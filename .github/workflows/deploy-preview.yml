@@ -1,0 +1,44 @@
+name: Deploy preview
+
+on:
+  push:
+    branches:
+      - chatgpt-dev
+
+permissions:
+  contents: write
+
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout test branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt-dev
+          path: dev
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: site
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy test build to preview
+        run: |
+          mkdir -p site/preview
+          cp dev/index.html site/preview/index.html
+
+      - name: Publish preview snapshot
+        working-directory: site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add preview/index.html
+          if git diff --cached --quiet; then
+            echo "Preview is already up to date."
+            exit 0
+          fi
+          git commit -m "Deploy chatgpt-dev preview"
+          git push origin main
