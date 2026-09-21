@@ -940,7 +940,11 @@ function enemyDisplayName(e){
   if(same.length<=1)return e.name;
   return e.name+(same.indexOf(e)+1);
 }
-function initiativeView(){const order=initiativeOrder();return `<section class="panel initiative-panel"><div class="row"><h2>行動順序</h2></div><div class="initiative-track">${order.map(u=>`<span class="initiative-token ${u.side}"><b>${esc(u.side==='hero'?characterName(u.actor):enemyDisplayName(u.actor))}</b></span>`).join('')||'<span class="small">開始探索後顯示雙方行動順序</span>'}</div><div class="last-actions">本回合實際出手：${lastActionOrder.map(x=>{const h=x.id.startsWith('hero-')?party.members.find(h=>heroKey(h)===x.id):null,e=x.id.startsWith('foe-')?foes.find(e=>e.id===x.id):null;return esc(h?characterName(h):e?enemyDisplayName(e):x.name);}).join('－')||'尚無行動'}</div></section>`;}
+function initiativeView(){
+  const order=initiativeOrder();
+  const names=order.map(u=>esc(u.side==='hero'?characterName(u.actor):enemyDisplayName(u.actor)));
+  return `<section class="panel initiative-panel compact-initiative"><div class="row"><h2 title="依速度排序；速度相同時維持穩定順序。">行動順序</h2></div><div class="initiative-track initiative-name-line">${names.length?names.join('<span class="initiative-separator">－</span>'):'<span class="small">開始探索後顯示</span>'}</div></section>`;
+}
 const beforeInitiativeBattle=battleView;battleView=function(){return beforeInitiativeBattle().replace('<div class="text-battle-layout">',initiativeView()+'<div class="text-battle-layout">');};
 const beforeSpeedCharacter=characterView;characterView=function(){const h=pageHero('character');return beforeSpeedCharacter().replace('<div class="page-owner-content">',`<div class="page-owner-content"><p class="speed-description">速度 <b>${stats(h).speed}</b></p>`);};
 const speedReset=resetEncounter;resetEncounter=function(){speedReset();lastActionOrder=[];actionVisualTime=0;};
@@ -3954,23 +3958,17 @@ render();
 (function(){
   const style=document.createElement('style');
   style.textContent=`
-  .initiative-panel.compact-initiative{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:30px;align-items:center;gap:6px;max-height:42px!important;height:42px!important;padding:4px 7px!important;overflow:hidden!important}
+  .initiative-panel.compact-initiative{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:30px;align-items:center;gap:8px;max-height:42px!important;height:42px!important;padding:4px 7px!important;overflow:hidden!important}
   .initiative-panel.compact-initiative .row{margin:0;white-space:nowrap}
   .initiative-panel.compact-initiative .row h2{font-size:11px;margin:0}
-  .initiative-panel.compact-initiative .initiative-track{height:30px!important;margin:0!important;padding:0!important;gap:4px;align-items:stretch}
-  .initiative-panel.compact-initiative .initiative-token{height:30px;min-height:30px;flex-basis:96px;padding:1px 4px;font-size:9px;overflow:hidden}
+  .initiative-panel.compact-initiative .initiative-track.initiative-name-line{display:block;height:30px!important;line-height:30px;margin:0!important;padding:0 2px!important;font-size:11px;white-space:nowrap;overflow-x:auto;overflow-y:hidden}
+  .initiative-panel.compact-initiative .initiative-separator{color:var(--muted);padding:0 2px}
   .initiative-panel.compact-initiative .last-actions{display:none!important}
   .battle-buffs.empty-buffs{flex:0 0 34px!important;height:34px!important;min-height:34px!important;padding:5px 7px!important;display:flex;align-items:center;justify-content:space-between;gap:8px}
   .battle-buffs.empty-buffs h2{font-size:11px;margin:0}.battle-buffs.empty-buffs .small{font-size:10px}
   `;
   document.head.appendChild(style);
 
-  if(typeof initiativeView==='function'){
-    initiativeView=function(){
-      const order=initiativeOrder();
-      return `<section class="panel initiative-panel compact-initiative"><div class="row"><h2 title="依速度排序；速度相同時維持穩定順序。">行動順序</h2></div><div class="initiative-track">${order.map(u=>`<span class="initiative-token ${u.side}" title="${esc(u.side==='hero'?characterName(u.actor):enemyDisplayName(u.actor))}"><b>${esc(u.side==='hero'?characterName(u.actor):enemyDisplayName(u.actor))}</b></span>`).join('－')||'<span class="small">開始探索後顯示</span>'}</div></section>`;
-    };
-  }
   if(typeof battleBuffPanel==='function'){
     const detailed=battleBuffPanel;
     battleBuffPanel=function(){
