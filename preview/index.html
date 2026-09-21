@@ -5865,12 +5865,13 @@ if(state)render();
 .pending-gear-bottom .pending-gear-expanded{max-height:520px;overflow-y:auto;overscroll-behavior:contain;padding-right:6px}
 .pending-gear-bottom .pending-quality-groups{display:grid;grid-template-columns:1fr;gap:7px;margin-top:8px}
 .pending-color-group{border:1px solid var(--line);background:#11191c}
-.pending-color-group>summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 9px;list-style:none;font-size:12px}
+.pending-color-group>summary{position:relative;cursor:pointer;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:8px 9px 8px 24px;list-style:none;font-size:12px}
 .pending-color-group>summary::-webkit-details-marker{display:none}
-.pending-color-group>summary::before{content:'▸';color:var(--muted);font-size:10px;flex:0 0 auto}
+.pending-color-group>summary::before{content:'▸';position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:10px}
 .pending-color-group[open]>summary::before{content:'▾'}
-.pending-color-group-title{display:flex;align-items:center;gap:8px;min-width:0;font-weight:800}
-.pending-color-group-count{color:var(--muted);font-weight:400}
+.pending-color-group-title{grid-column:2;justify-self:center;min-width:0;font-weight:800;text-align:center;white-space:nowrap}
+.pending-color-group-count{grid-column:1;grid-row:1;justify-self:end;color:var(--muted);font-weight:400;white-space:nowrap}
+.pending-color-group-tier{grid-column:3;grid-row:1;justify-self:end;min-width:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pending-color-group-body{border-top:1px solid var(--line);padding:7px}
 .pending-color-group-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:7px}
 .pending-color-group-actions button{padding:4px 7px;font-size:11px}
@@ -5892,6 +5893,8 @@ if(state)render();
   .pending-affix-group-actions{grid-column:1/-1;justify-content:stretch}
   .pending-affix-group-actions button{flex:1 1 90px}
   .pending-color-group-actions .pending-quality-total{width:100%;margin-left:0}
+  .pending-color-group>summary{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;padding-left:22px;font-size:11px}
+  .pending-color-group-count,.pending-color-group-tier{font-size:10px}
 }
 </style>
 <script id="pending-gear-detailed-list-system">
@@ -6093,7 +6096,7 @@ if(state)render();
       var totalSell=row.list.reduce(function(n,g){return n+(typeof equipmentSellPrice==='function'?equipmentSellPrice(g):0);},0);
       var claimDisabled=state.bag.length>=RULES.bagCapacity?' disabled':'';
       var open=globalThis.__pendingQualityFoldOpen[row.q]?' open':'';
-      return '<details class="pending-color-group effect-quality-'+row.q+'"'+open+' ontoggle="setPendingQualityFold('+row.q+',this.open)"><summary><span class="pending-color-group-title">'+esc(row.name)+'<span class="pending-color-group-count">'+row.list.length+' 件 · '+row.groups.length+' 組</span></span><span>'+esc(tierSummary(row.list))+'</span></summary><div class="pending-color-group-body"><div class="pending-color-group-actions"><button onclick="claimPendingQuality('+row.q+')"'+claimDisabled+'>全領</button><button onclick="salvagePendingQuality('+row.q+')">全分解</button><button onclick="sellPendingQuality('+row.q+')">全賣 · '+totalSell+'金</button><span class="pending-quality-total">依最高詞條等級分組</span></div><div class="pending-affix-groups">'+row.groups.map(groupHtml).join('')+'</div></div></details>';
+      return '<details class="pending-color-group effect-quality-'+row.q+'"'+open+' ontoggle="setPendingQualityFold('+row.q+',this.open)"><summary><span class="pending-color-group-count">'+row.list.length+' 件 · '+row.groups.length+' 組</span><span class="pending-color-group-title">'+esc(row.name)+'</span><span class="pending-color-group-tier">'+esc(tierSummary(row.list))+'</span></summary><div class="pending-color-group-body"><div class="pending-color-group-actions"><button onclick="claimPendingQuality('+row.q+')"'+claimDisabled+'>全領</button><button onclick="salvagePendingQuality('+row.q+')">全分解</button><button onclick="sellPendingQuality('+row.q+')">全賣 · '+totalSell+'金</button><span class="pending-quality-total">依最高詞條等級分組</span></div><div class="pending-affix-groups">'+row.groups.map(groupHtml).join('')+'</div></div></details>';
     }).join('');
 
     var outerOpen=pendingGearPanelCollapsed?'':' open';
