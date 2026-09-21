@@ -2587,9 +2587,9 @@ inlineInventoryView=function(){
   .inventory-list-scroll{display:block;margin:0;overflow:auto;min-height:0;scrollbar-gutter:stable}
   .inventory-list-item{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:22px 18px;width:100%;height:48px;padding:4px 8px;text-align:left;border:0;border-bottom:1px solid #2e3b3f;border-radius:0;background:transparent;gap:0 8px;overflow:hidden}
   .inventory-list-item:hover{background:#202c30}.inventory-list-item.selected{background:#2a383c;box-shadow:inset 3px 0 var(--green)}
-  .inventory-list-name{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;align-self:end}.inventory-list-name .enhanced-name{font-size:13px}
-  .inventory-list-meta{grid-column:1/-1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted);font-size:10px;line-height:16px}
-  .inventory-list-quality{align-self:end;justify-self:end;font-size:10px;white-space:nowrap}
+  .inventory-list-name{grid-column:1;grid-row:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;align-self:end}.inventory-list-name .enhanced-name{font-size:13px}
+  .inventory-list-meta{grid-column:1/-1;grid-row:2;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted);font-size:10px;line-height:16px}
+  .inventory-list-quality{grid-column:2;grid-row:1;align-self:end;justify-self:end;min-width:max-content;font-size:10px;white-space:nowrap;padding-left:6px}
   .inventory-list-empty{padding:18px;color:var(--muted)}
   .inventory-detail-wrap{overflow:auto;scrollbar-gutter:stable}
   .inventory-detail-pane{padding:16px 18px;min-height:100%}
