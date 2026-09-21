@@ -5108,32 +5108,32 @@ if(state)render();
 
   function fx(key,value){return {key,value};}
   const DEFAULT_PREFIXES=[
-    {id:'redmaple',name:'赤楓',tierMin:1,tierMax:12,weight:1,slots:[0],effect:fx('basicElement','fire')},
-    {id:'frostcarved',name:'霜刻',tierMin:1,tierMax:12,weight:1,slots:[0],effect:fx('basicElement','ice')},
-    {id:'verdant',name:'翠影',tierMin:1,tierMax:12,weight:1,slots:[0],effect:fx('basicElement','wind')},
-    {id:'radiant',name:'聖輝',tierMin:1,tierMax:12,weight:1,slots:[0],effect:fx('basicElement','light')},
-    {id:'nether',name:'幽冥',tierMin:1,tierMax:12,weight:1,slots:[0],effect:fx('basicElement','shadow')},
-    {id:'piercing',name:'穿甲',tierMin:1,tierMax:12,weight:1,slots:[0,1,2],effect:fx('pierce',6)},
-    {id:'bloodbound',name:'血契',tierMin:3,tierMax:12,weight:.8,slots:[0],effect:fx('lifesteal',3)},
-    {id:'starfall',name:'星隕',tierMin:3,tierMax:12,weight:.9,slots:[0,2],effect:fx('critDamage',12)},
-    {id:'echoing',name:'回響',tierMin:4,tierMax:12,weight:.65,slots:[0,1,2],effect:fx('allCooldownReduction',1)},
-    {id:'seeker',name:'尋珍',tierMin:4,tierMax:12,weight:.7,slots:[0,1,2],effect:fx('dropRateBonus',8)},
-    {id:'arcane',name:'秘能',tierMin:5,tierMax:12,weight:.7,slots:[0,1,2],effect:fx('elementBonus',8)},
-    {id:'keen',name:'銳眼',tierMin:5,tierMax:12,weight:.7,slots:[0,2],effect:fx('crit',5)}
+    {id:'redmaple',name:'赤楓',tierMin:1,tierMax:10,weight:1,slots:[0],effect:fx('basicElement','fire')},
+    {id:'frostcarved',name:'霜刻',tierMin:1,tierMax:10,weight:1,slots:[0],effect:fx('basicElement','ice')},
+    {id:'verdant',name:'翠影',tierMin:1,tierMax:10,weight:1,slots:[0],effect:fx('basicElement','wind')},
+    {id:'radiant',name:'聖輝',tierMin:1,tierMax:10,weight:1,slots:[0],effect:fx('basicElement','light')},
+    {id:'nether',name:'幽冥',tierMin:1,tierMax:10,weight:1,slots:[0],effect:fx('basicElement','shadow')},
+    {id:'piercing',name:'穿甲',tierMin:1,tierMax:10,weight:1,slots:[0,1,2],effect:fx('pierce',6)},
+    {id:'bloodbound',name:'血契',tierMin:3,tierMax:10,weight:.8,slots:[0],effect:fx('lifesteal',3)},
+    {id:'starfall',name:'星隕',tierMin:3,tierMax:10,weight:.9,slots:[0,2],effect:fx('critDamage',12)},
+    {id:'echoing',name:'回響',tierMin:4,tierMax:10,weight:.65,slots:[0,1,2],effect:fx('allCooldownReduction',1)},
+    {id:'seeker',name:'尋珍',tierMin:4,tierMax:10,weight:.7,slots:[0,1,2],effect:fx('dropRateBonus',8)},
+    {id:'arcane',name:'秘能',tierMin:5,tierMax:10,weight:.7,slots:[0,1,2],effect:fx('elementBonus',8)},
+    {id:'keen',name:'銳眼',tierMin:5,tierMax:10,weight:.7,slots:[0,2],effect:fx('crit',5)}
   ];
   const DEFAULT_SUFFIXES=[
-    {id:'traveler',name:'旅人',tierMin:1,tierMax:12,weight:1,slots:[0],effect:fx('basicAdvanceNextRound',1)},
-    {id:'vanguard',name:'先鋒',tierMin:1,tierMax:12,weight:1,slots:[0,1,2],effect:fx('attackPct',4)},
-    {id:'swift',name:'迅捷',tierMin:1,tierMax:12,weight:1,slots:[0,1,2],effect:fx('evasion',5)},
-    {id:'eagleeye',name:'鷹眼',tierMin:2,tierMax:12,weight:1,slots:[0,2],effect:fx('crit',4)},
-    {id:'breaker',name:'破城',tierMin:2,tierMax:12,weight:.9,slots:[0,2],effect:fx('pierce',6)},
-    {id:'leeching',name:'汲血',tierMin:3,tierMax:12,weight:.75,slots:[0],effect:fx('lifesteal',3)},
-    {id:'resonant',name:'共鳴',tierMin:3,tierMax:12,weight:.75,slots:[0,1,2],effect:fx('elementBonus',7)},
-    {id:'quickcast',name:'疾詠',tierMin:4,tierMax:12,weight:.6,slots:[0,1,2],effect:fx('allCooldownReduction',1)},
-    {id:'hunter',name:'獵手',tierMin:4,tierMax:12,weight:.7,slots:[0,1,2],effect:fx('dropRateBonus',7)},
-    {id:'fury',name:'狂擊',tierMin:5,tierMax:12,weight:.7,slots:[0,2],effect:fx('critDamage',12)},
-    {id:'assault',name:'強襲',tierMin:5,tierMax:12,weight:.65,slots:[0,1,2],effect:fx('attackPct',5)},
-    {id:'phantom',name:'幻步',tierMin:5,tierMax:12,weight:.65,slots:[0,1,2],effect:fx('evasion',6)}
+    {id:'traveler',name:'旅人',tierMin:1,tierMax:10,weight:1,slots:[0],effect:fx('basicAdvanceNextRound',1)},
+    {id:'vanguard',name:'先鋒',tierMin:1,tierMax:10,weight:1,slots:[0,1,2],effect:fx('attackPct',4)},
+    {id:'swift',name:'迅捷',tierMin:1,tierMax:10,weight:1,slots:[0,1,2],effect:fx('evasion',5)},
+    {id:'eagleeye',name:'鷹眼',tierMin:2,tierMax:10,weight:1,slots:[0,2],effect:fx('crit',4)},
+    {id:'breaker',name:'破城',tierMin:2,tierMax:10,weight:.9,slots:[0,2],effect:fx('pierce',6)},
+    {id:'leeching',name:'汲血',tierMin:3,tierMax:10,weight:.75,slots:[0],effect:fx('lifesteal',3)},
+    {id:'resonant',name:'共鳴',tierMin:3,tierMax:10,weight:.75,slots:[0,1,2],effect:fx('elementBonus',7)},
+    {id:'quickcast',name:'疾詠',tierMin:4,tierMax:10,weight:.6,slots:[0,1,2],effect:fx('allCooldownReduction',1)},
+    {id:'hunter',name:'獵手',tierMin:4,tierMax:10,weight:.7,slots:[0,1,2],effect:fx('dropRateBonus',7)},
+    {id:'fury',name:'狂擊',tierMin:5,tierMax:10,weight:.7,slots:[0,2],effect:fx('critDamage',12)},
+    {id:'assault',name:'強襲',tierMin:5,tierMax:10,weight:.65,slots:[0,1,2],effect:fx('attackPct',5)},
+    {id:'phantom',name:'幻步',tierMin:5,tierMax:10,weight:.65,slots:[0,1,2],effect:fx('evasion',6)}
   ];
 
   const FAMILY_BOSS_EFFECTS=[
@@ -5209,8 +5209,8 @@ if(state)render();
       const d=defaults[i%defaults.length];
       let id=typeof x.id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(x.id)?x.id:d.id+'_'+(i+1);
       if(seen.has(id))id=id+'_'+(i+1);seen.add(id);
-      const tierMin=Math.max(1,Math.min(12,Math.round(finite(x.tierMin,d.tierMin,1,12))));
-      const tierMax=Math.max(tierMin,Math.min(12,Math.round(finite(x.tierMax,d.tierMax,tierMin,12))));
+      const tierMin=Math.max(1,Math.min(10,Math.round(finite(x.tierMin,d.tierMin,1,10))));
+      const tierMax=Math.max(tierMin,Math.min(10,Math.round(finite(x.tierMax,d.tierMax,tierMin,10))));
       out.push({id,name:typeof x.name==='string'&&x.name.trim()?x.name.trim():d.name,tierMin,tierMax,weight:finite(x.weight,d.weight,0,1e6),slots:normalizeSlots(x.slots,d.slots),effect:normalizeEffect(x.effect,REGULAR_EFFECT_KEYS,d.effect)});
     }
     return out.length?out:clone(defaults);
@@ -5307,7 +5307,7 @@ if(state)render();
       const ids=new Set();
       for(const x of rows){
         if(ids.has(x.id))throw Error(label+' ID 重複：'+x.id);ids.add(x.id);
-        if(!x.name||!x.slots.length||x.tierMin<1||x.tierMax>12||x.tierMax<x.tierMin||x.weight<0)throw Error(label+'資料無效：'+x.id);
+        if(!x.name||!x.slots.length||x.tierMin<1||x.tierMax>10||x.tierMax<x.tierMin||x.weight<0)throw Error(label+'資料無效：'+x.id);
         if(!REGULAR_EFFECT_KEYS.has(x.effect.key))throw Error(label+'效果無效：'+x.id);
       }
     };
