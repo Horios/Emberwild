@@ -1315,7 +1315,7 @@ function coreSkillTargets(sk){const alive=foes.filter(e=>e.hp>0),m=sk[6]||{},req
 function coreSkillElement(job,i){return SKILL_ELEMENTS[job]?.[i]||'physical';}
 
 // Core attacks now honor maxTargets. When fewer monsters exist, all are hit; otherwise targets are chosen randomly without replacement.
-castPartySkill=function(h,i,v){const sk=CLASSES[h.job].skills[i];if(!sk)return false;const power=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),element=coreSkillElement(h.job,i);if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(power));const recovered=Math.max(0,ally.hp-beforeHp);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');}else if(sk[5]==='shield'){const shieldResult=applyPureShield(h,power);note(pureShieldCastLog(h,sk[0],shieldResult));}else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const d=resolveHit(e,power,h,element,Math.random()<v.crit);total+=d;results.push(e.name+' '+d);}if(sk[5]==='drain')h.hp=Math.min(v.hp,h.hp+total);note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害');}if(h.sockets[i]===2&&sk[1]==='active')h.hp=Math.min(v.hp,h.hp+Math.round(v.atk*GS('skills.gems.hybridActiveHealAttack',.15)));return true;};
+castPartySkill=function(h,i,v){const sk=CLASSES[h.job].skills[i];if(!sk)return false;const power=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),element=coreSkillElement(h.job,i);if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(power));const recovered=Math.max(0,ally.hp-beforeHp);if(recovered>0)recordCombatContribution(h,'healing',recovered);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');}else if(sk[5]==='shield'){const shieldResult=applyPureShield(h,power);note(pureShieldCastLog(h,sk[0],shieldResult));}else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const d=resolveHit(e,power,h,element,Math.random()<v.crit);total+=d;results.push(e.name+' '+d);}if(sk[5]==='drain'){const beforeDrain=h.hp;h.hp=Math.min(v.hp,h.hp+total);const recovered=Math.max(0,h.hp-beforeDrain);if(recovered>0)recordCombatContribution(h,'healing',recovered);}note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害');}if(h.sockets[i]===2&&sk[1]==='active'){const beforeGem=h.hp;h.hp=Math.min(v.hp,h.hp+Math.round(v.atk*GS('skills.gems.hybridActiveHealAttack',.15)));const recovered=Math.max(0,h.hp-beforeGem);if(recovered>0)recordCombatContribution(h,'healing',recovered);}return true;};
 const update09PerformHeroBasic=performHeroBasic;performHeroBasic=function(h){const v=battleStats(h),target=foes.find(e=>e.hp>0);if(!target)return;const d=resolveHit(target,v.atk,h,weaponElement(h),Math.random()<v.crit);note(characterName(h)+' 普攻 → '+target.name+' '+d+' 傷害');for(let i=0;i<CLASSES[h.job].skills.length;i++)if(foes.some(e=>e.hp>0)&&CLASSES[h.job].skills[i][1]==='proc'&&h.skills[i]>0&&Math.random()<procChance(i,h))castPartySkill(h,i,v);};
 const update09Socket=socket;socket=function(i,value){let g=Number(value);if(!Number.isInteger(i)||i<0||i>=CLASSES[state.job].skills.length||!state.skills[i]||!Number.isInteger(g)||g< -1||g>2)return;let old=state.sockets[i]??null;if(g===old)return;if(g>=0&&state.gems[g]<1)return;if(old!==null)state.gems[old]++;state.sockets[i]=g<0?null:g;if(g>=0)state.gems[g]--;save();render();};
 learn=function(i){let sk=CLASSES[state.job].skills[i],cap=skillCap();if(!sk)return;if(state.skills[i]>=cap)return toast(`目前技能上限 ${cap} 級；角色每 ${GS('skills.core.capLevelsPerStep',3)} 級提高 1 級上限，最高 ${RULES.skillMax} 級`);if(state.sp<1||state.lv<sk[2]||(skillRequiresAdvanced(sk,i)&&!state.advanced))return;state.sp--;state.skills[i]++;save();render();};
@@ -1930,7 +1930,7 @@ addGear=function(g){g.rar=0;const q=gearQualityRank(g);if(typeof collectingBattl
 
 combatSpeed=function(e){const s=GAMEPLAY_SETTINGS.combat.speed;return Math.round(s.enemyBase+e.lv*s.enemyPerLevel+(s.race[e.race]||0)+(s.kind[e.kind]||0)+(e.difficulty||0)*s.difficultyBonus);};
 resolveHit=function(e,amount,h,element,crit){const v=battleStats(h),cap=GAMEPLAY_SETTINGS.combat.caps,def=e.def*(1-Math.min(cap.fracture,effectTotal(e.id,'fracture')))*(1-v.pierce);let d=Math.max(1,Math.round(amount-def*GS('combat.defenseEffectiveness',.65)));if(crit)d=Math.round(d*v.critDamage);const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic&&tonic.element===element?GS('combat.supply.elementTonicDamage',.2):0);d=Math.max(1,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+effectTotal(e.id,'vulnerable'))));const actual=Math.min(e.hp,d);e.hp=Math.max(0,e.hp-d);h.hp=Math.min(v.hp,h.hp+actual*v.lifesteal);return actual;};
-performEnemyBasic=function(e){e.turn++;const targets=living(),h=targets[rand(targets.length)],v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss,multi=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:e.turn%Math.max(1,Math.round(fb.specialEveryTurns))===0?fb.specialMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*multi-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的攻擊');return;}const ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+(ward&&ward.element===e.element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));};
+performEnemyBasic=function(e){e.turn++;const targets=living(),h=targets[rand(targets.length)],v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss,multi=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:e.turn%Math.max(1,Math.round(fb.specialEveryTurns))===0?fb.specialMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*multi-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的攻擊');return;}const ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+(ward&&ward.element===e.element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0)recordCombatContribution(h,'mitigation',absorb);const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));};
 spawnGroup=function(){const weak=[...heroes()].sort((a,b)=>a.lv-b.lv)[0],g=GAMEPLAY_SETTINGS.combat.groupSize,min=Math.max(1,Math.round(g.min)),max=Math.max(min,Math.round(g.max)),n=min+rand(max-min+1);foes=[];effects=[];actorCooldowns={};supportCooldowns={};for(const h of heroes())h.shield=0;for(let i=0;i<n;i++){const mi=party.map===6&&i>0?5:party.map,e=makeEnemy(mi,weak);e.id='foe-'+uid();e.rewarded=false;foes.push(e);}enemy=foes[0];round=0;note('遭遇 '+foes.length+' 隻敵人。');};
 
 toggleBattleRate=function(){const rates=GS('combat.pacing.rates',[1,2,4]).filter(x=>Number.isFinite(x)&&x>0);if(!rates.length)return;const now=Date.now(),old=battleRate,idx=rates.findIndex(x=>x===battleRate);battleRate=rates[(idx+1+rates.length)%rates.length];if(roundStartedAt)roundStartedAt=now-(now-roundStartedAt)*old/battleRate;nextActionAt=now+Math.max(0,nextActionAt-now)*old/battleRate;render();};
@@ -2238,9 +2238,9 @@ resetEncounter=function(){enemySkillCooldowns={};return actionTurnResetEncounter
 const actionTurnSpawnGroupBase=spawnGroup;
 spawnGroup=function(){const r=actionTurnSpawnGroupBase();enemySkillCooldowns={};for(const e of foes)assignEnemySkill(e);return r;};
 function enemySkillTarget(sk){const targets=living();if(!targets.length)return null;if(sk.target==='weakest')return [...targets].sort((a,b)=>a.hp/battleStats(a).hp-b.hp/battleStats(b).hp)[0];return targets[rand(targets.length)];}
-function performEnemySkill(e,sk){e.turn=(e.turn||0)+1;const h=enemySkillTarget(sk);if(!h)return;const beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss;const levelMulti=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(Number(sk.power)||1)*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*levelMulti-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的「'+sk.name+'」');return;}const element=sk.element==='inherit'?e.element:sk.element,ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[element]||0)+(ward&&ward.element===element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+'・'+sk.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+'・'+sk.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);}
+function performEnemySkill(e,sk){e.turn=(e.turn||0)+1;const h=enemySkillTarget(sk);if(!h)return;const beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss;const levelMulti=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(Number(sk.power)||1)*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*levelMulti-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的「'+sk.name+'」');return;}const element=sk.element==='inherit'?e.element:sk.element,ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[element]||0)+(ward&&ward.element===element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0)recordCombatContribution(h,'mitigation',absorb);const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+'・'+sk.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+'・'+sk.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);}
 function performEnemyAction(e){const sk=enemySkillFor(e);if(sk){enemySkillCooldowns[e.id]=Math.max(0,cooldownLeft(enemySkillCooldowns,e.id)-1);if(enemySkillCooldowns[e.id]<=0){performEnemySkill(e,sk);enemySkillCooldowns[e.id]=rollEnemySkillCooldown(sk);return 'skill';}}performEnemyBasic(e);return 'basic';}
-pacedRound=function*(){if(!party||!running||$('modal').open)return;currentEvents=[];lastActionOrder=[];actionVisualTime=Date.now();partyClock++;round++;effects=effects.filter(e=>e.until>partyClock);if(!foes.some(e=>e.hp>0)){spawnGroup();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();return;}for(const h of living()){const v=battleStats(h),regen=effectTotal(heroKey(h),'regen');h.hp=Math.min(v.hp,h.hp+v.hp*regen);if(h.autoPotion&&h.hp<v.hp*GS('combat.autoPotionThreshold',.35)&&h.potions>0)withHero(h,()=>potion(true));}const order=initiativeOrder();for(const unit of order){if(!living().length||!foes.some(e=>e.hp>0))break;if(unit.actor.hp<=0)continue;if(unit.side==='hero'){const h=unit.actor;tickHeroCooldowns(h);for(const i of h.supportSlots){if(i===null)continue;const key=h.job+'-'+i;if(cooldownLeft(supportCooldowns,key)<=0){castSupport(h,i);recordAction(heroKey(h),characterName(h),'輔助');supportCooldowns[key]=supportSkillCooldown(h,i);yield;if(!living().length||!foes.some(e=>e.hp>0))break;}}for(const i of h.active){if(i===null||!foes.some(e=>e.hp>0))continue;const key=h.job+'-'+i;if(cooldownLeft(actorCooldowns,key)<=0&&castPartySkill(h,i,battleStats(h))!==false){actorCooldowns[key]=Math.max(0,Math.round(skillCooldown(i,h)));recordAction(heroKey(h),characterName(h),'技能');yield;}}if(foes.some(e=>e.hp>0)){recordAction(unit.id,characterName(h),'普攻');performHeroBasic(h);yield;}}else{const sk=enemySkillFor(unit.actor),willSkill=sk&&Math.max(0,cooldownLeft(enemySkillCooldowns,unit.actor.id)-1)<=0;recordAction(unit.id,unit.actor.name,willSkill?'技能':'攻擊');performEnemyAction(unit.actor);yield;}}for(const e of foes)if(e.hp<=0)rewardGroupKill(e);if(!living().length){running=false;party.members[0].gold-=Math.floor(party.members[0].gold*GS('combat.defeatGoldLoss',.05));for(const h of heroes())h.shield=0;note('全隊戰敗，帳號失去 '+Math.round(GS('combat.defeatGoldLoss',.05)*10000)/100+'% 金幣。生命已全滿。');refillParty();foes=[];enemy=null;}else if(!foes.some(e=>e.hp>0)){refillParty();note('本次遭遇勝利，全隊生命已回滿。');if(foes.some(e=>e.kind==='final')){running=false;note('噬日者已倒下！LV30 成員解鎖 LV60，其他成員達 LV30 時解鎖。');}}save();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();if(activeBattleStat){if(activeBattleStat.pendingOutcome==='wipe')finalizeBattleStatistics('wipe');else if(foes.length&&foes.every(e=>e.hp<=0))finalizeBattleStatistics('victory');}};
+pacedRound=function*(){if(!party||!running||$('modal').open)return;currentEvents=[];lastActionOrder=[];actionVisualTime=Date.now();partyClock++;round++;effects=effects.filter(e=>e.until>partyClock);if(!foes.some(e=>e.hp>0)){spawnGroup();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();return;}for(const h of living()){const v=battleStats(h),regen=effectTotal(heroKey(h),'regen'),beforeRegen=h.hp;h.hp=Math.min(v.hp,h.hp+v.hp*regen);const regenHealed=Math.max(0,h.hp-beforeRegen);if(regenHealed>0)recordRegenContribution(h,regenHealed);if(h.autoPotion&&h.hp<v.hp*GS('combat.autoPotionThreshold',.35)&&h.potions>0)withHero(h,()=>potion(true));}const order=initiativeOrder();for(const unit of order){if(!living().length||!foes.some(e=>e.hp>0))break;if(unit.actor.hp<=0)continue;if(unit.side==='hero'){const h=unit.actor;tickHeroCooldowns(h);for(const i of h.supportSlots){if(i===null)continue;const key=h.job+'-'+i;if(cooldownLeft(supportCooldowns,key)<=0){castSupport(h,i);recordAction(heroKey(h),characterName(h),'輔助');supportCooldowns[key]=supportSkillCooldown(h,i);yield;if(!living().length||!foes.some(e=>e.hp>0))break;}}for(const i of h.active){if(i===null||!foes.some(e=>e.hp>0))continue;const key=h.job+'-'+i;if(cooldownLeft(actorCooldowns,key)<=0&&castPartySkill(h,i,battleStats(h))!==false){actorCooldowns[key]=Math.max(0,Math.round(skillCooldown(i,h)));recordAction(heroKey(h),characterName(h),'技能');yield;}}if(foes.some(e=>e.hp>0)){recordAction(unit.id,characterName(h),'普攻');performHeroBasic(h);yield;}}else{const sk=enemySkillFor(unit.actor),willSkill=sk&&Math.max(0,cooldownLeft(enemySkillCooldowns,unit.actor.id)-1)<=0;recordAction(unit.id,unit.actor.name,willSkill?'技能':'攻擊');performEnemyAction(unit.actor);yield;}}for(const e of foes)if(e.hp<=0)rewardGroupKill(e);if(!living().length){running=false;party.members[0].gold-=Math.floor(party.members[0].gold*GS('combat.defeatGoldLoss',.05));for(const h of heroes())h.shield=0;note('全隊戰敗，帳號失去 '+Math.round(GS('combat.defeatGoldLoss',.05)*10000)/100+'% 金幣。生命已全滿。');refillParty();foes=[];enemy=null;}else if(!foes.some(e=>e.hp>0)){refillParty();note('本次遭遇勝利，全隊生命已回滿。');if(foes.some(e=>e.kind==='final')){running=false;note('噬日者已倒下！LV30 成員解鎖 LV60，其他成員達 LV30 時解鎖。');}}save();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();if(activeBattleStat){if(activeBattleStat.pendingOutcome==='wipe')finalizeBattleStatistics('wipe');else if(foes.length&&foes.every(e=>e.hp<=0))finalizeBattleStatistics('victory');}};
 function actionTurnElementLabel(element){return element==='physical'?'無屬性':`${ELEMENTS[element]}屬性`;}
 coreSkillDetail=function(job,i,h=state){const sk=CLASSES[job]?.skills?.[i];if(!sk)return '';const old=state;if(h&&h!==state)state=h;let power=0,cdText='',proc=0;try{power=Math.round(skillPower(i,h)*100);if(sk[1]==='active')cdText=`冷卻 ${skillCooldown(i,h)} 回合`;else{proc=Math.round(procChance(i,h)*100);cdText=`普攻觸發率 ${proc}% · 冷卻 無`;}}finally{state=old;}const effectLabel={damage:'傷害倍率',heal:'治療倍率',shield:'護盾倍率',drain:'傷害／吸血倍率'}[sk[5]]||'效果倍率';return `${actionTurnElementLabel(coreSkillElement(job,i))} · ${effectLabel} ${power}% · 目標 ${coreSkillTargetText(sk)} · ${cdText} · 需求 LV${sk[2]}${skillRequiresAdvanced(sk,i)?'／二轉':''}`;};
 supportSkillDetail=function(job,i,h=state){const sk=SUPPORT[job]?.[i];if(!sk)return '';const level=Math.max(1,h?.supportLevels?.[i]||1),value=+(sk.value*(1+(level-1)*GS('skills.support.effectPerExtraLevel',.2))*100).toFixed(1),cd=supportSkillCooldown(h,i);return `${actionTurnElementLabel(sk.element)} · 目標 ${TARGET_NAMES[sk.target]} · ${EFFECT_NAMES[sk.kind]} ${value}% · 持續 ${sk.duration} 戰鬥回合 · 冷卻 ${cd} 回合 · 需求 LV${sk.level}${i===2?'／二轉':''}`;};
@@ -2536,7 +2536,48 @@ try{
 // equipment actions, but show a dense selectable list at left and one detailed
 // equipment pane at right.
 let inventorySelectedGearId=null;
+let inventorySortKey='quality';
+let inventorySortDirection='desc';
 function selectInventoryGear(id){inventorySelectedGearId=id;render();}
+function inventorySortValue(g,key){
+  if(key==='quality')return gearQualityRank(g);
+  if(key==='plus')return Number(g.plus)||0;
+  if(key==='job')return g.slot===1?-1:(Number(g.job)||0);
+  return 0;
+}
+function sortedFilteredGear(){
+  const items=[...filteredGear()];
+  items.sort((a,b)=>{
+    let diff=0;
+    if(inventorySortKey==='job'){
+      diff=inventorySortValue(a,'job')-inventorySortValue(b,'job');
+      if(diff!==0)return inventorySortDirection==='asc'?diff:-diff;
+      const slotDiff=(Number(a.slot)||0)-(Number(b.slot)||0);
+      if(slotDiff!==0)return inventorySortDirection==='asc'?slotDiff:-slotDiff;
+    }else{
+      diff=inventorySortValue(a,inventorySortKey)-inventorySortValue(b,inventorySortKey);
+      if(diff!==0)return inventorySortDirection==='asc'?diff:-diff;
+    }
+    const qualityDiff=gearQualityRank(b)-gearQualityRank(a);if(qualityDiff)return qualityDiff;
+    const plusDiff=(Number(b.plus)||0)-(Number(a.plus)||0);if(plusDiff)return plusDiff;
+    const tierDiff=(Number(b.tier)||0)-(Number(a.tier)||0);if(tierDiff)return tierDiff;
+    return equipmentDisplayName(a).localeCompare(equipmentDisplayName(b),'zh-Hant');
+  });
+  return items;
+}
+function inventorySortControls(){
+  const options=[['quality','稀有度'],['plus','強化度'],['job','職業']];
+  return '<div class="inventory-sortbar"><label>排序 <select onchange="setInventorySort(this.value)">'+
+    options.map(([value,label])=>'<option value="'+value+'" '+(inventorySortKey===value?'selected':'')+'>'+label+'</option>').join('')+
+    '</select></label><button type="button" onclick="toggleInventorySortDirection()">'+(inventorySortDirection==='desc'?'高 → 低':'低 → 高')+'</button></div>';
+}
+globalThis.setInventorySort=function(key){
+  if(!['quality','plus','job'].includes(key))return;
+  inventorySortKey=key;render();
+};
+globalThis.toggleInventorySortDirection=function(){
+  inventorySortDirection=inventorySortDirection==='desc'?'asc':'desc';render();
+};
 function inventoryGearListItem(g,selected){
   const wearer=gearWearer(g.id),worn=!!wearer,locked=!!g.locked;
   return `<button type="button" class="inventory-list-item ${selected?'selected':''}" onclick="selectInventoryGear('${g.id}')" title="${esc(equipmentDisplayName(g))}">
@@ -2561,11 +2602,11 @@ function inventoryGearDetail(g){
   </div>`;
 }
 inlineInventoryView=function(){
-  const items=filteredGear();
+  const items=sortedFilteredGear();
   if(items.length && !items.some(g=>g.id===inventorySelectedGearId))inventorySelectedGearId=items[0].id;
   if(!items.length)inventorySelectedGearId=null;
   const selected=items.find(g=>g.id===inventorySelectedGearId)||null;
-  return `<section class="panel compact-inventory-panel">${resourceLine()}${gearFilters()}${bulkSalvageControls()}
+  return `<section class="panel compact-inventory-panel">${resourceLine()}${gearFilters()}${inventorySortControls()}${bulkSalvageControls()}
     <div class="inventory-master-detail">
       <section class="inventory-master-pane">
         <div class="inventory-master-heading"><b>裝備列表</b><span class="small">顯示 ${items.length} 件</span></div>
@@ -2584,12 +2625,16 @@ inlineInventoryView=function(){
   .inventory-master-pane,.inventory-detail-wrap{min-height:0;border:1px solid var(--line);background:#141c1f}
   .inventory-master-pane{display:grid;grid-template-rows:38px minmax(0,1fr);overflow:hidden}
   .inventory-master-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);background:#182124}
+  .inventory-sortbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .inventory-sortbar label{display:flex;align-items:center;gap:5px;font-size:12px}
+  .inventory-sortbar select{min-width:108px}
+  .inventory-sortbar button{padding:4px 8px;font-size:11px}
   .inventory-list-scroll{display:block;margin:0;overflow:auto;min-height:0;scrollbar-gutter:stable}
   .inventory-list-item{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:22px 18px;width:100%;height:48px;padding:4px 8px;text-align:left;border:0;border-bottom:1px solid #2e3b3f;border-radius:0;background:transparent;gap:0 8px;overflow:hidden}
   .inventory-list-item:hover{background:#202c30}.inventory-list-item.selected{background:#2a383c;box-shadow:inset 3px 0 var(--green)}
-  .inventory-list-name{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;align-self:end}.inventory-list-name .enhanced-name{font-size:13px}
-  .inventory-list-meta{grid-column:1/-1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted);font-size:10px;line-height:16px}
-  .inventory-list-quality{align-self:end;justify-self:end;font-size:10px;white-space:nowrap}
+  .inventory-list-name{grid-column:1;grid-row:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;align-self:end}.inventory-list-name .enhanced-name{font-size:13px}
+  .inventory-list-meta{grid-column:1/-1;grid-row:2;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted);font-size:10px;line-height:16px}
+  .inventory-list-quality{grid-column:2;grid-row:1;align-self:end;justify-self:end;min-width:max-content;font-size:10px;white-space:nowrap;padding-left:6px}
   .inventory-list-empty{padding:18px;color:var(--muted)}
   .inventory-detail-wrap{overflow:auto;scrollbar-gutter:stable}
   .inventory-detail-pane{padding:16px 18px;min-height:100%}
@@ -3831,6 +3876,137 @@ render();
 
 
 
+
+<style id="combat-contribution-meter-style">
+  .combat-contribution-meter{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .combat-contribution-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+  .combat-contribution-head b{font-size:13px}
+  .combat-contribution-head button{height:26px!important;padding:2px 8px!important;font-size:11px!important}
+  .combat-contribution-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:8px}
+  .combat-contribution-tabs button{width:100%;height:28px!important}
+  .combat-contribution-tabs button.active{border-color:var(--accent);background:rgba(161,190,183,.12)}
+  .combat-contribution-bars{display:grid;gap:7px}
+  .combat-contribution-row{display:grid;grid-template-columns:minmax(62px,84px) minmax(0,1fr) auto;gap:7px;align-items:center;font-size:11px}
+  .combat-contribution-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .combat-contribution-track{height:10px;border:1px solid var(--line);background:rgba(255,255,255,.035);overflow:hidden}
+  .combat-contribution-fill{height:100%;min-width:0;background:currentColor;opacity:.68}
+  .combat-contribution-value{min-width:48px;text-align:right;font-variant-numeric:tabular-nums}
+  .combat-contribution-note{margin:7px 0 0!important;font-size:10px!important}
+</style>
+<script id="combat-contribution-meter-system">
+/* Persistent active-party contribution meter: damage, healing and shield absorption. */
+(()=>{
+  const BASE_KEY='emberwild-combat-contribution-v1';
+  let cacheKey='',cache=null,selectedMetric='damage';
+
+  function storageKey(){
+    const root=party?.members?.[0];
+    const id=Number.isFinite(Number(root?.created))?String(root.created):'default';
+    return BASE_KEY+':'+id;
+  }
+  function activeSignature(){
+    if(!party?.active)return '';
+    return [...party.active].filter(Number.isInteger).sort((a,b)=>a-b).join(',');
+  }
+  function blankRow(){return {damage:0,healing:0,mitigation:0};}
+  function blankState(signature=activeSignature()){
+    const out={teamSignature:signature,byJob:{}};
+    for(let job=0;job<CLASSES.length;job++)out.byJob[job]=blankRow();
+    return out;
+  }
+  function normalize(raw){
+    const signature=typeof raw?.teamSignature==='string'?raw.teamSignature:'';
+    const out=blankState(signature),src=raw&&typeof raw==='object'&&raw.byJob&&typeof raw.byJob==='object'?raw.byJob:{};
+    for(let job=0;job<CLASSES.length;job++){
+      const row=src[job]||src[String(job)]||{},clean=blankRow();
+      for(const key of ['damage','healing','mitigation']){
+        const n=Number(row[key]);
+        clean[key]=Number.isFinite(n)&&n>0?Math.min(1e15,n):0;
+      }
+      out.byJob[job]=clean;
+    }
+    return out;
+  }
+  function writeCache(){
+    if(!party||!cache)return;
+    try{localStorage.setItem(storageKey(),JSON.stringify(cache));}catch{}
+  }
+  function ensure(){
+    const key=storageKey(),signature=activeSignature();
+    if(!cache||cacheKey!==key){
+      cacheKey=key;
+      try{cache=normalize(JSON.parse(localStorage.getItem(key)||'null'));}catch{cache=blankState(signature);}
+    }
+    if(cache.teamSignature!==signature){
+      cache=blankState(signature);
+      writeCache();
+    }
+    return cache;
+  }
+  function persist(){
+    if(!party)return;
+    ensure();
+    writeCache();
+  }
+  globalThis.recordCombatContribution=function(hero,key,amount){
+    if(!party||!['damage','healing','mitigation'].includes(key))return;
+    const job=typeof hero==='number'?hero:hero?.job,n=Number(amount);
+    if(!Number.isInteger(job)||!party.active.includes(job)||!Number.isFinite(n)||n<=0)return;
+    const stats=ensure(),row=stats.byJob[job]||(stats.byJob[job]=blankRow());
+    row[key]=Math.min(1e15,(Number(row[key])||0)+n);
+  };
+  globalThis.resetCombatContribution=function(){
+    if(!party)return;
+    cache=blankState(activeSignature());cacheKey=storageKey();writeCache();save();render();
+  };
+  globalThis.setCombatContributionMetric=function(metric){
+    if(!['damage','healing','mitigation'].includes(metric))return;
+    selectedMetric=metric;
+    render();
+  };
+  globalThis.recordRegenContribution=function(target,healed){
+    const total=Number(healed);
+    if(!party||!target||!party.active.includes(target.job)||!Number.isFinite(total)||total<=0)return;
+    const rows=effects.filter(fx=>fx.target===heroKey(target)&&fx.kind==='regen'&&fx.until>partyClock&&Number(fx.value)>0);
+    const weight=rows.reduce((sum,fx)=>sum+Number(fx.value),0);
+    if(weight<=0)return;
+    for(const fx of rows){
+      const caster=party.members.find(h=>h.job===fx.source);
+      if(caster&&party.active.includes(caster.job))recordCombatContribution(caster,'healing',total*Number(fx.value)/weight);
+    }
+  };
+  globalThis.combatContributionPanel=function(){
+    if(!party)return '';
+    const stats=ensure(),fmt=n=>Math.round(Number(n)||0).toLocaleString('zh-TW');
+    const labels={damage:'傷害',healing:'治療',mitigation:'減傷'};
+    const active=party.active.map(job=>party.members.find(h=>h.job===job)).filter(Boolean);
+    const values=active.map(h=>({h,value:Number(stats.byJob[h.job]?.[selectedMetric])||0}));
+    const max=Math.max(0,...values.map(x=>x.value));
+    const bars=values.map(({h,value})=>{
+      const width=max>0?Math.max(value>0?2:0,Math.min(100,value/max*100)):0;
+      return '<div class="combat-contribution-row">'+
+        '<span class="combat-contribution-name" title="'+esc(characterName(h))+'">'+esc(characterName(h))+'</span>'+
+        '<div class="combat-contribution-track" aria-label="'+esc(characterName(h))+' '+labels[selectedMetric]+' '+fmt(value)+'"><div class="combat-contribution-fill" style="width:'+width+'%"></div></div>'+
+        '<span class="combat-contribution-value">'+fmt(value)+'</span></div>';
+    }).join('');
+    const tabs=['damage','healing','mitigation'].map(key=>'<button class="'+(selectedMetric===key?'active':'')+'" onclick="setCombatContributionMetric(\''+key+'\')">'+labels[key]+'</button>').join('');
+    return '<div class="combat-contribution-meter"><div class="combat-contribution-head"><b>隊伍戰鬥統計</b><button onclick="resetCombatContribution()" title="將目前隊伍的累積統計歸零">重置</button></div>'+
+      '<div class="combat-contribution-tabs">'+tabs+'</div>'+
+      '<div class="combat-contribution-bars">'+bars+'</div>'+
+      '<p class="small combat-contribution-note">僅統計目前出戰成員；更換出戰隊伍會自動重置。減傷只計護盾實際抵擋的傷害。</p></div>';
+  };
+
+  if(typeof save==='function'){
+    const baseSave=save;
+    save=function(show=false){persist();return baseSave(show);};
+  }
+  if(typeof newGame==='function'){
+    const baseNewGame=newGame;
+    newGame=function(){cache=null;cacheKey='';selectedMetric='damage';return baseNewGame();};
+  }
+})();
+</script>
+
 <script id="expedition-ui-tidy-patch">
 /* Update 27: compact expedition controls + lower-density battle journal. */
 (function installExpeditionUiTidy(){
@@ -3918,7 +4094,7 @@ render();
 
   function expeditionControlCard(){
     const mi=party.map,mode=party.difficulty||0;
-    return `<section class="panel battle-map-column expedition-control-card"><div class="control-head"><div><span class="eyebrow">EXPEDITION CONTROL</span><h2>探索控制</h2></div>${tooltip('探索控制','地圖、難度與倍速共用此面板。切換地圖或難度會結束目前遭遇。介面中的「回合」是指該角色每次輪到自己行動一次；技能與治療藥水等冷卻只在該角色行動時遞減 1，不受戰鬥倍速影響。自動喝水在角色回合開始時判定，且不會取消原本的攻擊。')}</div><div class="control-grid"><label class="control-row"><span>地圖</span><select aria-label="探索地圖" onchange="chooseMap(Number(this.value))">${MAPS.map((m,i)=>`<option value="${i}" ${i===mi?'selected':''} ${canVisit(i)?'':'disabled'}>${safeEsc(m.name)} · LV${m.min}${isFinal(i)?' 終局':'–'+m.max}</option>`).join('')}</select><button onclick="showRegionBestiary()" title="查看目前區域怪物、BOSS 關卡與掉落">圖鑑</button></label><label class="control-row"><span>難度</span><select aria-label="探索難度" onchange="changeDifficulty(this.value)">${MODES.map((d,i)=>`<option value="${i}" ${i===mode?'selected':''}>${safeEsc(d.name)}</option>`).join('')}</select>${tooltip('難度','切換難度會結束目前遭遇；不會恢復生命。詳細倍率可在冒險指南查看。')}</label><div class="control-row"><span>倍速</span><button onclick="toggleBattleRate()" title="點擊循環切換可用戰鬥倍速">${battleRate}×</button>${tooltip('戰鬥節奏','倍速只影響等待時間，不改變回合制冷卻與行動順序。')}</div></div>${bossBlock(mi)}${compactSupply()}</section>`;
+    return `<section class="panel battle-map-column expedition-control-card"><div class="control-head"><div><span class="eyebrow">EXPEDITION CONTROL</span><h2>探索控制</h2></div>${tooltip('探索控制','地圖、難度與倍速共用此面板。切換地圖或難度會結束目前遭遇。介面中的「回合」是指該角色每次輪到自己行動一次；技能與治療藥水等冷卻只在該角色行動時遞減 1，不受戰鬥倍速影響。自動喝水在角色回合開始時判定，且不會取消原本的攻擊。')}</div><div class="control-grid"><label class="control-row"><span>地圖</span><select aria-label="探索地圖" onchange="chooseMap(Number(this.value))">${MAPS.map((m,i)=>`<option value="${i}" ${i===mi?'selected':''} ${canVisit(i)?'':'disabled'}>${safeEsc(m.name)} · LV${m.min}${isFinal(i)?' 終局':'–'+m.max}</option>`).join('')}</select><button onclick="showRegionBestiary()" title="查看目前區域怪物、BOSS 關卡與掉落">圖鑑</button></label><label class="control-row"><span>難度</span><select aria-label="探索難度" onchange="changeDifficulty(this.value)">${MODES.map((d,i)=>`<option value="${i}" ${i===mode?'selected':''}>${safeEsc(d.name)}</option>`).join('')}</select>${tooltip('難度','切換難度會結束目前遭遇；不會恢復生命。詳細倍率可在冒險指南查看。')}</label><div class="control-row"><span>倍速</span><button onclick="toggleBattleRate()" title="點擊循環切換可用戰鬥倍速">${battleRate}×</button>${tooltip('戰鬥節奏','倍速只影響等待時間，不改變回合制冷卻與行動順序。')}</div></div>${bossBlock(mi)}${compactSupply()}${combatContributionPanel()}</section>`;
   }
 
   if(typeof battleView==='function'){
@@ -4282,7 +4458,7 @@ dialog[data-view="healing-settings"]>.actions button:first-child{flex:0 0 auto;m
     if(h.hp/v.hp>threshold||h.hp>=v.hp)return false;
     setHealPotionCount(item.id,healPotionCount(item.id)-1);
     const before=h.hp,amount=Math.max(1,Math.round(v.hp*item.healFraction));h.hp=Math.min(v.hp,h.hp+amount);
-    const actual=Math.max(0,Math.round(h.hp-before));h.healPotionCooldownRemaining=Math.max(0,Math.round(item.cooldown));
+    const actual=Math.max(0,Math.round(h.hp-before));if(actual>0)recordCombatContribution(h,'healing',actual);h.healPotionCooldownRemaining=Math.max(0,Math.round(item.cooldown));
     note(`${characterName(h)}自動使用${item.name} · 恢復 ${actual} 生命（最大生命 ${pct(item.healFraction)}%）· 冷卻 ${item.cooldown} 回合`);
     return true;
   }
@@ -4923,7 +5099,7 @@ if(state)render();
     for(const target of targets.filter(Boolean)){
       effects=effects.filter(e=>!(e.source===h.job&&e.skill===index&&e.target===target));
       effects.push({source:h.job,skill:index,target,kind:sk.kind,element:sk.element,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});
-      if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);if(ally)ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));}
+      if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);if(ally){const before=ally.hp;ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));const recovered=Math.max(0,ally.hp-before);if(recovered>0)recordCombatContribution(h,'healing',recovered);}}
     }
     note(characterName(h)+'施放 '+sk.name+' · '+Math.round(sk.duration)+' 回合');
   };
@@ -4948,6 +5124,7 @@ if(state)render();
       followup=Math.max(1,Math.round(followup*(1-Math.min(cap.guard,effectTotal(target.id,'guard')))));
       const dealt=Math.min(target.hp,followup);
       target.hp=Math.max(0,target.hp-dealt);
+      if(dealt>0)recordCombatContribution(caster,'damage',dealt);
       total+=dealt;
       note(`${fx.name}追打 [${ELEMENTS[element]}] → ${target.name} ${dealt} 傷害`);
     }
@@ -4965,7 +5142,10 @@ if(state)render();
     d=Math.max(1,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)));
     const actual=Math.min(e.hp,d);
     e.hp=Math.max(0,e.hp-d);
+    if(actual>0)recordCombatContribution(h,'damage',actual);
+    const beforeLifesteal=h.hp;
     h.hp=Math.min(v.hp,h.hp+actual*v.lifesteal);
+    const lifestealHealing=Math.max(0,h.hp-beforeLifesteal);if(lifestealHealing>0)recordCombatContribution(h,'healing',lifestealHealing);
     if(actual>0&&e.hp>0)triggerFollowupDebuffs(e);
     return actual;
   };
@@ -4976,14 +5156,15 @@ if(state)render();
     const dots=effects.filter(fx=>fx.target===e.id&&fx.until>partyClock&&(fx.kind==='dotAttack'||fx.kind==='dotMaxHp'));
     for(const fx of dots){
       if(e.hp<=0)break;
+      const caster=party?.members?.find(h=>h.job===fx.source);
       let raw=0;
       if(fx.kind==='dotAttack'){
-        const caster=party?.members?.find(h=>h.job===fx.source);
         if(caster)raw=battleStats(caster).atk*Math.max(0,Number(fx.value)||0);
       }else raw=(Number(e.maxhp)||Number(e.hp)||1)*Math.max(0,Number(fx.value)||0);
       // DOT is deliberately fixed damage: direct HP loss, no defense, resistance, guard, amp, reduction, crit or element factor.
       const dealt=Math.min(e.hp,Math.max(1,Math.round(raw)));
       e.hp=Math.max(0,e.hp-dealt);
+      if(dealt>0&&caster)recordCombatContribution(caster,'damage',dealt);
       total+=dealt;
       note(`${fx.name} → ${e.name} ${dealt} 持續傷害`);
     }
@@ -5726,90 +5907,246 @@ if(state)render();
 
 
 <style id="pending-gear-detailed-list-style">
-.pending-gear-bottom .pending-quality-groups{display:grid;grid-template-columns:1fr;gap:6px;margin-top:0}
-.pending-quality-details{border:1px solid var(--line);background:#141c1f;overflow:hidden}
-.pending-quality-details>summary{list-style:none;display:flex;align-items:center;gap:8px;min-height:34px;padding:6px 8px;cursor:pointer}
-.pending-quality-details>summary::-webkit-details-marker{display:none}
-.pending-quality-details>summary::before{content:'▸';flex:0 0 auto;color:var(--muted);font-size:10px}
-.pending-quality-details[open]>summary::before{content:'▾'}
-.pending-quality-details[open]>summary{border-bottom:1px solid var(--line)}
-.pending-quality-title{font-weight:700}
-.pending-quality-meta{margin-left:auto;white-space:nowrap;font-size:11px;color:var(--muted)}
-.pending-quality-body{padding:7px 8px 8px}
-.pending-quality-body>.actions{margin:0 0 7px;gap:4px}
-.pending-quality-body>.actions button{padding:4px 7px;font-size:11px}
-.pending-affix-stats{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px;align-items:start;padding:6px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px}
-.pending-affix-stats>b{white-space:nowrap;color:var(--muted)}
-.pending-affix-counts{display:flex;flex-wrap:wrap;gap:4px 10px;min-width:0}
-.pending-affix-count{white-space:nowrap}
-.pending-gear-lines{display:grid;margin-top:4px}
-.pending-gear-line{display:grid;grid-template-columns:minmax(200px,.9fr) minmax(260px,1.4fr);gap:8px;padding:6px 2px;border-bottom:1px solid var(--line);align-items:start}
-.pending-gear-line:last-child{border-bottom:0}
-.pending-gear-line-name{min-width:0;overflow-wrap:anywhere}
-.pending-gear-line-affixes{min-width:0}
-.pending-gear-line-affixes .affix{font-size:11px;line-height:1.45}
-.pending-gear-line-meta{display:block;margin-top:1px;color:var(--muted);font-size:10px}
+.pending-gear-bottom .pending-gear-expanded{max-height:520px;overflow-y:auto;overscroll-behavior:contain;padding-right:6px}
+.pending-gear-bottom .pending-quality-groups{display:grid;grid-template-columns:1fr;gap:7px;margin-top:8px}
+.pending-color-group{border:1px solid var(--line);background:#11191c}
+.pending-color-group>summary{position:relative;cursor:pointer;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:8px 9px 8px 24px;list-style:none;font-size:12px}
+.pending-color-group>summary::-webkit-details-marker{display:none}
+.pending-color-group>summary::before{content:'▸';position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:10px}
+.pending-color-group[open]>summary::before{content:'▾'}
+.pending-color-group-title{grid-column:2;justify-self:center;min-width:0;font-weight:800;text-align:center;white-space:nowrap}
+.pending-color-group-count{grid-column:1;grid-row:1;justify-self:end;color:var(--muted);font-weight:400;white-space:nowrap}
+.pending-color-group-tier{grid-column:3;grid-row:1;justify-self:end;min-width:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pending-color-group-body{border-top:1px solid var(--line);padding:7px}
+.pending-color-group-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:7px}
+.pending-color-group-actions button{padding:4px 7px;font-size:11px}
+.pending-color-group-actions .pending-quality-total{margin-left:auto;color:var(--muted);font-size:11px}
+.pending-gear-bottom .pending-affix-groups{display:grid;grid-template-columns:1fr;gap:6px}
+.pending-affix-group{border:1px solid var(--line);background:#141c1f;padding:7px 8px}
+.pending-affix-group-main{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
+.pending-affix-group-name{min-width:0;overflow-wrap:anywhere}
+.pending-affix-group-count{font-weight:800;white-space:nowrap}
+.pending-affix-group-meta{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:3px;color:var(--muted);font-size:11px}
+.pending-affix-group-actions{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.pending-affix-group-actions button{padding:4px 7px;font-size:11px;white-space:nowrap}
+.pending-affix-group-actions .danger{border-color:#79524e}
+.pending-gear-top-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pending-gear-top-actions .small{margin-right:auto}
 @media(max-width:780px){
-  .pending-quality-details>summary{flex-wrap:wrap}
-  .pending-quality-meta{width:100%;margin-left:18px}
-  .pending-affix-stats{grid-template-columns:1fr;gap:3px}
-  .pending-gear-line{grid-template-columns:1fr;gap:3px}
+  .pending-gear-bottom .pending-gear-expanded{max-height:460px}
+  .pending-affix-group-main{grid-template-columns:minmax(0,1fr) auto}
+  .pending-affix-group-actions{grid-column:1/-1;justify-content:stretch}
+  .pending-affix-group-actions button{flex:1 1 90px}
+  .pending-color-group-actions .pending-quality-total{width:100%;margin-left:0}
+  .pending-color-group>summary{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;padding-left:22px;font-size:11px}
+  .pending-color-group-count,.pending-color-group-tier{font-size:10px}
 }
 </style>
 <script id="pending-gear-detailed-list-system">
 (function installPendingGearDetailedList(){
-  globalThis.pendingGearQualityOpenState=globalThis.pendingGearQualityOpenState||{};
-  globalThis.setPendingGearQualityOpenState=function(q,open){globalThis.pendingGearQualityOpenState[q]=!!open;};
+  if(!globalThis.__pendingQualityFoldOpen)globalThis.__pendingQualityFoldOpen={0:true,1:true,2:true,3:true};
+  globalThis.setPendingQualityFold=function(q,open){globalThis.__pendingQualityFoldOpen[q]=!!open;};
 
-  function affixGroupLabel(a,g){
-    if(!a)return '無詞條';
-    var label=typeof affixLabel==='function'?String(affixLabel(a,g)||'未知詞條'):'詞條 '+String(a.type??'?');
-    label=label.replace(/\s+(?:\+|−|-)\s*\d+(?:\.\d+)?(?:%| 回合)?$/,'');
-    var rank=Math.max(0,Math.min(3,Number(a.rank)||0));
-    var rankName=(typeof AFFIX_RANK!=='undefined'&&AFFIX_RANK[rank])||'普通';
-    return {label:'['+rankName+'] '+label,rank:rank};
+  function namedAffixName(kind,id){
+    if(!id)return kind==='prefix'?'無前綴':'無後綴';
+    var power=globalThis.__EMBERWILD_EQUIPMENT_POWER||{};
+    var rows=kind==='prefix'?(power.prefixes||[]):(power.suffixes||[]);
+    var row=rows.find(function(x){return x&&x.id===id;});
+    return row&&row.name?String(row.name):String(id);
   }
 
-  function affixCounts(list){
+  function qualityName(q){
+    return (Array.isArray(AFFIX_RANK)&&AFFIX_RANK[q])||(Array.isArray(QUALITY_NAMES)&&QUALITY_NAMES[q])||('品質 '+q);
+  }
+
+  function pendingGearGroupMeta(g){
+    var boss=!!(g&&g.boss!==undefined);
+    var quality=Math.max(0,Math.min(3,typeof gearQualityRank==='function'?gearQualityRank(g):0));
+    var name=typeof gearName==='function'?String(gearName(g)||g&&g.name||'裝備'):String(g&&g.name||'裝備');
+    var prefixId=boss?'':String(g&&g.prefixId||'');
+    var suffixId=boss?'':String(g&&g.suffixId||'');
+    var key=[
+      quality,
+      boss?'boss':'normal',
+      g&&g.job!==undefined?g.job:'',
+      g&&g.slot!==undefined?g.slot:'',
+      g&&g.form!==undefined?g.form:'',
+      prefixId,
+      suffixId,
+      name
+    ].join('|');
+    return {
+      key:key,
+      quality:quality,
+      name:name,
+      boss:boss,
+      prefix:namedAffixName('prefix',prefixId),
+      suffix:namedAffixName('suffix',suffixId)
+    };
+  }
+
+  function pendingGearGroups(source){
+    var map=new Map(),rows=Array.isArray(source)?source:pendingGearLoot;
+    for(const g of rows){
+      var meta=pendingGearGroupMeta(g),group=map.get(meta.key);
+      if(group)group.list.push(g);
+      else map.set(meta.key,{meta:meta,list:[g]});
+    }
+    return Array.from(map.values());
+  }
+
+  function pendingQualityRows(){
+    var rows=[];
+    for(var q=0;q<4;q++){
+      var list=pendingGearLoot.filter(function(g){return gearQualityRank(g)===q;});
+      if(list.length)rows.push({q:q,name:qualityName(q),list:list,groups:pendingGearGroups(list)});
+    }
+    return rows;
+  }
+
+  function tierSummary(list){
     var counts=new Map();
-    function add(label,rank){
-      var key=rank+'|'+label,old=counts.get(key);
-      if(old)old.count++;
-      else counts.set(key,{label:label,rank:rank,count:1});
-    }
     for(const g of list){
-      if(g&&g.boss!==undefined){add('BOSS 專屬',3);continue;}
-      var affixes=Array.isArray(g&&g.affix)?g.affix:[];
-      if(!affixes.length){add('無隨機詞條',0);continue;}
-      for(const a of affixes){var item=affixGroupLabel(a,g);add(item.label,item.rank);}
+      var tier=Number.isInteger(g&&g.powerTier)?g.powerTier:null;
+      var key=tier===null?'T?':'T'+tier;
+      counts.set(key,(counts.get(key)||0)+1);
     }
-    return Array.from(counts.values()).sort(function(a,b){return b.count-a.count||b.rank-a.rank||a.label.localeCompare(b.label,'zh-Hant');});
+    return Array.from(counts.entries()).sort(function(a,b){
+      var na=Number(a[0].slice(1)),nb=Number(b[0].slice(1));
+      if(Number.isNaN(na)&&Number.isNaN(nb))return 0;
+      if(Number.isNaN(na))return 1;
+      if(Number.isNaN(nb))return -1;
+      return na-nb;
+    }).map(function(x){return x[0]+' ×'+x[1];}).join(' · ');
   }
 
-  function itemMeta(g){
-    var job=g&&g.slot===1?'全職業':((CLASSES[g&&g.job]&&CLASSES[g.job].name)||'未知職業');
-    var slot=(CLASS_GEAR[g&&g.job]&&CLASS_GEAR[g.job][g.slot])||['武器','護甲','副手／飾品'][g&&g.slot]||'裝備';
-    var t=Number.isInteger(g&&g.powerTier)?'T'+g.powerTier:'';
-    return [job,slot,t,g&&g.boss!==undefined?'BOSS 專屬':''].filter(Boolean).join(' · ');
+  function clonePlain(v){return JSON.parse(JSON.stringify(v||{}));}
+  function economySnapshot(){
+    return {
+      gold:state.gold,ore:state.ore,dust:state.dust,potions:state.potions,
+      materials:clonePlain(state.materials),consumables:clonePlain(state.consumables),
+      gems:Array.isArray(state.gems)?state.gems.slice():[]
+    };
+  }
+  function restoreObject(target,source){
+    for(const k of Object.keys(target||{}))delete target[k];
+    Object.assign(target,source||{});
+  }
+  function restoreEconomy(s){
+    state.gold=s.gold;state.ore=s.ore;state.dust=s.dust;state.potions=s.potions;
+    restoreObject(state.materials,s.materials);
+    restoreObject(state.consumables,s.consumables);
+    if(Array.isArray(state.gems))state.gems.splice(0,state.gems.length,...s.gems);
+  }
+
+  function findPendingGroup(key){
+    return pendingGearGroups().find(function(x){return x.meta.key===key;})||null;
+  }
+  function pendingNeedsConfirm(list){
+    return list.some(function(g){return gearQualityRank(g)>=1||g.boss!==undefined;});
+  }
+  function confirmPendingDispose(list,mode,label){
+    if(!pendingNeedsConfirm(list))return true;
+    var verb=mode==='sell'?'販售':'分解';
+    var total=mode==='sell'?list.reduce(function(n,g){return n+(typeof equipmentSellPrice==='function'?equipmentSellPrice(g):0);},0):0;
+    var boss=list.some(function(g){return g.boss!==undefined;});
+    return confirm('確定要'+verb+' '+list.length+' 件'+label+'？'+(mode==='sell'?'\n可獲得 '+total+' 金幣。':'')+'\n精良、稀有、傳說裝備的'+verb+'需要再次確認，操作後無法復原。'+(boss?'\n其中包含 BOSS 專屬裝備。':''));
+  }
+
+  function claimPendingList(list,label){
+    if(!list.length)return toast('沒有可領取的'+label);
+    var room=Math.max(0,RULES.bagCapacity-state.bag.length);
+    if(!room)return toast('裝備背包已滿');
+    var take=list.slice(0,room),ids=new Set(take.map(function(g){return g.id;}));
+    var oldPending=pendingGearLoot.slice(),oldBag=state.bag.slice();
+    state.bag.push.apply(state.bag,take);
+    pendingGearLoot=pendingGearLoot.filter(function(g){return !ids.has(g.id);});
+    if(!save()){
+      state.bag.splice(0,state.bag.length,...oldBag);
+      pendingGearLoot=oldPending;
+      return toast('領取失敗：儲存失敗');
+    }
+    render();
+    toast('已領取 '+take.length+' 件'+label+(take.length<list.length?'；背包已滿':''));
+  }
+
+  function disposePendingList(list,mode,label){
+    if(!list.length)return toast('沒有可處理的'+label);
+    if(!confirmPendingDispose(list,mode,label))return;
+    var oldPending=pendingGearLoot.slice(),snap=economySnapshot();
+    try{
+      if(mode==='sell'){
+        var total=list.reduce(function(n,g){return n+(typeof equipmentSellPrice==='function'?equipmentSellPrice(g):0);},0);
+        state.gold+=total;
+      }else{
+        for(const g of list)grantSalvageRewards(g,false);
+      }
+      var ids=new Set(list.map(function(g){return g.id;}));
+      pendingGearLoot=pendingGearLoot.filter(function(g){return !ids.has(g.id);});
+      if(!save())throw Error('儲存失敗');
+      render();
+      toast('已'+(mode==='sell'?'販售 ':'分解 ')+list.length+' 件'+label+(mode==='sell'?'，獲得 '+total+' 金幣':''));
+    }catch(e){
+      pendingGearLoot=oldPending;
+      restoreEconomy(snap);
+      toast('操作失敗：'+e.message);
+    }
+  }
+
+  globalThis.claimPendingGearGroup=function(key){
+    var group=findPendingGroup(key);
+    if(!group)return toast('這組待領取裝備已不存在');
+    claimPendingList(group.list,group.meta.name);
+  };
+  globalThis.sellPendingGearGroup=function(key){
+    var group=findPendingGroup(key);
+    if(!group)return toast('這組待領取裝備已不存在');
+    disposePendingList(group.list,'sell',group.meta.name);
+  };
+  globalThis.salvagePendingGearGroup=function(key){
+    var group=findPendingGroup(key);
+    if(!group)return toast('這組待領取裝備已不存在');
+    disposePendingList(group.list,'salvage',group.meta.name);
+  };
+
+  globalThis.claimPendingQuality=function(q){
+    var row=pendingQualityRows().find(function(x){return x.q===Number(q);});
+    if(!row)return toast('沒有'+qualityName(Number(q))+'待領取裝備');
+    claimPendingList(row.list,qualityName(row.q)+'裝備');
+  };
+  globalThis.sellPendingQuality=function(q){
+    var row=pendingQualityRows().find(function(x){return x.q===Number(q);});
+    if(!row)return toast('沒有'+qualityName(Number(q))+'待領取裝備');
+    disposePendingList(row.list,'sell',qualityName(row.q)+'裝備');
+  };
+  globalThis.salvagePendingQuality=function(q){
+    var row=pendingQualityRows().find(function(x){return x.q===Number(q);});
+    if(!row)return toast('沒有'+qualityName(Number(q))+'待領取裝備');
+    disposePendingList(row.list,'salvage',qualityName(row.q)+'裝備');
+  };
+
+  function groupHtml(group){
+    var g=group.list[0],meta=group.meta;
+    var affixText=meta.boss?'BOSS 專屬':('前綴：'+meta.prefix+' · 後綴：'+meta.suffix);
+    var claimDisabled=state.bag.length>=RULES.bagCapacity?' disabled':'';
+    var totalSell=group.list.reduce(function(n,x){return n+(typeof equipmentSellPrice==='function'?equipmentSellPrice(x):0);},0);
+    return '<section class="pending-affix-group"><div class="pending-affix-group-main"><div class="pending-affix-group-name">'+equipmentNameHTML(g)+'<div class="pending-affix-group-meta"><span>'+esc(affixText)+'</span><span>'+esc(tierSummary(group.list))+'</span></div></div><span class="pending-affix-group-count">×'+group.list.length+'</span><div class="pending-affix-group-actions"><button data-group="'+esc(meta.key)+'" onclick="claimPendingGearGroup(this.dataset.group)"'+claimDisabled+'>全領</button><button data-group="'+esc(meta.key)+'" onclick="salvagePendingGearGroup(this.dataset.group)">全分解</button><button data-group="'+esc(meta.key)+'" onclick="sellPendingGearGroup(this.dataset.group)">全賣 · '+totalSell+'金</button></div></div></section>';
   }
 
   pendingGearBottomView=function(){
-    var rows=pendingGearQualityCounts(),total=rows.reduce(function(n,r){return n+r.list.length;},0);
-    var summary=rows.map(function(r){return '<span class="pending-gear-summary-count effect-quality-'+r.q+'">'+esc(r.name)+' '+r.list.length+' 件</span>';}).join('');
-    var groups=rows.filter(function(r){return r.list.length;}).map(function(r){
-      var totalSell=r.list.reduce(function(n,g){return n+(typeof equipmentSellPrice==='function'?equipmentSellPrice(g):0);},0);
-      var stats=affixCounts(r.list);
-      var statHtml=stats.map(function(x){return '<span class="pending-affix-count effect-quality-'+x.rank+'">'+esc(x.label)+' ×'+x.count+'</span>';}).join('')||'<span class="small">無詞綴資料</span>';
-      var itemRows=r.list.map(function(g){
-        var affixes=g&&g.boss!==undefined?'<span class="small">BOSS 專屬裝備</span>':(Array.isArray(g&&g.affix)&&g.affix.length?g.affix.map(function(a){return affixHTML(a,g);}).join(''):'<span class="small">無隨機詞條</span>');
-        return '<div class="pending-gear-line"><div class="pending-gear-line-name">'+equipmentNameHTML(g)+'<span class="pending-gear-line-meta">'+esc(itemMeta(g))+'</span></div><div class="pending-gear-line-affixes">'+affixes+'</div></div>';
-      }).join('');
-      var open=globalThis.pendingGearQualityOpenState[r.q]?' open':'';
-      return '<details class="pending-quality-details effect-quality-'+r.q+'"'+open+' ontoggle="setPendingGearQualityOpenState('+r.q+',this.open)"><summary><span class="pending-quality-title">'+esc(r.name)+' '+r.list.length+' 件</span><span class="pending-quality-meta">合計販售 '+totalSell+' 金幣</span></summary><div class="pending-quality-body"><div class="actions"><button onclick="claimPendingQuality('+r.q+')">領取全部'+esc(r.name)+'</button><button onclick="salvagePendingQuality('+r.q+')">分解全部'+esc(r.name)+'</button><button onclick="sellPendingQuality('+r.q+')">販售全部'+esc(r.name)+' · '+totalSell+'金</button></div><div class="pending-affix-stats"><b>詞綴統計</b><div class="pending-affix-counts">'+statHtml+'</div></div><div class="pending-gear-lines">'+itemRows+'</div></div></details>';
+    var qualityRows=pendingQualityRows();
+    var total=qualityRows.reduce(function(n,r){return n+r.list.length;},0);
+    var groupCount=qualityRows.reduce(function(n,r){return n+r.groups.length;},0);
+    var qualityHtml=qualityRows.map(function(row){
+      var totalSell=row.list.reduce(function(n,g){return n+(typeof equipmentSellPrice==='function'?equipmentSellPrice(g):0);},0);
+      var claimDisabled=state.bag.length>=RULES.bagCapacity?' disabled':'';
+      var open=globalThis.__pendingQualityFoldOpen[row.q]?' open':'';
+      return '<details class="pending-color-group effect-quality-'+row.q+'"'+open+' ontoggle="setPendingQualityFold('+row.q+',this.open)"><summary><span class="pending-color-group-count">'+row.list.length+' 件 · '+row.groups.length+' 組</span><span class="pending-color-group-title">'+esc(row.name)+'</span><span class="pending-color-group-tier">'+esc(tierSummary(row.list))+'</span></summary><div class="pending-color-group-body"><div class="pending-color-group-actions"><button onclick="claimPendingQuality('+row.q+')"'+claimDisabled+'>全領</button><button onclick="salvagePendingQuality('+row.q+')">全分解</button><button onclick="sellPendingQuality('+row.q+')">全賣 · '+totalSell+'金</button><span class="pending-quality-total">依最高詞條等級分組</span></div><div class="pending-affix-groups">'+row.groups.map(groupHtml).join('')+'</div></div></details>';
     }).join('');
+
     var outerOpen=pendingGearPanelCollapsed?'':' open';
-    var disabled=!total||state.bag.length>=RULES.bagCapacity?' disabled':'';
-    return '<details class="panel pending-gear-panel pending-gear-bottom"'+outerOpen+' ontoggle="pendingGearPanelCollapsed=!this.open"><summary><span class="pending-gear-summary-title">待領取裝備 '+total+' 件</span><span class="pending-gear-summary-counts">'+summary+'</span></summary><div class="pending-gear-expanded"><div class="row"><span class="small">依品質展開可查看全部待領取裝備與詞綴統計；戰鬥掉落在領取前不會改變背包順序。</span><button onclick="claimPendingGearLoot()"'+disabled+'>全部領取</button></div><div class="pending-quality-groups">'+(groups||'<p class="small">目前沒有待領取裝備。</p>')+'</div></div></details>';
+    var claimAllDisabled=!total||state.bag.length>=RULES.bagCapacity?' disabled':'';
+    return '<details class="panel pending-gear-panel pending-gear-bottom"'+outerOpen+' ontoggle="pendingGearPanelCollapsed=!this.open"><summary><span class="pending-gear-summary-title">待領取裝備 '+total+' 件 · '+groupCount+' 組</span></summary><div class="pending-gear-expanded"><div class="pending-gear-top-actions"><span class="small">先依最高詞條等級（裝備顏色）分組，各色內仍依前綴＋後綴與裝備名稱分組。精良以上販售／分解會再次確認。</span><button onclick="claimPendingGearLoot()"'+claimAllDisabled+'>全部領取</button></div><div class="pending-quality-groups">'+(qualityHtml||'<p class="small">目前沒有待領取裝備。</p>')+'</div></div></details>';
   };
 
   if(state)render();
