@@ -5363,9 +5363,9 @@ if(state)render();
   function prefixById(id){return EQUIPMENT_POWER.prefixes.find(x=>x.id===id)||null;}
   function suffixById(id){return EQUIPMENT_POWER.suffixes.find(x=>x.id===id)||null;}
   function eligibleRows(rows,tier,slot){return rows.filter(x=>tier>=x.tierMin&&tier<=x.tierMax&&x.weight>0&&x.slots.includes(slot));}
-  function deterministicRow(rows,tier,slot,offset=0){const eligible=eligibleRows(rows,tier,slot);return eligible.length?eligible[(Math.max(1,Number(tier)||1)+slot+offset)%eligible.length]:rows.find(x=>x.slots.includes(slot))||rows[0]||null;}
+  function deterministicRow(rows,tier,slot,offset=0){const eligible=eligibleRows(rows,tier,slot);return eligible.length?eligible[(Math.max(1,Number(tier)||1)+slot+offset)%eligible.length]:null;}
   function rollWeighted(rows){const total=rows.reduce((n,x)=>n+Math.max(0,Number(x.weight)||0),0);if(total<=0)return rows[0]||null;let r=Math.random()*total;for(const x of rows){r-=Math.max(0,Number(x.weight)||0);if(r<=0)return x;}return rows.at(-1)||null;}
-  function rollNamedAffix(rows,tier,slot){return rollWeighted(eligibleRows(rows,tier,slot))||deterministicRow(rows,tier,slot);}
+  function rollNamedAffix(rows,tier,slot){return rollWeighted(eligibleRows(rows,tier,slot));}
   function bossProfileId(g){const group=MAPS[g?.region]?.parallel?'parallel':'legacy',family=Math.max(0,Math.min(5,Number(g?.boss)||0)),high=(Number(g?.tier)||1)>6;return group+'_'+(high?'high':'low')+'_'+family;}
   function bossProfileForGear(g){if(!g||g.boss===undefined)return null;const id=bossProfileId(g);return EQUIPMENT_POWER.bossAffixes.find(x=>x.id===id)||DEFAULT_BOSS_AFFIXES.find(x=>x.id===id)||null;}
   function strengthAnchor(mode){return mode===2?10:mode===1?5:1;}
@@ -5374,7 +5374,9 @@ if(state)render();
 
   function ensureGearIdentityMeta(g,{freshNames=false,freshPower=false,mode=null}={}){
     if(!g||typeof g!=='object'||g.slot===undefined)return g;
-    const tier=Math.max(1,Math.min(12,Number(g.tier)||1)),slot=Math.max(0,Math.min(2,Number(g.slot)||0));
+    const sourceMode=mode===null?Math.max(0,Math.min(2,Number(g.difficulty)||0)):Math.max(0,Math.min(2,Number(mode)||0));
+    if(freshPower||!Number.isInteger(g.powerTier)||g.powerTier<1||g.powerTier>10)g.powerTier=freshPower?rollStrengthTier(sourceMode):strengthAnchor(sourceMode);
+    const tier=Math.max(1,Math.min(10,Number(g.powerTier)||strengthAnchor(sourceMode))),slot=Math.max(0,Math.min(2,Number(g.slot)||0));
     if(g.boss===undefined){
       if(freshNames||!prefixById(g.prefixId)||!prefixById(g.prefixId).slots.includes(slot))g.prefixId=(freshNames?rollNamedAffix(EQUIPMENT_POWER.prefixes,tier,slot):deterministicRow(EQUIPMENT_POWER.prefixes,tier,slot,0))?.id||'';
       if(freshNames||!suffixById(g.suffixId)||!suffixById(g.suffixId).slots.includes(slot))g.suffixId=(freshNames?rollNamedAffix(EQUIPMENT_POWER.suffixes,tier,slot):deterministicRow(EQUIPMENT_POWER.suffixes,tier,slot,3))?.id||'';
@@ -5382,8 +5384,6 @@ if(state)render();
       g.prefixId='';g.suffixId='';g.affix=[];delete g.affixLock;
       g.bossQualityRank=Math.max(0,Math.min(3,Number(GS('equipment.boss.affixRankByDifficulty',[2,2,3])[g.difficulty||0])||2));
     }
-    const sourceMode=mode===null?Math.max(0,Math.min(2,Number(g.difficulty)||0)):Math.max(0,Math.min(2,Number(mode)||0));
-    if(freshPower||!Number.isInteger(g.powerTier)||g.powerTier<1||g.powerTier>10)g.powerTier=freshPower?rollStrengthTier(sourceMode):strengthAnchor(sourceMode);
     return g;
   }
   function allKnownGear(){const out=[];for(const h of party?.members||[])for(const g of h?.bag||[])out.push(g);if(state&&!party?.members?.includes(state))for(const g of state.bag||[])out.push(g);if(Array.isArray(globalThis.pendingGearLoot))out.push(...globalThis.pendingGearLoot);else if(typeof pendingGearLoot!=='undefined'&&Array.isArray(pendingGearLoot))out.push(...pendingGearLoot);return [...new Map(out.filter(Boolean).map(g=>[g.id,g])).values()];}
@@ -5432,7 +5432,7 @@ if(state)render();
   const identityGearFactoryBase=gear;
   gear=function(tier=1,slot=rand(3),rar=0,job=null){const g=identityGearFactoryBase(tier,slot,rar,job);ensureGearIdentityMeta(g,{freshNames:true,freshPower:true,mode:0});g.name=gearName(g);return g;};
   const identityModeAffixesBase=modeAffixes;
-  modeAffixes=function(g,mode){const out=identityModeAffixesBase(g,mode);if(g){g.difficulty=Math.max(0,Math.min(2,Number(mode)||0));ensureGearIdentityMeta(g,{freshPower:true,mode:g.difficulty});g.name=gearName(g);}return out;};
+  modeAffixes=function(g,mode){const out=identityModeAffixesBase(g,mode);if(g){g.difficulty=Math.max(0,Math.min(2,Number(mode)||0));ensureGearIdentityMeta(g,{freshNames:true,freshPower:true,mode:g.difficulty});g.name=gearName(g);}return out;};
   const identityBossGearBase=bossGear;
   bossGear=function(mi,job=state.job,mode=state.difficulty||0){const g=identityBossGearBase(mi,job,mode);g.affix=[];delete g.affixLock;ensureGearIdentityMeta(g,{freshPower:true,mode});g.name=gearName(g);return g;};
 
