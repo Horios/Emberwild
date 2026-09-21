@@ -5137,11 +5137,11 @@ if(state)render();
   ];
 
   const FAMILY_BOSS_EFFECTS=[
-    [fx('gearHpPct',12),fx('lifesteal',4),fx('bossDamagePct',8)],
+    [fx('gearAtkPct',10),fx('lifesteal',4),fx('bossDamagePct',8)],
     [fx('gearDefPct',12),fx('pierce',8),fx('allCooldownReduction',1)],
-    [fx('gearAtkPct',10),fx('basicElement','shadow'),fx('evasion',6)],
-    [fx('gearDefPct',10),fx('basicElement','ice'),fx('critDamage',18)],
-    [fx('gearAtkPct',12),fx('basicElement','fire'),fx('elementBonus',10)],
+    [fx('gearHpPct',12),fx('basicElement','shadow'),fx('evasion',6)],
+    [fx('gearAtkPct',10),fx('basicElement','ice'),fx('critDamage',18)],
+    [fx('gearHpPct',12),fx('basicElement','fire'),fx('elementBonus',10)],
     [fx('gearAtkPct',15),fx('crit',7),fx('bossDamagePct',12)]
   ];
   function boostedEffect(effect,high,parallel){
@@ -5579,7 +5579,7 @@ if(state)render();
     }
     const n=state?.consumables?.[POWER_ITEM_ID]||0,b=gearStatBreakdown(g);
     const card='<section class="forge-power-reroll"><h3>強度階級重鑄</h3><p>目前 <b>T'+g.powerTier+'</b>（'+esc(sourceDifficulty(g))+'來源，基礎能力 ×'+Number(b.mult.toFixed(3))+'）。T 級不顯示在裝備名稱。</p><p class="small">'+esc(EQUIPMENT_POWER.rerollItem.name)+' ×'+n+' · 重骰依原始掉落難度的 T1～T10 權重。</p><div class="actions"><button onclick="rerollEquipmentPowerTier(\''+g.id+'\')" '+(n<1?'disabled':'')+'>消耗 1 個重骰階級</button></div></section>';
-    return html.replace('</section></div></section>',card+'</section></div></section>');
+    const tail=html.lastIndexOf('</section>');return tail>=0?html.slice(0,tail)+card+html.slice(tail):html+card;
   };
 
   globalThis.rerollEquipmentPowerTier=function(id){
