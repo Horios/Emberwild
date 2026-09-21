@@ -2536,7 +2536,48 @@ try{
 // equipment actions, but show a dense selectable list at left and one detailed
 // equipment pane at right.
 let inventorySelectedGearId=null;
+let inventorySortKey='quality';
+let inventorySortDirection='desc';
 function selectInventoryGear(id){inventorySelectedGearId=id;render();}
+function inventorySortValue(g,key){
+  if(key==='quality')return gearQualityRank(g);
+  if(key==='plus')return Number(g.plus)||0;
+  if(key==='job')return g.slot===1?-1:(Number(g.job)||0);
+  return 0;
+}
+function sortedFilteredGear(){
+  const items=[...filteredGear()];
+  items.sort((a,b)=>{
+    let diff=0;
+    if(inventorySortKey==='job'){
+      diff=inventorySortValue(a,'job')-inventorySortValue(b,'job');
+      if(diff!==0)return inventorySortDirection==='asc'?diff:-diff;
+      const slotDiff=(Number(a.slot)||0)-(Number(b.slot)||0);
+      if(slotDiff!==0)return inventorySortDirection==='asc'?slotDiff:-slotDiff;
+    }else{
+      diff=inventorySortValue(a,inventorySortKey)-inventorySortValue(b,inventorySortKey);
+      if(diff!==0)return inventorySortDirection==='asc'?diff:-diff;
+    }
+    const qualityDiff=gearQualityRank(b)-gearQualityRank(a);if(qualityDiff)return qualityDiff;
+    const plusDiff=(Number(b.plus)||0)-(Number(a.plus)||0);if(plusDiff)return plusDiff;
+    const tierDiff=(Number(b.tier)||0)-(Number(a.tier)||0);if(tierDiff)return tierDiff;
+    return equipmentDisplayName(a).localeCompare(equipmentDisplayName(b),'zh-Hant');
+  });
+  return items;
+}
+function inventorySortControls(){
+  const options=[['quality','稀有度'],['plus','強化度'],['job','職業']];
+  return '<div class="inventory-sortbar"><label>排序 <select onchange="setInventorySort(this.value)">'+
+    options.map(([value,label])=>'<option value="'+value+'" '+(inventorySortKey===value?'selected':'')+'>'+label+'</option>').join('')+
+    '</select></label><button type="button" onclick="toggleInventorySortDirection()">'+(inventorySortDirection==='desc'?'高 → 低':'低 → 高')+'</button></div>';
+}
+globalThis.setInventorySort=function(key){
+  if(!['quality','plus','job'].includes(key))return;
+  inventorySortKey=key;render();
+};
+globalThis.toggleInventorySortDirection=function(){
+  inventorySortDirection=inventorySortDirection==='desc'?'asc':'desc';render();
+};
 function inventoryGearListItem(g,selected){
   const wearer=gearWearer(g.id),worn=!!wearer,locked=!!g.locked;
   return `<button type="button" class="inventory-list-item ${selected?'selected':''}" onclick="selectInventoryGear('${g.id}')" title="${esc(equipmentDisplayName(g))}">
@@ -2561,11 +2602,11 @@ function inventoryGearDetail(g){
   </div>`;
 }
 inlineInventoryView=function(){
-  const items=filteredGear();
+  const items=sortedFilteredGear();
   if(items.length && !items.some(g=>g.id===inventorySelectedGearId))inventorySelectedGearId=items[0].id;
   if(!items.length)inventorySelectedGearId=null;
   const selected=items.find(g=>g.id===inventorySelectedGearId)||null;
-  return `<section class="panel compact-inventory-panel">${resourceLine()}${gearFilters()}${bulkSalvageControls()}
+  return `<section class="panel compact-inventory-panel">${resourceLine()}${gearFilters()}${inventorySortControls()}${bulkSalvageControls()}
     <div class="inventory-master-detail">
       <section class="inventory-master-pane">
         <div class="inventory-master-heading"><b>裝備列表</b><span class="small">顯示 ${items.length} 件</span></div>
@@ -2584,6 +2625,10 @@ inlineInventoryView=function(){
   .inventory-master-pane,.inventory-detail-wrap{min-height:0;border:1px solid var(--line);background:#141c1f}
   .inventory-master-pane{display:grid;grid-template-rows:38px minmax(0,1fr);overflow:hidden}
   .inventory-master-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);background:#182124}
+  .inventory-sortbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .inventory-sortbar label{display:flex;align-items:center;gap:5px;font-size:12px}
+  .inventory-sortbar select{min-width:108px}
+  .inventory-sortbar button{padding:4px 8px;font-size:11px}
   .inventory-list-scroll{display:block;margin:0;overflow:auto;min-height:0;scrollbar-gutter:stable}
   .inventory-list-item{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:22px 18px;width:100%;height:48px;padding:4px 8px;text-align:left;border:0;border-bottom:1px solid #2e3b3f;border-radius:0;background:transparent;gap:0 8px;overflow:hidden}
   .inventory-list-item:hover{background:#202c30}.inventory-list-item.selected{background:#2a383c;box-shadow:inset 3px 0 var(--green)}
