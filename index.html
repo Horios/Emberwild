@@ -5687,4 +5687,42 @@ if(state)render();
 </script>
 
 
+<style id="inventory-control-fold-style">
+.inventory-control-fold{margin:7px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#151d20}
+.inventory-control-fold+ .inventory-control-fold{margin-top:-1px}
+.inventory-control-fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px;min-height:30px;padding:4px 8px;color:#d9dfdc;font-size:12px;font-weight:600;user-select:none}
+.inventory-control-fold>summary::-webkit-details-marker{display:none}
+.inventory-control-fold>summary::before{content:"▸";width:12px;color:var(--muted)}
+.inventory-control-fold[open]>summary::before{content:"▾"}
+.inventory-control-fold[open]>summary{border-bottom:1px solid var(--line);background:#182124}
+.inventory-control-fold-body{padding:6px 9px 8px}
+.inventory-control-fold-body>.filters{margin:0}
+.inventory-control-fold-body>.small:first-child{margin-top:0}
+.inventory-control-fold-body>.ui-help:last-child{margin-bottom:0}
+.inventory-control-fold-body>.bulk-sell-actions:last-child{margin-bottom:0}
+</style>
+<script id="inventory-control-fold-system">
+(function installInventoryControlFolds(){
+  globalThis.inventoryFilterFoldOpen=globalThis.inventoryFilterFoldOpen??false;
+  globalThis.inventoryDisposeFoldOpen=globalThis.inventoryDisposeFoldOpen??false;
+  globalThis.setInventoryFoldState=function(kind,open){
+    if(kind==='filters')globalThis.inventoryFilterFoldOpen=!!open;
+    else if(kind==='dispose')globalThis.inventoryDisposeFoldOpen=!!open;
+  };
+
+  const foldGearFiltersBase=gearFilters;
+  gearFilters=function(){
+    return '<details class="inventory-control-fold inventory-filter-fold" '+(globalThis.inventoryFilterFoldOpen?'open':'')+' ontoggle="setInventoryFoldState(\'filters\',this.open)"><summary>篩選</summary><div class="inventory-control-fold-body">'+foldGearFiltersBase()+'</div></details>';
+  };
+
+  const foldBulkDisposeBase=bulkSalvageControls;
+  bulkSalvageControls=function(){
+    return '<details class="inventory-control-fold inventory-dispose-fold" '+(globalThis.inventoryDisposeFoldOpen?'open':'')+' ontoggle="setInventoryFoldState(\'dispose\',this.open)"><summary>批次分解／販售</summary><div class="inventory-control-fold-body">'+foldBulkDisposeBase()+'</div></details>';
+  };
+
+  if(state)render();
+})();
+</script>
+
+
 </body></html>
