@@ -5352,4 +5352,132 @@ if(state)render();
   applyHeight();
 })();
 </script>
+<script id="weapon-basic-element-and-initiative-affix">
+/* Test update: basic attacks are neutral by default. Selected weapon forms can
+   override basic-attack element, and a fixed weapon affix can move the wielder
+   one place forward on the following round after a basic attack. */
+(function installWeaponBasicEffects(){
+  const VALID_BASIC_ELEMENTS=new Set(['fire','ice','wind','light','shadow']);
+  function equippedWeaponForm(h){
+    const weapon=equipment(h).find(g=>g.slot===0);
+    return weapon?itemForm(weapon):null;
+  }
+  function weaponAdvanceSteps(h){
+    const form=equippedWeaponForm(h),n=Number(form?.exclusive?.basicAdvanceNextRound)||0;
+    return Math.max(0,Math.min(5,Math.round(n)));
+  }
+
+  // All jobs are neutral by default. Only an active imbue or an explicit
+  // weapon-form element changes the basic attack element.
+  weaponElement=function(h){
+    const imbue=activeSupply(h,'imbue');
+    if(imbue&&VALID_BASIC_ELEMENTS.has(imbue.element))return imbue.element;
+    const element=equippedWeaponForm(h)?.element;
+    return VALID_BASIC_ELEMENTS.has(element)?element:'physical';
+  };
+
+  // Give a small selection of weapon variants explicit identity effects.
+  // Existing elemental mage weapons remain elemental; add representative
+  // elemental weapons for the other jobs and initiative-affix weapons.
+  const weaponDefaults=[
+    {job:0,form:1,element:'fire'},   // 穿甲槍
+    {job:1,form:0,element:'fire'},   // 炎晶杖
+    {job:1,form:1,element:'ice'},    // 霜紋杖
+    {job:1,form:2,element:'wind'},   // 疾風法器
+    {job:2,form:2,element:'wind'},   // 風羽短弓
+    {job:3,form:0,element:'light'}   // 晨光權杖
+  ];
+  for(const x of weaponDefaults){
+    const form=ITEM_FORMS[x.job]?.[0]?.[x.form];
+    if(form)form.element=x.element;
+  }
+  const advanceDefaults=[
+    {job:0,form:0}, // 闊刃劍
+    {job:1,form:2}, // 疾風法器
+    {job:2,form:2}, // 風羽短弓
+    {job:3,form:2}  // 祈禱法杖
+  ];
+  for(const x of advanceDefaults){
+    const form=ITEM_FORMS[x.job]?.[0]?.[x.form];
+    if(form){form.exclusive??={};form.exclusive.basicAdvanceNextRound=1;}
+  }
+
+  EQUIPMENT_EXCLUSIVE_KEYS.add('basicAdvanceNextRound');
+
+  const basicEffectNormalizeBase=normalizeEquipmentFormObject;
+  normalizeEquipmentFormObject=function(source){
+    const form=basicEffectNormalizeBase(source);
+    if(form?.exclusive&&Object.prototype.hasOwnProperty.call(form.exclusive,'basicAdvanceNextRound')){
+      form.exclusive.basicAdvanceNextRound=Math.max(0,Math.min(5,Math.round(Number(form.exclusive.basicAdvanceNextRound)||0)));
+      if(!form.exclusive.basicAdvanceNextRound)delete form.exclusive.basicAdvanceNextRound;
+    }
+    return form;
+  };
+
+  const basicEffectTextBase=exclusiveEquipmentText;
+  exclusiveEquipmentText=function(g){
+    const out=basicEffectTextBase(g)||[],form=itemForm(g),steps=Math.max(0,Math.round(Number(form?.exclusive?.basicAdvanceNextRound)||0));
+    if(steps)out.push('普攻後，下回合行動往前 '+steps+' 格');
+    return out;
+  };
+
+  const basicEffectReferenceBase=balanceReference;
+  balanceReference=function(){
+    const r=basicEffectReferenceBase();
+    r.equipmentExclusive??={};
+    r.equipmentExclusive.basicAdvanceNextRound='武器詞綴效果：普攻後，下回合初始行動順序往前指定格數；不增加額外行動次數。';
+    return r;
+  };
+
+  const basicEffectExportBase=exportableBalance;
+  exportableBalance=function(){
+    const out=basicEffectExportBase();
+    out.notes=[...(out.notes||[]),'所有職業普攻預設為 physical（無屬性）；只有武器 equipmentForms[].element 或附魔消耗品會改變普攻屬性。','equipmentForms[].exclusive.basicAdvanceNextRound 為武器固定詞綴效果：普攻後，下回合行動順序往前指定格數。'];
+    return out;
+  };
+
+  const basicEffectValidateBase=validateBalanceConfig;
+  validateBalanceConfig=function(input){
+    const copy=JSON.parse(JSON.stringify(input));
+    for(const jobs of copy?.equipmentForms||[])for(const forms of jobs||[])for(const form of forms||[]){
+      const v=form?.exclusive?.basicAdvanceNextRound;
+      if(v!==undefined&&(!Number.isInteger(v)||v<0||v>5))throw Error('普攻後下回合前移格數必須是 0～5 的整數');
+    }
+    return basicEffectValidateBase(copy);
+  };
+
+  const initiativeOrderBase=initiativeOrder;
+  initiativeOrder=function(){
+    const order=initiativeOrderBase();
+    // Move only heroes whose previous basic attack armed this exact round.
+    for(let i=1;i<order.length;i++){
+      const u=order[i];
+      if(u.side!=='hero')continue;
+      const steps=(u.actor.basicAdvanceRound===round)?weaponAdvanceSteps(u.actor):0;
+      if(!steps)continue;
+      const to=Math.max(0,i-steps);
+      if(to!==i){order.splice(i,1);order.splice(to,0,u);}
+    }
+    return order;
+  };
+
+  const basicAdvancePerformBase=performHeroBasic;
+  performHeroBasic=function(h){
+    const result=basicAdvancePerformBase(h);
+    const steps=weaponAdvanceSteps(h);
+    if(steps)h.basicAdvanceRound=round+1;
+    else delete h.basicAdvanceRound;
+    return result;
+  };
+
+  const basicEffectResetBase=resetEncounter;
+  resetEncounter=function(){
+    for(const h of party?.members||[])delete h.basicAdvanceRound;
+    return basicEffectResetBase();
+  };
+
+  if(state&&party){normalizeAllEquipmentForms();save();render();}
+})();
+</script>
+
 </body></html>
