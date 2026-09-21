@@ -3968,7 +3968,7 @@ render();
   if(typeof initiativeView==='function'){
     initiativeView=function(){
       const order=initiativeOrder();
-      return `<section class="panel initiative-panel compact-initiative"><div class="row"><h2 title="依速度排序；速度相同時維持穩定順序。">行動順序</h2></div><div class="initiative-track">${order.map((u,i)=>`<span class="initiative-token ${u.side}" title="${esc(u.side==='hero'?characterName(u.actor):u.actor.name)} · 速度 ${u.speed}"><b>${i+1}. ${esc(u.side==='hero'?characterName(u.actor):u.actor.name)}</b><small>速 ${u.speed}</small></span>`).join('')||'<span class="small">開始探索後顯示</span>'}</div></section>`;
+      return `<section class="panel initiative-panel compact-initiative"><div class="row"><h2 title="依速度排序；速度相同時維持穩定順序。">行動順序</h2></div><div class="initiative-track">${order.map(u=>`<span class="initiative-token ${u.side}" title="${esc(u.side==='hero'?characterName(u.actor):enemyDisplayName(u.actor))}"><b>${esc(u.side==='hero'?characterName(u.actor):enemyDisplayName(u.actor))}</b></span>`).join('－')||'<span class="small">開始探索後顯示</span>'}</div></section>`;
     };
   }
   if(typeof battleBuffPanel==='function'){
