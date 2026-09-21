@@ -30,6 +30,16 @@ jobs:
           mkdir -p site/preview
           cp dev/index.html site/preview/index.html
 
+      - name: Mark preview build
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("site/preview/index.html")
+          s = p.read_text(encoding="utf-8")
+          s = s.replace("<title>", "<title>測試版｜", 1)
+          p.write_text(s, encoding="utf-8")
+          PY
+
       - name: Publish preview snapshot
         working-directory: site
         run: |
