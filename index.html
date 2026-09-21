@@ -3837,26 +3837,41 @@ render();
   .combat-contribution-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
   .combat-contribution-head b{font-size:13px}
   .combat-contribution-head button{height:26px!important;padding:2px 8px!important;font-size:11px!important}
-  .combat-contribution-grid{display:grid;grid-template-columns:minmax(76px,1.2fr) repeat(3,minmax(54px,.8fr));gap:0;font-size:11px}
-  .combat-contribution-grid>span{padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.06);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .combat-contribution-grid .metric-head{color:var(--muted);font-size:10px}
-  .combat-contribution-grid .metric-number{text-align:right;font-variant-numeric:tabular-nums}
-  .combat-contribution-note{margin:6px 0 0!important;font-size:10px!important}
+  .combat-contribution-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:8px}
+  .combat-contribution-tabs button{width:100%;height:28px!important}
+  .combat-contribution-tabs button.active{border-color:var(--accent);background:rgba(161,190,183,.12)}
+  .combat-contribution-bars{display:grid;gap:7px}
+  .combat-contribution-row{display:grid;grid-template-columns:minmax(62px,84px) minmax(0,1fr) auto;gap:7px;align-items:center;font-size:11px}
+  .combat-contribution-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .combat-contribution-track{height:10px;border:1px solid var(--line);background:rgba(255,255,255,.035);overflow:hidden}
+  .combat-contribution-fill{height:100%;min-width:0;background:currentColor;opacity:.68}
+  .combat-contribution-value{min-width:48px;text-align:right;font-variant-numeric:tabular-nums}
+  .combat-contribution-note{margin:7px 0 0!important;font-size:10px!important}
 </style>
 <script id="combat-contribution-meter-system">
-/* Persistent team contribution meter: damage, healing and shield absorption. */
+/* Persistent active-party contribution meter: damage, healing and shield absorption. */
 (()=>{
   const BASE_KEY='emberwild-combat-contribution-v1';
-  let cacheKey='',cache=null;
+  let cacheKey='',cache=null,selectedMetric='damage';
 
   function storageKey(){
     const root=party?.members?.[0];
     const id=Number.isFinite(Number(root?.created))?String(root.created):'default';
     return BASE_KEY+':'+id;
   }
+  function activeSignature(){
+    if(!party?.active)return '';
+    return [...party.active].filter(Number.isInteger).sort((a,b)=>a-b).join(',');
+  }
   function blankRow(){return {damage:0,healing:0,mitigation:0};}
+  function blankState(signature=activeSignature()){
+    const out={teamSignature:signature,byJob:{}};
+    for(let job=0;job<CLASSES.length;job++)out.byJob[job]=blankRow();
+    return out;
+  }
   function normalize(raw){
-    const out={byJob:{}},src=raw&&typeof raw==='object'&&raw.byJob&&typeof raw.byJob==='object'?raw.byJob:{};
+    const signature=typeof raw?.teamSignature==='string'?raw.teamSignature:'';
+    const out=blankState(signature),src=raw&&typeof raw==='object'&&raw.byJob&&typeof raw.byJob==='object'?raw.byJob:{};
     for(let job=0;job<CLASSES.length;job++){
       const row=src[job]||src[String(job)]||{},clean=blankRow();
       for(const key of ['damage','healing','mitigation']){
@@ -3867,52 +3882,73 @@ render();
     }
     return out;
   }
+  function writeCache(){
+    if(!party||!cache)return;
+    try{localStorage.setItem(storageKey(),JSON.stringify(cache));}catch{}
+  }
   function ensure(){
-    const key=storageKey();
-    if(cache&&cacheKey===key)return cache;
-    cacheKey=key;
-    try{cache=normalize(JSON.parse(localStorage.getItem(key)||'null'));}catch{cache=normalize(null);}
+    const key=storageKey(),signature=activeSignature();
+    if(!cache||cacheKey!==key){
+      cacheKey=key;
+      try{cache=normalize(JSON.parse(localStorage.getItem(key)||'null'));}catch{cache=blankState(signature);}
+    }
+    if(cache.teamSignature!==signature){
+      cache=blankState(signature);
+      writeCache();
+    }
     return cache;
   }
   function persist(){
     if(!party)return;
-    try{localStorage.setItem(storageKey(),JSON.stringify(ensure()));}catch{}
+    ensure();
+    writeCache();
   }
   globalThis.recordCombatContribution=function(hero,key,amount){
     if(!party||!['damage','healing','mitigation'].includes(key))return;
     const job=typeof hero==='number'?hero:hero?.job,n=Number(amount);
-    if(!Number.isInteger(job)||job<0||job>=CLASSES.length||!Number.isFinite(n)||n<=0)return;
+    if(!Number.isInteger(job)||!party.active.includes(job)||!Number.isFinite(n)||n<=0)return;
     const stats=ensure(),row=stats.byJob[job]||(stats.byJob[job]=blankRow());
     row[key]=Math.min(1e15,(Number(row[key])||0)+n);
   };
   globalThis.resetCombatContribution=function(){
     if(!party)return;
-    cache=normalize(null);cacheKey=storageKey();persist();save();render();
+    cache=blankState(activeSignature());cacheKey=storageKey();writeCache();save();render();
+  };
+  globalThis.setCombatContributionMetric=function(metric){
+    if(!['damage','healing','mitigation'].includes(metric))return;
+    selectedMetric=metric;
+    render();
   };
   globalThis.recordRegenContribution=function(target,healed){
     const total=Number(healed);
-    if(!party||!target||!Number.isFinite(total)||total<=0)return;
+    if(!party||!target||!party.active.includes(target.job)||!Number.isFinite(total)||total<=0)return;
     const rows=effects.filter(fx=>fx.target===heroKey(target)&&fx.kind==='regen'&&fx.until>partyClock&&Number(fx.value)>0);
     const weight=rows.reduce((sum,fx)=>sum+Number(fx.value),0);
     if(weight<=0)return;
     for(const fx of rows){
       const caster=party.members.find(h=>h.job===fx.source);
-      if(caster)recordCombatContribution(caster,'healing',total*Number(fx.value)/weight);
+      if(caster&&party.active.includes(caster.job))recordCombatContribution(caster,'healing',total*Number(fx.value)/weight);
     }
   };
   globalThis.combatContributionPanel=function(){
     if(!party)return '';
     const stats=ensure(),fmt=n=>Math.round(Number(n)||0).toLocaleString('zh-TW');
-    const rows=party.members.map(h=>{
-      const row=stats.byJob[h.job]||blankRow();
-      return '<span title="'+esc(characterName(h))+'">'+esc(characterName(h))+'</span>'+
-        '<span class="metric-number">'+fmt(row.damage)+'</span>'+
-        '<span class="metric-number">'+fmt(row.healing)+'</span>'+
-        '<span class="metric-number">'+fmt(row.mitigation)+'</span>';
+    const labels={damage:'傷害',healing:'治療',mitigation:'減傷'};
+    const active=party.active.map(job=>party.members.find(h=>h.job===job)).filter(Boolean);
+    const values=active.map(h=>({h,value:Number(stats.byJob[h.job]?.[selectedMetric])||0}));
+    const max=Math.max(0,...values.map(x=>x.value));
+    const bars=values.map(({h,value})=>{
+      const width=max>0?Math.max(value>0?2:0,Math.min(100,value/max*100)):0;
+      return '<div class="combat-contribution-row">'+
+        '<span class="combat-contribution-name" title="'+esc(characterName(h))+'">'+esc(characterName(h))+'</span>'+
+        '<div class="combat-contribution-track" aria-label="'+esc(characterName(h))+' '+labels[selectedMetric]+' '+fmt(value)+'"><div class="combat-contribution-fill" style="width:'+width+'%"></div></div>'+
+        '<span class="combat-contribution-value">'+fmt(value)+'</span></div>';
     }).join('');
-    return '<div class="combat-contribution-meter"><div class="combat-contribution-head"><b>隊伍戰鬥統計</b><button onclick="resetCombatContribution()" title="將傷害、治療與減傷累積值歸零">重置</button></div>'+
-      '<div class="combat-contribution-grid"><span class="metric-head">成員</span><span class="metric-head metric-number">傷害</span><span class="metric-head metric-number">治療</span><span class="metric-head metric-number">減傷</span>'+rows+'</div>'+
-      '<p class="small combat-contribution-note">持續累積至手動重置；減傷僅計護盾實際抵擋的傷害。</p></div>';
+    const tabs=['damage','healing','mitigation'].map(key=>'<button class="'+(selectedMetric===key?'active':'')+'" onclick="setCombatContributionMetric(\''+key+'\')">'+labels[key]+'</button>').join('');
+    return '<div class="combat-contribution-meter"><div class="combat-contribution-head"><b>隊伍戰鬥統計</b><button onclick="resetCombatContribution()" title="將目前隊伍的累積統計歸零">重置</button></div>'+
+      '<div class="combat-contribution-tabs">'+tabs+'</div>'+
+      '<div class="combat-contribution-bars">'+bars+'</div>'+
+      '<p class="small combat-contribution-note">僅統計目前出戰成員；更換出戰隊伍會自動重置。減傷只計護盾實際抵擋的傷害。</p></div>';
   };
 
   if(typeof save==='function'){
@@ -3921,7 +3957,7 @@ render();
   }
   if(typeof newGame==='function'){
     const baseNewGame=newGame;
-    newGame=function(){cache=null;cacheKey='';return baseNewGame();};
+    newGame=function(){cache=null;cacheKey='';selectedMetric='damage';return baseNewGame();};
   }
 })();
 </script>
