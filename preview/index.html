@@ -5419,6 +5419,7 @@ if(state)render();
   globalThis.equipmentIdentityEffectText=effectText;
 
   const identityGearNameBase=gearName;
+  const identityEquipmentDisplayBase=equipmentDisplayName;
   gearName=function(g){
     if(!g||g.slot===undefined)return identityGearNameBase(g);
     ensureGearIdentityMeta(g);
@@ -5426,7 +5427,7 @@ if(state)render();
     if(g.boss!==undefined)return (bossProfileForGear(g)?.name||'BOSS專屬')+body;
     return (prefixById(g.prefixId)?.name||'')+(suffixById(g.suffixId)?.name||'')+body;
   };
-  equipmentDisplayName=function(g){if(!g||g.slot===undefined)return identityGearNameBase(g);ensureGearIdentityMeta(g);return '+'+(g.plus||0)+' '+gearName(g);};
+  equipmentDisplayName=function(g){if(!g||g.slot===undefined)return identityEquipmentDisplayBase(g);ensureGearIdentityMeta(g);return '+'+(g.plus||0)+' '+gearName(g);};
 
   const identityGearFactoryBase=gear;
   gear=function(tier=1,slot=rand(3),rar=0,job=null){const g=identityGearFactoryBase(tier,slot,rar,job);ensureGearIdentityMeta(g,{freshNames:true,freshPower:true,mode:0});g.name=gearName(g);return g;};
@@ -5520,16 +5521,10 @@ if(state)render();
   heroDropRateBonus=function(h){const random=(equipment(h).flatMap(g=>g.affix||[]).filter(a=>a.type===17).reduce((n,a)=>n+(Number(a.value)||0),0))/100;return random+Math.max(0,effectNumberForHero(h,'dropRateBonus'))/100;};
   partyDropRateBonus=function(){const hs=party?heroes():(state?[state]:[]);return hs.reduce((n,h)=>n+heroDropRateBonus(h),0);};
 
+  const identityResolveHitBase=resolveHit;
   resolveHit=function(e,amount,h,element,crit){
-    const v=battleStats(h),cap=GAMEPLAY_SETTINGS.combat.caps,def=e.def*(1-Math.min(cap.fracture,effectTotal(e.id,'fracture')))*(1-v.pierce);
-    let d=Math.max(1,Math.round(amount-def*GS('combat.defenseEffectiveness',.65)));
-    if(crit)d=Math.round(d*v.critDamage);
-    const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic&&tonic.element===element?GS('combat.supply.elementTonicDamage',.2):0);
-    const amp=effectTotal(e.id,'damageAmp')+effectTotal(e.id,'vulnerable'),bossBonus=(e.kind==='boss'||e.kind==='final')?(v.bossDamage||0):0;
-    d=Math.max(1,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)*(1+bossBonus)));
-    const actual=Math.min(e.hp,d);e.hp=Math.max(0,e.hp-d);h.hp=Math.min(v.hp,h.hp+actual*v.lifesteal);
-    if(actual>0&&e.hp>0&&typeof triggerFollowupDebuffs==='function')triggerFollowupDebuffs(e);
-    return actual;
+    const bonus=(e?.kind==='boss'||e?.kind==='final')?(battleStats(h).bossDamage||0):0;
+    return identityResolveHitBase(e,amount*(1+bonus),h,element,crit);
   };
 
   function sourceDifficulty(g){return MODES[Math.max(0,Math.min(2,Number(g?.difficulty)||0))]?.name||'普通';}
