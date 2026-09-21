@@ -1315,7 +1315,7 @@ function coreSkillTargets(sk){const alive=foes.filter(e=>e.hp>0),m=sk[6]||{},req
 function coreSkillElement(job,i){return SKILL_ELEMENTS[job]?.[i]||'physical';}
 
 // Core attacks now honor maxTargets. When fewer monsters exist, all are hit; otherwise targets are chosen randomly without replacement.
-castPartySkill=function(h,i,v){const sk=CLASSES[h.job].skills[i];if(!sk)return false;const power=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),element=coreSkillElement(h.job,i);if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(power));const recovered=Math.max(0,ally.hp-beforeHp);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');}else if(sk[5]==='shield'){const shieldResult=applyPureShield(h,power);note(pureShieldCastLog(h,sk[0],shieldResult));}else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const d=resolveHit(e,power,h,element,Math.random()<v.crit);total+=d;results.push(e.name+' '+d);}if(sk[5]==='drain')h.hp=Math.min(v.hp,h.hp+total);note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害');}if(h.sockets[i]===2&&sk[1]==='active')h.hp=Math.min(v.hp,h.hp+Math.round(v.atk*GS('skills.gems.hybridActiveHealAttack',.15)));return true;};
+castPartySkill=function(h,i,v){const sk=CLASSES[h.job].skills[i];if(!sk)return false;const power=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),element=coreSkillElement(h.job,i);if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(power));const recovered=Math.max(0,ally.hp-beforeHp);if(recovered>0)recordCombatContribution(h,'healing',recovered);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');}else if(sk[5]==='shield'){const shieldResult=applyPureShield(h,power);note(pureShieldCastLog(h,sk[0],shieldResult));}else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const d=resolveHit(e,power,h,element,Math.random()<v.crit);total+=d;results.push(e.name+' '+d);}if(sk[5]==='drain'){const beforeDrain=h.hp;h.hp=Math.min(v.hp,h.hp+total);const recovered=Math.max(0,h.hp-beforeDrain);if(recovered>0)recordCombatContribution(h,'healing',recovered);}note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害');}if(h.sockets[i]===2&&sk[1]==='active'){const beforeGem=h.hp;h.hp=Math.min(v.hp,h.hp+Math.round(v.atk*GS('skills.gems.hybridActiveHealAttack',.15)));const recovered=Math.max(0,h.hp-beforeGem);if(recovered>0)recordCombatContribution(h,'healing',recovered);}return true;};
 const update09PerformHeroBasic=performHeroBasic;performHeroBasic=function(h){const v=battleStats(h),target=foes.find(e=>e.hp>0);if(!target)return;const d=resolveHit(target,v.atk,h,weaponElement(h),Math.random()<v.crit);note(characterName(h)+' 普攻 → '+target.name+' '+d+' 傷害');for(let i=0;i<CLASSES[h.job].skills.length;i++)if(foes.some(e=>e.hp>0)&&CLASSES[h.job].skills[i][1]==='proc'&&h.skills[i]>0&&Math.random()<procChance(i,h))castPartySkill(h,i,v);};
 const update09Socket=socket;socket=function(i,value){let g=Number(value);if(!Number.isInteger(i)||i<0||i>=CLASSES[state.job].skills.length||!state.skills[i]||!Number.isInteger(g)||g< -1||g>2)return;let old=state.sockets[i]??null;if(g===old)return;if(g>=0&&state.gems[g]<1)return;if(old!==null)state.gems[old]++;state.sockets[i]=g<0?null:g;if(g>=0)state.gems[g]--;save();render();};
 learn=function(i){let sk=CLASSES[state.job].skills[i],cap=skillCap();if(!sk)return;if(state.skills[i]>=cap)return toast(`目前技能上限 ${cap} 級；角色每 ${GS('skills.core.capLevelsPerStep',3)} 級提高 1 級上限，最高 ${RULES.skillMax} 級`);if(state.sp<1||state.lv<sk[2]||(skillRequiresAdvanced(sk,i)&&!state.advanced))return;state.sp--;state.skills[i]++;save();render();};
@@ -1930,7 +1930,7 @@ addGear=function(g){g.rar=0;const q=gearQualityRank(g);if(typeof collectingBattl
 
 combatSpeed=function(e){const s=GAMEPLAY_SETTINGS.combat.speed;return Math.round(s.enemyBase+e.lv*s.enemyPerLevel+(s.race[e.race]||0)+(s.kind[e.kind]||0)+(e.difficulty||0)*s.difficultyBonus);};
 resolveHit=function(e,amount,h,element,crit){const v=battleStats(h),cap=GAMEPLAY_SETTINGS.combat.caps,def=e.def*(1-Math.min(cap.fracture,effectTotal(e.id,'fracture')))*(1-v.pierce);let d=Math.max(1,Math.round(amount-def*GS('combat.defenseEffectiveness',.65)));if(crit)d=Math.round(d*v.critDamage);const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic&&tonic.element===element?GS('combat.supply.elementTonicDamage',.2):0);d=Math.max(1,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+effectTotal(e.id,'vulnerable'))));const actual=Math.min(e.hp,d);e.hp=Math.max(0,e.hp-d);h.hp=Math.min(v.hp,h.hp+actual*v.lifesteal);return actual;};
-performEnemyBasic=function(e){e.turn++;const targets=living(),h=targets[rand(targets.length)],v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss,multi=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:e.turn%Math.max(1,Math.round(fb.specialEveryTurns))===0?fb.specialMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*multi-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的攻擊');return;}const ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+(ward&&ward.element===e.element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));};
+performEnemyBasic=function(e){e.turn++;const targets=living(),h=targets[rand(targets.length)],v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss,multi=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:e.turn%Math.max(1,Math.round(fb.specialEveryTurns))===0?fb.specialMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*multi-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的攻擊');return;}const ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+(ward&&ward.element===e.element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0)recordCombatContribution(h,'mitigation',absorb);const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));};
 spawnGroup=function(){const weak=[...heroes()].sort((a,b)=>a.lv-b.lv)[0],g=GAMEPLAY_SETTINGS.combat.groupSize,min=Math.max(1,Math.round(g.min)),max=Math.max(min,Math.round(g.max)),n=min+rand(max-min+1);foes=[];effects=[];actorCooldowns={};supportCooldowns={};for(const h of heroes())h.shield=0;for(let i=0;i<n;i++){const mi=party.map===6&&i>0?5:party.map,e=makeEnemy(mi,weak);e.id='foe-'+uid();e.rewarded=false;foes.push(e);}enemy=foes[0];round=0;note('遭遇 '+foes.length+' 隻敵人。');};
 
 toggleBattleRate=function(){const rates=GS('combat.pacing.rates',[1,2,4]).filter(x=>Number.isFinite(x)&&x>0);if(!rates.length)return;const now=Date.now(),old=battleRate,idx=rates.findIndex(x=>x===battleRate);battleRate=rates[(idx+1+rates.length)%rates.length];if(roundStartedAt)roundStartedAt=now-(now-roundStartedAt)*old/battleRate;nextActionAt=now+Math.max(0,nextActionAt-now)*old/battleRate;render();};
@@ -2238,9 +2238,9 @@ resetEncounter=function(){enemySkillCooldowns={};return actionTurnResetEncounter
 const actionTurnSpawnGroupBase=spawnGroup;
 spawnGroup=function(){const r=actionTurnSpawnGroupBase();enemySkillCooldowns={};for(const e of foes)assignEnemySkill(e);return r;};
 function enemySkillTarget(sk){const targets=living();if(!targets.length)return null;if(sk.target==='weakest')return [...targets].sort((a,b)=>a.hp/battleStats(a).hp-b.hp/battleStats(b).hp)[0];return targets[rand(targets.length)];}
-function performEnemySkill(e,sk){e.turn=(e.turn||0)+1;const h=enemySkillTarget(sk);if(!h)return;const beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss;const levelMulti=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(Number(sk.power)||1)*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*levelMulti-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的「'+sk.name+'」');return;}const element=sk.element==='inherit'?e.element:sk.element,ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[element]||0)+(ward&&ward.element===element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+'・'+sk.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+'・'+sk.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);}
+function performEnemySkill(e,sk){e.turn=(e.turn||0)+1;const h=enemySkillTarget(sk);if(!h)return;const beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss;const levelMulti=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(Number(sk.power)||1)*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*levelMulti-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的「'+sk.name+'」');return;}const element=sk.element==='inherit'?e.element:sk.element,ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[element]||0)+(ward&&ward.element===element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0)recordCombatContribution(h,'mitigation',absorb);const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+'・'+sk.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+'・'+sk.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);}
 function performEnemyAction(e){const sk=enemySkillFor(e);if(sk){enemySkillCooldowns[e.id]=Math.max(0,cooldownLeft(enemySkillCooldowns,e.id)-1);if(enemySkillCooldowns[e.id]<=0){performEnemySkill(e,sk);enemySkillCooldowns[e.id]=rollEnemySkillCooldown(sk);return 'skill';}}performEnemyBasic(e);return 'basic';}
-pacedRound=function*(){if(!party||!running||$('modal').open)return;currentEvents=[];lastActionOrder=[];actionVisualTime=Date.now();partyClock++;round++;effects=effects.filter(e=>e.until>partyClock);if(!foes.some(e=>e.hp>0)){spawnGroup();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();return;}for(const h of living()){const v=battleStats(h),regen=effectTotal(heroKey(h),'regen');h.hp=Math.min(v.hp,h.hp+v.hp*regen);if(h.autoPotion&&h.hp<v.hp*GS('combat.autoPotionThreshold',.35)&&h.potions>0)withHero(h,()=>potion(true));}const order=initiativeOrder();for(const unit of order){if(!living().length||!foes.some(e=>e.hp>0))break;if(unit.actor.hp<=0)continue;if(unit.side==='hero'){const h=unit.actor;tickHeroCooldowns(h);for(const i of h.supportSlots){if(i===null)continue;const key=h.job+'-'+i;if(cooldownLeft(supportCooldowns,key)<=0){castSupport(h,i);recordAction(heroKey(h),characterName(h),'輔助');supportCooldowns[key]=supportSkillCooldown(h,i);yield;if(!living().length||!foes.some(e=>e.hp>0))break;}}for(const i of h.active){if(i===null||!foes.some(e=>e.hp>0))continue;const key=h.job+'-'+i;if(cooldownLeft(actorCooldowns,key)<=0&&castPartySkill(h,i,battleStats(h))!==false){actorCooldowns[key]=Math.max(0,Math.round(skillCooldown(i,h)));recordAction(heroKey(h),characterName(h),'技能');yield;}}if(foes.some(e=>e.hp>0)){recordAction(unit.id,characterName(h),'普攻');performHeroBasic(h);yield;}}else{const sk=enemySkillFor(unit.actor),willSkill=sk&&Math.max(0,cooldownLeft(enemySkillCooldowns,unit.actor.id)-1)<=0;recordAction(unit.id,unit.actor.name,willSkill?'技能':'攻擊');performEnemyAction(unit.actor);yield;}}for(const e of foes)if(e.hp<=0)rewardGroupKill(e);if(!living().length){running=false;party.members[0].gold-=Math.floor(party.members[0].gold*GS('combat.defeatGoldLoss',.05));for(const h of heroes())h.shield=0;note('全隊戰敗，帳號失去 '+Math.round(GS('combat.defeatGoldLoss',.05)*10000)/100+'% 金幣。生命已全滿。');refillParty();foes=[];enemy=null;}else if(!foes.some(e=>e.hp>0)){refillParty();note('本次遭遇勝利，全隊生命已回滿。');if(foes.some(e=>e.kind==='final')){running=false;note('噬日者已倒下！LV30 成員解鎖 LV60，其他成員達 LV30 時解鎖。');}}save();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();if(activeBattleStat){if(activeBattleStat.pendingOutcome==='wipe')finalizeBattleStatistics('wipe');else if(foes.length&&foes.every(e=>e.hp<=0))finalizeBattleStatistics('victory');}};
+pacedRound=function*(){if(!party||!running||$('modal').open)return;currentEvents=[];lastActionOrder=[];actionVisualTime=Date.now();partyClock++;round++;effects=effects.filter(e=>e.until>partyClock);if(!foes.some(e=>e.hp>0)){spawnGroup();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();return;}for(const h of living()){const v=battleStats(h),regen=effectTotal(heroKey(h),'regen'),beforeRegen=h.hp;h.hp=Math.min(v.hp,h.hp+v.hp*regen);const regenHealed=Math.max(0,h.hp-beforeRegen);if(regenHealed>0)recordRegenContribution(h,regenHealed);if(h.autoPotion&&h.hp<v.hp*GS('combat.autoPotionThreshold',.35)&&h.potions>0)withHero(h,()=>potion(true));}const order=initiativeOrder();for(const unit of order){if(!living().length||!foes.some(e=>e.hp>0))break;if(unit.actor.hp<=0)continue;if(unit.side==='hero'){const h=unit.actor;tickHeroCooldowns(h);for(const i of h.supportSlots){if(i===null)continue;const key=h.job+'-'+i;if(cooldownLeft(supportCooldowns,key)<=0){castSupport(h,i);recordAction(heroKey(h),characterName(h),'輔助');supportCooldowns[key]=supportSkillCooldown(h,i);yield;if(!living().length||!foes.some(e=>e.hp>0))break;}}for(const i of h.active){if(i===null||!foes.some(e=>e.hp>0))continue;const key=h.job+'-'+i;if(cooldownLeft(actorCooldowns,key)<=0&&castPartySkill(h,i,battleStats(h))!==false){actorCooldowns[key]=Math.max(0,Math.round(skillCooldown(i,h)));recordAction(heroKey(h),characterName(h),'技能');yield;}}if(foes.some(e=>e.hp>0)){recordAction(unit.id,characterName(h),'普攻');performHeroBasic(h);yield;}}else{const sk=enemySkillFor(unit.actor),willSkill=sk&&Math.max(0,cooldownLeft(enemySkillCooldowns,unit.actor.id)-1)<=0;recordAction(unit.id,unit.actor.name,willSkill?'技能':'攻擊');performEnemyAction(unit.actor);yield;}}for(const e of foes)if(e.hp<=0)rewardGroupKill(e);if(!living().length){running=false;party.members[0].gold-=Math.floor(party.members[0].gold*GS('combat.defeatGoldLoss',.05));for(const h of heroes())h.shield=0;note('全隊戰敗，帳號失去 '+Math.round(GS('combat.defeatGoldLoss',.05)*10000)/100+'% 金幣。生命已全滿。');refillParty();foes=[];enemy=null;}else if(!foes.some(e=>e.hp>0)){refillParty();note('本次遭遇勝利，全隊生命已回滿。');if(foes.some(e=>e.kind==='final')){running=false;note('噬日者已倒下！LV30 成員解鎖 LV60，其他成員達 LV30 時解鎖。');}}save();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();if(activeBattleStat){if(activeBattleStat.pendingOutcome==='wipe')finalizeBattleStatistics('wipe');else if(foes.length&&foes.every(e=>e.hp<=0))finalizeBattleStatistics('victory');}};
 function actionTurnElementLabel(element){return element==='physical'?'無屬性':`${ELEMENTS[element]}屬性`;}
 coreSkillDetail=function(job,i,h=state){const sk=CLASSES[job]?.skills?.[i];if(!sk)return '';const old=state;if(h&&h!==state)state=h;let power=0,cdText='',proc=0;try{power=Math.round(skillPower(i,h)*100);if(sk[1]==='active')cdText=`冷卻 ${skillCooldown(i,h)} 回合`;else{proc=Math.round(procChance(i,h)*100);cdText=`普攻觸發率 ${proc}% · 冷卻 無`;}}finally{state=old;}const effectLabel={damage:'傷害倍率',heal:'治療倍率',shield:'護盾倍率',drain:'傷害／吸血倍率'}[sk[5]]||'效果倍率';return `${actionTurnElementLabel(coreSkillElement(job,i))} · ${effectLabel} ${power}% · 目標 ${coreSkillTargetText(sk)} · ${cdText} · 需求 LV${sk[2]}${skillRequiresAdvanced(sk,i)?'／二轉':''}`;};
 supportSkillDetail=function(job,i,h=state){const sk=SUPPORT[job]?.[i];if(!sk)return '';const level=Math.max(1,h?.supportLevels?.[i]||1),value=+(sk.value*(1+(level-1)*GS('skills.support.effectPerExtraLevel',.2))*100).toFixed(1),cd=supportSkillCooldown(h,i);return `${actionTurnElementLabel(sk.element)} · 目標 ${TARGET_NAMES[sk.target]} · ${EFFECT_NAMES[sk.kind]} ${value}% · 持續 ${sk.duration} 戰鬥回合 · 冷卻 ${cd} 回合 · 需求 LV${sk.level}${i===2?'／二轉':''}`;};
@@ -3831,6 +3831,101 @@ render();
 
 
 
+
+<style id="combat-contribution-meter-style">
+  .combat-contribution-meter{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .combat-contribution-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+  .combat-contribution-head b{font-size:13px}
+  .combat-contribution-head button{height:26px!important;padding:2px 8px!important;font-size:11px!important}
+  .combat-contribution-grid{display:grid;grid-template-columns:minmax(76px,1.2fr) repeat(3,minmax(54px,.8fr));gap:0;font-size:11px}
+  .combat-contribution-grid>span{padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.06);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .combat-contribution-grid .metric-head{color:var(--muted);font-size:10px}
+  .combat-contribution-grid .metric-number{text-align:right;font-variant-numeric:tabular-nums}
+  .combat-contribution-note{margin:6px 0 0!important;font-size:10px!important}
+</style>
+<script id="combat-contribution-meter-system">
+/* Persistent team contribution meter: damage, healing and shield absorption. */
+(()=>{
+  const BASE_KEY='emberwild-combat-contribution-v1';
+  let cacheKey='',cache=null;
+
+  function storageKey(){
+    const root=party?.members?.[0];
+    const id=Number.isFinite(Number(root?.created))?String(root.created):'default';
+    return BASE_KEY+':'+id;
+  }
+  function blankRow(){return {damage:0,healing:0,mitigation:0};}
+  function normalize(raw){
+    const out={byJob:{}},src=raw&&typeof raw==='object'&&raw.byJob&&typeof raw.byJob==='object'?raw.byJob:{};
+    for(let job=0;job<CLASSES.length;job++){
+      const row=src[job]||src[String(job)]||{},clean=blankRow();
+      for(const key of ['damage','healing','mitigation']){
+        const n=Number(row[key]);
+        clean[key]=Number.isFinite(n)&&n>0?Math.min(1e15,n):0;
+      }
+      out.byJob[job]=clean;
+    }
+    return out;
+  }
+  function ensure(){
+    const key=storageKey();
+    if(cache&&cacheKey===key)return cache;
+    cacheKey=key;
+    try{cache=normalize(JSON.parse(localStorage.getItem(key)||'null'));}catch{cache=normalize(null);}
+    return cache;
+  }
+  function persist(){
+    if(!party)return;
+    try{localStorage.setItem(storageKey(),JSON.stringify(ensure()));}catch{}
+  }
+  globalThis.recordCombatContribution=function(hero,key,amount){
+    if(!party||!['damage','healing','mitigation'].includes(key))return;
+    const job=typeof hero==='number'?hero:hero?.job,n=Number(amount);
+    if(!Number.isInteger(job)||job<0||job>=CLASSES.length||!Number.isFinite(n)||n<=0)return;
+    const stats=ensure(),row=stats.byJob[job]||(stats.byJob[job]=blankRow());
+    row[key]=Math.min(1e15,(Number(row[key])||0)+n);
+  };
+  globalThis.resetCombatContribution=function(){
+    if(!party)return;
+    cache=normalize(null);cacheKey=storageKey();persist();save();render();
+  };
+  globalThis.recordRegenContribution=function(target,healed){
+    const total=Number(healed);
+    if(!party||!target||!Number.isFinite(total)||total<=0)return;
+    const rows=effects.filter(fx=>fx.target===heroKey(target)&&fx.kind==='regen'&&fx.until>partyClock&&Number(fx.value)>0);
+    const weight=rows.reduce((sum,fx)=>sum+Number(fx.value),0);
+    if(weight<=0)return;
+    for(const fx of rows){
+      const caster=party.members.find(h=>h.job===fx.source);
+      if(caster)recordCombatContribution(caster,'healing',total*Number(fx.value)/weight);
+    }
+  };
+  globalThis.combatContributionPanel=function(){
+    if(!party)return '';
+    const stats=ensure(),fmt=n=>Math.round(Number(n)||0).toLocaleString('zh-TW');
+    const rows=party.members.map(h=>{
+      const row=stats.byJob[h.job]||blankRow();
+      return '<span title="'+esc(characterName(h))+'">'+esc(characterName(h))+'</span>'+
+        '<span class="metric-number">'+fmt(row.damage)+'</span>'+
+        '<span class="metric-number">'+fmt(row.healing)+'</span>'+
+        '<span class="metric-number">'+fmt(row.mitigation)+'</span>';
+    }).join('');
+    return '<div class="combat-contribution-meter"><div class="combat-contribution-head"><b>隊伍戰鬥統計</b><button onclick="resetCombatContribution()" title="將傷害、治療與減傷累積值歸零">重置</button></div>'+
+      '<div class="combat-contribution-grid"><span class="metric-head">成員</span><span class="metric-head metric-number">傷害</span><span class="metric-head metric-number">治療</span><span class="metric-head metric-number">減傷</span>'+rows+'</div>'+
+      '<p class="small combat-contribution-note">持續累積至手動重置；減傷僅計護盾實際抵擋的傷害。</p></div>';
+  };
+
+  if(typeof save==='function'){
+    const baseSave=save;
+    save=function(show=false){persist();return baseSave(show);};
+  }
+  if(typeof newGame==='function'){
+    const baseNewGame=newGame;
+    newGame=function(){cache=null;cacheKey='';return baseNewGame();};
+  }
+})();
+</script>
+
 <script id="expedition-ui-tidy-patch">
 /* Update 27: compact expedition controls + lower-density battle journal. */
 (function installExpeditionUiTidy(){
@@ -3918,7 +4013,7 @@ render();
 
   function expeditionControlCard(){
     const mi=party.map,mode=party.difficulty||0;
-    return `<section class="panel battle-map-column expedition-control-card"><div class="control-head"><div><span class="eyebrow">EXPEDITION CONTROL</span><h2>探索控制</h2></div>${tooltip('探索控制','地圖、難度與倍速共用此面板。切換地圖或難度會結束目前遭遇。介面中的「回合」是指該角色每次輪到自己行動一次；技能與治療藥水等冷卻只在該角色行動時遞減 1，不受戰鬥倍速影響。自動喝水在角色回合開始時判定，且不會取消原本的攻擊。')}</div><div class="control-grid"><label class="control-row"><span>地圖</span><select aria-label="探索地圖" onchange="chooseMap(Number(this.value))">${MAPS.map((m,i)=>`<option value="${i}" ${i===mi?'selected':''} ${canVisit(i)?'':'disabled'}>${safeEsc(m.name)} · LV${m.min}${isFinal(i)?' 終局':'–'+m.max}</option>`).join('')}</select><button onclick="showRegionBestiary()" title="查看目前區域怪物、BOSS 關卡與掉落">圖鑑</button></label><label class="control-row"><span>難度</span><select aria-label="探索難度" onchange="changeDifficulty(this.value)">${MODES.map((d,i)=>`<option value="${i}" ${i===mode?'selected':''}>${safeEsc(d.name)}</option>`).join('')}</select>${tooltip('難度','切換難度會結束目前遭遇；不會恢復生命。詳細倍率可在冒險指南查看。')}</label><div class="control-row"><span>倍速</span><button onclick="toggleBattleRate()" title="點擊循環切換可用戰鬥倍速">${battleRate}×</button>${tooltip('戰鬥節奏','倍速只影響等待時間，不改變回合制冷卻與行動順序。')}</div></div>${bossBlock(mi)}${compactSupply()}</section>`;
+    return `<section class="panel battle-map-column expedition-control-card"><div class="control-head"><div><span class="eyebrow">EXPEDITION CONTROL</span><h2>探索控制</h2></div>${tooltip('探索控制','地圖、難度與倍速共用此面板。切換地圖或難度會結束目前遭遇。介面中的「回合」是指該角色每次輪到自己行動一次；技能與治療藥水等冷卻只在該角色行動時遞減 1，不受戰鬥倍速影響。自動喝水在角色回合開始時判定，且不會取消原本的攻擊。')}</div><div class="control-grid"><label class="control-row"><span>地圖</span><select aria-label="探索地圖" onchange="chooseMap(Number(this.value))">${MAPS.map((m,i)=>`<option value="${i}" ${i===mi?'selected':''} ${canVisit(i)?'':'disabled'}>${safeEsc(m.name)} · LV${m.min}${isFinal(i)?' 終局':'–'+m.max}</option>`).join('')}</select><button onclick="showRegionBestiary()" title="查看目前區域怪物、BOSS 關卡與掉落">圖鑑</button></label><label class="control-row"><span>難度</span><select aria-label="探索難度" onchange="changeDifficulty(this.value)">${MODES.map((d,i)=>`<option value="${i}" ${i===mode?'selected':''}>${safeEsc(d.name)}</option>`).join('')}</select>${tooltip('難度','切換難度會結束目前遭遇；不會恢復生命。詳細倍率可在冒險指南查看。')}</label><div class="control-row"><span>倍速</span><button onclick="toggleBattleRate()" title="點擊循環切換可用戰鬥倍速">${battleRate}×</button>${tooltip('戰鬥節奏','倍速只影響等待時間，不改變回合制冷卻與行動順序。')}</div></div>${bossBlock(mi)}${compactSupply()}${combatContributionPanel()}</section>`;
   }
 
   if(typeof battleView==='function'){
@@ -4282,7 +4377,7 @@ dialog[data-view="healing-settings"]>.actions button:first-child{flex:0 0 auto;m
     if(h.hp/v.hp>threshold||h.hp>=v.hp)return false;
     setHealPotionCount(item.id,healPotionCount(item.id)-1);
     const before=h.hp,amount=Math.max(1,Math.round(v.hp*item.healFraction));h.hp=Math.min(v.hp,h.hp+amount);
-    const actual=Math.max(0,Math.round(h.hp-before));h.healPotionCooldownRemaining=Math.max(0,Math.round(item.cooldown));
+    const actual=Math.max(0,Math.round(h.hp-before));if(actual>0)recordCombatContribution(h,'healing',actual);h.healPotionCooldownRemaining=Math.max(0,Math.round(item.cooldown));
     note(`${characterName(h)}自動使用${item.name} · 恢復 ${actual} 生命（最大生命 ${pct(item.healFraction)}%）· 冷卻 ${item.cooldown} 回合`);
     return true;
   }
@@ -4923,7 +5018,7 @@ if(state)render();
     for(const target of targets.filter(Boolean)){
       effects=effects.filter(e=>!(e.source===h.job&&e.skill===index&&e.target===target));
       effects.push({source:h.job,skill:index,target,kind:sk.kind,element:sk.element,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});
-      if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);if(ally)ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));}
+      if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);if(ally){const before=ally.hp;ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));const recovered=Math.max(0,ally.hp-before);if(recovered>0)recordCombatContribution(h,'healing',recovered);}}
     }
     note(characterName(h)+'施放 '+sk.name+' · '+Math.round(sk.duration)+' 回合');
   };
@@ -4948,6 +5043,7 @@ if(state)render();
       followup=Math.max(1,Math.round(followup*(1-Math.min(cap.guard,effectTotal(target.id,'guard')))));
       const dealt=Math.min(target.hp,followup);
       target.hp=Math.max(0,target.hp-dealt);
+      if(dealt>0)recordCombatContribution(caster,'damage',dealt);
       total+=dealt;
       note(`${fx.name}追打 [${ELEMENTS[element]}] → ${target.name} ${dealt} 傷害`);
     }
@@ -4965,7 +5061,10 @@ if(state)render();
     d=Math.max(1,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)));
     const actual=Math.min(e.hp,d);
     e.hp=Math.max(0,e.hp-d);
+    if(actual>0)recordCombatContribution(h,'damage',actual);
+    const beforeLifesteal=h.hp;
     h.hp=Math.min(v.hp,h.hp+actual*v.lifesteal);
+    const lifestealHealing=Math.max(0,h.hp-beforeLifesteal);if(lifestealHealing>0)recordCombatContribution(h,'healing',lifestealHealing);
     if(actual>0&&e.hp>0)triggerFollowupDebuffs(e);
     return actual;
   };
@@ -4976,14 +5075,15 @@ if(state)render();
     const dots=effects.filter(fx=>fx.target===e.id&&fx.until>partyClock&&(fx.kind==='dotAttack'||fx.kind==='dotMaxHp'));
     for(const fx of dots){
       if(e.hp<=0)break;
+      const caster=party?.members?.find(h=>h.job===fx.source);
       let raw=0;
       if(fx.kind==='dotAttack'){
-        const caster=party?.members?.find(h=>h.job===fx.source);
         if(caster)raw=battleStats(caster).atk*Math.max(0,Number(fx.value)||0);
       }else raw=(Number(e.maxhp)||Number(e.hp)||1)*Math.max(0,Number(fx.value)||0);
       // DOT is deliberately fixed damage: direct HP loss, no defense, resistance, guard, amp, reduction, crit or element factor.
       const dealt=Math.min(e.hp,Math.max(1,Math.round(raw)));
       e.hp=Math.max(0,e.hp-dealt);
+      if(dealt>0&&caster)recordCombatContribution(caster,'damage',dealt);
       total+=dealt;
       note(`${fx.name} → ${e.name} ${dealt} 持續傷害`);
     }
