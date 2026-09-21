@@ -885,6 +885,10 @@ heroMenuAction=function(job,action){const hero=party?.members.find(h=>h.job===jo
 const allTeamRender=render;
 render=function(){allTeamRender();if(party&&state){const wallet=$('wallet');if(wallet)wallet.textContent='全隊金幣 '+party.members[0].gold.toLocaleString();}};
 
+function newcomerPartyGuide(){if(!party||party.members.length>=3)return '';return `<section class="panel" style="border-color:#b88a45"><h2>新手提示：先招募滿 3 人</h2><p>目前戰鬥固定為群怪遭遇，每場會同時出現 3～6 隻敵人。單人直接開始探索很容易反覆戰敗。</p><div class="actions"><button class="primary" onclick="setTab('roster')">前往隊伍編成</button><span class="small">目前已招募 ${party.members.length} / 3；建議先再招募 ${3-party.members.length} 名同伴並加入出戰。</span></div></section>`;}
+const basePartyBattleView=battleView;
+battleView=function(){return newcomerPartyGuide()+basePartyBattleView();}
+
 function rosterView(){return heading('PARTY / 編成與招募','隊伍編成',`<span class="tag">出戰 ${heroes().length} / 3 · 已招募 ${party.members.length} / 4</span>`)+`<section class="panel roster-page">${uiHelp('編成說明','每職業一人，最多三人出戰。候補不獲經驗；招募等級依出戰最低等級。')}<p class="small">調整編成會放棄當前遭遇。</p><div class="roster-list">${CLASSES.map((c,job)=>{const h=party.members.find(h=>h.job===job),active=h&&party.active.includes(job);return `<article class="roster-row"><div><b>${h?esc(characterName(h)):c.name}</b><span class="tag">${h?'LV '+h.lv+' · '+(active?'出戰':'候補'):'尚未招募'}</span><p class="small">${c.desc}</p></div>${h?`<div class="roster-member-actions"><button onclick="toggleMember(${job})">${active?'移至候補':'加入出戰'}</button><button onclick="requestRename(${job})">改名</button></div>`:`<button class="primary" onclick="requestHeroName(${job},false)">招募${c.name}</button>`}</article>`;}).join('')}</div></section>`;}
 partyPicker=function(){return '';};
 
