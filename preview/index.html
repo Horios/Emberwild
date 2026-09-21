@@ -5725,4 +5725,96 @@ if(state)render();
 </script>
 
 
+<style id="pending-gear-detailed-list-style">
+.pending-gear-bottom .pending-quality-groups{display:grid;grid-template-columns:1fr;gap:6px;margin-top:0}
+.pending-quality-details{border:1px solid var(--line);background:#141c1f;overflow:hidden}
+.pending-quality-details>summary{list-style:none;display:flex;align-items:center;gap:8px;min-height:34px;padding:6px 8px;cursor:pointer}
+.pending-quality-details>summary::-webkit-details-marker{display:none}
+.pending-quality-details>summary::before{content:'▸';flex:0 0 auto;color:var(--muted);font-size:10px}
+.pending-quality-details[open]>summary::before{content:'▾'}
+.pending-quality-details[open]>summary{border-bottom:1px solid var(--line)}
+.pending-quality-title{font-weight:700}
+.pending-quality-meta{margin-left:auto;white-space:nowrap;font-size:11px;color:var(--muted)}
+.pending-quality-body{padding:7px 8px 8px}
+.pending-quality-body>.actions{margin:0 0 7px;gap:4px}
+.pending-quality-body>.actions button{padding:4px 7px;font-size:11px}
+.pending-affix-stats{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px;align-items:start;padding:6px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px}
+.pending-affix-stats>b{white-space:nowrap;color:var(--muted)}
+.pending-affix-counts{display:flex;flex-wrap:wrap;gap:4px 10px;min-width:0}
+.pending-affix-count{white-space:nowrap}
+.pending-gear-lines{display:grid;margin-top:4px}
+.pending-gear-line{display:grid;grid-template-columns:minmax(200px,.9fr) minmax(260px,1.4fr);gap:8px;padding:6px 2px;border-bottom:1px solid var(--line);align-items:start}
+.pending-gear-line:last-child{border-bottom:0}
+.pending-gear-line-name{min-width:0;overflow-wrap:anywhere}
+.pending-gear-line-affixes{min-width:0}
+.pending-gear-line-affixes .affix{font-size:11px;line-height:1.45}
+.pending-gear-line-meta{display:block;margin-top:1px;color:var(--muted);font-size:10px}
+@media(max-width:780px){
+  .pending-quality-details>summary{flex-wrap:wrap}
+  .pending-quality-meta{width:100%;margin-left:18px}
+  .pending-affix-stats{grid-template-columns:1fr;gap:3px}
+  .pending-gear-line{grid-template-columns:1fr;gap:3px}
+}
+</style>
+<script id="pending-gear-detailed-list-system">
+(function installPendingGearDetailedList(){
+  globalThis.pendingGearQualityOpenState=globalThis.pendingGearQualityOpenState||{};
+  globalThis.setPendingGearQualityOpenState=function(q,open){globalThis.pendingGearQualityOpenState[q]=!!open;};
+
+  function affixGroupLabel(a,g){
+    if(!a)return '無詞條';
+    var label=typeof affixLabel==='function'?String(affixLabel(a,g)||'未知詞條'):'詞條 '+String(a.type??'?');
+    label=label.replace(/\s+(?:\+|−|-)\s*\d+(?:\.\d+)?(?:%| 回合)?$/,'');
+    var rank=Math.max(0,Math.min(3,Number(a.rank)||0));
+    var rankName=(typeof AFFIX_RANK!=='undefined'&&AFFIX_RANK[rank])||'普通';
+    return {label:'['+rankName+'] '+label,rank:rank};
+  }
+
+  function affixCounts(list){
+    var counts=new Map();
+    function add(label,rank){
+      var key=rank+'|'+label,old=counts.get(key);
+      if(old)old.count++;
+      else counts.set(key,{label:label,rank:rank,count:1});
+    }
+    for(const g of list){
+      if(g&&g.boss!==undefined){add('BOSS 專屬',3);continue;}
+      var affixes=Array.isArray(g&&g.affix)?g.affix:[];
+      if(!affixes.length){add('無隨機詞條',0);continue;}
+      for(const a of affixes){var item=affixGroupLabel(a,g);add(item.label,item.rank);}
+    }
+    return Array.from(counts.values()).sort(function(a,b){return b.count-a.count||b.rank-a.rank||a.label.localeCompare(b.label,'zh-Hant');});
+  }
+
+  function itemMeta(g){
+    var job=g&&g.slot===1?'全職業':((CLASSES[g&&g.job]&&CLASSES[g.job].name)||'未知職業');
+    var slot=(CLASS_GEAR[g&&g.job]&&CLASS_GEAR[g.job][g.slot])||['武器','護甲','副手／飾品'][g&&g.slot]||'裝備';
+    var t=Number.isInteger(g&&g.powerTier)?'T'+g.powerTier:'';
+    return [job,slot,t,g&&g.boss!==undefined?'BOSS 專屬':''].filter(Boolean).join(' · ');
+  }
+
+  pendingGearBottomView=function(){
+    var rows=pendingGearQualityCounts(),total=rows.reduce(function(n,r){return n+r.list.length;},0);
+    var summary=rows.map(function(r){return '<span class="pending-gear-summary-count effect-quality-'+r.q+'">'+esc(r.name)+' '+r.list.length+' 件</span>';}).join('');
+    var groups=rows.filter(function(r){return r.list.length;}).map(function(r){
+      var totalSell=r.list.reduce(function(n,g){return n+(typeof equipmentSellPrice==='function'?equipmentSellPrice(g):0);},0);
+      var stats=affixCounts(r.list);
+      var statHtml=stats.map(function(x){return '<span class="pending-affix-count effect-quality-'+x.rank+'">'+esc(x.label)+' ×'+x.count+'</span>';}).join('')||'<span class="small">無詞綴資料</span>';
+      var itemRows=r.list.map(function(g){
+        var affixes=g&&g.boss!==undefined?'<span class="small">BOSS 專屬裝備</span>':(Array.isArray(g&&g.affix)&&g.affix.length?g.affix.map(function(a){return affixHTML(a,g);}).join(''):'<span class="small">無隨機詞條</span>');
+        return '<div class="pending-gear-line"><div class="pending-gear-line-name">'+equipmentNameHTML(g)+'<span class="pending-gear-line-meta">'+esc(itemMeta(g))+'</span></div><div class="pending-gear-line-affixes">'+affixes+'</div></div>';
+      }).join('');
+      var open=globalThis.pendingGearQualityOpenState[r.q]?' open':'';
+      return '<details class="pending-quality-details effect-quality-'+r.q+'"'+open+' ontoggle="setPendingGearQualityOpenState('+r.q+',this.open)"><summary><span class="pending-quality-title">'+esc(r.name)+' '+r.list.length+' 件</span><span class="pending-quality-meta">合計販售 '+totalSell+' 金幣</span></summary><div class="pending-quality-body"><div class="actions"><button onclick="claimPendingQuality('+r.q+')">領取全部'+esc(r.name)+'</button><button onclick="salvagePendingQuality('+r.q+')">分解全部'+esc(r.name)+'</button><button onclick="sellPendingQuality('+r.q+')">販售全部'+esc(r.name)+' · '+totalSell+'金</button></div><div class="pending-affix-stats"><b>詞綴統計</b><div class="pending-affix-counts">'+statHtml+'</div></div><div class="pending-gear-lines">'+itemRows+'</div></div></details>';
+    }).join('');
+    var outerOpen=pendingGearPanelCollapsed?'':' open';
+    var disabled=!total||state.bag.length>=RULES.bagCapacity?' disabled':'';
+    return '<details class="panel pending-gear-panel pending-gear-bottom"'+outerOpen+' ontoggle="pendingGearPanelCollapsed=!this.open"><summary><span class="pending-gear-summary-title">待領取裝備 '+total+' 件</span><span class="pending-gear-summary-counts">'+summary+'</span></summary><div class="pending-gear-expanded"><div class="row"><span class="small">依品質展開可查看全部待領取裝備與詞綴統計；戰鬥掉落在領取前不會改變背包順序。</span><button onclick="claimPendingGearLoot()"'+disabled+'>全部領取</button></div><div class="pending-quality-groups">'+(groups||'<p class="small">目前沒有待領取裝備。</p>')+'</div></div></details>';
+  };
+
+  if(state)render();
+})();
+</script>
+
+
 </body></html>
