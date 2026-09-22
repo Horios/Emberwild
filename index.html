@@ -5276,12 +5276,15 @@ if(state)render();
   // Final damage resolver: damageAmp increases only the triggering attack.
   // Legacy vulnerable remains accepted as a compatibility alias for old imported configs.
   resolveHit=function(e,amount,h,element,crit){
-    const v=battleStats(h),cap=GAMEPLAY_SETTINGS.combat.caps,def=e.def*(1-Math.min(cap.fracture,effectTotal(e.id,'fracture')))*(1-v.pierce);
-    let d=Math.max(1,Math.round(amount-def*GS('combat.defenseEffectiveness',.65)));
+    const v=battleStats(h),cap=GAMEPLAY_SETTINGS.combat.caps,formula=GAMEPLAY_SETTINGS.combat.damageFormula||{},fracture=Math.min(cap.fracture,effectTotal(e.id,'fracture'));
+    const ignore=Math.min(GAME_BALANCE.combat.statCaps.defenseIgnore??.75,Math.max(0,v.defenseIgnore||0)),penetration=Math.min(GAME_BALANCE.combat.statCaps.pierce,Math.max(0,v.pierce||0));
+    const afterIgnore=Math.max(0,e.def*(1-fracture)*(1-ignore)),effectiveDefense=Math.max(0,afterIgnore-penetration);
+    const attackCoefficient=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defenseCoefficient=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:(GAMEPLAY_SETTINGS.combat.defenseEffectiveness??.55),minimumDamage=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
+    let d=Math.max(minimumDamage,Math.round(amount*attackCoefficient-effectiveDefense*defenseCoefficient));
     if(crit)d=Math.round(d*v.critDamage);
     const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic&&tonic.element===element?GS('combat.supply.elementTonicDamage',.2):0);
     const amp=effectTotal(e.id,'damageAmp')+effectTotal(e.id,'vulnerable');
-    d=Math.max(1,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)));
+    d=Math.max(minimumDamage,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)));
     const actual=Math.min(e.hp,d);
     e.hp=Math.max(0,e.hp-d);
     if(actual>0)recordCombatContribution(h,'damage',actual);
