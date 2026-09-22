@@ -509,9 +509,10 @@ function gearDesc(g) {
   return ['atk','hp','def'].filter(k=>v[k]).map(k=>`${{atk:'攻擊',hp:'生命',def:'防禦'}[k]} +${Math.round(v[k])}`).join(' / ');
 }
 function migrateLegacyEquipmentSlotsInSave(s){
- if(!s||!Array.isArray(s.equipped)||s.equipped.length!==3)return s;const oldEquipped=[...s.equipped];
- for(const g of s.bag||[]){if(g?.slot!==2)continue;if(g.boss===5){g.slot=3;continue;}if(g.boss===undefined&&Number.isInteger(g.form)&&g.form>0){g.slot=3;g.form=Math.max(0,g.form-1);}}
- s.equipped=[oldEquipped[0]??null,oldEquipped[1]??null,null,null,null];const oldThird=oldEquipped[2];if(oldThird!==null&&oldThird!==undefined){const gear=(s.bag||[]).find(g=>g.id===oldThird),positions=gearEquipPositions(gear);if(positions.length)s.equipped[positions[0]]=oldThird;}return s;
+ if(!s||!Array.isArray(s.bag))return s;
+ for(const g of s.bag){if(g?.slot!==2||g.formJob!==undefined)continue;if(g.boss===5){g.slot=3;continue;}if(g.boss===undefined&&Number.isInteger(g.form)&&g.form>0){g.slot=3;g.form=Math.max(0,g.form-1);}}
+ if(!Array.isArray(s.equipped)||s.equipped.length!==3)return s;const oldEquipped=[...s.equipped];
+ s.equipped=[oldEquipped[0]??null,oldEquipped[1]??null,null,null,null];const oldThird=oldEquipped[2];if(oldThird!==null&&oldThird!==undefined){const gear=s.bag.find(g=>g.id===oldThird),positions=gearEquipPositions(gear);if(positions.length)s.equipped[positions[0]]=oldThird;}return s;
 }
 // Validate a private copy; migrations never modify an untrusted caller object.
 function validateSave(input) {
