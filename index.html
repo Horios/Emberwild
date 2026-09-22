@@ -6168,4 +6168,311 @@ if(state)render();
 </script>
 
 
+
+<script id="proc-slot-and-trigger-effects-v1">
+(()=>{
+  const PROC_SLOT_COUNT=2;
+  const PROC_ONLY_EFFECTS=new Set(['nextActiveDamage','advanceNextRound','shieldLowest']);
+  const PROC_EFFECT_LABELS={
+    nextActiveDamage:'下次主動技能增傷',
+    advanceNextRound:'下回合行動提前一格',
+    shieldLowest:'最低生命隊友護盾'
+  };
+  function finite(v,fallback){v=Number(v);return Number.isFinite(v)?v:fallback;}
+  function legacyProcRates(settings=null){
+    const p=settings?.skills?.proc;
+    const per=Math.max(0,finite(p?.perSkillLevel,GS('skills.proc.perSkillLevel',.025)));
+    const preLevel=Math.max(0,finite(p?.baseChance,GS('skills.proc.baseChance',.22)));
+    return {base:Math.min(1,preLevel+per),per:Math.min(1,per)};
+  }
+  function ensureProcSkillMeta(job,i,settings=null){
+    const sk=CLASSES[job]?.skills?.[i];if(!sk||sk[1]!=='proc')return null;
+    if(!sk[6]||typeof sk[6]!=='object'||Array.isArray(sk[6]))sk[6]={};
+    const d=legacyProcRates(settings);
+    if(!Number.isFinite(sk[6].procBaseChance))sk[6].procBaseChance=d.base;
+    if(!Number.isFinite(sk[6].procChancePerLevel))sk[6].procChancePerLevel=d.per;
+    sk[6].procBaseChance=Math.max(0,Math.min(1,Number(sk[6].procBaseChance)));
+    sk[6].procChancePerLevel=Math.max(0,Math.min(1,Number(sk[6].procChancePerLevel)));
+    return sk[6];
+  }
+  function ensureAllProcSkillMeta(settings=null){
+    for(let job=0;job<CLASSES.length;job++)for(let i=0;i<CLASSES[job].skills.length;i++)ensureProcSkillMeta(job,i,settings);
+  }
+  function validProcIndex(h,i){return Number.isInteger(i)&&i>=0&&i<CLASSES[h.job].skills.length&&CLASSES[h.job].skills[i][1]==='proc'&&h.skills[i]>0;}
+  function ensureProcSlots(h){
+    if(!h)return;
+    const had=Array.isArray(h.procSlots);
+    let slots=had?h.procSlots.slice(0,PROC_SLOT_COUNT):[];
+    if(!had){
+      const learned=[];
+      for(let i=0;i<CLASSES[h.job].skills.length;i++)if(validProcIndex(h,i))learned.push(i);
+      slots=learned.slice(0,PROC_SLOT_COUNT);
+    }
+    while(slots.length<PROC_SLOT_COUNT)slots.push(null);
+    slots=slots.map(i=>i===null||validProcIndex(h,i)?i:null);
+    if(slots[0]!==null&&slots[0]===slots[1])slots[1]=null;
+    h.procSlots=slots;
+  }
+  globalThis.ensureProcSlots=ensureProcSlots;
+  ensureAllProcSkillMeta();
+
+  const procInitHeroBase=initHero;
+  initHero=function(h){
+    h=procInitHeroBase(h);
+    delete h.nextActiveDamageBonus;delete h.procAdvanceRound;delete h.procAdvanceSteps;
+    ensureProcSlots(h);return h;
+  };
+  const procInitialBase=initial;
+  initial=function(job){const h=procInitialBase(job);h.procSlots=[null,null];ensureProcSlots(h);return h;};
+  solo.initial=initial;
+
+  const procSyncHeroBase=syncHeroSkillArrays;
+  syncHeroSkillArrays=function(h){const out=procSyncHeroBase(h);ensureProcSlots(h);return out;};
+  const procValidatePartyBase=validateParty;
+  validateParty=function(input){const p=procValidatePartyBase(input);for(const h of p.members||[])ensureProcSlots(h);return p;};
+  const procLoadPartyBase=loadParty;
+  loadParty=function(input){const out=procLoadPartyBase(input);for(const h of party?.members||[])ensureProcSlots(h);return out;};
+
+  procChance=function(i,h=state){
+    const meta=ensureProcSkillMeta(h.job,i);
+    if(!meta)return 0;
+    const level=Math.max(1,Number(h.skills[i])||1);
+    const gem=h.sockets[i]===1?GS('skills.gems.cooldownProcBonus',.10):h.sockets[i]===2?GS('skills.gems.hybridProcBonus',.05):0;
+    const affix=bonusFor(i,5,h)*(GAME_BALANCE.affixes.procChancePerPointPercent/100);
+    return Math.min(GAME_BALANCE.combat.statCaps.crit,Math.max(0,meta.procBaseChance+(level-1)*meta.procChancePerLevel+gem+affix));
+  };
+
+  globalThis.slotProcSkill=function(i,slot){
+    ensureProcSlots(state);
+    if(!Number.isInteger(slot)||slot<0||slot>=PROC_SLOT_COUNT)return;
+    if(i!==null&&!validProcIndex(state,i))return;
+    if(i!==null)for(let s=0;s<PROC_SLOT_COUNT;s++)if(s!==slot&&state.procSlots[s]===i)state.procSlots[s]=null;
+    state.procSlots[slot]=i;save();render();
+  };
+  globalThis.clearProcSkill=function(slot){
+    ensureProcSlots(state);if(!Number.isInteger(slot)||slot<0||slot>=PROC_SLOT_COUNT)return;
+    state.procSlots[slot]=null;save();render();
+  };
+
+  function activeDamageBonus(h){return Math.max(0,Number(h.nextActiveDamageBonus)||0);}
+  function procSpecialCast(h,i,v){
+    const sk=CLASSES[h.job]?.skills?.[i];if(!sk||sk[1]!=='proc'||!PROC_ONLY_EFFECTS.has(sk[5]))return null;
+    if(sk[5]==='nextActiveDamage'){
+      const bonus=Math.max(0,skillPower(i,h));
+      h.nextActiveDamageBonus=activeDamageBonus(h)+bonus;
+      note(characterName(h)+'・'+sk[0]+' → 下次主動技能傷害 +'+Number((bonus*100).toFixed(1))+'%');
+      return true;
+    }
+    if(sk[5]==='advanceNextRound'){
+      h.procAdvanceRound=round+1;
+      h.procAdvanceSteps=Math.min(5,Math.max(0,Number(h.procAdvanceSteps)||0)+1);
+      note(characterName(h)+'・'+sk[0]+' → 下回合行動提前 1 格');
+      return true;
+    }
+    if(sk[5]==='shieldLowest'){
+      const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];
+      if(!ally)return false;
+      const amount=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),result=applyPureShield(ally,amount);
+      note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 護盾 '+result.generated+(result.upgraded?'':'（現有護盾較高，維持不變）'));
+      return true;
+    }
+    return null;
+  }
+
+  castPartySkill=function(h,i,v){
+    const sk=CLASSES[h.job].skills[i];if(!sk)return false;
+    const special=procSpecialCast(h,i,v);if(special!==null)return special;
+    const storedBonus=sk[1]==='active'?activeDamageBonus(h):0;
+    const basePower=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power'));
+    const damagePower=basePower*((storedBonus>0&&['damage','drain'].includes(sk[5]))?1+storedBonus:1);
+    const element=coreSkillElement(h.job,i);let success=false;
+    if(sk[5]==='heal'){
+      const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;
+      const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(basePower));
+      const recovered=Math.max(0,ally.hp-beforeHp);if(recovered>0)recordCombatContribution(h,'healing',recovered);
+      note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');success=true;
+    }else if(sk[5]==='shield'){
+      const result=applyPureShield(h,basePower);note(pureShieldCastLog(h,sk[0],result));success=true;
+    }else{
+      const targets=coreSkillTargets(sk);if(!targets.length)return false;
+      let total=0;const results=[];
+      for(const e of targets){const d=resolveHit(e,damagePower,h,element,Math.random()<v.crit);total+=d;results.push(e.name+' '+d);}
+      if(sk[5]==='drain'){const before=h.hp;h.hp=Math.min(v.hp,h.hp+total);const recovered=Math.max(0,h.hp-before);if(recovered>0)recordCombatContribution(h,'healing',recovered);}
+      note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害');success=true;
+    }
+    if(success&&sk[1]==='active'&&storedBonus>0)delete h.nextActiveDamageBonus;
+    if(success&&h.sockets[i]===2&&sk[1]==='active'){
+      const before=h.hp;h.hp=Math.min(v.hp,h.hp+Math.round(v.atk*GS('skills.gems.hybridActiveHealAttack',.15)));
+      const recovered=Math.max(0,h.hp-before);if(recovered>0)recordCombatContribution(h,'healing',recovered);
+    }
+    return success;
+  };
+
+  const procInitiativeBase=initiativeOrder;
+  initiativeOrder=function(){
+    const order=procInitiativeBase();
+    for(let i=1;i<order.length;i++){
+      const u=order[i];if(u.side!=='hero')continue;
+      const h=u.actor,steps=h.procAdvanceRound===round?Math.max(0,Math.min(5,Number(h.procAdvanceSteps)||0)):0;
+      if(steps){const to=Math.max(0,i-steps);if(to!==i){order.splice(i,1);order.splice(to,0,u);}delete h.procAdvanceRound;delete h.procAdvanceSteps;}
+    }
+    return order;
+  };
+
+  const procResetEncounterBase=resetEncounter;
+  resetEncounter=function(){
+    for(const h of party?.members||[]){delete h.nextActiveDamageBonus;delete h.procAdvanceRound;delete h.procAdvanceSteps;}
+    return procResetEncounterBase();
+  };
+
+  performHeroBasic=function(h){
+    ensureProcSlots(h);
+    const v=battleStats(h),target=foes.find(e=>e.hp>0);if(!target)return;
+    const d=resolveHit(target,v.atk,h,weaponElement(h),Math.random()<v.crit);
+    note(characterName(h)+' 普攻 → '+target.name+' '+d+' 傷害');
+    for(const i of h.procSlots){
+      if(!foes.some(e=>e.hp>0))break;
+      if(i!==null&&validProcIndex(h,i)&&Math.random()<procChance(i,h))castPartySkill(h,i,v);
+    }
+    const steps=basicAdvanceSteps(h);if(steps)h.basicAdvanceRound=round+1;else delete h.basicAdvanceRound;
+  };
+
+  function normalizeProcFields(config){
+    const settings=config?.balanceSettings||null,d=legacyProcRates(settings);
+    for(const c of config?.classes||[])for(const sk of c?.skills||[])if(sk?.activation==='proc'){
+      if(!Number.isFinite(sk.procBaseChance))sk.procBaseChance=d.base;
+      if(!Number.isFinite(sk.procChancePerLevel))sk.procChancePerLevel=d.per;
+      sk.procBaseChance=Math.max(0,Math.min(1,Number(sk.procBaseChance)));
+      sk.procChancePerLevel=Math.max(0,Math.min(1,Number(sk.procChancePerLevel)));
+    }
+    return config;
+  }
+  const procValidateBalanceBase=validateBalanceConfig;
+  validateBalanceConfig=function(input){
+    const original=normalizeProcFields(JSON.parse(JSON.stringify(input)));
+    for(const [job,c] of (original.classes||[]).entries())for(const [i,sk] of (c.skills||[]).entries()){
+      if(PROC_ONLY_EFFECTS.has(sk.effect)&&sk.activation!=='proc')throw Error('觸發專屬效果只能用於 proc 技能：'+job+'-'+i);
+      if(sk.activation==='proc'&&(!Number.isFinite(sk.procBaseChance)||sk.procBaseChance<0||sk.procBaseChance>1||!Number.isFinite(sk.procChancePerLevel)||sk.procChancePerLevel<0||sk.procChancePerLevel>1))throw Error('普攻觸發率設定無效：'+job+'-'+i);
+    }
+    const shadow=JSON.parse(JSON.stringify(original));
+    for(const c of shadow.classes||[])for(const sk of c.skills||[])if(PROC_ONLY_EFFECTS.has(sk.effect))sk.effect='damage';
+    const out=procValidateBalanceBase(shadow);
+    for(let job=0;job<(out.classes||[]).length;job++)for(let i=0;i<(out.classes[job].skills||[]).length;i++){
+      const src=original.classes?.[job]?.skills?.[i],dst=out.classes[job].skills[i];if(!src||!dst)continue;
+      dst.effect=src.effect;dst.procBaseChance=src.procBaseChance;dst.procChancePerLevel=src.procChancePerLevel;
+    }
+    return out;
+  };
+
+  const procApplyBalanceBase=applyBalanceConfig;
+  applyBalanceConfig=function(input,{persist=true}={}){
+    const copy=normalizeProcFields(JSON.parse(JSON.stringify(input)));
+    const out=procApplyBalanceBase(copy,{persist:false});
+    for(let job=0;job<CLASSES.length;job++)for(let i=0;i<CLASSES[job].skills.length;i++){
+      const src=copy.classes?.[job]?.skills?.[i],sk=CLASSES[job].skills[i];if(!src||sk[1]!=='proc')continue;
+      if(!sk[6]||typeof sk[6]!=='object'||Array.isArray(sk[6]))sk[6]={};
+      sk[6].procBaseChance=src.procBaseChance;
+      sk[6].procChancePerLevel=src.procChancePerLevel;
+      if(sk[5]==='shieldLowest')sk[6].target='weakest';
+      else if(PROC_ONLY_EFFECTS.has(sk[5]))sk[6].target='self';
+    }
+    ensureAllProcSkillMeta(copy.balanceSettings);
+    syncAllHeroSkillArrays();
+    if(persist)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));
+    if(state)render();
+    return out;
+  };
+
+  const procExportBalanceBase=exportableBalance;
+  exportableBalance=function(){
+    ensureAllProcSkillMeta();
+    const out=procExportBalanceBase();
+    for(let job=0;job<(out.classes||[]).length;job++)for(let i=0;i<(out.classes[job].skills||[]).length;i++){
+      const src=CLASSES[job]?.skills?.[i],dst=out.classes[job].skills[i];if(!src||!dst||src[1]!=='proc')continue;
+      const meta=ensureProcSkillMeta(job,i);
+      dst.procBaseChance=meta.procBaseChance;
+      dst.procChancePerLevel=meta.procChancePerLevel;
+    }
+    out._reference??={};
+    out._reference.procSkills={
+      slots:'每名角色有 2 個普攻觸發槽；只有配置於槽位中的 proc 技能會在普攻後判定。',
+      procBaseChance:'技能 Lv1 的基礎觸發率，0.245 = 24.5%。',
+      procChancePerLevel:'技能每提升 1 級增加的觸發率，從 Lv2 起累加。',
+      effects:{nextActiveDamage:'觸發後累積下次主動技能傷害加成；下一個主動技能施放後消耗。',advanceNextRound:'觸發後使角色下一回合行動順序提前 1 格。',shieldLowest:'觸發後，以施放者攻擊力×技能倍率產生純護盾，給生命比例最低的存活隊友。'}
+    };
+    out.notes=[...(out.notes||[]),'普攻觸發技能改為 2 個獨立槽位；學會技能不再代表自動啟用。','proc 技能可逐招設定 procBaseChance（Lv1 基礎率）與 procChancePerLevel（每次升級增加率）。舊設定會依原公式換算，維持 Lv1 實際觸發率。','proc 專屬效果：nextActiveDamage=下次主動技能增傷；advanceNextRound=下回合行動提前 1 格；shieldLowest=最低生命比例隊友獲得護盾。'];
+    return out;
+  };
+
+  function pct(v){return Number((Number(v)*100).toFixed(1));}
+  function upgradeReason(i){
+    const sk=CLASSES[state.job]?.skills?.[i];if(!sk)return '技能資料不存在。';
+    const reasons=[],level=state.skills[i]||0,cap=skillCap(),advanced=skillRequiresAdvanced(sk,i);
+    if(level>=RULES.skillMax)return '已達技能最高等級 Lv.'+RULES.skillMax+'。';
+    if(state.lv<sk[2])reasons.push('需要角色 LV'+sk[2]+'（目前 LV'+state.lv+'）');
+    if(advanced&&!state.advanced)reasons.push('需要完成二轉');
+    if(level>=cap)reasons.push('目前技能等級上限 Lv.'+cap);
+    if(state.sp<1)reasons.push('需要 1 技能點（目前 '+state.sp+'）');
+    return reasons.length?'無法升級：'+reasons.join('；')+'。':'';
+  }
+  function upgradeButton(i,locked){
+    const reason=upgradeReason(i),label=locked?'尚未解鎖':state.skills[i]?'升級1點':'學習';
+    const html='<button onclick="learn('+i+')" '+(reason?'disabled':'')+'>'+label+'</button>';
+    return '<span class="skill-upgrade-tip" '+(reason?'tabindex="0" data-tooltip="'+esc(reason)+'" title="'+esc(reason)+'" aria-label="'+esc(reason)+'"':'')+'>'+html+'</span>';
+  }
+  function procEffectDetail(i){
+    const sk=CLASSES[state.job].skills[i];
+    if(sk[5]==='nextActiveDamage')return '觸發後：下次主動技能傷害 +'+pct(skillPower(i,state))+'%；使用下一個主動技能後消耗';
+    if(sk[5]==='advanceNextRound')return '觸發後：下回合行動順序提前 1 格';
+    if(sk[5]==='shieldLowest')return '觸發後：生命比例最低隊友獲得施放者攻擊力 '+pct(skillPower(i,state))+'% 的純護盾';
+    return coreSkillDetail(state.job,i,state);
+  }
+  function skillRows(kind){
+    syncHeroSkillArrays(state);ensureProcSlots(state);
+    const slots=kind==='active'?Array.from({length:2},(_,i)=>state.active?.[i]??null):state.procSlots;
+    const clearName=kind==='active'?'clearActiveSkill':'clearProcSkill';
+    const slotSummary='<div class="actions active-slot-summary">'+slots.map((id,s)=>'<span>槽 '+(s+1)+'：'+(id===null?'未配置':esc(CLASSES[state.job].skills[id]?.[0]||'未知技能')+skillTypeBadges(state.job,id))+' <button onclick="'+clearName+'('+s+')">清空</button></span>').join('')+'</div>';
+    const rows=CLASSES[state.job].skills.map((sk,i)=>({sk,i})).filter(x=>x.sk[1]===kind).map(({sk,i})=>{
+      const advanced=skillRequiresAdvanced(sk,i),locked=state.lv<sk[2]||(advanced&&!state.advanced),gem=state.sockets[i]??null;
+      const setButtons=[0,1].map(s=>'<button onclick="'+(kind==='active'?'equipSkill':'slotProcSkill')+'('+i+','+s+')" '+(!state.skills[i]?'disabled':'')+'>'+(slots[s]===i?'已配置槽':'設為槽')+' '+(s+1)+'</button>').join('');
+      const detail=kind==='proc'?procEffectDetail(i):coreSkillDetail(state.job,i,state);
+      const chance=kind==='proc'?'<p>Lv1 基礎 '+pct(ensureProcSkillMeta(state.job,i).procBaseChance)+'% · 每升 1 級 +'+pct(ensureProcSkillMeta(state.job,i).procChancePerLevel)+'% · 目前 '+pct(procChance(i,state))+'%</p>':'';
+      return '<article class="skill-list-row"><div><div class="skill-list-title"><b>'+esc(sk[0])+'</b><span>Lv.'+state.skills[i]+'/'+RULES.skillMax+'</span><span>'+(kind==='proc'?'普攻觸發':'主動')+'</span></div>'+skillTypeBadges(state.job,i)+skillMechanicsDetails(state.job,i)+'<p class="skill-flavor"><b>說明：</b>'+(esc(coreSkillFlavor(state.job,i))||'<span class="small">尚未填寫</span>')+'</p><p class="skill-detail"><b>詳細：</b>'+esc(detail)+'</p>'+chance+'</div><div class="skill-list-controls">'+upgradeButton(i,locked)+setButtons+'<label>寶石 <select aria-label="'+esc(sk[0])+'寶石" onchange="socket('+i+',this.value)" '+(!state.skills[i]?'disabled':'')+'><option value="-1" '+(gem===null?'selected':'')+'>不鑲嵌</option>'+GEMS.map((g,j)=>'<option value="'+j+'" '+(gem===j?'selected':'')+' '+(state.gems[j]<1&&gem!==j?'disabled':'')+'>'+esc(g.name)+' ×'+state.gems[j]+' · '+esc(g.desc)+'</option>').join('')+'</select></label></div></article>';
+    }).join('');
+    return slotSummary+'<div class="skill-list">'+rows+'</div>';
+  }
+  coreSkillRows=function(){return skillRows('active');};
+  globalThis.procSkillRows=function(){return skillRows('proc');};
+  setSkillPanel=function(panel){if(!['active','proc','support'].includes(panel))return;skillPanel=panel;render();};
+  skillsView=function(){
+    return singlePagePanel('skills','技能',()=>'<div class="actions skill-subtabs"><button class="'+(skillPanel==='active'?'primary':'')+'" onclick="setSkillPanel(\'active\')">主動技能</button><button class="'+(skillPanel==='proc'?'primary':'')+'" onclick="setSkillPanel(\'proc\')">普攻觸發</button><button class="'+(skillPanel==='support'?'primary':'')+'" onclick="setSkillPanel(\'support\')">輔助技能</button></div>'+(skillPanel==='active'?coreSkillRows():skillPanel==='proc'?procSkillRows():supportSkillRows()));
+  };
+
+  const procGuideBase=guideView;
+  guideView=function(){
+    return procGuideBase().replace('觸發技在普攻時各自判定','只有配置於普攻觸發槽的觸發技能會在普攻時各自判定').replace('所有已學會的觸發技能永久啟用','普攻觸發技能必須配置於觸發槽才會啟用');
+  };
+
+  function decorateBattleProcSlots(){
+    if(!party||tab!=='battle')return;
+    document.querySelectorAll('.squad-allies .unit[data-combat-id]').forEach(node=>{
+      const id=node.getAttribute('data-combat-id'),h=(party.members||[]).find(x=>heroKey(x)===id),box=node.querySelector('.unit-skills');
+      if(!h||!box||box.querySelector('.proc-loadout-line'))return;ensureProcSlots(h);
+      const line=document.createElement('div');line.className='proc-loadout-line';
+      line.textContent='觸發｜'+h.procSlots.map(i=>i===null?'未配置':CLASSES[h.job].skills[i][0]+' '+pct(procChance(i,h))+'%').join(' ／ ');
+      box.appendChild(line);
+    });
+  }
+  const procRenderBase=render;
+  render=function(){const out=procRenderBase();decorateBattleProcSlots();return out;};
+
+  for(const h of party?.members||[])ensureProcSlots(h);
+  try{
+    const raw=localStorage.getItem(BALANCE_KEY);
+    if(raw){const saved=JSON.parse(raw);if(saved?.classes)applyBalanceConfig(saved,{persist:false});}
+  }catch(e){console.warn('普攻觸發技能設定重新載入失敗，使用目前設定',e);}
+  if(state){for(const h of party?.members||[state])ensureProcSlots(h);save();render();}
+})();
+</script>
+
 </body></html>
