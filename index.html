@@ -1127,7 +1127,7 @@ function armorProfile(){return null;}
 const beforeArmorStats=stats;stats=function(h=state){const v=beforeArmorStats(h);for(const g of equipment(h)){const p=armorProfile(g);if(p)for(const k of ['hp','def','crit','evasion'])v[k]=(v[k]||0)+(p[k]||0);}v.crit=Math.min(.85,v.crit);v.evasion=Math.min(.45,v.evasion);v.speed=Math.round([102,108,116,96][h.job]+h.lv*.5+Math.min(5,v.evasion*10+v.crit*5));return v;};solo.stats=stats;
 const beforeArmorDesc=gearDesc;gearDesc=function(g){const p=armorProfile(g);return beforeArmorDesc(g)+(p?' / '+p.name+'加成：'+Object.entries(p).filter(([k])=>k!=='name').map(([k,v])=>({hp:'生命',def:'防禦',crit:'暴擊率',evasion:'閃避率'}[k])+' +'+(['crit','evasion'].includes(k)?+(v*100).toFixed(1)+'%':v)).join('、'):'');};
 const beforeArmorAffixLabel=affixLabel;affixLabel=function(a,g){return (g.slot===1&&[4,5].includes(a.type)?CLASSES[g.job].name+'專屬 · ':'')+beforeArmorAffixLabel(a,g);};
-equipmentView=function(){ensureSharedGear();if(filters.job==='own')filters.job='all';const h=pageHero('equipment');return heading('ACCOUNT INVENTORY / 帳號共用','裝備背包',`<span class="tag">${h.bag.length} / ${RULES.bagCapacity} 件</span>`)+`${uiHelp('裝備規則','背包與資源共用。護甲通用；武器、副手與職業技能詞條有職業限制。')}<section class="panel page-owner-panel"><div class="page-owner-content">${withHero(h,()=>ownerControls(inlineInventoryView(),h.job))}</div></section>`;};
+equipmentView=function(){ensureSharedGear();if(filters.job==='own')filters.job='all';const h=pageHero('equipment');return heading('ACCOUNT INVENTORY / 帳號共用','裝備背包',`<span class="tag">${h.bag.length} / ${RULES.bagCapacity} 件</span>`)+`${uiHelp('裝備規則','背包與資源共用。每件裝備依可穿戴職業設定判定；每名角色可裝備 1 件副手與 2 件飾品。')}<section class="panel page-owner-panel"><div class="page-owner-content">${withHero(h,()=>ownerControls(inlineInventoryView(),h.job))}</div></section>`;};
 const accountShopView=shopView;shopView=function(){return accountShopView().replace('使用對象／付款角色：','道具使用對象：').replace('購買由上方角色付款，使用效果只施加到該角色；寶石及製作材料仍各自持有。','購買扣除帳號金幣，使用效果只施加到選取角色；寶石與製作材料也由帳號共用。');};
 
 function equipmentComparison(h,g,position=null){const afterHero={...h,equipped:[...h.equipped]};while(afterHero.equipped.length<5)afterHero.equipped.push(null);const positions=gearEquipPositions(g);let target=Number.isInteger(position)&&positions.includes(position)?position:positions.find(p=>!afterHero.equipped[p]);if(target===undefined)target=positions[0];afterHero.equipped[target]=g.id;const before=stats(h),after=stats(afterHero),rows=[];
@@ -1142,7 +1142,7 @@ function equipmentComparison(h,g,position=null){const afterHero={...h,equipped:[
 function previewEquip(id,job,position=null){const h=party.members.find(h=>h.job===job),g=state.bag.find(g=>g.id===id);if(!h||!g||!eligibleWearers(g).includes(h))return;const positions=gearEquipPositions(g);while(h.equipped.length<5)h.equipped.push(null);if(g.slot===3&&position===null&&positions.every(p=>h.equipped[p]&&h.equipped[p]!==id)){$('modal').innerHTML=`<h2>${esc(characterName(h))} · 選擇飾品欄位</h2><p>兩個飾品欄位都已裝備物品，請選擇要替換哪一格。</p><div class="actions">${positions.map(p=>{const current=h.bag.find(x=>x.id===h.equipped[p]);return `<button onclick="previewEquip('${id}',${job},${p})">替換 ${EQUIP_POSITION_NAMES[p]}${current?' · '+esc(equipmentDisplayName(current)):''}</button>`;}).join('')}<button onclick="closeModal()">取消</button></div>`;$('modal').showModal();return;}let target=Number.isInteger(position)&&positions.includes(position)?position:positions.find(p=>!h.equipped[p]||h.equipped[p]===id);if(target===undefined)target=positions[0];const current=h.bag.find(x=>x.id===h.equipped[target]);if(!current){equipSharedGear(id,job,target);return;}if(current.id===id)return;const rows=equipmentComparison(h,g,target),wearer=gearWearer(id);$('modal').innerHTML=`<h2>${esc(characterName(h))} · 換裝比較</h2><div class="equip-compare-grid">${[[current,'目前穿戴'],[g,'準備穿戴']].map(([item,label])=>`<section><h3>${label}</h3><b>${equipmentNameHTML(item)}</b><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryText(item)}</p>${globalThis.equipmentAttributeDetailsHTML(item)}</section>`).join('')}</div>${wearer&&wearer!==h?`<p class="gold">這件裝備目前由 ${esc(characterName(wearer))} 穿戴，確認後會轉移給 ${esc(characterName(h))}。</p>`:''}<h3>角色能力變化</h3><table class="equip-delta-table"><thead><tr><th>能力</th><th>目前</th><th>穿戴後</th><th>差異</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.label)}</td><td>${r.before}${r.percent?'%':''}</td><td>${r.after}${r.percent?'%':''}</td><td class="${r.good?'delta-up':'delta-down'}">${r.delta>0?'+':''}${r.delta}${r.percent?' 百分點':''}</td></tr>`).join('')||'<tr><td colspan="4">數值無變化</td></tr>'}</tbody></table><p class="small">僅列出有變化的能力；未學技能的詞條請見裝備說明。</p><div class="actions"><button class="primary" onclick="confirmEquipComparison('${id}',${job},${target})">確認穿戴</button><button onclick="closeModal()">取消</button></div>`;$('modal').showModal();}
 function confirmEquipComparison(id,job,position=null){closeModal();equipSharedGear(id,job,position);}
 
-function forgeEquipmentOptions(selectedId){const worn=[],spare=[];for(const g of state.bag)(gearWearer(g.id)?worn:spare).push(g);worn.sort((a,b)=>gearWearer(a.id).job-gearWearer(b.id).job||a.slot-b.slot);const option=g=>{const wearer=gearWearer(g.id);return `<option value="${g.id}" ${g.id===selectedId?'selected':''}>${wearer?'【'+esc(characterName(wearer))+'穿戴】':g.slot===1?'【全職業】':'【'+CLASSES[g.job].name+'】'} ${esc(equipmentDisplayName(g))} · ${RARITY[g.rar]}</option>`;};return (worn.length?`<optgroup label="全隊已穿戴（${worn.length}）">${worn.map(option).join('')}</optgroup>`:'')+(spare.length?`<optgroup label="未穿戴（${spare.length}）">${spare.map(option).join('')}</optgroup>`:'');}
+function forgeEquipmentOptions(selectedId){const worn=[],spare=[];for(const g of state.bag)(gearWearer(g.id)?worn:spare).push(g);worn.sort((a,b)=>gearWearer(a.id).job-gearWearer(b.id).job||a.slot-b.slot);const option=g=>{const wearer=gearWearer(g.id);return `<option value="${g.id}" ${g.id===selectedId?'selected':''}>${wearer?'【'+esc(characterName(wearer))+'穿戴】':'【'+gearWearableJobsText(g)+'】'} ${esc(equipmentDisplayName(g))} · ${RARITY[g.rar]}</option>`;};return (worn.length?`<optgroup label="全隊已穿戴（${worn.length}）">${worn.map(option).join('')}</optgroup>`:'')+(spare.length?`<optgroup label="未穿戴（${spare.length}）">${spare.map(option).join('')}</optgroup>`:'');}
 function wornEquipmentView(){return heading('PARTY EQUIPMENT / 穿戴總覽','已穿戴裝備',`<span class="tag">${party.members.length} 位角色</span>`)+`<div class="worn-overview">${party.members.map(h=>`<section class="panel worn-member"><div class="row"><h2>${esc(characterName(h))}</h2><span class="small">${CLASSES[h.job].name} · LV ${h.lv} · ${party.active.includes(h.job)?'出戰':'候補'}</span></div>${[0,1,2,3,4].map(position=>{const g=h.bag.find(x=>x.id===h.equipped[position]);return `<article class="worn-slot"><div class="worn-slot-head"><b class="slot-label">${EQUIP_POSITION_NAMES[position]}</b>${g?`<span>${equipmentNameHTML(g)}</span><button onclick="heroMenuAction(${h.job},()=>openForge('${g.id}'))">強化／洗鍊</button>`:'<span class="small">未穿戴</span>'}</div>${g?`<p class="small equipment-total-summary">${globalThis.equipmentTotalSummaryText(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g)}`:''}</article>`;}).join('')}</section>`).join('')}</div>`;}
 
 // Audit boundary: validate persistent shared data before replacing any live session.
@@ -1360,7 +1360,7 @@ function balanceReference(){return {
   qualities:{normal:'rank 0／普通',fine:'rank 1／精良',rare:'rank 2／稀有',legendary:'rank 3／傳說'},
   affixTypes:{'0':'固定攻擊','1':'固定生命','2':'固定防禦','3':'暴擊率 %','4':'指定技能效果 %','5':'主動技能冷卻減少；若該技能為 proc，則每 1 點依 procChancePerPointPercent 增加觸發率','6':'暴擊傷害 %','7':'防禦穿透 %','8':'生命竊取 %','9':'閃避率 %','12':'指定屬性傷害 %','13':'對指定種族增傷 %','14':'指定屬性抗性 %','15':'總攻擊力 %；目前只在稀有／傳說池出現'},
   equipmentExclusive:{gearAtkPct:'只增加該件裝備的基礎攻擊 %',gearHpPct:'只增加該件裝備的基礎生命 %',gearDefPct:'只增加該件裝備的基礎防禦 %',attackPct:'增加角色總攻擊力 %',crit:'暴擊率 %',critDamage:'暴擊傷害 %',pierce:'防禦穿透 %',lifesteal:'生命竊取 %',evasion:'閃避率 %',elementBonus:'全元素傷害 %；不含 physical 無屬性'},
-  equipmentSlots:{'0':'武器','1':'護甲','2':'副手／飾品'},
+  equipmentSlots:{'0':'武器','1':'護甲','2':'副手','3':'飾品'},
   balancePaths:{
     'balance.combat.elementMultipliers':'neutral=無剋制、same=同屬性、strong=剋制、weak=被剋制',
     'balance.combat.statCaps':'crit/pierce/evasion/lifesteal 的最終上限，使用 0~1 小數',
@@ -1737,7 +1737,7 @@ confirmMassSalvage=function(){if(!massSalvageIds)return;const items=massSalvageT
 salvage=function(id){const g=findGear(id);if(!g||g.locked||gearWearer(g.id)||inlineAffixDrafts.has(affixDraftKey(g)))return;const q=gearQualityRank(g);state.ore+=g.tier*(3+q*2+(g.plus||0));state.dust+=1+q;state.bag=state.bag.filter(x=>x.id!==id);pruneGearSelections();save();render();};
 
 addGear=function(g){g.rar=0;const q=gearQualityRank(g);if(state.bag.length>=RULES.bagCapacity){state.ore+=g.tier*(3+q*2);state.dust+=1+q;note('背包已滿，掉落裝備自動分解。');}else{state.bag.push(g);note(`獲得 ${AFFIX_RANK[q]} ${equipmentDisplayName(g)}${g.boss!==undefined?'（BOSS 專屬）':''}`);}};
-forgeEquipmentOptions=function(selectedId){const worn=[],spare=[];for(const g of state.bag)(gearWearer(g.id)?worn:spare).push(g);worn.sort((a,b)=>gearWearer(a.id).job-gearWearer(b.id).job||a.slot-b.slot);const option=g=>{const wearer=gearWearer(g.id);return `<option value="${g.id}" ${g.id===selectedId?'selected':''}>${wearer?'【'+esc(characterName(wearer))+'穿戴】':g.slot===1?'【全職業】':'【'+CLASSES[g.job].name+'】'} ${esc(equipmentDisplayName(g))} · ${AFFIX_RANK[gearQualityRank(g)]}${g.boss!==undefined?' · BOSS':''}</option>`;};return (worn.length?`<optgroup label="全隊已穿戴（${worn.length}）">${worn.map(option).join('')}</optgroup>`:'')+(spare.length?`<optgroup label="未穿戴（${spare.length}）">${spare.map(option).join('')}</optgroup>`:'');};
+forgeEquipmentOptions=function(selectedId){const worn=[],spare=[];for(const g of state.bag)(gearWearer(g.id)?worn:spare).push(g);worn.sort((a,b)=>gearWearer(a.id).job-gearWearer(b.id).job||a.slot-b.slot);const option=g=>{const wearer=gearWearer(g.id);return `<option value="${g.id}" ${g.id===selectedId?'selected':''}>${wearer?'【'+esc(characterName(wearer))+'穿戴】':'【'+gearWearableJobsText(g)+'】'} ${esc(equipmentDisplayName(g))} · ${AFFIX_RANK[gearQualityRank(g)]}${g.boss!==undefined?' · BOSS':''}</option>`;};return (worn.length?`<optgroup label="全隊已穿戴（${worn.length}）">${worn.map(option).join('')}</optgroup>`:'')+(spare.length?`<optgroup label="未穿戴（${spare.length}）">${spare.map(option).join('')}</optgroup>`:'');};
 
 // Normalize old saves in memory: legacy equipment rarity no longer has gameplay meaning.
 if(state?.bag)state.bag.forEach(g=>g.rar=0);
@@ -5541,7 +5541,7 @@ if(state)render();
     ...makeBossProfiles('parallel',PARALLEL_BOSS_SERIES,true)
   ];
   const DEFAULT_POWER={
-    schemaVersion:3,
+    schemaVersion:4,
     prefixes:DEFAULT_PREFIXES,
     suffixes:DEFAULT_SUFFIXES,
     bossAffixes:DEFAULT_BOSS_AFFIXES,
@@ -5557,8 +5557,9 @@ if(state)render();
   };
 
   function finite(v,d,min=-Infinity,max=Infinity){v=Number(v);return Number.isFinite(v)?Math.max(min,Math.min(max,v)):d;}
-  function normalizeSlots(v,def=[0,1,2]){
-    const out=Array.isArray(v)?[...new Set(v.map(Number).filter(x=>Number.isInteger(x)&&x>=0&&x<=2))]:clone(def);
+  function normalizeSlots(v,def=[0,1,2,3],legacy=false){
+    const out=Array.isArray(v)?[...new Set(v.map(Number).filter(x=>Number.isInteger(x)&&x>=0&&x<=3))]:clone(def);
+    if(legacy&&out.includes(2)&&!out.includes(3))out.push(3);
     return out.length?out:clone(def);
   }
   function normalizeEffect(src,allowed,def){
@@ -5587,7 +5588,7 @@ if(state)render();
     const v=Array.isArray(x.chanceByTier)?x.chanceByTier[tier-1]:x.weight;
     return finite(v,0,0,100);
   }
-  function normalizeAffixRows(rows,defaults){
+  function normalizeAffixRows(rows,defaults,legacySlots=false){
     if(!Array.isArray(rows)||!rows.some(x=>x&&x.effect))rows=clone(defaults);
     const seen=new Set();
     const out=[];
@@ -5600,7 +5601,7 @@ if(state)render();
       const tierMax=Math.max(tierMin,Math.min(10,Math.round(finite(x.tierMax,d.tierMax,tierMin,10))));
       const weight=finite(x.weight,d.weight,0,100);
       const chanceByTier=normalizeAffixChances(x.chanceByTier,weight,tierMin,tierMax);
-      out.push({id,name:typeof x.name==='string'&&x.name.trim()?x.name.trim():d.name,tierMin,tierMax,weight,chanceByTier,slots:normalizeSlots(x.slots,d.slots),effect:normalizeEffect(x.effect,REGULAR_EFFECT_KEYS,d.effect)});
+      out.push({id,name:typeof x.name==='string'&&x.name.trim()?x.name.trim():d.name,tierMin,tierMax,weight,chanceByTier,slots:normalizeSlots(x.slots,d.slots,legacySlots),effect:normalizeEffect(x.effect,REGULAR_EFFECT_KEYS,d.effect)});
     }
     return out.length?out:clone(defaults);
   }
@@ -5626,9 +5627,10 @@ if(state)render();
   }
   function normalizePower(src){
     src=src&&typeof src==='object'&&!Array.isArray(src)?src:{};
-    const out=clone(DEFAULT_POWER);
-    out.prefixes=normalizeAffixRows(src.prefixes,DEFAULT_PREFIXES);
-    out.suffixes=normalizeAffixRows(src.suffixes,DEFAULT_SUFFIXES);
+    const legacySlots=Number(src.schemaVersion||0)<4,out=clone(DEFAULT_POWER);
+    out.schemaVersion=4;
+    out.prefixes=normalizeAffixRows(src.prefixes,DEFAULT_PREFIXES,legacySlots);
+    out.suffixes=normalizeAffixRows(src.suffixes,DEFAULT_SUFFIXES,legacySlots);
     out.bossAffixes=normalizeBossAffixes(src.bossAffixes,src.seriesPrefixes);
     const st=src.strength&&typeof src.strength==='object'?src.strength:{};
     out.strength.multipliers=Array.from({length:10},(_,i)=>finite(st.multipliers?.[i],DEFAULT_POWER.strength.multipliers[i],.01,100));
@@ -5699,9 +5701,9 @@ if(state)render();
         if(!x.name||!x.slots.length||x.tierMin<1||x.tierMax>10||x.tierMax<x.tierMin||!Array.isArray(x.chanceByTier)||x.chanceByTier.length!==10||x.chanceByTier.some(v=>!Number.isFinite(v)||v<0||v>100))throw Error(label+'資料無效：'+x.id);
         if(!REGULAR_EFFECT_KEYS.has(x.effect.key))throw Error(label+'效果無效：'+x.id);
       }
-      for(let tier=1;tier<=10;tier++)for(let slot=0;slot<3;slot++){
+      for(let tier=1;tier<=10;tier++)for(let slot=0;slot<4;slot++){
         const total=rows.filter(x=>tier>=x.tierMin&&tier<=x.tierMax&&x.slots.includes(slot)).reduce((n,x)=>n+affixChanceAtTier(x,tier),0);
-        if(total>100+1e-9)throw Error(label+' T'+tier+' '+['武器','護甲','飾品'][slot]+'機率合計超過 100%');
+        if(total>100+1e-9)throw Error(label+' T'+tier+' '+['武器','護甲','副手','飾品'][slot]+'機率合計超過 100%');
       }
     };
     checkRows(p.prefixes,'前綴');checkRows(p.suffixes,'後綴');
@@ -5728,7 +5730,7 @@ if(state)render();
         boss:'BOSS 專屬裝備沒有前後綴與隨機洗鍊詞條；bossAffixes 每筆固定 3 條效果。',
         effects:[...BOSS_EFFECT_KEYS]
       };
-      out.notes=[...(out.notes||[]),'equipmentPowerSystem schemaVersion=3：prefixes / suffixes 各一條效果；chanceByTier[0..9] 分別控制 T1～T10 實際百分比機率，舊版 weight 會自動轉入有效 T 級。','同一 T 級與部位的前綴／後綴機率池各自以 100% 為上限；不足 100% 的剩餘機率會生成無前綴／無後綴裝備。','一般裝備 raw ATK/HP/DEF 不受前後綴影響；由 equipmentForms 基底、T 階級與既有強化計算。','BOSS 專屬裝備不抽前後綴，也不使用隨機洗鍊詞條。'];
+      out.notes=[...(out.notes||[]),'equipmentPowerSystem schemaVersion=4：prefixes / suffixes 各一條效果；chanceByTier[0..9] 分別控制 T1～T10 實際百分比機率，舊版 weight 會自動轉入有效 T 級。','同一 T 級與部位的前綴／後綴機率池各自以 100% 為上限；不足 100% 的剩餘機率會生成無前綴／無後綴裝備。','一般裝備 raw ATK/HP/DEF 不受前後綴影響；由 equipmentForms 基底、T 階級與既有強化計算。','BOSS 專屬裝備不抽前後綴，也不使用隨機洗鍊詞條。'];
       return out;
     };
   }
@@ -6420,7 +6422,7 @@ if(state)render();
     s.skills.core.effectPerExtraLevel=.18;
     Object.assign(s.skills.gems,{effectMultiplier:1.10,hybridMultiplier:1.05,hybridActiveHealAttack:.10});
     s.equipment??={};s.equipment.baseStats??={};s.equipment.enhance??={};s.equipment.boss??={};s.equipment.difficultyAffix??={};
-    Object.assign(s.equipment.baseStats,{weaponAttackPerTier:.7,armorHpPerTier:2.2,armorDefensePerTier:.45,accessoryAttackPerTier:.3,accessoryHpPerTier:.8});
+    Object.assign(s.equipment.baseStats,{weaponAttackPerTier:.7,armorHpPerTier:2.2,armorDefensePerTier:.45,offhandAttackPerTier:.3,offhandHpPerTier:.8,accessoryAttackPerTier:.3,accessoryHpPerTier:.8});
     s.equipment.enhance.statPerLevel=.06;
     s.equipment.boss.powerByDifficulty=[1,1.15,1.3];
     Object.assign(s.equipment.difficultyAffix,{baseAttackPerTier:.6,baseHpPerTier:2.2,defenseBasePerTier:.5,defensePerRankPerTier:.2,critBase:2,critPerRank:2});
