@@ -1840,7 +1840,7 @@ function normalizeFixedEquipmentEffect(raw){
  if(raw.key==='basicElement')out.value=EQUIPMENT_EFFECT_ELEMENTS.has(raw.value)?raw.value:'physical';else out.value=Number.isFinite(Number(raw.value))?Number(raw.value):0;
  if(['elementDamagePct','elementResistPct'].includes(raw.key))out.element=EQUIPMENT_EFFECT_ELEMENTS.has(raw.element)&&raw.element!=='physical'?raw.element:'fire';
  if(raw.key==='raceDamagePct')out.race=EQUIPMENT_EFFECT_RACES.has(raw.race)?raw.race:'beast';
- if(['skillEffectPct','skillCooldownReduction'].includes(raw.key))out.skill=Math.max(0,Math.min(5,Number.isInteger(Number(raw.skill))?Number(raw.skill):0));
+ if(['skillEffectPct','skillCooldownReduction'].includes(raw.key))out.skill=Math.max(0,Number.isInteger(Number(raw.skill))?Number(raw.skill):0);
  return out;
 }
 function normalizeEquipmentFormObject(source){
@@ -1854,6 +1854,7 @@ function normalizeEquipmentFormObject(source){
   for(const key of ['crit','critDamage','pierce','lifesteal','evasion','elementBonus','defenseIgnore'])if(Number.isFinite(form[key])&&form[key]!==0)ex[key]=(ex[key]||0)+form[key];
   let manaAttack=0;if(Number.isFinite(form.mp)&&form.mp>0)manaAttack+=Math.max(1,Math.round(form.mp/15));if(Number.isFinite(form.mpRegen)&&form.mpRegen>0)manaAttack+=Math.max(1,Math.round(form.mpRegen));if(manaAttack)ex.attackPct=(ex.attackPct||0)+manaAttack;
   for(const [key,value] of Object.entries(ex))legacy.push({key,value});
+  if(EQUIPMENT_EFFECT_ELEMENTS.has(form.element)&&form.element!=='physical')legacy.push({key:'basicElement',value:form.element});
  }
  const src=Array.isArray(form.fixedEffects)&&form.fixedEffects.length?form.fixedEffects:legacy;
  form.fixedEffects=src.map(normalizeFixedEquipmentEffect).filter(Boolean).slice(0,5);
@@ -1989,10 +1990,10 @@ equipmentComparison=function(h,g,position=null){
   return rows;
 };
 
-// Test JSON accepts the explicit exclusive object and transparently migrates legacy mana/form fields.
+// Test JSON accepts fixedEffects (1–5 rows) and transparently migrates legacy exclusive / mana / form fields.
 validateBalanceConfig=function(input){
   const data=validateBalanceConfigCore(input),elements=new Set(Object.keys(ELEMENTS));
-  data.equipmentForms.forEach((jobs,job)=>jobs.forEach((forms,slot)=>forms.forEach((form,i)=>{normalizeEquipmentFormObject(form);for(const key of Object.keys(form))if(!['id','name','wearableJobs','fixedEffects'].includes(key))throw Error(`未知裝備欄位：${key}`);if(!Array.isArray(form.fixedEffects)||form.fixedEffects.length<1||form.fixedEffects.length>5)throw Error(`裝備固定屬性必須為 1～5 條：${job}-${slot}-${i}`);for(const [j,fx] of form.fixedEffects.entries()){if(!fx||!EQUIPMENT_FIXED_EFFECT_KEYS.has(fx.key))throw Error(`裝備固定屬性無效：${job}-${slot}-${i}-${j}`);if(fx.key==='basicElement'){if(!EQUIPMENT_EFFECT_ELEMENTS.has(fx.value))throw Error('裝備普通攻擊屬性無效');}else if(!Number.isFinite(fx.value))throw Error(`裝備固定屬性數值無效：${job}-${slot}-${i}-${j}`);if(['elementDamagePct','elementResistPct'].includes(fx.key)&&(!EQUIPMENT_EFFECT_ELEMENTS.has(fx.element)||fx.element==='physical'))throw Error('裝備固定屬性的元素目標無效');if(fx.key==='raceDamagePct'&&!EQUIPMENT_EFFECT_RACES.has(fx.race))throw Error('裝備固定屬性的種族目標無效');if(['skillEffectPct','skillCooldownReduction'].includes(fx.key)&&(!Number.isInteger(fx.skill)||fx.skill<0||fx.skill>5))throw Error('裝備固定屬性的技能目標無效');}})));
+  data.equipmentForms.forEach((jobs,job)=>jobs.forEach((forms,slot)=>forms.forEach((form,i)=>{normalizeEquipmentFormObject(form);for(const key of Object.keys(form))if(!['id','name','wearableJobs','fixedEffects'].includes(key))throw Error(`未知裝備欄位：${key}`);if(!Array.isArray(form.fixedEffects)||form.fixedEffects.length<1||form.fixedEffects.length>5)throw Error(`裝備固定屬性必須為 1～5 條：${job}-${slot}-${i}`);const wearJobs=Array.isArray(form.wearableJobs)?form.wearableJobs.filter(j=>Number.isInteger(j)&&j>=0&&j<data.classes.length):(job<data.classes.length?[job]:data.classes.map((_,j)=>j)),skillCount=wearJobs.reduce((max,j)=>Math.max(max,(data.classes[j]?.skills||[]).length),0);for(const [j,fx] of form.fixedEffects.entries()){if(!fx||!EQUIPMENT_FIXED_EFFECT_KEYS.has(fx.key))throw Error(`裝備固定屬性無效：${job}-${slot}-${i}-${j}`);if(fx.key==='basicElement'){if(!EQUIPMENT_EFFECT_ELEMENTS.has(fx.value))throw Error('裝備普通攻擊屬性無效');}else if(!Number.isFinite(fx.value))throw Error(`裝備固定屬性數值無效：${job}-${slot}-${i}-${j}`);if(['elementDamagePct','elementResistPct'].includes(fx.key)&&(!EQUIPMENT_EFFECT_ELEMENTS.has(fx.element)||fx.element==='physical'))throw Error('裝備固定屬性的元素目標無效');if(fx.key==='raceDamagePct'&&!EQUIPMENT_EFFECT_RACES.has(fx.race))throw Error('裝備固定屬性的種族目標無效');if(['skillEffectPct','skillCooldownReduction'].includes(fx.key)&&(!Number.isInteger(fx.skill)||fx.skill<0||fx.skill>=skillCount))throw Error('裝備固定屬性的技能目標無效');}})));
   return data;
 };
 
