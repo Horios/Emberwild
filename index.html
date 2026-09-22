@@ -233,6 +233,9 @@ const MAPS=[{name:'苔光林地',min:1,max:5,icon:'',color:'#34483a',mobs:[['苔
 const GEMS=[{name:'赤焰石',desc:'技能效果 +18%',icon:''},{name:'疾風石',desc:'主動冷卻 −1 回合（最低 2）／觸發率 +10%',icon:''},{name:'共鳴石',desc:'技能效果 +10%，觸發率 +5%／施放時回復攻擊力 15% 生命',icon:''}];
 const SLOTS=['武器','護甲','護符'];const RARITY=['普通','精良','稀有','傳說'];const AFFIX=['攻擊','生命','防禦','暴擊'];
 const KEY='emberwild-save-v1',BACKUP_KEY='emberwild-save-v1-backup';let state=null,tab='battle',running=false,enemy=null,round=0,cd={},logs=[],timer=null;let toastTimer;
+// Do not persist a partially hydrated save while later modules are still loading.
+let saveReady=false;
+let migrateWorldSave=data=>data;
 const $=x=>document.getElementById(x);const rand=n=>Math.floor(Math.random()*n);let uidSerial=0;const uid=()=>{let id;do{id=Date.now().toString(36)+'-'+(++uidSerial).toString(36)+'-'+Math.random().toString(36).slice(2,8);}while(party?.members.some(h=>h.bag.some(g=>g.id===id)));return id;};let need=l=>Math.round((45+l*18+l*l*2)*(2.2+l*.16));
 
 function initial(job){let g=gear(1,0,0,job);return migrate({version:1,job,lv:1,xp:0,gold:150,ore:12,dust:0,hp:CLASSES[job].hp,shield:0,map:0,advanced:false,sp:2,ap:0,stats:[0,0,0],skills:[1,0,0,0,0,0],active:[0,null],procSlots:[null,null],gems:[0,0,0],sockets:[null,null,null,null,null,null],bag:[g],equipped:[g.id,null,null],materials:{},kills:{},totalKills:0,tutorial:0,claimed:[],repeat:0,won:false,autoPotion:true,potions:5,discovered:[],created:Date.now()});}
@@ -336,7 +339,7 @@ function cast(i,v){let sk=CLASSES[state.job].skills[i],power=v.atk*skillPower(i)
 function addGear(g){if(state.bag.length>=RULES.bagCapacity){state.ore+=g.tier*(3+g.rar*2);state.dust+=1+g.rar;note('背包已滿，掉落裝備自動分解。');}else{state.bag.push(g);note(`獲得 ${RARITY[g.rar]} ${equipmentDisplayName(g)}`);}}
 function exportSave(){if(!state)return toast('請先建立角色');save();let blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`emberwild-lv${state.lv}-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('已匯出角色 JSON');}
 
-let pendingImport=null;async function importSave(ev){let f=ev.target.files[0];ev.target.value='';if(!f)return;try{if(f.size>2e6)throw Error('檔案過大');pendingImport=validateSave(JSON.parse(await f.text()));running=false;render();$('modal').innerHTML=`<h2>載入角色存檔？</h2><p>LV${pendingImport.lv} ${CLASSES[pendingImport.job].name} · ${pendingImport.totalKills} 次擊殺</p><p>這會取代此瀏覽器目前的角色。建議先匯出原角色備份。</p><div class="actions"><button class="primary" onclick="acceptImport()">確認載入</button><button onclick="pendingImport=null;closeModal()">取消</button></div>`;$('modal').showModal();}catch(e){pendingImport=null;toast('無法匯入：'+e.message);}}
+let pendingImport=null;async function importSave(ev){let f=ev.target.files[0];ev.target.value='';if(!f)return;try{if(f.size>16*1024*1024)throw Error('存檔超過 16 MiB，無法匯入');pendingImport=validateSave(JSON.parse(await f.text()));running=false;render();$('modal').innerHTML=`<h2>載入角色存檔？</h2><p>LV${pendingImport.lv} ${CLASSES[pendingImport.job].name} · ${pendingImport.totalKills} 次擊殺</p><p>這會取代此瀏覽器目前的角色。建議先匯出原角色備份。</p><div class="actions"><button class="primary" onclick="acceptImport()">確認載入</button><button onclick="pendingImport=null;closeModal()">取消</button></div>`;$('modal').showModal();}catch(e){pendingImport=null;toast('無法匯入：'+e.message);}}
 
 function confirmNew(){running=false;$('modal').innerHTML='<h2>建立新角色？</h2><p>目前角色將被覆蓋。請先匯出 JSON 留存，再開始新旅程。</p><div class="actions"><button onclick="exportSave()">匯出目前角色</button><button class="danger" onclick="newGame()">確認重新開始</button><button onclick="closeModal()">取消</button></div>';$('modal').showModal();}
 // Emberwild 2: progression, commissions and class loot.
@@ -517,13 +520,17 @@ function validateSave(input) {
   if(!int(s.job,0,3)||!int(s.lv,1,RULES.maxLevel)||!int(s.map,0,MAPS.length-1))fail('角色或地圖無效');
   for(const k of ['gold','ore','dust','sp','ap','totalKills','repeat','potions','xp'])if(!int(s[k]))fail('資源數值無效');
   for(const k of ['hp','shield'])if(!num(s[k]))fail('生命資料無效');
-  for(const [k,n,max] of [['stats',3,100000],['skills',6,RULES.skillMax],['gems',3,1e9]])
+  const skillCount=CLASSES[s.job].skills.length;
+  // Older saves may lack newly appended skills, but malformed existing entries stay invalid.
+  if(Array.isArray(s.skills)&&s.skills.length<skillCount)while(s.skills.length<skillCount)s.skills.push(0);
+  if(Array.isArray(s.sockets)&&s.sockets.length<skillCount)while(s.sockets.length<skillCount)s.sockets.push(null);
+  for(const [k,n,max] of [['stats',3,100000],['skills',skillCount,RULES.skillMax],['gems',3,1e9]])
     if(!array(s[k],n)||!s[k].every(v=>int(v,0,max)))fail('角色陣列無效');
   for(const k of ['advanced','won','autoPotion'])if(typeof s[k]!=='boolean')fail('角色狀態無效');
   if(!int(s.tutorial,0,3)||s.advanced&&s.lv<GS('progression.advance.level',15)||s.won&&s.lv<GS('progression.levelCaps.beforeClear',30))fail('角色進度無效');
-  for(let i=0;i<6;i++)if(s.skills[i]>0&&(s.lv<CLASSES[s.job].skills[i][2]||i>=4&&!s.advanced))fail('尚未解鎖的技能');
-  if(!array(s.active,2)||!s.active.every(i=>i===null||int(i,0,5)&&CLASSES[s.job].skills[i][1]==='active'&&s.skills[i]>0)||s.active[0]!==null&&s.active[0]===s.active[1])fail('主動槽無效');
-  if(!array(s.sockets,6)||!s.sockets.every((v,i)=>v===null||int(v,0,2)&&s.skills[i]>0))fail('寶石插槽無效');
+  for(let i=0;i<skillCount;i++)if(s.skills[i]>0&&(s.lv<CLASSES[s.job].skills[i][2]||skillRequiresAdvanced(CLASSES[s.job].skills[i],i)&&!s.advanced))fail('尚未解鎖的技能');
+  if(!array(s.active,2)||!s.active.every(i=>i===null||int(i,0,skillCount-1)&&CLASSES[s.job].skills[i][1]==='active'&&s.skills[i]>0)||s.active[0]!==null&&s.active[0]===s.active[1])fail('主動槽無效');
+  if(!array(s.sockets,skillCount)||!s.sockets.every((v,i)=>v===null||int(v,0,2)&&s.skills[i]>0))fail('寶石插槽無效');
   if(!Array.isArray(s.bag)||s.bag.length>RULES.bagCapacity)fail('背包無效');
   const ids=new Set();
   for(const g of s.bag) {
@@ -536,7 +543,7 @@ function validateSave(input) {
     if(g.boss!==undefined&&!int(g.boss,0,5))fail('首領裝備無效');
     if(g.difficulty!==undefined&&!int(g.difficulty,0,2))fail('裝備難度無效');
     if(g.region!==undefined&&(!int(g.region,0,MAPS.length-1)||g.region===6||g.boss===undefined||regionFamily(g.region)!==g.boss||regionTier(g.region)!==g.tier))fail('裝備來源無效');
-    for(const a of g.affix)if(!object(a)||!int(a.type,0,legacy?3:17)||!num(a.value,0,RULES.affixMax)||!legacy&&!int(a.rank,0,3)||[4,5].includes(a.type)&&!int(a.skill,0,5)||[12,14].includes(a.type)&&!['fire','ice','wind','light','shadow'].includes(a.element)||a.type===13&&!['beast','plant','undead','construct','demon','spirit'].includes(a.race))fail('詞條資料無效');
+    for(const a of g.affix)if(!object(a)||!int(a.type,0,legacy?3:17)||!num(a.value,0,RULES.affixMax)||!legacy&&!int(a.rank,0,3)||[4,5].includes(a.type)&&!int(a.skill,0,CLASSES[g.job??s.job].skills.length-1)||[12,14].includes(a.type)&&!['fire','ice','wind','light','shadow'].includes(a.element)||a.type===13&&!['beast','plant','undead','construct','demon','spirit'].includes(a.race))fail('詞條資料無效');
   }
   if(!array(s.equipped,3)||!s.equipped.every((id,i)=>id===null||s.bag.some(g=>g.id===id&&g.slot===i&&(legacy||g.slot===1||g.job===s.job)&&s.lv>=gearRequiredLevelByTier(g.tier))))fail('穿戴資料無效');
   for(const k of ['materials','kills'])if(!object(s[k])||Object.entries(s[k]).some(([key,n])=>key.length>80||/[<>]/.test(key)||['__proto__','constructor','prototype'].includes(key)||!int(n,0,1e9)))fail('素材資料無效');
@@ -606,11 +613,11 @@ function withHero(hero,fn){const previous=state;state=hero;try{return fn();}fina
 function syncParty(){if(!party)return;for(const h of party.members){h.map=party.map;h.difficulty=party.difficulty;if(party.cleared&&h.lv>=GS('progression.levelCaps.beforeClear',30))h.won=true;}}
 function packParty(){syncParty();return party;}
 save=function(show=false){
- if(!state||partyBusy)return;
+ if(!saveReady||!state||partyBusy)return;
  if(!party)party=createParty(state);
  let payload,previous=null,backupWritten=false;
  try{
-  payload=JSON.stringify(packParty());
+  payload=JSON.stringify(packParty(),(key,value)=>{if(typeof value==='number'&&!Number.isFinite(value))throw Error('存檔包含非有限數值：'+key);return value;});
   previous=localStorage.getItem(KEY);
   if(previous&&previous!==payload){try{localStorage.setItem(BACKUP_KEY,previous);backupWritten=true;}catch{}}
   try{localStorage.setItem(KEY,payload);}catch(firstError){
@@ -1231,7 +1238,7 @@ function marketOfferName(o){return o.kind==='ore'?'鍛鐵':o.kind==='dust'?'粉�
 function buyMarketOffer(id){const o=party.market?.offers.find(x=>x.id===id);if(!o||o.sold)return;if(state.gold<o.price)return toast('金幣不足');const prior={gold:state.gold,ore:state.ore,dust:state.dust,gems:[...state.gems],materials:{...state.materials}};state.gold-=o.price;if(o.kind==='ore'||o.kind==='dust')state[o.kind]+=o.qty;else if(o.kind==='gem')state.gems[Number(o.key)]+=o.qty;else state.materials[o.key]=(state.materials[o.key]||0)+o.qty;if(state.ore>1e12||state.dust>1e12||state.gems.some(n=>n>1e9)||Object.values(state.materials).some(n=>n>1e9)){Object.assign(state,prior);return toast('庫存已達上限');}o.sold=true;if(!save()){o.sold=false;Object.assign(state,prior);return;}render();toast('已購買 '+marketOfferName(o)+' ×'+o.qty);}
 function marketCards(){return party.market.offers.map(o=>`<article class="card"><h3>${esc(marketOfferName(o))} ×${o.qty}</h3><p>${o.price} 金幣</p><button onclick="buyMarketOffer('${o.id}')" ${o.sold||state.gold<o.price?'disabled':''}>${o.sold?'已售完':'購買'}</button></article>`).join('');}
 const materialShopView=shopView;shopView=function(){ensureMarket();return materialShopView().replace('<div class="shared-shop-grid">',`<div class="actions market-refresh"><span>素材商品 · 第 ${party.market.serial} 批</span><button onclick="refreshMarket()">刷新商店 · ${MARKET_REFRESH_COST} 金幣</button></div><div class="shared-shop-grid">${marketCards()}`);};
-const update08ValidateParty=validateParty;validateParty=function(data){const p=update08ValidateParty(data);const tasks=p.members.flatMap(h=>h.board.tasks);if(new Set(tasks.map(q=>q.id)).size>12)throw Error('共用委託超過遷移容量');for(const q of tasks)if(q.job!==undefined&&(!Number.isInteger(q.job)||q.job<0||q.job>3))throw Error('委託裝備職業無效');const m=data.market;if(m!==undefined){const validMat=new Set(MAPS.flatMap(x=>x.mobs.map(y=>y[2])));if(!m||!Number.isSafeInteger(m.serial)||m.serial<1||!Array.isArray(m.offers)||m.offers.length<1||m.offers.length>100)throw Error('商店資料無效');const ids=new Set();for(const o of m.offers){if(!o||typeof o.id!=='string'||!/^\d+-\d+$/.test(o.id)||ids.has(o.id)||!['ore','dust','gem','material'].includes(o.kind)||!Number.isInteger(o.qty)||o.qty<1||o.qty>10000||!Number.isInteger(o.price)||o.price<1||o.price>1e9||typeof o.sold!=='boolean'||typeof o.key!=='string'||o.kind==='gem'&&!['0','1','2'].includes(o.key)||o.kind==='material'&&!validMat.has(o.key)||['ore','dust'].includes(o.kind)&&o.key!=='')throw Error('素材商品無效');ids.add(o.id);}p.market=JSON.parse(JSON.stringify(m));}return p;};
+const update08ValidateParty=validateParty;validateParty=function(data){const p=update08ValidateParty(data);const tasks=p.members.flatMap(h=>h.board.tasks);if(new Set(tasks.map(q=>q.id)).size>12)throw Error('共用委託超過遷移容量');for(const q of tasks)if(q.job!==undefined&&(!Number.isInteger(q.job)||q.job<0||q.job>3))throw Error('委託裝備職業無效');const m=data.market;if(m!==undefined){const validMaterialKey=key=>typeof key==='string'&&key.length>0&&key.length<=80&&!/[<>]/.test(key)&&!['__proto__','constructor','prototype'].includes(key);if(!m||!Number.isSafeInteger(m.serial)||m.serial<1||!Array.isArray(m.offers)||m.offers.length>100)throw Error('商店資料無效');const ids=new Set();for(const o of m.offers){if(!o||typeof o.id!=='string'||!/^\d+-\d+$/.test(o.id)||ids.has(o.id)||!['ore','dust','gem','material'].includes(o.kind)||!Number.isInteger(o.qty)||o.qty<1||o.qty>10000||!Number.isInteger(o.price)||o.price<1||o.price>1e9||typeof o.sold!=='boolean'||typeof o.key!=='string'||o.kind==='gem'&&!['0','1','2'].includes(o.key)||o.kind==='material'&&!validMaterialKey(o.key)||['ore','dust'].includes(o.kind)&&o.key!=='')throw Error('素材商品無效');ids.add(o.id);}p.market=JSON.parse(JSON.stringify(m));}return p;};
 
 // Combat-only counters are per open session; purchases and spending cannot alter totals.
 let expeditionLoot={kills:0,items:new Map()};
@@ -1433,7 +1440,7 @@ function unlockBalanceTools(){const input=$('balance-tools-password');if(!input|
 
 // Save validation compatibility for skills appended by a test configuration.
 const update09LegacyValidateSave=solo.validateSave;
-function dynamicValidateSave(input){const raw=JSON.parse(JSON.stringify(input)),job=raw?.job,n=Number.isInteger(job)&&CLASSES[job]?CLASSES[job].skills.length:6;if(n<=6)return update09LegacyValidateSave(raw);/* Older saves can legitimately contain only the original six skill/socket entries. When a balance JSON later appends skills, migrate the missing tail instead of rejecting the whole save. Existing extra entries are still validated below. */const savedSkills=Array.isArray(raw.skills)?raw.skills:[],savedSockets=Array.isArray(raw.sockets)?raw.sockets:[],extraSkills=Array.from({length:n-6},(_,i)=>savedSkills[6+i]===undefined?0:savedSkills[6+i]),extraSockets=Array.from({length:n-6},(_,i)=>savedSockets[6+i]===undefined?null:savedSockets[6+i]),active=Array.isArray(raw.active)?[...raw.active]:[];raw.skills=savedSkills.slice(0,6);raw.sockets=savedSockets.slice(0,6);raw.active=active.map(i=>Number.isInteger(i)&&i>=6?null:i);const out=update09LegacyValidateSave(raw);for(let i=6;i<n;i++){const lv=extraSkills[i-6],sock=extraSockets[i-6],sk=CLASSES[job].skills[i];if(!Number.isSafeInteger(lv)||lv<0||lv>10||lv>0&&(out.lv<sk[2]||skillRequiresAdvanced(sk,i)&&!out.advanced))throw Error('新增技能進度無效');if(sock!==null&&(!Number.isSafeInteger(sock)||sock<0||sock>2||lv<1))throw Error('新增技能寶石無效');}if(active.some(i=>i!==null&&(!Number.isSafeInteger(i)||i<0||i>=n||CLASSES[job].skills[i][1]!=='active'||(i>=6?extraSkills[i-6]:out.skills[i])<1))||active[0]!==null&&active[0]===active[1])throw Error('主動槽無效');out.skills.push(...extraSkills);out.sockets.push(...extraSockets);out.active=active;return out;}
+function dynamicValidateSave(input){return update09LegacyValidateSave(input);}
 solo.validateSave=dynamicValidateSave;validateSave=dynamicValidateSave;
 
 
@@ -1555,7 +1562,7 @@ function supplyDetail(item){const effect=item.type==='imbue'?`普通攻擊轉為
 // Keep legacy callers useful, but return only the hand-written description.
 skillDescription=function(i){return esc(coreSkillFlavor(state.job,i));};
 
-coreSkillRows=function(){syncHeroSkillArrays(state);const activeSlots=Array.from({length:2},(_,i)=>state.active?.[i]??null);return `<div class="actions active-slot-summary">${activeSlots.map((id,i)=>`<span>槽 ${i+1}：${id===null?'未配置':esc(CLASSES[state.job].skills[id]?.[0]||'未知技能')+skillTypeBadges(state.job,id)} <button onclick="clearActiveSkill(${i})">清空</button></span>`).join('')}</div><div class="skill-list">${CLASSES[state.job].skills.map((sk,i)=>{const advanced=skillRequiresAdvanced(sk,i),prereq=skillPrerequisite(sk),prereqMet=skillPrerequisiteMet(sk,state),locked=state.lv<sk[2]||(advanced&&!state.advanced)||!prereqMet,gem=state.sockets[i]??null;return `<article class="skill-list-row"><div><div class="skill-list-title"><b>${esc(sk[0])}</b><span>Lv.${state.skills[i]}/${RULES.skillMax}</span><span>${sk[1]==='proc'?'普攻觸發':'主動'}</span></div>${skillTypeBadges(state.job,i)}${skillMechanicsDetails(state.job,i)}<p class="skill-flavor"><b>說明：</b>${esc(coreSkillFlavor(state.job,i))||'<span class="small">尚未填寫</span>'}</p><p class="skill-detail"><b>詳細：</b>${esc(coreSkillDetail(state.job,i,state))}</p></div><div class="skill-list-controls"><button onclick="learn(${i})" ${locked||state.sp<1||state.skills[i]>=skillCap()?'disabled':''}>${locked?'尚未解鎖':state.skills[i]?'升級1點':'學習'}</button>${sk[1]==='active'?[0,1].map(slot=>`<button onclick="equipSkill(${i},${slot})" ${!state.skills[i]?'disabled':''}>${state.active[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join(''):'<span>需配置於觸發槽</span>'}<label>寶石 <select aria-label="${esc(sk[0])}寶石" onchange="socket(${i},this.value)" ${!state.skills[i]?'disabled':''}><option value="-1" ${gem===null?'selected':''}>不鑲嵌</option>${GEMS.map((g,j)=>`<option value="${j}" ${gem===j?'selected':''} ${state.gems[j]<1&&gem!==j?'disabled':''}>${esc(g.name)} ×${state.gems[j]} · ${esc(g.desc)}</option>`).join('')}</select></label></div></article>`;}).join('')}</div>`;};
+coreSkillRows=function(){syncHeroSkillArrays(state);const activeSlots=Array.from({length:2},(_,i)=>state.active?.[i]??null);return `<div class="actions active-slot-summary">${activeSlots.map((id,i)=>`<span>槽 ${i+1}：${id===null?'未配置':esc(CLASSES[state.job].skills[id]?.[0]||'未知技能')+skillTypeBadges(state.job,id)} <button onclick="clearActiveSkill(${i})">清空</button></span>`).join('')}</div><div class="skill-list">${CLASSES[state.job].skills.map((sk,i)=>{const advanced=skillRequiresAdvanced(sk,i),prereqMet=skillPrerequisitesMet(sk,state),locked=state.lv<sk[2]||(advanced&&!state.advanced)||!prereqMet,gem=state.sockets[i]??null;return `<article class="skill-list-row"><div><div class="skill-list-title"><b>${esc(sk[0])}</b><span>Lv.${state.skills[i]}/${RULES.skillMax}</span><span>${sk[1]==='proc'?'普攻觸發':'主動'}</span></div>${skillTypeBadges(state.job,i)}${skillMechanicsDetails(state.job,i)}<p class="skill-flavor"><b>說明：</b>${esc(coreSkillFlavor(state.job,i))||'<span class="small">尚未填寫</span>'}</p><p class="skill-detail"><b>詳細：</b>${esc(coreSkillDetail(state.job,i,state))}</p></div><div class="skill-list-controls"><button onclick="learn(${i})" ${locked||state.sp<1||state.skills[i]>=skillCap()?'disabled':''}>${locked?'尚未解鎖':state.skills[i]?'升級1點':'學習'}</button>${sk[1]==='active'?[0,1].map(slot=>`<button onclick="equipSkill(${i},${slot})" ${!state.skills[i]?'disabled':''}>${state.active[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join(''):'<span>需配置於觸發槽</span>'}<label>寶石 <select aria-label="${esc(sk[0])}寶石" onchange="socket(${i},this.value)" ${!state.skills[i]?'disabled':''}><option value="-1" ${gem===null?'selected':''}>不鑲嵌</option>${GEMS.map((g,j)=>`<option value="${j}" ${gem===j?'selected':''} ${state.gems[j]<1&&gem!==j?'disabled':''}>${esc(g.name)} ×${state.gems[j]} · ${esc(g.desc)}</option>`).join('')}</select></label></div></article>`;}).join('')}</div>`;};
 supportSkillRows=function(){return `<div class="actions">${state.supportSlots.map((id,i)=>`<span>槽 ${i+1}：${id===null?'未配置':esc(SUPPORT[state.job][id].name)+skillTypeBadges(state.job,id,'support')} <button onclick="slotSupport(null,${i})">清空</button></span>`).join('')}</div><div class="skill-list">${SUPPORT[state.job].map((sk,i)=>`<article class="skill-list-row"><div><div class="skill-list-title"><b>${esc(sk.name)}</b><span>Lv.${state.supportLevels[i]}/${Math.max(1,Math.floor(GS('skills.support.maxLevel',5)))}</span><span>${ELEMENTS[sk.element]}</span></div>${skillTypeBadges(state.job,i,'support')}${skillMechanicsDetails(state.job,i,'support')}<p class="skill-flavor"><b>說明：</b>${esc(sk.description||'')||'<span class="small">尚未填寫</span>'}</p><p class="skill-detail"><b>詳細：</b>${esc(supportSkillDetail(state.job,i,state))}</p></div><div class="skill-list-controls"><button onclick="learnSupport(${i})" ${state.sp<1||state.supportLevels[i]>=Math.max(1,Math.floor(GS('skills.support.maxLevel',5)))||state.lv<sk.level||i===2&&!state.advanced?'disabled':''}>${state.supportLevels[i]?'升級1點':'學習'}</button>${[0,1].map(slot=>`<button onclick="slotSupport(${i},${slot})" ${state.supportLevels[i]?'':'disabled'}>${state.supportSlots[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join('')}</div></article>`).join('')}</div>`;};
 
 const update11DefaultItemShape=SHOP.map(item=>({id:item.id,type:item.type,element:item.element??null}));
@@ -2006,7 +2013,7 @@ procChance=function(i,h=state){const meta=ensureProcSkillMeta(h.job,i);if(!meta)
 supportAmount=function(job,index){const h=party.members.find(h=>h.job===job),sk=SUPPORT[job][index];return sk.value*(1+(h.supportLevels[index]-1)*GS('skills.support.effectPerExtraLevel',.2));};
 
 claimTutorial=function(){const t=GAMEPLAY_SETTINGS.quests.tutorial;if(state.tutorial===0&&state.bag.length>=RULES.bagCapacity)return toast('背包已滿，請先整理再領取新手護甲');let ok=[state.totalKills>=t.killRequirement,state.bag.some(g=>g.plus>0),state.skills[0]>=t.skillLevelRequirement][state.tutorial];if(!ok)return;state.tutorial++;state.gold+=Math.round(t.rewardGold);state.ore+=Math.round(t.rewardOre);if(state.tutorial===1){addGear(gear(Math.max(1,Math.round(t.armorTier)),Math.max(0,Math.min(2,Math.round(t.armorSlot))),Math.max(0,Math.min(3,Math.round(t.armorQuality))),state.job));}save();render();toast('獲得 '+Math.round(t.rewardGold)+' 金幣與 '+Math.round(t.rewardOre)+' 鍛鐵');};
-advance=function(){const a=GAMEPLAY_SETTINGS.progression.advance;if(state.advanced||state.lv<a.level)return;if(state.gold<a.gold||state.ore<a.ore||(state.materials['怨念碎片']||0)<a.materialCount)return toast('二轉資源不足');state.gold-=Math.round(a.gold);state.ore-=Math.round(a.ore);state.materials['怨念碎片']-=Math.round(a.materialCount);state.advanced=true;state.hp=stats().hp;save();render();toast('二轉完成，進階技能已開放！');};
+advance=function(){const a=GAMEPLAY_SETTINGS.progression.advance;if(state.advanced||state.lv<a.level)return;if(state.gold<a.gold||state.ore<a.ore||(state.materials['怨念碎片']||0)<a.materialCount)return toast('二轉資源不足');state.gold-=Math.round(a.gold);state.ore-=Math.round(a.ore);state.materials['怨念碎片']=(state.materials['怨念碎片']||0)-Math.round(a.materialCount);state.advanced=true;state.hp=stats().hp;save();render();toast('二轉完成，進階技能已開放！');};
 awardXP=function(amount){if(state.lv>=levelCap())return;state.xp+=amount;while(state.lv<levelCap()&&state.xp>=need(state.lv)){state.xp-=need(state.lv);state.lv++;const ap=Math.round(GS('progression.levelRewards.abilityPoints',3)),sp=Math.round(GS('progression.levelRewards.skillPoints',2));state.ap+=ap;state.sp+=sp;state.hp=stats().hp;note(`升至 LV${state.lv}！能力點 +${ap}、技能點 +${sp}`);}if(state.lv===levelCap())state.xp=0;};
 
 makeBaseEnemy=function(map=state.map,h=state,rng=Math.random){const m=MAPS[map],f=GAMEPLAY_SETTINGS.monsters.finalBoss;if(map===6)return{name:m.boss[0],icon:m.boss[1],mat:m.boss[2],lv:Math.round(f.level),hp:Math.round(f.hp),maxhp:Math.round(f.hp),atk:Math.round(f.attack),def:Math.round(f.defense),kind:'final',turn:0};const ec=GAMEPLAY_SETTINGS.monsters.encounter,r=rng(),bossAllowed=m.max<=h.lv+GS('progression.mapAheadAllowance',5),kind=r<ec.bossChance&&bossAllowed?'boss':r<ec.bossChance+ec.eliteChance?'elite':'normal',mob=kind==='boss'?m.boss:m.mobs[Math.floor(rng()*m.mobs.length)],maxLv=Math.min(m.max,h.lv+GS('progression.mapAheadAllowance',5)),lv=kind==='boss'?m.max:m.min+Math.floor(rng()*Math.max(1,maxLv-m.min+1)),n=GAMEPLAY_SETTINGS.monsters.normal,k=GAMEPLAY_SETTINGS.monsters.kindMultipliers,hp=Math.round((n.hpBase+lv*n.hpPerLevel+lv*lv*n.hpQuadratic)*(kind==='boss'?k.bossHp:kind==='elite'?k.eliteHp:1)),atk=Math.round((n.attackBase+lv*n.attackPerLevel)*(kind==='boss'?k.bossAttack:kind==='elite'?k.eliteAttack:1));return{name:(kind==='elite'?'菁英・':'')+mob[0],icon:mob[1],mat:mob[2],lv,hp,maxhp:hp,atk,def:Math.round(lv*n.defensePerLevel),kind,turn:0};};
@@ -2014,7 +2021,7 @@ makeEnemy=function(mi=state.map,h=state,rng=Math.random){let e=makeBaseEnemy(mi,
 
 modeAffixes=function(g,mode){if(mode===0)return;const c=GAMEPLAY_SETTINGS.equipment.difficultyAffix;g.difficulty=mode;g.name=gearName(g);if(g.affix.length||Math.random()<(mode===1?c.hardChance:c.hellChance)){g.affix=rollAffixes(g);let a=g.affix[0],r=Math.random();a.rank=mode===1?(r<c.hardFineThreshold?1:r<c.hardRareThreshold?2:3):(r<c.hellFineThreshold?1:r<c.hellRareThreshold?2:3);if(Math.random()<c.skillChance){a.type=4;a.skill=rand(CLASSES[g.job].skills.length);a.value=GAME_BALANCE.affixes.skillEffectPercent[balanceQualityKey(a.rank)];}else{a.type=rand(4);const q=GAME_BALANCE.affixes.qualityMultiplier[balanceQualityKey(a.rank)];a.value=a.type===0?Math.round(g.tier*c.baseAttackPerTier*q):a.type===1?Math.round(g.tier*c.baseHpPerTier*q):a.type===2?Math.round(g.tier*(c.defenseBasePerTier+a.rank*c.defensePerRankPerTier)):Math.round(c.critBase+a.rank*c.critPerRank);}}};
 bossGear=function(mi,job=state.job,mode=state.difficulty||0){let family=regionFamily(mi),ranks=GS('equipment.boss.affixRankByDifficulty',[2,2,3]),g=gear(regionTier(mi),family%3,mode===2?3:2,job);g.boss=family;g.region=mi;g.difficulty=mode;g.name=gearName(g);g.affix[0]={type:4,rank:ranks[mode]??2,skill:family,value:(GS('equipment.boss.skillEffectByDifficulty',[30,40,55])[mode]??30)};return g;};
-craftBoss=function(mi){if(mi===6||!canVisit(mi))return;let mode=state.difficulty||0,mat=bossMaterial(mi,mode),cost=Math.round(regionTier(mi)*GS('equipment.boss.craftGoldPerTier',250)*(mode+1)),needMat=Math.max(0,Math.round(GS('equipment.boss.craftMaterialCount',5)));if(state.lv<MAPS[mi].min||state.gold<cost||(state.materials[mat]||0)<needMat)return toast('等級、金幣或對應難度的 BOSS 素材不足');if(state.bag.length>=RULES.bagCapacity)return toast('背包已滿，請先整理再製作');state.gold-=cost;state.materials[mat]-=needMat;addGear(bossGear(mi));save();render();toast('已製作'+MODES[mode].name+' BOSS 專屬裝備');};
+craftBoss=function(mi){if(mi===6||!canVisit(mi))return;let mode=state.difficulty||0,mat=bossMaterial(mi,mode),cost=Math.round(regionTier(mi)*GS('equipment.boss.craftGoldPerTier',250)*(mode+1)),needMat=Math.max(0,Math.round(GS('equipment.boss.craftMaterialCount',5)));if(state.lv<MAPS[mi].min||state.gold<cost||(state.materials[mat]||0)<needMat)return toast('等級、金幣或對應難度的 BOSS 素材不足');if(state.bag.length>=RULES.bagCapacity)return toast('背包已滿，請先整理再製作');state.gold-=cost;state.materials[mat]=(state.materials[mat]||0)-needMat;addGear(bossGear(mi));save();render();toast('已製作'+MODES[mode].name+' BOSS 專屬裝備');};
 
 upgradeMaterials=function(g){const next=g.plus+1,e=GAMEPLAY_SETTINGS.equipment.enhance,dust=next>=e.dustStartLevel?g.tier*Math.max(0,next-e.dustStartLevel+1)*e.dustPerTierPerLevelAboveStart:0,ether=next>=e.etherStartLevel?e.etherCost:0;return {ore:Math.max(0,Math.round(g.tier*next*e.orePerTierPerLevel)),dust:Math.max(0,Math.round(dust)),ether:Math.max(0,Math.round(ether))};};
 enhanceCost=function(g){return upgradeMaterials(g).ore;};
@@ -2208,7 +2215,7 @@ validateParty=function(data){const p=battleStatsValidatePartyBase(data);p.battle
 const battleStatsPackPartyBase=packParty;
 packParty=function(){const out=battleStatsPackPartyBase();if(party)out.battleStatistics=normalizeBattleStatistics(party.battleStatistics);return out;};
 const battleStatsSaveBase=save;
-save=function(show=false){if(party){try{localStorage.setItem(BATTLE_STATS_STORAGE_KEY,JSON.stringify(normalizeBattleStatistics(party.battleStatistics)));}catch{}}return battleStatsSaveBase(show);};
+save=function(show=false){if(!saveReady)return;if(party){try{localStorage.setItem(BATTLE_STATS_STORAGE_KEY,JSON.stringify(normalizeBattleStatistics(party.battleStatistics)));}catch{}}return battleStatsSaveBase(show);};
 const battleStatsNewGameBase=newGame;
 newGame=function(){try{localStorage.removeItem(BATTLE_STATS_STORAGE_KEY);}catch{}activeBattleStat=null;return battleStatsNewGameBase();};
 const battleStatsResetEncounterBase=resetEncounter;
@@ -2337,7 +2344,7 @@ resetEncounter=function(){enemySkillCooldowns={};return actionTurnResetEncounter
 const actionTurnSpawnGroupBase=spawnGroup;
 spawnGroup=function(){const r=actionTurnSpawnGroupBase();enemySkillCooldowns={};for(const e of foes)assignEnemySkill(e);return r;};
 function enemySkillTarget(sk){const targets=living();if(!targets.length)return null;if(sk.target==='weakest')return [...targets].sort((a,b)=>a.hp/battleStats(a).hp-b.hp/battleStats(b).hp)[0];return targets[rand(targets.length)];}
-function performEnemySkill(e,sk){e.turn=(e.turn||0)+1;const h=enemySkillTarget(sk);if(!h)return;const beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss;const levelMulti=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(Number(sk.power)||1)*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*levelMulti-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的「'+sk.name+'」');return;}const element=sk.element==='inherit'?e.element:sk.element,ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[element]||0)+(ward&&ward.element===element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0)recordCombatContribution(h,'mitigation',absorb);const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+'・'+sk.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+'・'+sk.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);}
+function performEnemySkill(e,sk){e.turn=(e.turn||0)+1;const h=enemySkillTarget(sk);if(!h)return;const beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss;const levelMulti=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(Number.isFinite(sk.power)?sk.power:1)*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*levelMulti-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的「'+sk.name+'」');return;}const element=sk.element==='inherit'?e.element:sk.element,ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[element]||0)+(ward&&ward.element===element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0)recordCombatContribution(h,'mitigation',absorb);const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+'・'+sk.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+'・'+sk.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);}
 function performEnemyAction(e){const sk=enemySkillFor(e);if(sk){enemySkillCooldowns[e.id]=Math.max(0,cooldownLeft(enemySkillCooldowns,e.id)-1);if(enemySkillCooldowns[e.id]<=0){performEnemySkill(e,sk);enemySkillCooldowns[e.id]=rollEnemySkillCooldown(sk);return 'skill';}}performEnemyBasic(e);return 'basic';}
 pacedRound=function*(){if(!party||!running||$('modal').open)return;currentEvents=[];lastActionOrder=[];actionVisualTime=Date.now();partyClock++;round++;effects=effects.filter(e=>e.until>partyClock);if(!foes.some(e=>e.hp>0)){spawnGroup();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();return;}for(const h of living()){const v=battleStats(h),regen=effectTotal(heroKey(h),'regen'),beforeRegen=h.hp;h.hp=Math.min(v.hp,h.hp+v.hp*regen);const regenHealed=Math.max(0,h.hp-beforeRegen);if(regenHealed>0)recordRegenContribution(h,regenHealed);if(h.autoPotion&&h.hp<v.hp*GS('combat.autoPotionThreshold',.35)&&h.potions>0)withHero(h,()=>potion(true));}const order=initiativeOrder();for(const unit of order){if(!living().length||!foes.some(e=>e.hp>0))break;if(unit.actor.hp<=0)continue;if(unit.side==='hero'){const h=unit.actor;tickHeroCooldowns(h);for(const i of h.supportSlots){if(i===null)continue;const key=h.job+'-'+i;if(cooldownLeft(supportCooldowns,key)<=0){castSupport(h,i);recordAction(heroKey(h),characterName(h),'輔助');supportCooldowns[key]=supportSkillCooldown(h,i);yield;if(!living().length||!foes.some(e=>e.hp>0))break;}}for(const i of h.active){if(i===null||!foes.some(e=>e.hp>0))continue;const key=h.job+'-'+i;if(cooldownLeft(actorCooldowns,key)<=0&&castPartySkill(h,i,battleStats(h))!==false){actorCooldowns[key]=Math.max(0,Math.round(skillCooldown(i,h)));recordAction(heroKey(h),characterName(h),'技能');yield;}}if(foes.some(e=>e.hp>0)){recordAction(unit.id,characterName(h),'普攻');performHeroBasic(h);yield;}}else{const sk=enemySkillFor(unit.actor),willSkill=sk&&Math.max(0,cooldownLeft(enemySkillCooldowns,unit.actor.id)-1)<=0;recordAction(unit.id,unit.actor.name,willSkill?'技能':'攻擊');performEnemyAction(unit.actor);yield;}}for(const e of foes)if(e.hp<=0)rewardGroupKill(e);if(!living().length){running=false;party.members[0].gold-=Math.floor(party.members[0].gold*GS('combat.defeatGoldLoss',.05));for(const h of heroes())h.shield=0;note('全隊戰敗，帳號失去 '+Math.round(GS('combat.defeatGoldLoss',.05)*10000)/100+'% 金幣。生命已全滿。');refillParty();foes=[];enemy=null;}else if(!foes.some(e=>e.hp>0)){refillParty();note('本次遭遇勝利，全隊生命已回滿。');if(foes.some(e=>e.kind==='final')){running=false;note('噬日者已倒下！LV30 成員解鎖 LV60，其他成員達 LV30 時解鎖。');}}save();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();if(activeBattleStat){if(activeBattleStat.pendingOutcome==='wipe')finalizeBattleStatistics('wipe');else if(foes.length&&foes.every(e=>e.hp<=0))finalizeBattleStatistics('victory');}};
 function actionTurnElementLabel(element){return element==='physical'?'無屬性':`${ELEMENTS[element]}屬性`;}
@@ -2964,20 +2971,21 @@ inlineInventoryView=function(){
     validateParty=function(data){
       const out=auditedValidatePartyBase(data);
       if(data?.pendingGearLoot!==undefined){
-        if(!Array.isArray(data.pendingGearLoot)||data.pendingGearLoot.length>5000)throw Error('待結算裝備資料無效');
-        out.pendingGearLoot=clonePlain(data.pendingGearLoot);
+        if(!Array.isArray(data.pendingGearLoot))throw Error('待結算裝備資料無效');
+        out.pendingGearLoot=validatePendingGearArray(data.pendingGearLoot,out);
       }
       return out;
     };
   }
-  function validatePendingGearArray(raw){
+  function validatePendingGearArray(raw,validatedParty=null){
     if(raw===undefined)return [];
-    if(!Array.isArray(raw)||raw.length>5000)throw Error('待結算裝備資料無效');
-    const existing=new Set((state?.bag||[]).map(g=>g.id)),seen=new Set(),out=[],template=clonePlain(state);
+    if(!Array.isArray(raw))throw Error('待結算裝備資料無效');
+    const members=validatedParty?.members||[state],hero=validatedParty?members.find(h=>h.job===validatedParty.selected):state;
+    const existing=new Set(members.flatMap(h=>(h?.bag||[]).map(g=>g.id))),seen=new Set(),out=[],template=clonePlain(hero);
     for(const item of raw){
       if(!item||typeof item.id!=='string'||existing.has(item.id)||seen.has(item.id))throw Error('待結算裝備 ID 無效');
       seen.add(item.id);
-      const probe={...clonePlain(template),map:0,bag:[clonePlain(item)],equipped:[null,null,null]};
+      const probe={...template,map:0,bag:[clonePlain(item)],equipped:[null,null,null]};
       const valid=validateSave(probe);
       if(!valid?.bag?.[0])throw Error('待結算裝備資料無效');
       out.push(valid.bag[0]);
@@ -2987,10 +2995,10 @@ inlineInventoryView=function(){
   if(typeof loadParty==='function'){
     const auditedLoadPartyBase=loadParty;
     loadParty=function(data){
-      const queued=data?.pendingGearLoot;
+      const validated=validateParty(data),queued=validated.pendingGearLoot;
       const copy=clonePlain(data);copy.pendingGearLoot=[];
       const out=auditedLoadPartyBase(copy);
-      pendingGearLoot=validatePendingGearArray(queued);
+      pendingGearLoot=queued||[];
       return out;
     };
   }
@@ -3514,13 +3522,14 @@ render();
       const usable=i=>validMap(i)&&activeRows.length>0&&activeRows.every(h=>{try{return solo.canVisit(i,h);}catch{return false;}});
       if(!usable(d.map)){const fallback=MAPS.findIndex((_,i)=>usable(i));d.map=fallback>=0?fallback:0;}
       if(Array.isArray(d.members))for(const h of d.members)h.map=d.map;
-      if(d.market?.offers?.some(o=>o?.kind==='material'&&!MAPS.some(m=>m.mobs.some(x=>x[2]===o.key))))delete d.market;
+
     }else{
       scrubHero(d);if(!validMap(d.map))d.map=0;
     }
     if(Array.isArray(d.pendingGearLoot))d.pendingGearLoot.forEach(scrubGear);
     return d;
   }
+  migrateWorldSave=migrateWorldSaveForCurrentMaps;
   try{
     const raw=globalThis.__EMBERWILD_BOOT_SAVE_RAW??localStorage.getItem(KEY);
     if(raw){
@@ -3922,12 +3931,12 @@ render();
   if(typeof spawnGroup==='function'){const base=spawnGroup;spawnGroup=function(){if(party?.bossChallenge?.active&&!isFinalMapIndex(party.map)&&spawnBossStage())return;return base();};}
 
   globalThis.startBossChallenge=function(){
-    if(!party||isFinalMapIndex(party.map))return;const mc=mapConfig(party.map),entry=bossProgressEntry(party.map);
+    if(!party||party.bossChallenge?.active||isFinalMapIndex(party.map))return;const mc=mapConfig(party.map),entry=bossProgressEntry(party.map);
     if(mc?.bossEnabled===false)return toast('此地圖的 BOSS 挑戰已停用');if(entry.charges<1)return toast('尚未累積 BOSS 挑戰次數');
-    running=true;clearEncounter();party.bossChallenge={active:true,mapIndex:party.map,mapId:mapKey(party.map),stagePaid:false};spawnBossStage();save();render();
+    resetEncounter();running=true;party.bossChallenge={active:true,mapIndex:party.map,mapId:mapKey(party.map),stagePaid:false};spawnBossStage();save();render();
   };
   globalThis.leaveBossChallenge=function(){
-    if(!party?.bossChallenge?.active)return;const mi=party.bossChallenge.mapIndex;party.bossChallenge=null;clearEncounter();refillParty();running=true;note(`已離開 ${MAPS[mi]?.name||'目前地圖'} 的 BOSS 關卡，返回一般探索。`);save();render();
+    if(!party?.bossChallenge?.active)return;const mi=party.bossChallenge.mapIndex;party.bossChallenge=null;resetEncounter();refillParty();running=true;note(`已離開 ${MAPS[mi]?.name||'目前地圖'} 的 BOSS 關卡，返回一般探索。`);save();render();
   };
   if(typeof chooseMap==='function'){const base=chooseMap;chooseMap=function(mi){if(party?.bossChallenge?.active&&mi!==party.map)party.bossChallenge=null;return base(mi);};}
 
@@ -4349,7 +4358,7 @@ render();
       if(Number.isFinite(sk.cooldown))sk.cooldown=Math.max(0,Math.round(sk.cooldown));
     }
     if(Array.isArray(out.items))for(const item of out.items){
-      if(Number.isFinite(item.duration))item.duration=legacyItems?turnsFromLegacySeconds(item.duration,out):Math.max(0,Math.round(item.duration));
+      if(Number.isFinite(item.duration))item.duration=legacyItems&&item.duration>0?turnsFromLegacySeconds(item.duration,out):Math.max(0,Math.round(item.duration));
     }
     out.timeUnits={...(out.timeUnits||{}),...TIME_UNITS};
     return out;
@@ -5577,7 +5586,7 @@ if(state)render();
   }
   normalizeBaseFormsV2();
 
-  function rerollItemData(){const r=EQUIPMENT_POWER.rerollItem;return {id:POWER_ITEM_ID,type:POWER_ITEM_TYPE,cost:0,sellPrice:r.sellPrice,duration:0,name:r.name,description:r.description,desc:r.description,shopEnabled:false};}
+  function rerollItemData(power=EQUIPMENT_POWER){const r=power.rerollItem;return {id:POWER_ITEM_ID,type:POWER_ITEM_TYPE,cost:0,sellPrice:r.sellPrice,duration:0,name:r.name,description:r.description,desc:r.description,shopEnabled:false};}
   function syncRerollItem(){
     const src=rerollItemData(),i=SHOP.findIndex(x=>x.id===POWER_ITEM_ID);
     if(i<0)SHOP.push(src);else Object.assign(SHOP[i],src);
@@ -5656,11 +5665,14 @@ if(state)render();
     const identityApplyBase=applyBalanceConfig;
     applyBalanceConfig=function(input,{persist=true}={}){
       const copy=clone(input);
-      EQUIPMENT_POWER=validatePowerInput(copy.equipmentPowerSystem);
-      globalThis.__EMBERWILD_EQUIPMENT_POWER=EQUIPMENT_POWER;
+      const nextPower=validatePowerInput(copy.equipmentPowerSystem);
       if(!Array.isArray(copy.items))copy.items=[];
-      const item=rerollItemData(),idx=copy.items.findIndex(x=>x?.id===POWER_ITEM_ID||x?.type===POWER_ITEM_TYPE);
+      const item=rerollItemData(nextPower),idx=copy.items.findIndex(x=>x?.id===POWER_ITEM_ID||x?.type===POWER_ITEM_TYPE);
       if(idx<0)copy.items.push(item);else copy.items[idx]={...copy.items[idx],...item};
+      copy.equipmentPowerSystem=clone(nextPower);
+      // Validate the complete candidate before changing the live equipment rules.
+      validateDescriptionItems(normalizeDescriptionBalance(copy).items);validateBalanceConfig(copy);
+      EQUIPMENT_POWER=nextPower;globalThis.__EMBERWILD_EQUIPMENT_POWER=EQUIPMENT_POWER;
       syncRerollItem();ensurePowerDropRule(copy.balanceSettings);copy.equipmentPowerSystem=clone(EQUIPMENT_POWER);
       const out=identityApplyBase(copy,{persist:false});
       normalizeBaseFormsV2();syncRerollItem();normalizeAllGearIdentity();
@@ -5929,12 +5941,16 @@ if(state)render();
   }catch(e){console.warn('裝備前綴／後綴設定載入失敗，使用內建設定',e);}
 
   syncRerollItem();normalizeAllGearIdentity();
-  if(!state){
-    const candidates=[];
-    try{const primary=localStorage.getItem(KEY);if(primary)candidates.push({raw:primary,label:'主要存檔'});}catch{}
-    try{const backup=localStorage.getItem(BACKUP_KEY);if(backup&&!candidates.some(x=>x.raw===backup))candidates.push({raw:backup,label:'備份存檔'});}catch{}
-    for(const candidate of candidates){try{loadParty(JSON.parse(candidate.raw));normalizeAllGearIdentity();save();if(candidate.label==='備份存檔')toast('主要存檔無法載入，已自動恢復上一份備份');break;}catch(e){state=null;party=null;console.warn(candidate.label+'最終載入失敗',e);}}
+  // Rehydrate the original bytes once all save validators and migrations exist.
+  // Earlier passes must never overwrite the only complete copy of late fields.
+  const candidates=[];
+  try{const primary=globalThis.__EMBERWILD_BOOT_SAVE_RAW??localStorage.getItem(KEY);if(primary)candidates.push({raw:primary,label:'主要存檔'});}catch{}
+  try{const backup=localStorage.getItem(BACKUP_KEY);if(backup&&!candidates.some(x=>x.raw===backup))candidates.push({raw:backup,label:'備份存檔'});}catch{}
+  if(candidates.length){
+    state=null;party=null;
+    for(const candidate of candidates){try{loadParty(migrateWorldSave(JSON.parse(candidate.raw)));normalizeAllGearIdentity();if(candidate.label==='備份存檔')toast('主要存檔無法載入，已自動恢復上一份備份');break;}catch(e){state=null;party=null;console.warn(candidate.label+'最終載入失敗',e);}}
   }
+  saveReady=true;
   window.__EMBERWILD_EQUIPMENT_IDENTITY={schemaVersion:2,effectKeys:[...BOSS_EFFECT_KEYS],prefixes:()=>clone(EQUIPMENT_POWER.prefixes),suffixes:()=>clone(EQUIPMENT_POWER.suffixes),bossAffixes:()=>clone(EQUIPMENT_POWER.bossAffixes),effectText};
   if(state){save();render();}
 })();
@@ -6286,3 +6302,4 @@ if(state)render();
 
 
 </body></html>
+
