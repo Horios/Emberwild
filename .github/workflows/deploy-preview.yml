@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
   pages: write
   id-token: write
 
@@ -17,7 +18,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  request-deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/chatgpt-dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request Pages deployment from main context
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-preview.yml --ref main
+
   deploy:
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
