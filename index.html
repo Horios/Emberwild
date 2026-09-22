@@ -2493,7 +2493,7 @@ function grantConfiguredDrop(rule,e,rng=Math.random){
   if(rule.type==='potion'){state.potions+=qty;note('獲得 治療藥水 ×'+qty);return {name:'治療藥水',count:qty};}
   if(rule.type==='item'){const item=SHOP.find(x=>x.id===rule.key);if(!item)return null;state.consumables??={};state.consumables[item.id]=(state.consumables[item.id]||0)+qty;note('獲得 '+item.name+' ×'+qty);return {name:item.name,count:qty};}
   if(rule.type==='gem'){for(let q=0;q<qty;q++){const i=rule.key==='random'?Math.floor(rng()*GEMS.length):Math.max(0,Math.min(GEMS.length-1,Number(rule.key)||0));state.gems[i]++;note('獲得 '+GEMS[i].name);}return {name:rule.key==='random'?'隨機技能寶石':GEMS[Number(rule.key)||0].name,count:qty};}
-  if(rule.type==='gear'||rule.type==='gearLegendary'){for(let q=0;q<qty;q++){const rar=rule.type==='gearLegendary'?0:(rng()<r.equipmentQuality.rareChance?2:rng()<r.equipmentQuality.fineConditionalChance?1:0),g=gear(tier,Math.floor(rng()*3),rar);modeAffixes(g,mode);if(rule.type==='gearLegendary')ensureLegendaryDropAffix(g);addGear(g);}return {name:rule.name,count:qty};}
+  if(rule.type==='gear'||rule.type==='gearLegendary'){for(let q=0;q<qty;q++){const rar=rule.type==='gearLegendary'?0:(rng()<r.equipmentQuality.rareChance?2:rng()<r.equipmentQuality.fineConditionalChance?1:0),g=gear(tier,Math.floor(rng()*4),rar);modeAffixes(g,mode);if(rule.type==='gearLegendary')ensureLegendaryDropAffix(g);addGear(g);}return {name:rule.name,count:qty};}
   if(rule.type==='bossGear'){for(let q=0;q<qty;q++)addGear(bossGear(mi,state.job,mode));return {name:rule.name,count:qty};}
   return null;
 }
