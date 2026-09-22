@@ -5480,12 +5480,12 @@ if(state)render();
   const POWER_ITEM_ID='power_tier_reroll';
   const VALID_ELEMENTS=new Set(['physical','fire','ice','wind','light','shadow']);
   const REGULAR_EFFECT_KEYS=new Set(['basicElement','basicAdvanceNextRound','attackPct','crit','critDamage','pierce','defenseIgnore','lifesteal','evasion','elementBonus','allCooldownReduction','dropRateBonus']);
-  const BASE_EFFECT_KEYS=new Set(['gearAtkPct','gearHpPct','gearDefPct','attackPct','crit','critDamage','pierce','defenseIgnore','lifesteal','evasion','elementBonus']);
-  const BOSS_EFFECT_KEYS=new Set([...REGULAR_EFFECT_KEYS,...BASE_EFFECT_KEYS,'bossDamagePct']);
+  const BASE_EFFECT_KEYS=new Set([...EQUIPMENT_FIXED_EFFECT_KEYS]);
+  const BOSS_EFFECT_KEYS=new Set([...REGULAR_EFFECT_KEYS,'gearAtkPct','gearHpPct','gearDefPct','bossDamagePct']);
   const EFFECT_LABELS={
-    basicElement:'普通攻擊屬性',basicAdvanceNextRound:'普攻後下回合前移',gearAtkPct:'此裝備基礎攻擊',gearHpPct:'此裝備基礎生命',gearDefPct:'此裝備基礎防禦',
-    attackPct:'攻擊力',crit:'暴擊率',critDamage:'暴擊傷害',pierce:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避率',elementBonus:'全屬性增傷',
-    allCooldownReduction:'全主動／輔助技能冷卻',dropRateBonus:'掉寶率',bossDamagePct:'對 BOSS 傷害'
+    flatAttack:'固定攻擊',flatHp:'固定生命',flatDefense:'固定防禦',basicElement:'普通攻擊屬性',basicAdvanceNextRound:'普攻後下回合前移',gearAtkPct:'此裝備基礎攻擊',gearHpPct:'此裝備基礎生命',gearDefPct:'此裝備基礎防禦',
+    attackPct:'攻擊力',crit:'暴擊率',critDamage:'暴擊傷害',pierce:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避率',elementBonus:'全屬性增傷',bossDamagePct:'對 BOSS 傷害',speed:'速度',
+    allCooldownReduction:'全主動／輔助技能冷卻',dropRateBonus:'掉寶率',elementDamagePct:'屬性傷害',elementResistPct:'屬性抗性',raceDamagePct:'種族增傷',skillEffectPct:'核心技能效果',skillCooldownReduction:'核心技能冷卻／觸發'
   };
   const LEGACY_BOSS_SERIES=['古木誓約','礦脈共鳴','暮沼咒印','永凍之誓','熔核意志','隕星遺產'];
   const PARALLEL_BOSS_SERIES=['赤楓炎靈','潮汐巨像','白骨巫后','雷鳴獸王','聖所守護者','幽冥觀測者'];
@@ -5653,18 +5653,9 @@ if(state)render();
   globalThis.__EMBERWILD_EQUIPMENT_POWER=EQUIPMENT_POWER;
 
   function normalizeBaseFormsV2(){
-    for(let job=0;job<ITEM_FORMS.length;job++)for(let slot=0;slot<ITEM_FORMS[job].length;slot++)for(let i=0;i<ITEM_FORMS[job][slot].length;i++){
-      const form=ITEM_FORMS[job][slot][i];
-      normalizeEquipmentFormObject(form);
-      delete form.element;
-      if(form.exclusive&&Object.prototype.hasOwnProperty.call(form.exclusive,'basicAdvanceNextRound'))delete form.exclusive.basicAdvanceNextRound;
-      if(form.exclusive&&Object.keys(form.exclusive).length===0)delete form.exclusive;
-    }
+    for(let job=0;job<ITEM_FORMS.length;job++)for(let slot=0;slot<ITEM_FORMS[job].length;slot++)for(let i=0;i<ITEM_FORMS[job][slot].length;i++)normalizeEquipmentFormObject(ITEM_FORMS[job][slot][i]);
     const broad=ITEM_FORMS?.[0]?.[0]?.[0];
-    if(broad){
-      broad.exclusive??={};
-      if(!Number.isFinite(broad.exclusive.gearAtkPct)||Math.abs(Number(broad.exclusive.gearAtkPct)-20)<.001)broad.exclusive.gearAtkPct=5;
-    }
+    if(broad){const hit=broad.fixedEffects?.find(e=>e.key==='gearAtkPct');if(hit&&Math.abs(Number(hit.value)-20)<.001)hit.value=5;}
   }
   normalizeBaseFormsV2();
 
@@ -5800,11 +5791,9 @@ if(state)render();
 
   function baseFormForGear(g){return g&&g.boss===undefined&&Number.isInteger(g.form)?itemForm(g):null;}
   function baseEffectEntries(g){
-    const form=baseFormForGear(g),out=[];
-    if(!form)return out;
-    const ex=form.exclusive&&typeof form.exclusive==='object'?form.exclusive:{};
-    for(const key of BASE_EFFECT_KEYS)if(Number.isFinite(ex[key])&&Number(ex[key])!==0)out.push({key,value:Number(ex[key]),source:'base'});
-    return out;
+    const form=baseFormForGear(g);if(!form)return [];
+    normalizeEquipmentFormObject(form);
+    return (form.fixedEffects||[]).map(e=>({...e,source:'base'}));
   }
   function identityEffectEntriesForGear(g){
     ensureGearIdentityMeta(g);
@@ -5822,8 +5811,12 @@ if(state)render();
     const key=effect.key,value=effect.value,label=EFFECT_LABELS[key]||key;
     if(key==='basicElement')return '普通攻擊改為'+(ELEMENTS[value]||value)+'屬性';
     if(key==='basicAdvanceNextRound')return '普攻後，下回合行動往前 '+Math.round(Number(value)||0)+' 格';
-    if(key==='allCooldownReduction')return label+' −'+Number(value)+' 回合';
-    if(key==='pierce')return label+' '+(Number(value)>=0?'+':'')+Number(value);
+    if(key==='allCooldownReduction'||key==='skillCooldownReduction')return (key==='skillCooldownReduction'?'核心技能 '+((effect.skill??0)+1)+' ':'')+label+' −'+Number(value)+' 回合';
+    if(['flatAttack','flatHp','flatDefense','pierce','speed'].includes(key))return label+' '+(Number(value)>=0?'+':'')+Number(value);
+    if(key==='elementDamagePct')return (ELEMENTS[effect.element]||effect.element)+' '+label+' '+(Number(value)>=0?'+':'')+Number(value)+'%';
+    if(key==='elementResistPct')return (ELEMENTS[effect.element]||effect.element)+' '+label+' '+(Number(value)>=0?'+':'')+Number(value)+'%';
+    if(key==='raceDamagePct')return '對'+(RACES[effect.race]||effect.race)+' '+label+' '+(Number(value)>=0?'+':'')+Number(value)+'%';
+    if(key==='skillEffectPct')return '核心技能 '+((effect.skill??0)+1)+' '+label+' '+(Number(value)>=0?'+':'')+Number(value)+'%';
     return label+' '+(Number(value)>=0?'+':'')+Number(value)+'%';
   }
   globalThis.equipmentIdentityEffectText=effectText;
@@ -5855,8 +5848,7 @@ if(state)render();
   function statMul(a,m){return {atk:(a.atk||0)*m,hp:(a.hp||0)*m,def:(a.def||0)*m};}
   function baseStatPct(g,key){
     const effects=g.boss!==undefined?(bossProfileForGear(g)?.effects||[]):baseEffectEntries(g);
-    const hit=effects.find(e=>e.key===key);
-    return Number(hit?.value)||0;
+    return effects.filter(e=>e.key===key).reduce((n,e)=>n+(Number(e.value)||0),0);
   }
   function gearStatBreakdown(g){
     ensureGearIdentityMeta(g);
@@ -5883,10 +5875,20 @@ if(state)render();
   stats=function(h=state){
     const cls=CLASSES[h.job],v={hp:cls.hp+(h.lv-1)*GS('progression.statsPerLevel.hp',20)+h.stats[1]*GS('progression.statsPerPoint.hp',12),atk:cls.atk+(h.lv-1)*GS('progression.statsPerLevel.attack',4)+h.stats[0]*GS('progression.statsPerPoint.attack',2),def:cls.def+(h.lv-1)*GS('progression.statsPerLevel.defense',2)+h.stats[2]*GS('progression.statsPerPoint.defense',1.3),crit:h.job===2?GS('progression.baseCrit.archer',.17):GS('progression.baseCrit.default',.07),critDamage:GS('combat.baseCritDamage',1.5),pierce:0,defenseIgnore:0,lifesteal:0,evasion:0,elementBonus:0,bossDamage:0,elementDamage:{},raceDamage:{},resist:{}};
     if(h.advanced){v.hp*=GS('progression.advance.hpMultiplier',1.18);v.atk*=GS('progression.advance.attackMultiplier',1.22);v.def*=GS('progression.advance.defenseMultiplier',1.15);}
-    const attackBox={value:0};
+    const attackBox={value:0};let fixedSpeed=0;
     for(const g of equipment(h)){
       const base=gearBaseStats(g);v.atk+=base.atk;v.hp+=base.hp;v.def+=base.def;
-      for(const e of identityEffectEntriesForGear(g))if(!['gearAtkPct','gearHpPct','gearDefPct','basicElement','basicAdvanceNextRound','allCooldownReduction','dropRateBonus'].includes(e.key))applyIdentityStatEffect(v,e,attackBox);
+      for(const e of identityEffectEntriesForGear(g)){
+        const n=Number(e.value)||0;
+        if(e.key==='flatAttack')v.atk+=n;
+        else if(e.key==='flatHp')v.hp+=n;
+        else if(e.key==='flatDefense')v.def+=n;
+        else if(e.key==='speed')fixedSpeed+=n;
+        else if(e.key==='elementDamagePct'&&e.element)v.elementDamage[e.element]=(v.elementDamage[e.element]||0)+n/100;
+        else if(e.key==='elementResistPct'&&e.element)v.resist[e.element]=(v.resist[e.element]||0)+n/100;
+        else if(e.key==='raceDamagePct'&&e.race)v.raceDamage[e.race]=(v.raceDamage[e.race]||0)+n/100;
+        else if(!['gearAtkPct','gearHpPct','gearDefPct','basicElement','basicAdvanceNextRound','allCooldownReduction','dropRateBonus','skillEffectPct','skillCooldownReduction'].includes(e.key))applyIdentityStatEffect(v,e,attackBox);
+      }
       for(const a0 of g.affix||[]){
         const a=convertLegacyManaAffix(a0,g);
         if(a.type<=3){const key=['atk','hp','def','crit'][a.type];v[key]+=a.value/(key==='crit'?100:1);}
@@ -5903,7 +5905,7 @@ if(state)render();
     }
     if(attackBox.value)v.atk*=1+attackBox.value/100;
     v.crit=Math.min(GAME_BALANCE.combat.statCaps.crit,v.crit);v.pierce=Math.min(GAME_BALANCE.combat.statCaps.pierce,v.pierce);v.defenseIgnore=Math.min(GAME_BALANCE.combat.statCaps.defenseIgnore??.75,v.defenseIgnore);v.evasion=Math.min(GAME_BALANCE.combat.statCaps.evasion,v.evasion);v.lifesteal=Math.min(GAME_BALANCE.combat.statCaps.lifesteal,v.lifesteal);
-    const heroBase=GS('combat.speed.heroBase',[102,108,116,96]);v.speed=Math.round((heroBase[h.job]??100)+h.lv*GS('combat.speed.heroPerLevel',.5)+Math.min(GS('combat.speed.bonusCap',5),(v.evasion||0)*GS('combat.speed.evasionWeight',10)+(v.crit||0)*GS('combat.speed.critWeight',5)));
+    const heroBase=GS('combat.speed.heroBase',[102,108,116,96]);v.speed=Math.round((heroBase[h.job]??100)+h.lv*GS('combat.speed.heroPerLevel',.5)+Math.min(GS('combat.speed.bonusCap',5),(v.evasion||0)*GS('combat.speed.evasionWeight',10)+(v.crit||0)*GS('combat.speed.critWeight',5))+fixedSpeed);
     for(const k of ['hp','atk','def'])v[k]=Math.round(v[k]);
     return v;
   };
@@ -5931,6 +5933,14 @@ if(state)render();
   performHeroBasic=function(h){const out=identityPerformHeroBasicBase(h),steps=basicAdvanceSteps(h);if(steps)h.basicAdvanceRound=round+1;else delete h.basicAdvanceRound;return out;};
   const identityResetEncounterBase=resetEncounter;
   resetEncounter=function(){for(const h of party?.members||[]){delete h.basicAdvanceRound;delete h.procAdvanceRound;delete h.procAdvanceSteps;delete h.nextActiveDamageBonus;}return identityResetEncounterBase();};
+
+  function fixedSkillEffectNumber(h,key,i){return identityEffectsForHero(h).filter(e=>e.key===key&&Number(e.skill)===Number(i)).reduce((n,e)=>n+(Number(e.value)||0),0);}
+  const identitySkillPowerBase=skillPower;
+  skillPower=function(i,h=state){return identitySkillPowerBase(i,h)*(1+fixedSkillEffectNumber(h,'skillEffectPct',i)/100);};
+  const identitySkillCooldownBase=skillCooldown;
+  skillCooldown=function(i,h=state){const base=identitySkillCooldownBase(i,h),sk=CLASSES[h.job]?.skills?.[i],n=Math.max(0,Math.round(fixedSkillEffectNumber(h,'skillCooldownReduction',i)));return sk?.[1]==='active'?Math.max(GAME_BALANCE.combat.minimumActiveCooldown,base-n):base;};
+  const identityProcChanceBase=procChance;
+  procChance=function(i,h=state){const base=identityProcChanceBase(i,h),sk=CLASSES[h.job]?.skills?.[i],n=Math.max(0,fixedSkillEffectNumber(h,'skillCooldownReduction',i));return sk?.[1]==='proc'?Math.min(GAME_BALANCE.combat.statCaps.crit,base+n*(GAME_BALANCE.affixes.procChancePerPointPercent/100)):base;};
 
   const identityAllCdBase=allSkillCooldownReduction;
   allSkillCooldownReduction=function(h=state){return identityAllCdBase(h)+Math.max(0,Math.round(effectNumberForHero(h,'allCooldownReduction')));};
