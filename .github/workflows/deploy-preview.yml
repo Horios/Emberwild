@@ -1,54 +1,78 @@
-name: Deploy preview
+name: Deploy production and preview
 
 on:
   push:
     branches:
+      - main
       - chatgpt-dev
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
 
 jobs:
-  publish-preview:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout test branch
-        uses: actions/checkout@v4
-        with:
-          ref: chatgpt-dev
-          path: dev
-
-      - name: Checkout main
+      - name: Checkout production source
         uses: actions/checkout@v4
         with:
           ref: main
-          path: site
-          token: ${{ secrets.GITHUB_TOKEN }}
+          path: production
+          fetch-depth: 1
 
-      - name: Copy test build to preview
-        run: |
-          mkdir -p site/preview
-          cp dev/index.html site/preview/index.html
+      - name: Checkout preview source
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt-dev
+          path: preview-source
+          fetch-depth: 1
 
-      - name: Mark preview build
+      - name: Assemble Pages artifact
         run: |
+          set -euo pipefail
+          test -f production/index.html
+          test -f preview-source/index.html
+          mkdir -p _site/preview
+          cp production/index.html _site/index.html
+          cp preview-source/index.html _site/preview/index.html
           python3 - <<'PY'
           from pathlib import Path
-          p = Path("site/preview/index.html")
-          s = p.read_text(encoding="utf-8")
-          s = s.replace("<title>", "<title>測試版｜", 1)
-          p.write_text(s, encoding="utf-8")
+
+          path = Path("_site/preview/index.html")
+          html = path.read_text(encoding="utf-8")
+          if "<title>" not in html or "<body>" not in html:
+              raise SystemExit("Preview HTML is missing the expected <title> or <body> tag.")
+
+          html = html.replace("<title>", "<title>測試版｜", 1)
+          banner = (
+              '<div id="preview-build-banner" '
+              'style="position:fixed;top:8px;right:8px;z-index:2147483647;'
+              'padding:6px 10px;border-radius:4px;background:#8b3a2b;color:#fff;'
+              'font:700 12px/1.2 system-ui,sans-serif;box-shadow:0 1px 4px #0008;">'
+              '測試版本 · chatgpt-dev</div>'
+          )
+          html = html.replace("<body>", "<body>" + banner, 1)
+          path.write_text(html, encoding="utf-8")
           PY
 
-      - name: Publish preview snapshot
-        working-directory: site
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add preview/index.html
-          if git diff --cached --quiet; then
-            echo "Preview is already up to date."
-            exit 0
-          fi
-          git commit -m "Deploy chatgpt-dev preview"
-          git push origin main
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
