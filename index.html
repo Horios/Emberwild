@@ -1831,28 +1831,36 @@ loadParty=function(data){
    - Boss equipment never inherits a hidden normal-form effect.
    - Equipment max-MP / MP-regen effects and affixes are removed; legacy ones migrate to small attack bonuses.
 */
-const EQUIPMENT_EXCLUSIVE_KEYS=new Set(['gearAtkPct','gearHpPct','gearDefPct','attackPct','crit','critDamage','pierce','defenseIgnore','lifesteal','evasion','elementBonus']);
-
+const EQUIPMENT_FIXED_EFFECT_KEYS=new Set(['flatAttack','flatHp','flatDefense','gearAtkPct','gearHpPct','gearDefPct','attackPct','crit','critDamage','pierce','defenseIgnore','lifesteal','evasion','elementBonus','bossDamagePct','speed','allCooldownReduction','dropRateBonus','basicAdvanceNextRound','basicElement','elementDamagePct','elementResistPct','raceDamagePct','skillEffectPct','skillCooldownReduction']);
+const EQUIPMENT_EFFECT_ELEMENTS=new Set(['physical','fire','ice','wind','light','shadow']);
+const EQUIPMENT_EFFECT_RACES=new Set(['beast','plant','undead','construct','demon','spirit']);
+function normalizeFixedEquipmentEffect(raw){
+ if(!raw||typeof raw!=='object'||Array.isArray(raw)||!EQUIPMENT_FIXED_EFFECT_KEYS.has(raw.key))return null;
+ const out={key:raw.key};
+ if(raw.key==='basicElement')out.value=EQUIPMENT_EFFECT_ELEMENTS.has(raw.value)?raw.value:'physical';else out.value=Number.isFinite(Number(raw.value))?Number(raw.value):0;
+ if(['elementDamagePct','elementResistPct'].includes(raw.key))out.element=EQUIPMENT_EFFECT_ELEMENTS.has(raw.element)&&raw.element!=='physical'?raw.element:'fire';
+ if(raw.key==='raceDamagePct')out.race=EQUIPMENT_EFFECT_RACES.has(raw.race)?raw.race:'beast';
+ if(['skillEffectPct','skillCooldownReduction'].includes(raw.key))out.skill=Math.max(0,Math.min(5,Number.isInteger(Number(raw.skill))?Number(raw.skill):0));
+ return out;
+}
 function normalizeEquipmentFormObject(source){
-  if(!source||typeof source!=='object'||Array.isArray(source))return source;
-  const form=source;
-  const ex=(form.exclusive&&typeof form.exclusive==='object'&&!Array.isArray(form.exclusive))?{...form.exclusive}:{};
-  const pct=(value)=>Number(((Number(value)-1)*100).toFixed(2));
+ if(!source||typeof source!=='object'||Array.isArray(source))return source;
+ const form=source,legacy=[];
+ if(!Array.isArray(form.fixedEffects)||!form.fixedEffects.length){
+  const ex=(form.exclusive&&typeof form.exclusive==='object'&&!Array.isArray(form.exclusive))?{...form.exclusive}:{},pct=value=>Number(((Number(value)-1)*100).toFixed(2));
   if(Number.isFinite(form.atk)&&form.atk!==1)ex.gearAtkPct=(ex.gearAtkPct||0)+pct(form.atk);
   if(Number.isFinite(form.hp)&&form.hp!==1)ex.gearHpPct=(ex.gearHpPct||0)+pct(form.hp);
   if(Number.isFinite(form.def)&&form.def!==1)ex.gearDefPct=(ex.gearDefPct||0)+pct(form.def);
-  for(const key of ['crit','critDamage','pierce','lifesteal','evasion','elementBonus'])if(Number.isFinite(form[key])&&form[key]!==0)ex[key]=(ex[key]||0)+form[key];
-
-  // Legacy equipment mana is intentionally converted to a small immutable attack bonus.
-  // 15 max MP ~= 1% attack; 1 MP regen ~= 1% attack.
-  let manaAttack=0;
-  if(Number.isFinite(form.mp)&&form.mp>0)manaAttack+=Math.max(1,Math.round(form.mp/15));
-  if(Number.isFinite(form.mpRegen)&&form.mpRegen>0)manaAttack+=Math.max(1,Math.round(form.mpRegen));
-  if(manaAttack)ex.attackPct=(ex.attackPct||0)+manaAttack;
-
-  for(const key of ['atk','hp','def','mp','mpRegen','crit','critDamage','pierce','lifesteal','evasion','elementBonus'])delete form[key];
-  if(Object.keys(ex).length)form.exclusive=ex;else delete form.exclusive;
-  return form;
+  for(const key of ['crit','critDamage','pierce','lifesteal','evasion','elementBonus','defenseIgnore'])if(Number.isFinite(form[key])&&form[key]!==0)ex[key]=(ex[key]||0)+form[key];
+  let manaAttack=0;if(Number.isFinite(form.mp)&&form.mp>0)manaAttack+=Math.max(1,Math.round(form.mp/15));if(Number.isFinite(form.mpRegen)&&form.mpRegen>0)manaAttack+=Math.max(1,Math.round(form.mpRegen));if(manaAttack)ex.attackPct=(ex.attackPct||0)+manaAttack;
+  for(const [key,value] of Object.entries(ex))legacy.push({key,value});
+  if(form.element&&EQUIPMENT_EFFECT_ELEMENTS.has(form.element))legacy.push({key:'basicElement',value:form.element});
+ }
+ const src=Array.isArray(form.fixedEffects)&&form.fixedEffects.length?form.fixedEffects:legacy;
+ form.fixedEffects=src.map(normalizeFixedEquipmentEffect).filter(Boolean).slice(0,5);
+ if(!form.fixedEffects.length)form.fixedEffects=[{key:'flatAttack',value:0}];
+ for(const key of ['atk','hp','def','mp','mpRegen','crit','critDamage','pierce','lifesteal','evasion','elementBonus','defenseIgnore','element','exclusive'])delete form[key];
+ return form;
 }
 function normalizeAllEquipmentForms(){
   for(const jobs of ITEM_FORMS)for(const forms of jobs)for(const form of forms)normalizeEquipmentFormObject(form);
@@ -1985,14 +1993,14 @@ equipmentComparison=function(h,g,position=null){
 // Test JSON accepts the explicit exclusive object and transparently migrates legacy mana/form fields.
 validateBalanceConfig=function(input){
   const data=validateBalanceConfigCore(input),elements=new Set(Object.keys(ELEMENTS));
-  data.equipmentForms.forEach((jobs,job)=>jobs.forEach((forms,slot)=>forms.forEach((form,i)=>{normalizeEquipmentFormObject(form);if(form.element!==undefined&&!elements.has(form.element))throw Error('裝備元素無效');for(const key of Object.keys(form))if(!['id','name','element','wearableJobs','exclusive'].includes(key))throw Error(`未知裝備欄位：${key}`);if(form.exclusive!==undefined){if(!form.exclusive||typeof form.exclusive!=='object'||Array.isArray(form.exclusive))throw Error(`裝備專屬屬性無效：${job}-${slot}-${i}`);for(const [k,v] of Object.entries(form.exclusive)){if(!EQUIPMENT_EXCLUSIVE_KEYS.has(k)||!Number.isFinite(v)||v<-100||v>500)throw Error(`裝備專屬屬性無效：${job}-${slot}-${i}-${k}`);}}})));
+  data.equipmentForms.forEach((jobs,job)=>jobs.forEach((forms,slot)=>forms.forEach((form,i)=>{normalizeEquipmentFormObject(form);for(const key of Object.keys(form))if(!['id','name','wearableJobs','fixedEffects'].includes(key))throw Error(`未知裝備欄位：${key}`);if(!Array.isArray(form.fixedEffects)||form.fixedEffects.length<1||form.fixedEffects.length>5)throw Error(`裝備固定屬性必須為 1～5 條：${job}-${slot}-${i}`);for(const [j,fx] of form.fixedEffects.entries()){if(!fx||!EQUIPMENT_FIXED_EFFECT_KEYS.has(fx.key))throw Error(`裝備固定屬性無效：${job}-${slot}-${i}-${j}`);if(fx.key==='basicElement'){if(!EQUIPMENT_EFFECT_ELEMENTS.has(fx.value))throw Error('裝備普通攻擊屬性無效');}else if(!Number.isFinite(fx.value))throw Error(`裝備固定屬性數值無效：${job}-${slot}-${i}-${j}`);if(['elementDamagePct','elementResistPct'].includes(fx.key)&&(!EQUIPMENT_EFFECT_ELEMENTS.has(fx.element)||fx.element==='physical'))throw Error('裝備固定屬性的元素目標無效');if(fx.key==='raceDamagePct'&&!EQUIPMENT_EFFECT_RACES.has(fx.race))throw Error('裝備固定屬性的種族目標無效');if(['skillEffectPct','skillCooldownReduction'].includes(fx.key)&&(!Number.isInteger(fx.skill)||fx.skill<0||fx.skill>5))throw Error('裝備固定屬性的技能目標無效');}})));
   return data;
 };
 
 const equipmentCleanupApplyBalanceConfig=applyBalanceConfig;
 applyBalanceConfig=function(input,options={}){const result=equipmentCleanupApplyBalanceConfig(input,options);normalizeAllEquipmentForms();migrateCurrentEquipmentMana();if(state)render();return result;};
 const equipmentCleanupExportableBalance=exportableBalance;
-exportableBalance=function(){normalizeAllEquipmentForms();const data=equipmentCleanupExportableBalance();data.balance=cloneBalance(GAME_BALANCE);data._reference=balanceReference();data.notes=[...(data.notes||[]),'equipmentForms 的 exclusive 為裝備專屬額外屬性，固定且不可洗鍊；基礎屬性不會因名稱／變體改變。','魔力資源系統已移除；技能只受冷卻限制。舊裝備中的 mp / mpRegen 欄位僅在匯入時轉換為少量 attackPct，以保留舊裝備價值。','balance.affixes 可直接調整品質機率、詞條倍率、攻擊%與洗鍊成本；_reference 僅為欄位說明。'];return data;};
+exportableBalance=function(){normalizeAllEquipmentForms();const data=equipmentCleanupExportableBalance();data.balance=cloneBalance(GAME_BALANCE);data._reference=balanceReference();data.notes=[...(data.notes||[]),'equipmentForms.fixedEffects 為每件基底裝備的 1～5 條固定屬性；舊 exclusive / element 匯入時會自動轉換。','魔力資源系統已移除；技能只受冷卻限制。舊裝備中的 mp / mpRegen 欄位僅在匯入時轉換為少量 attackPct，以保留舊裝備價值。','balance.affixes 可直接調整品質機率、詞條倍率、攻擊%與洗鍊成本；_reference 僅為欄位說明。'];return data;};
 
 const equipmentCleanupLoadParty=loadParty;
 loadParty=function(data){const out=equipmentCleanupLoadParty(data);normalizeAllEquipmentForms();migrateCurrentEquipmentMana();return out;};
