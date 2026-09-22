@@ -5868,6 +5868,9 @@ if(state)render();
     push((g.boss!==undefined?(b.bossProfile?.name||'BOSS 專屬'):(form?.name||CLASS_GEAR[g.job??0]?.[g.slot]||'基底'))+'基礎',statText(b.body));
     push('強度 T'+b.powerTier+'（'+sourceDifficulty(g)+'來源 · ×'+Number(b.mult.toFixed(3))+'）',statText(b.grade));
     push('+'+(g.plus||0)+' 強化',statText(b.enhance));
+    // Total-attack modifiers affect the final summed attack, so keep one compact source line here too.
+    const totalAttackPct=identityEffectEntriesForGear(g).filter(e=>e.key==='attackPct').reduce((n,e)=>n+(Number(e.value)||0),0)+(Array.isArray(g.affix)?g.affix:[]).map(a=>convertLegacyManaAffix(a,g)).filter(a=>a.type===15).reduce((n,a)=>n+(Number(a.value)||0),0);
+    if(Math.abs(totalAttackPct)>.00001)push('詞綴',(totalAttackPct>=0?'+':'')+Number(totalAttackPct.toFixed(2))+'%');
 
     // Equipment effects / affixes belong one level above the summed-stat detail.
     if(g.boss===undefined){
