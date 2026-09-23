@@ -7549,4 +7549,58 @@ if(state)render();
 })();
 </script>
 
+<script id="per-class-growth-runtime-v1">
+(()=>{
+  function classInitial(cls,job){
+    const own=cls?.initialStats||{};
+    return {
+      hp:Number.isFinite(Number(own.hp))?Number(own.hp):Number(cls?.hp||0),
+      atk:Number.isFinite(Number(own.atk))?Number(own.atk):Number(cls?.atk||0),
+      def:Number.isFinite(Number(own.def))?Number(own.def):Number(cls?.def||0),
+      crit:Number.isFinite(Number(own.crit))?Number(own.crit):Number(job===2?GS('progression.baseCrit.archer',.17):GS('progression.baseCrit.default',.07)),
+      critDamage:Number.isFinite(Number(own.critDamage))?Number(own.critDamage):Number(GS('combat.baseCritDamage',1.5))
+    };
+  }
+  function classGrowth(cls){
+    const own=cls?.growthPerLevel||{};
+    return {
+      hp:Number.isFinite(Number(own.hp))?Number(own.hp):Number(GS('progression.statsPerLevel.hp',.9)),
+      atk:Number.isFinite(Number(own.atk))?Number(own.atk):Number(GS('progression.statsPerLevel.attack',.18)),
+      def:Number.isFinite(Number(own.def))?Number(own.def):Number(GS('progression.statsPerLevel.defense',.1)),
+      crit:Number.isFinite(Number(own.crit))?Number(own.crit):0,
+      critDamage:Number.isFinite(Number(own.critDamage))?Number(own.critDamage):0
+    };
+  }
+  const baseStats=stats;
+  stats=function(h=state){
+    const v=baseStats(h),cls=CLASSES[h.job],initial=classInitial(cls,h.job),growth=classGrowth(cls),lv=Math.max(1,Number(h.lv)||1);
+    const legacy={
+      hp:Number(cls.hp)+(lv-1)*Number(GS('progression.statsPerLevel.hp',.9)),
+      atk:Number(cls.atk)+(lv-1)*Number(GS('progression.statsPerLevel.attack',.18)),
+      def:Number(cls.def)+(lv-1)*Number(GS('progression.statsPerLevel.defense',.1)),
+      crit:Number(h.job===2?GS('progression.baseCrit.archer',.17):GS('progression.baseCrit.default',.07)),
+      critDamage:Number(GS('combat.baseCritDamage',1.5))
+    };
+    const own={
+      hp:initial.hp+(lv-1)*growth.hp,
+      atk:initial.atk+(lv-1)*growth.atk,
+      def:initial.def+(lv-1)*growth.def,
+      crit:initial.crit+(lv-1)*growth.crit,
+      critDamage:initial.critDamage+(lv-1)*growth.critDamage
+    };
+    const hpAdv=h.advanced?Number(GS('progression.advance.hpMultiplier',1.12)):1;
+    const atkAdv=h.advanced?Number(GS('progression.advance.attackMultiplier',1.15)):1;
+    const defAdv=h.advanced?Number(GS('progression.advance.defenseMultiplier',1.12)):1;
+    v.hp+=(own.hp-legacy.hp)*hpAdv;
+    v.atk+=(own.atk-legacy.atk)*atkAdv;
+    v.def+=(own.def-legacy.def)*defAdv;
+    v.crit+=own.crit-legacy.crit;
+    v.critDamage+=own.critDamage-legacy.critDamage;
+    return v;
+  };
+  globalThis.classInitialStats=classInitial;
+  globalThis.classGrowthPerLevel=classGrowth;
+})();
+</script>
+
 </body></html>
