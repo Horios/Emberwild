@@ -7047,8 +7047,14 @@ validateParty=function(input){
   const raw=clone(input),prepared=prepSaveForLegacyValidator(input),p=masteryValidatePartyBase(prepared);
   const rawRows=raw?.version===3?raw.members:[raw];
   for(const h of p.members||[]){
-    const source=rawRows?.find(x=>Number(x?.job)===Number(h.job));
-    h.mastery=normalizeMastery(source?.mastery,h.job);ensureHeroMastery(h);
+    const source=rawRows?.find(x=>Number(x?.job)===Number(h.job)),rawMastery=source?.mastery;
+    if(rawMastery!==undefined){
+      if(!rawMastery||typeof rawMastery!=='object'||Array.isArray(rawMastery))throw Error('精通資料無效');
+      const valid=new Set(validMasteries(h.job));
+      for(const [key,value] of Object.entries(rawMastery))if(!valid.has(key)||!Number.isSafeInteger(value)||value<0||value>1e12)throw Error('精通 XP 無效：'+key);
+    }
+    for(const g of source?.bag||[])if(Number(g?.slot)===0&&g.weaponType!==undefined&&!WEAPON_TYPES.has(g.weaponType))throw Error('裝備類型資料無效');
+    h.mastery=normalizeMastery(rawMastery,h.job);ensureHeroMastery(h);
   }
   migrateWeaponCatalog();migrateGearList(p.sharedGear?.items);for(const h of p.members||[])migrateGearList(h.bag);
   return p;
