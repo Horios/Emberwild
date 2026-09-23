@@ -6691,6 +6691,7 @@ if(state)render();
   try{
     const migrated=compressDocument(compressionExportBase());
     applyBalanceConfig(migrated,{persist:false});
+    if(!state)render();
   }catch(e){console.error('數據壓縮初始化失敗',e);}
 
   // Make the first-level promise explicit even if future catalog multipliers are edited.
