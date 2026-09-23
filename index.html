@@ -7106,14 +7106,14 @@ function validateOverhaulFields(doc){
     const sk=doc.classes[job].skills[i],valid=new Set(validMasteries(job));
     if(sk.mastery!=null&&!valid.has(sk.mastery))fail(`技能精通不存在：${job}-${i}-${sk.mastery}`);
     if(sk.requiredMastery!=null&&!valid.has(sk.requiredMastery))fail(`技能需求精通不存在：${job}-${i}-${sk.requiredMastery}`);
-    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0||sk.requiredMasteryLevel>Math.min(100,masteryMax)||!sk.requiredMastery&&sk.requiredMasteryLevel>0)fail(`技能精通等級需求無效：${job}-${i}`);
+    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0||sk.requiredMasteryLevel>100||!sk.requiredMastery&&sk.requiredMasteryLevel>0)fail(`技能精通等級需求無效：${job}-${i}`);
     if(!Array.isArray(sk.weaponTypes)||sk.weaponTypes.some(x=>!WEAPON_TYPES.has(x)))fail(`技能武器類型無效：${job}-${i}`);
   }
   for(let job=0;job<(doc.supportSkills||[]).length;job++)for(let i=0;i<(doc.supportSkills[job]||[]).length;i++){
     const sk=doc.supportSkills[job][i],valid=new Set(validMasteries(job));
     if(sk.mastery!=null&&!valid.has(sk.mastery))fail(`輔助技能精通不存在：${job}-${i}-${sk.mastery}`);
     if(sk.requiredMastery!=null&&!valid.has(sk.requiredMastery))fail(`輔助技能需求精通不存在：${job}-${i}-${sk.requiredMastery}`);
-    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0||sk.requiredMasteryLevel>Math.min(100,masteryMax)||!sk.requiredMastery&&sk.requiredMasteryLevel>0)fail(`輔助技能精通等級需求無效：${job}-${i}`);
+    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0||sk.requiredMasteryLevel>100||!sk.requiredMastery&&sk.requiredMasteryLevel>0)fail(`輔助技能精通等級需求無效：${job}-${i}`);
     if(!Array.isArray(sk.weaponTypes)||sk.weaponTypes.some(x=>!WEAPON_TYPES.has(x)))fail(`輔助技能武器類型無效：${job}-${i}`);
   }
   for(let job=0;job<(doc.equipmentForms||[]).length;job++)for(const form of doc.equipmentForms[job]?.[0]||[])if(form.weaponType!=null&&!WEAPON_TYPES.has(form.weaponType))fail(`武器 weaponType 無效：${job}-${form.name}`);
@@ -7178,7 +7178,7 @@ exportableBalance=function(){
   }
   migrateWeaponCatalog(out.equipmentForms);
   out.masteryTypes=MASTERIES_BY_JOB.map((types,job)=>({job,types:[...types]}));
-  out.notes=(out.notes||[]).filter(x=>!/技能等級|每級|skill level|powerPerLevel|procChancePerLevel|effectPerLevel/i.test(String(x)));
+  out.notes=(out.notes||[]).filter(x=>!/技能等級|每級|skill level|powerPerLevel|procChancePerLevel|effectPerLevel|前置|prerequisite/i.test(String(x)));
   out.notes.push('第一次大修：技能僅有未學／已學，技能點與技能等級不再參與遊戲計算。','mastery 保存精通 XP，等級由 balanceSettings.skills.mastery 的共用曲線即時計算。','mastery / requiredMastery / requiredMasteryLevel / weaponTypes 分別描述培養精通、學習精通條件與可用武器；學習精通等級要求限制為 0～100。','weaponType 與 mastery 為獨立概念；戰士／弓箭手普通攻擊依目前武器類型累積精通，法師／牧師則依技能 mastery 累積。');
   return out;
 };
