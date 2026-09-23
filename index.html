@@ -1364,7 +1364,7 @@ function balanceReference(){return {
   equipmentSlots:{'0':'武器','1':'護甲','2':'副手','3':'飾品'},
   balancePaths:{
     'balance.combat.elementMultipliers':'neutral=無剋制、same=同屬性、strong=剋制、weak=被剋制',
-    'balance.combat.statCaps':'crit/pierce/evasion/lifesteal 的最終上限，使用 0~1 小數',
+    'balance.combat.statCaps':'暴擊、閃避、吸血、防禦無視使用 0~1 小數；防禦穿透為固定防禦點數',
     'balance.combat.minimumActiveCooldown':'主動技能最低冷卻回合',
     'balance.affixes.qualityChance':'每一條詞條獨立抽品質，四項總和必須 = 1',
     'balance.affixes.qualityMultiplier':'普通四種基礎詞條（攻擊/生命/防禦/暴擊）的品質倍率',
@@ -1386,7 +1386,7 @@ function normalizeRuntimeBalance(input){
   for(const key of ['skillSpecialChance','skillEffectShare','extendedPoolChance'])if(out.affixes[key]<0||out.affixes[key]>1)throw Error(key+' 必須介於 0~1');
   if(out.combat.minimumActiveCooldown<0||!Number.isFinite(out.combat.minimumActiveCooldown))throw Error('minimumActiveCooldown 無效');
   for(const [k,v] of Object.entries(out.combat.elementMultipliers))if(!Number.isFinite(v)||v<0)throw Error('elementMultipliers.'+k+' 無效');
-  for(const [k,v] of Object.entries(out.combat.statCaps))if(!Number.isFinite(v)||v<0||v>1)throw Error('statCaps.'+k+' 必須介於 0~1');
+  for(const [k,v] of Object.entries(out.combat.statCaps)){const max=k==='pierce'?10000:1;if(!Number.isFinite(v)||v<0||v>max)throw Error('statCaps.'+k+' 必須介於 0~'+max);}
   for(const key of ['attackPerTier','hpPerTier','defensePerTier']){const r=out.affixes.baseValues[key];if(!Number.isFinite(r.min)||!Number.isFinite(r.max)||r.min<0||r.max<r.min)throw Error('baseValues.'+key+' 範圍無效');}
   const cr=out.affixes.baseValues.critPercent;if(!Number.isFinite(cr.min)||!Number.isFinite(cr.max)||!Number.isFinite(cr.cap)||cr.min<0||cr.max<cr.min||cr.cap<cr.max)throw Error('baseValues.critPercent 範圍無效');
   if(out.affixes.rerollCost.goldPerTier<0||out.affixes.rerollCost.orePerTier<0)throw Error('rerollCost 不可為負數');
