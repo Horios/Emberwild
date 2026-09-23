@@ -1703,6 +1703,24 @@ applyBalanceConfig=function(input,{persist=true}={}){
   if(state)render();return result;
 };
 
+/* mastery-overhaul-preload-v1: make new learned-skill saves valid before late modules hydrate. */
+const MASTERY_OVERHAUL_OLD_CORE_LEVELS=[1,4,7,11,15,20],MASTERY_OVERHAUL_CORE_LEVELS=[1,3,5,7,15,20];
+const MASTERY_OVERHAUL_OLD_SUPPORT_LEVELS=[1,7,15],MASTERY_OVERHAUL_SUPPORT_LEVELS=[1,4,15];
+function migrateMasteryRequiredLevelsDocument(doc){
+  if(!doc||typeof doc!=='object')return doc;
+  for(const cls of doc.classes||[]){const list=cls?.skills||[];if(list.length>=6&&list.slice(0,6).every((sk,i)=>Number(sk?.requiredLevel)===MASTERY_OVERHAUL_OLD_CORE_LEVELS[i]))for(let i=0;i<6;i++)list[i].requiredLevel=MASTERY_OVERHAUL_CORE_LEVELS[i];}
+  for(const list of doc.supportSkills||[]){if(Array.isArray(list)&&list.length===3&&list.every((sk,i)=>Number(sk?.level)===MASTERY_OVERHAUL_OLD_SUPPORT_LEVELS[i]))for(let i=0;i<3;i++)list[i].level=MASTERY_OVERHAUL_SUPPORT_LEVELS[i];}
+  doc.balanceSettings??={};doc.balanceSettings.meta??={};doc.balanceSettings.meta.masteryOverhaulVersion=Math.max(1,Number(doc.balanceSettings.meta.masteryOverhaulVersion)||0);
+  return doc;
+}
+function applyMasteryRequiredLevelBootstrap(){
+  for(const cls of CLASSES){const list=cls.skills||[];if(list.length>=6&&list.slice(0,6).every((sk,i)=>Number(sk?.[2])===MASTERY_OVERHAUL_OLD_CORE_LEVELS[i]))for(let i=0;i<6;i++)list[i][2]=MASTERY_OVERHAUL_CORE_LEVELS[i];}
+  for(const list of SUPPORT){if(Array.isArray(list)&&list.length===3&&list.every((sk,i)=>Number(sk?.level)===MASTERY_OVERHAUL_OLD_SUPPORT_LEVELS[i]))for(let i=0;i<3;i++)list[i].level=MASTERY_OVERHAUL_SUPPORT_LEVELS[i];}
+}
+applyMasteryRequiredLevelBootstrap();
+const masteryPreloadApplyBalanceBase=applyBalanceConfig;
+applyBalanceConfig=function(input,options={}){const copy=migrateMasteryRequiredLevelsDocument(JSON.parse(JSON.stringify(input)));return masteryPreloadApplyBalanceBase(copy,options);};
+
 // Load persisted test balance before validating the player save.
 try{const savedBalance=localStorage.getItem(BALANCE_KEY);if(savedBalance)applyBalanceConfig(JSON.parse(savedBalance),{persist:false});}catch(e){console.warn('早期測試設定載入失敗，保留原資料並等待後續模組重試',e);}
 
@@ -6737,43 +6755,43 @@ const LEGACY_WEAPON_BY_NAME={
 };
 const CORE_PLAN=[
   [
-    {level:1,mastery:'sword',requiredMastery:'sword',requiredMasteryLevel:0,weaponTypes:['sword'],prerequisites:[]},
+    {level:1,mastery:'sword',requiredMastery:null,requiredMasteryLevel:0,weaponTypes:['sword'],prerequisites:[]},
     {level:3,mastery:'sword',requiredMastery:'sword',requiredMasteryLevel:1,weaponTypes:['sword'],prerequisites:[]},
     {level:5,mastery:'sword',requiredMastery:'sword',requiredMasteryLevel:2,weaponTypes:['sword'],prerequisites:[{type:'core',skill:0}]},
-    {level:6,mastery:'axe',requiredMastery:'axe',requiredMasteryLevel:2,weaponTypes:['axe'],prerequisites:[{type:'core',skill:0}]},
-    {level:8,mastery:'sword',requiredMastery:'sword',requiredMasteryLevel:4,weaponTypes:['sword'],prerequisites:[{type:'core',skill:2}]},
-    {level:10,mastery:'axe',requiredMastery:'axe',requiredMasteryLevel:4,weaponTypes:['axe'],prerequisites:[{type:'core',skill:3}]}
+    {level:7,mastery:'axe',requiredMastery:'axe',requiredMasteryLevel:2,weaponTypes:['axe'],prerequisites:[{type:'core',skill:0}]},
+    {level:15,mastery:'sword',requiredMastery:'sword',requiredMasteryLevel:4,weaponTypes:['sword'],prerequisites:[{type:'core',skill:2}]},
+    {level:20,mastery:'axe',requiredMastery:'axe',requiredMasteryLevel:4,weaponTypes:['axe'],prerequisites:[{type:'core',skill:3}]}
   ],
   [
-    {level:1,mastery:'fire',requiredMastery:'fire',requiredMasteryLevel:0,weaponTypes:['staff','grimoire'],prerequisites:[]},
-    {level:3,mastery:'ice',requiredMastery:'ice',requiredMasteryLevel:1,weaponTypes:['staff','grimoire'],prerequisites:[]},
+    {level:1,mastery:'fire',requiredMastery:null,requiredMasteryLevel:0,weaponTypes:['staff','grimoire'],prerequisites:[]},
+    {level:3,mastery:'ice',requiredMastery:null,requiredMasteryLevel:0,weaponTypes:['staff','grimoire'],prerequisites:[]},
     {level:5,mastery:'fire',requiredMastery:'fire',requiredMasteryLevel:2,weaponTypes:['staff','grimoire'],prerequisites:[{type:'core',skill:0}]},
-    {level:6,mastery:'ice',requiredMastery:'ice',requiredMasteryLevel:2,weaponTypes:['staff','grimoire'],prerequisites:[{type:'core',skill:1}]},
-    {level:8,mastery:'fire',requiredMastery:'fire',requiredMasteryLevel:4,weaponTypes:['staff','grimoire'],prerequisites:[{type:'core',skill:2}]},
-    {level:10,mastery:'ice',requiredMastery:'ice',requiredMasteryLevel:4,weaponTypes:['staff','grimoire'],prerequisites:[{type:'core',skill:3}]}
+    {level:7,mastery:'shadow',requiredMastery:null,requiredMasteryLevel:0,weaponTypes:['staff','grimoire'],prerequisites:[]},
+    {level:15,mastery:'fire',requiredMastery:'fire',requiredMasteryLevel:4,weaponTypes:['staff','grimoire'],prerequisites:[{type:'core',skill:2}]},
+    {level:20,mastery:'wind',requiredMastery:'wind',requiredMasteryLevel:4,weaponTypes:['staff','grimoire'],prerequisites:[{type:'support',skill:0}]}
   ],
   [
-    {level:1,mastery:'bow',requiredMastery:'bow',requiredMasteryLevel:0,weaponTypes:['bow'],prerequisites:[]},
+    {level:1,mastery:'bow',requiredMastery:null,requiredMasteryLevel:0,weaponTypes:['bow'],prerequisites:[]},
     {level:3,mastery:'bow',requiredMastery:'bow',requiredMasteryLevel:1,weaponTypes:['bow'],prerequisites:[]},
     {level:5,mastery:'bow',requiredMastery:'bow',requiredMasteryLevel:2,weaponTypes:['bow'],prerequisites:[{type:'core',skill:0}]},
-    {level:6,mastery:'crossbow',requiredMastery:'crossbow',requiredMasteryLevel:2,weaponTypes:['crossbow'],prerequisites:[{type:'core',skill:0}]},
-    {level:8,mastery:'bow',requiredMastery:'bow',requiredMasteryLevel:4,weaponTypes:['bow'],prerequisites:[{type:'core',skill:2}]},
-    {level:10,mastery:'crossbow',requiredMastery:'crossbow',requiredMasteryLevel:4,weaponTypes:['crossbow'],prerequisites:[{type:'core',skill:3}]}
+    {level:7,mastery:'crossbow',requiredMastery:'crossbow',requiredMasteryLevel:2,weaponTypes:['crossbow'],prerequisites:[{type:'core',skill:0}]},
+    {level:15,mastery:'bow',requiredMastery:'bow',requiredMasteryLevel:4,weaponTypes:['bow'],prerequisites:[{type:'core',skill:2}]},
+    {level:20,mastery:'crossbow',requiredMastery:'crossbow',requiredMasteryLevel:4,weaponTypes:['crossbow'],prerequisites:[{type:'core',skill:3}]}
   ],
   [
-    {level:1,mastery:'light',requiredMastery:'light',requiredMasteryLevel:0,weaponTypes:['prayerBook','holyStaff'],prerequisites:[]},
+    {level:1,mastery:'light',requiredMastery:null,requiredMasteryLevel:0,weaponTypes:['prayerBook','holyStaff'],prerequisites:[]},
     {level:3,mastery:'light',requiredMastery:'light',requiredMasteryLevel:1,weaponTypes:['prayerBook','holyStaff'],prerequisites:[{type:'core',skill:0}]},
-    {level:5,mastery:'shadow',requiredMastery:'shadow',requiredMasteryLevel:1,weaponTypes:['prayerBook','holyStaff'],prerequisites:[]},
-    {level:6,mastery:'shadow',requiredMastery:'shadow',requiredMasteryLevel:2,weaponTypes:['prayerBook','holyStaff'],prerequisites:[{type:'core',skill:2}]},
-    {level:8,mastery:'light',requiredMastery:'light',requiredMasteryLevel:4,weaponTypes:['prayerBook','holyStaff'],prerequisites:[{type:'core',skill:1}]},
-    {level:10,mastery:'shadow',requiredMastery:'shadow',requiredMasteryLevel:4,weaponTypes:['prayerBook','holyStaff'],prerequisites:[{type:'core',skill:3}]}
+    {level:5,mastery:'shadow',requiredMastery:null,requiredMasteryLevel:0,weaponTypes:['prayerBook','holyStaff'],prerequisites:[]},
+    {level:7,mastery:'shadow',requiredMastery:'shadow',requiredMasteryLevel:2,weaponTypes:['prayerBook','holyStaff'],prerequisites:[{type:'core',skill:2}]},
+    {level:15,mastery:'light',requiredMastery:'light',requiredMasteryLevel:4,weaponTypes:['prayerBook','holyStaff'],prerequisites:[{type:'core',skill:1}]},
+    {level:20,mastery:'shadow',requiredMastery:'shadow',requiredMasteryLevel:4,weaponTypes:['prayerBook','holyStaff'],prerequisites:[{type:'core',skill:3}]}
   ]
 ];
 const SUPPORT_PLAN=[
-  [{level:1},{level:4},{level:8}],
-  [{level:1,mastery:'fire'},{level:4,mastery:'ice'},{level:8,mastery:'wind'}],
-  [{level:1},{level:4},{level:8}],
-  [{level:1,mastery:'light'},{level:4,mastery:'light'},{level:8,mastery:'shadow'}]
+  [{level:1},{level:4},{level:15}],
+  [{level:1,mastery:'wind'},{level:4,mastery:'ice'},{level:15,mastery:'fire'}],
+  [{level:1},{level:4},{level:15}],
+  [{level:1,mastery:'light'},{level:4,mastery:'light'},{level:15,mastery:'light'}]
 ];
 const MASTERY_DEFAULTS={xpBase:8,xpLinear:5,xpQuadratic:1,skillUseXp:2,basicAttackXp:1,maxLevel:30,advanceRequiredLevel:4,characterXpMultiplier:1.35};
 
@@ -6782,6 +6800,7 @@ function ensureMasterySettings(settings){
   settings.progression??={};settings.progression.starting??={};settings.progression.levelRewards??={};
   settings.progression.starting.skillPoints=0;
   settings.progression.levelRewards.skillPoints=0;
+  if(settings.quests?.tutorial)settings.quests.tutorial.skillLevelRequirement=1;
   settings.skills??={};settings.skills.mastery??={};
   for(const [k,v] of Object.entries(MASTERY_DEFAULTS))if(!Number.isFinite(Number(settings.skills.mastery[k])))settings.skills.mastery[k]=v;
   settings.skills.mastery.xpBase=Math.max(1,Number(settings.skills.mastery.xpBase));
@@ -6826,6 +6845,7 @@ function applyDefaultSkillPlan(){
   for(let job=0;job<CLASSES.length;job++){
     for(let i=0;i<CLASSES[job].skills.length;i++){
       const sk=CLASSES[job].skills[i],plan=CORE_PLAN[job]?.[i]||{},meta=runtimeCoreMeta(job,i);
+      if(job===3&&[2,3].includes(i)&&SKILL_ELEMENTS[job]?.[i]==='light')SKILL_ELEMENTS[job][i]='shadow';
       if(Number.isInteger(plan.level))sk[2]=plan.level;
       Object.assign(meta,{
         mastery:plan.mastery??meta.mastery??null,
@@ -7036,6 +7056,10 @@ validateParty=function(input){
 
 function normalizeOverhaulDocument(input){
   const doc=clone(input||{});doc.balanceSettings??=clone(GAMEPLAY_SETTINGS);ensureMasterySettings(doc.balanceSettings);
+  const firstMasteryMigration=Number(doc.balanceSettings?.meta?.masteryOverhaulVersion||0)<1;
+  if(firstMasteryMigration)migrateMasteryRequiredLevelsDocument(doc);
+  doc.balanceSettings.meta??={};doc.balanceSettings.meta.masteryOverhaulVersion=1;
+  if(firstMasteryMigration&&doc.classes?.[3]?.skills?.[2]?.element==='light'&&doc.classes?.[3]?.skills?.[3]?.element==='light'){doc.classes[3].skills[2].element='shadow';doc.classes[3].skills[3].element='shadow';}
   doc.masteryTypes=MASTERIES_BY_JOB.map((list,job)=>({job,types:[...list]}));
   for(let job=0;job<(doc.classes||[]).length;job++)for(let i=0;i<(doc.classes[job]?.skills||[]).length;i++){
     const sk=doc.classes[job].skills[i],fallback=CORE_PLAN[job]?.[i]||{},live=runtimeCoreMeta(job,i);
@@ -7317,9 +7341,10 @@ tutorial=function(){
 
 const masteryCharacterViewBase=characterView;
 characterView=function(){
-  M.ensureHero(state);let html=masteryCharacterViewBase();
+  const h=typeof pageHero==='function'?pageHero('character'):state;M.ensureHero(h);let html=masteryCharacterViewBase();
   html=html.replace(/升級獲得\s*\d+\s*能力點[、，]\s*\d+\s*技能點；?/g,'升級獲得能力點；').replace(/技能點\s*\+\s*\d+/g,'');
-  const req=M.masterySettings().advanceRequiredLevel,best=Math.max(0,...masteryKeys().map(k=>M.masteryLevelFromXp(state.mastery[k])));
+  const req=M.masterySettings().advanceRequiredLevel,best=Math.max(0,...M.validMasteries(h.job).map(k=>M.masteryLevelFromXp(h.mastery[k]))),a=GAMEPLAY_SETTINGS.progression.advance,disabled=h.advanced||h.lv<a.level||best<req;
+  html=html.replace(/<button class="primary" onclick="heroMenuAction\((\d+),\(\)=>\{advance\(\)\}\)"\s*(?:disabled)?\s*>/,(_,job)=>`<button class="primary" onclick="heroMenuAction(${job},()=>{advance()})"${disabled?' disabled':''}>`);
   return html+`<section class="panel"><h2>二轉精通條件</h2><p>除既有角色等級與資源外，需要本職任一主要精通達 Lv${req}。</p><p class="small">目前最高精通 Lv${best}。不要求所有精通平均培養。</p></section>`;
 };
 const masteryGuideBase=guideView;
