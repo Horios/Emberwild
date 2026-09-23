@@ -7988,6 +7988,16 @@ function statusPureSelfTest(){
 
 const STATUS_TARGETS=['enemy','enemies','self','weakest','allies'];
 const STATUS_TARGET_LABELS={enemy:'目前敵人',enemies:'敵方全體',self:'自己',weakest:'生命比例最低隊友',allies:'我方全體'};
+const STATUS_HERO_ONLY_MODIFIERS=new Set(['attack','critical','guard','power','regen']);
+const STATUS_ENEMY_ONLY_MODIFIERS=new Set(['fracture','weaken','vulnerable','damageAmp','followup']);
+function statusAllowedTargetsForDefinition(def){
+  if(!def)return STATUS_TARGETS.slice();
+  const heroOnly=def.modifiers.some(m=>STATUS_HERO_ONLY_MODIFIERS.has(m.kind)),enemyOnly=!!def.control||def.modifiers.some(m=>STATUS_ENEMY_ONLY_MODIFIERS.has(m.kind));
+  if(heroOnly&&enemyOnly)return [];
+  if(heroOnly)return ['self','weakest','allies'];
+  if(enemyOnly)return ['enemy','enemies'];
+  return STATUS_TARGETS.slice();
+}
 let statusDefinitions=[];
 let activeStatuses=[];
 let lastStatusTickClock=-1;
@@ -8134,7 +8144,7 @@ initiativeOrder=function(){tickCustomStatuses();return statusInitiativeBase();};
 const statusCastBase=castPartySkill;
 castPartySkill=function(h,i,v){
   const sk=CLASSES[h.job]?.skills?.[i],meta=sk?.[6];if(!sk||sk[5]!=='applyStatus')return statusCastBase(h,i,v);
-  const def=statusById(meta?.statusId);if(!def)return false;const targets=statusTargetsForSkill(h,meta);if(!targets.length)return false;
+  const def=statusById(meta?.statusId);if(!def||!statusAllowedTargetsForDefinition(def).includes(meta?.statusTarget||'enemy'))return false;const targets=statusTargetsForSkill(h,meta);if(!targets.length)return false;
   let success=false;for(const target of targets)success=applyCustomStatus(def,h,target)||success;
   if(success&&h.sockets?.[i]===2&&sk[1]==='active'){const pv=v||battleStats(h),before=h.hp;h.hp=Math.min(pv.hp,h.hp+Math.round(pv.atk*GS('skills.gems.hybridActiveHealAttack',.10)));const recovered=Math.max(0,h.hp-before);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}
   if(success&&meta?.mastery&&typeof gainMastery==='function')gainMastery(h,meta.mastery,masterySettings().skillUseXp);
@@ -8161,7 +8171,7 @@ const statusValidateBase=validateBalanceConfig;
 validateBalanceConfig=function(input){
   const out=statusValidateBase(input),defs=normalizeStatusList(input?.statusDefinitions),ids=new Set();
   for(const [i,d] of defs.entries()){const issues=validateStatusDefinition(d);if(issues.length)throw Error('自訂狀態 '+(i+1)+' 無效：'+issues.join('、'));if(ids.has(d.id))throw Error('自訂狀態 ID 重複：'+d.id);ids.add(d.id);}
-  for(const [job,c] of (input?.classes||[]).entries())for(const [i,sk] of (c?.skills||[]).entries())if(sk?.effect==='applyStatus'){if(!ids.has(String(sk.statusId||'')))throw Error('技能 '+job+'-'+i+' 引用不存在的狀態');if(!STATUS_TARGETS.includes(sk.statusTarget||'enemy'))throw Error('技能 '+job+'-'+i+' 的狀態目標無效');}
+  for(const [job,c] of (input?.classes||[]).entries())for(const [i,sk] of (c?.skills||[]).entries())if(sk?.effect==='applyStatus'){const def=defs.find(x=>x.id===String(sk.statusId||'')),target=sk.statusTarget||'enemy';if(!def)throw Error('技能 '+job+'-'+i+' 引用不存在的狀態');if(!STATUS_TARGETS.includes(target))throw Error('技能 '+job+'-'+i+' 的狀態目標無效');if(!statusAllowedTargetsForDefinition(def).includes(target))throw Error('技能 '+job+'-'+i+' 的狀態效果與套用目標方向不相容');}
   out.statusDefinitions=defs;return out;
 };
 const statusApplyBase=applyBalanceConfig;
