@@ -7930,7 +7930,7 @@ if(state)render();
 /* STATUS_PURE_START */
 const STATUS_SCHEMA_VERSION=1;
 const STATUS_TAGS=['periodic','control','modifier','instant'];
-const STATUS_MODIFIER_KINDS=['attack','critical','guard','fracture','power','weaken','vulnerable','damageAmp','regen'];
+const STATUS_MODIFIER_KINDS=['attack','critical','guard','fracture','power','weaken','vulnerable','damageAmp','regen','followup'];
 const STATUS_CONTROL_KINDS=['polymorph','freeze','frost','rage','fear','tauntRage'];
 const STATUS_PERIODIC_KINDS=['damage','heal'];
 const STATUS_BASIS=['fixed','casterAttack','casterMaxHp','casterCurrentHp','casterMissingHp','casterDefense','casterShield','casterLevel','targetAttack','targetMaxHp','targetCurrentHp','targetMissingHp','targetDefense','targetShield','targetLevel'];
@@ -7943,7 +7943,7 @@ function statusClamp01(v,fallback=0){return Math.max(0,Math.min(1,statusNum(v,fa
 function normalizeStatusDefinition(raw,index=0){
   raw=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
   const tags=[...new Set((Array.isArray(raw.tags)?raw.tags:[]).filter(x=>STATUS_TAGS.includes(x)))];
-  const modifiers=tags.includes('modifier')?(Array.isArray(raw.modifiers)?raw.modifiers:[]).slice(0,3).map(x=>({kind:STATUS_MODIFIER_KINDS.includes(x?.kind)?x.kind:'attack',value:statusNum(x?.value,0)})):[];
+  const modifiers=tags.includes('modifier')?(Array.isArray(raw.modifiers)?raw.modifiers:[]).slice(0,3).map(x=>({kind:STATUS_MODIFIER_KINDS.includes(x?.kind)?x.kind:'attack',value:statusNum(x?.value,0),element:STATUS_ELEMENTS.includes(x?.element)?x.element:'physical'})):[];
   let control=null;
   if(tags.includes('control')&&raw.control&&STATUS_CONTROL_KINDS.includes(raw.control.kind)){
     control={
@@ -8094,11 +8094,34 @@ function statusTargetsForSkill(h,meta){
 }
 function customStatusSummary(def){
   if(!def)return '未指定狀態';const bits=[];
-  if(def.modifiers.length)bits.push(def.modifiers.map(x=>x.kind+' '+Number((x.value*100).toFixed(2))+'%').join('、'));
+  if(def.modifiers.length)bits.push(def.modifiers.map(x=>x.kind+' '+Number((x.value*100).toFixed(2))+'%'+(x.kind==='followup'?' '+x.element:'' )).join('、'));
   if(def.control)bits.push('控制 '+def.control.kind);
   if(def.periodic.length)bits.push(def.periodic.map(x=>(x.kind==='heal'?'恢復':'傷害')+' '+x.basis+'×'+x.coefficient+' / '+x.resolution).join('、'));
   if(def.tags.includes('instant'))bits.push('套用時立即結算持續效果 1 次');return bits.join('；')||'純標記狀態';
 }
+
+function triggerCustomStatusFollowups(target){
+  if(!target||target.hp<=0)return 0;let total=0;
+  const entries=[];
+  for(const inst of activeStatuses.filter(x=>x.targetKey===target.id&&partyClock<x.expiresClock)){
+    for(const m of inst.definition.modifiers)if(m.kind==='followup')entries.push({inst,m});
+  }
+  for(const {inst,m} of entries){
+    if(target.hp<=0)break;
+    const caster=party?.members?.find(h=>h.job===inst.sourceJob);if(!caster)continue;
+    const v=battleStats(caster),formula=GAMEPLAY_SETTINGS?.combat?.damageFormula||{},attackCoefficient=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defenseCoefficient=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:(GAMEPLAY_SETTINGS?.combat?.defenseEffectiveness??.55),minimumDamage=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
+    const fracture=Math.min(GAMEPLAY_SETTINGS?.combat?.caps?.fracture??.75,effectTotal(target.id,'fracture')),ignore=Math.min(GAME_BALANCE?.combat?.statCaps?.defenseIgnore??.75,Math.max(0,Number(v.defenseIgnore)||0)),penetration=Math.min(GAME_BALANCE?.combat?.statCaps?.pierce??10000,Math.max(0,Number(v.pierce)||0));
+    const effectiveDefense=Math.max(0,Math.max(0,Number(target.def)||0)*(1-fracture)*(1-ignore)-penetration);
+    let amount=Math.max(minimumDamage,Math.round(statusAttack(caster)*Math.max(0,m.value)*attackCoefficient-effectiveDefense*defenseCoefficient));
+    const crit=Math.random()<Math.max(0,Math.min(GAME_BALANCE?.combat?.statCaps?.crit??1,Number(v.crit)||0));if(crit)amount=Math.round(amount*Math.max(1,Number(v.critDamage)||1));
+    amount=Math.max(minimumDamage,Math.round(amount*elementFactor(m.element||'physical',target.element)*(1-Math.min(GAMEPLAY_SETTINGS?.combat?.caps?.guard??.75,effectTotal(target.id,'guard')))));
+    const dealt=statusApplyShieldAwareDamage(target,amount,false);if(dealt>0&&typeof recordCombatContribution==='function')recordCombatContribution(caster,'damage',dealt);total+=dealt;
+    if(dealt>0)note(inst.name+'・受擊追打 ['+((typeof ELEMENTS==='object'&&ELEMENTS[m.element])||m.element||'physical')+'] → '+target.name+' '+dealt+' 傷害'+(crit?'（暴擊）':''));
+  }
+  return total;
+}
+const statusResolveHitBase=resolveHit;
+resolveHit=function(e,amount,h,element,crit,options={}){const dealt=statusResolveHitBase(e,amount,h,element,crit,options);if(dealt>0&&e?.hp>0)triggerCustomStatusFollowups(e);return dealt;};
 
 // Add custom status modifiers to the same aggregation path used by existing buffs/debuffs.
 const statusEffectTotalBase=effectTotal;
