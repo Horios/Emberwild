@@ -5326,6 +5326,7 @@ if(state)render();
     }
     return total;
   }
+  globalThis.triggerFollowupDebuffs=triggerFollowupDebuffs;
 
   // Final damage resolver: damageAmp increases only the triggering attack.
   // Legacy vulnerable remains accepted as a compatibility alias for old imported configs.
@@ -6611,8 +6612,14 @@ if(state)render();
     let d=Math.max(minimumDamage,Math.round(rawAmount*attackCoefficient-effectiveDefense*defenseCoefficient));
     if(crit)d=Math.round(d*Math.max(1,Number.isFinite(options.critDamage)?options.critDamage:v.critDamage));
     const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic&&tonic.element===element?GS('combat.supply.elementTonicDamage',.2):0);
-    d=Math.max(minimumDamage,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+effectTotal(e.id,'vulnerable'))));
-    const actual=Math.min(e.hp,d);e.hp=Math.max(0,e.hp-d);h.hp=Math.min(v.hp,h.hp+actual*v.lifesteal);return actual;
+    const amp=effectTotal(e.id,'damageAmp')+effectTotal(e.id,'vulnerable');
+    d=Math.max(minimumDamage,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)));
+    const actual=Math.min(e.hp,d);e.hp=Math.max(0,e.hp-d);
+    if(actual>0)recordCombatContribution(h,'damage',actual);
+    const beforeLifesteal=h.hp;h.hp=Math.min(v.hp,h.hp+actual*v.lifesteal);
+    const healed=Math.max(0,h.hp-beforeLifesteal);if(healed>0)recordCombatContribution(h,'healing',healed);
+    if(actual>0&&e.hp>0)triggerFollowupDebuffs(e);
+    return actual;
   };
 
   // Skills use character crit/crit-damage plus their own editable baseline.
