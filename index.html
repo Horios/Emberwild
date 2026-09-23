@@ -6851,9 +6851,9 @@ function applyDefaultSkillPlan(){
         mastery:plan.mastery??meta.mastery??null,
         requiredMastery:plan.requiredMastery??meta.requiredMastery??null,
         requiredMasteryLevel:Number.isInteger(plan.requiredMasteryLevel)?plan.requiredMasteryLevel:Math.max(0,Math.floor(Number(meta.requiredMasteryLevel)||0)),
-        weaponTypes:Array.isArray(plan.weaponTypes)?[...plan.weaponTypes]:(Array.isArray(meta.weaponTypes)?meta.weaponTypes.filter(x=>WEAPON_TYPES.has(x)):[]),
-        prerequisites:normalizePrerequisites(plan.prerequisites??meta.prerequisites)
+        weaponTypes:Array.isArray(plan.weaponTypes)?[...plan.weaponTypes]:(Array.isArray(meta.weaponTypes)?meta.weaponTypes.filter(x=>WEAPON_TYPES.has(x)):[])
       });
+      delete meta.prerequisites;delete meta.prerequisiteSkill;delete meta.prerequisiteLevel;
       meta.powerPerLevel=0;
       if(sk[1]==='proc'){ensureProcSkillMeta(job,i);meta.procChancePerLevel=0;}
     }
@@ -6864,7 +6864,7 @@ function applyDefaultSkillPlan(){
       sk.requiredMastery=sk.requiredMastery??null;
       sk.requiredMasteryLevel=Math.max(0,Math.floor(Number(sk.requiredMasteryLevel)||0));
       sk.weaponTypes=Array.isArray(sk.weaponTypes)?sk.weaponTypes.filter(x=>WEAPON_TYPES.has(x)):[];
-      sk.prerequisites=normalizePrerequisites(sk.prerequisites);
+      delete sk.prerequisites;delete sk.prerequisiteSkill;delete sk.prerequisiteLevel;
       sk.effectPerLevel=0;
     }
   }
@@ -6944,7 +6944,6 @@ function coreMissingRequirements(h,i,forUse=false){
   const meta=runtimeCoreMeta(h.job,i),reasons=[];
   if(!forUse&&h.lv<sk[2])reasons.push(`角色 LV${sk[2]}`);
   if(!forUse&&skillRequiresAdvanced(sk,i)&&!h.advanced)reasons.push('完成二轉');
-  if(!forUse&&!skillPrerequisitesMet(sk,h)){const label=skillPrerequisiteLabel(h.job,sk);reasons.push(label?`前置 ${label}`:'前置技能');}
   const req=meta.requiredMastery,reqLv=Math.max(0,Math.floor(Number(meta.requiredMasteryLevel)||0));
   if(!forUse&&req&&masteryLevelFromXp(h.mastery?.[req]||0)<reqLv)reasons.push(`${MASTERY_LABELS[req]||req}精通 Lv${reqLv}`);
   if(!skillWeaponAllowed(h,meta))reasons.push(`武器 ${meta.weaponTypes.map(x=>WEAPON_TYPE_LABELS[x]||x).join('／')}`);
@@ -6954,7 +6953,6 @@ function supportMissingRequirements(h,i,forUse=false){
   const sk=SUPPORT[h.job]?.[i];if(!sk)return ['技能不存在'];const reasons=[];
   if(!forUse&&h.lv<sk.level)reasons.push(`角色 LV${sk.level}`);
   if(!forUse&&i===2&&!h.advanced)reasons.push('完成二轉');
-  if(!forUse&&!skillPrerequisitesMet(sk,h)){const label=skillPrerequisiteLabel(h.job,sk);reasons.push(label?`前置 ${label}`:'前置技能');}
   const req=sk.requiredMastery,reqLv=Math.max(0,Math.floor(Number(sk.requiredMasteryLevel)||0));
   if(!forUse&&req&&masteryLevelFromXp(h.mastery?.[req]||0)<reqLv)reasons.push(`${MASTERY_LABELS[req]||req}精通 Lv${reqLv}`);
   if(!skillWeaponAllowed(h,sk))reasons.push(`武器 ${(sk.weaponTypes||[]).map(x=>WEAPON_TYPE_LABELS[x]||x).join('／')}`);
@@ -7073,7 +7071,7 @@ function normalizeOverhaulDocument(input){
     sk.requiredMastery=sk.requiredMastery??live.requiredMastery??fallback.requiredMastery??null;
     sk.requiredMasteryLevel=Math.max(0,Math.floor(Number(sk.requiredMasteryLevel??live.requiredMasteryLevel??fallback.requiredMasteryLevel)||0));
     sk.weaponTypes=Array.isArray(sk.weaponTypes)?sk.weaponTypes.filter(x=>WEAPON_TYPES.has(x)):clone(live.weaponTypes??fallback.weaponTypes??[]);
-    sk.prerequisites=normalizePrerequisites(Array.isArray(sk.prerequisites)?sk.prerequisites:(live.prerequisites??fallback.prerequisites??[]));
+    delete sk.prerequisites;delete sk.prerequisiteSkill;delete sk.prerequisiteLevel;
     if(!Number.isFinite(sk.powerPerLevel))sk.powerPerLevel=0;else sk.powerPerLevel=0;
     if(sk.activation==='proc'){if(!Number.isFinite(sk.procBaseChance))sk.procBaseChance=legacyProcRates(doc.balanceSettings).base;sk.procChancePerLevel=0;}
   }
@@ -7083,7 +7081,7 @@ function normalizeOverhaulDocument(input){
     sk.requiredMastery=sk.requiredMastery??live.requiredMastery??null;
     sk.requiredMasteryLevel=Math.max(0,Math.floor(Number(sk.requiredMasteryLevel??live.requiredMasteryLevel)||0));
     sk.weaponTypes=Array.isArray(sk.weaponTypes)?sk.weaponTypes.filter(x=>WEAPON_TYPES.has(x)):clone(live.weaponTypes||[]);
-    sk.prerequisites=normalizePrerequisites(Array.isArray(sk.prerequisites)?sk.prerequisites:(live.prerequisites||[]));
+    delete sk.prerequisites;delete sk.prerequisiteSkill;delete sk.prerequisiteLevel;
     sk.effectPerLevel=0;
   }
   if(Array.isArray(doc.equipmentForms)){
@@ -7108,14 +7106,14 @@ function validateOverhaulFields(doc){
     const sk=doc.classes[job].skills[i],valid=new Set(validMasteries(job));
     if(sk.mastery!=null&&!valid.has(sk.mastery))fail(`技能精通不存在：${job}-${i}-${sk.mastery}`);
     if(sk.requiredMastery!=null&&!valid.has(sk.requiredMastery))fail(`技能需求精通不存在：${job}-${i}-${sk.requiredMastery}`);
-    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0||sk.requiredMasteryLevel>masteryMax||!sk.requiredMastery&&sk.requiredMasteryLevel>0)fail(`技能精通等級需求無效：${job}-${i}`);
+    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0||sk.requiredMasteryLevel>Math.min(100,masteryMax)||!sk.requiredMastery&&sk.requiredMasteryLevel>0)fail(`技能精通等級需求無效：${job}-${i}`);
     if(!Array.isArray(sk.weaponTypes)||sk.weaponTypes.some(x=>!WEAPON_TYPES.has(x)))fail(`技能武器類型無效：${job}-${i}`);
   }
   for(let job=0;job<(doc.supportSkills||[]).length;job++)for(let i=0;i<(doc.supportSkills[job]||[]).length;i++){
     const sk=doc.supportSkills[job][i],valid=new Set(validMasteries(job));
     if(sk.mastery!=null&&!valid.has(sk.mastery))fail(`輔助技能精通不存在：${job}-${i}-${sk.mastery}`);
     if(sk.requiredMastery!=null&&!valid.has(sk.requiredMastery))fail(`輔助技能需求精通不存在：${job}-${i}-${sk.requiredMastery}`);
-    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0||sk.requiredMasteryLevel>masteryMax||!sk.requiredMastery&&sk.requiredMasteryLevel>0)fail(`輔助技能精通等級需求無效：${job}-${i}`);
+    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0||sk.requiredMasteryLevel>Math.min(100,masteryMax)||!sk.requiredMastery&&sk.requiredMasteryLevel>0)fail(`輔助技能精通等級需求無效：${job}-${i}`);
     if(!Array.isArray(sk.weaponTypes)||sk.weaponTypes.some(x=>!WEAPON_TYPES.has(x)))fail(`輔助技能武器類型無效：${job}-${i}`);
   }
   for(let job=0;job<(doc.equipmentForms||[]).length;job++)for(const form of doc.equipmentForms[job]?.[0]||[])if(form.weaponType!=null&&!WEAPON_TYPES.has(form.weaponType))fail(`武器 weaponType 無效：${job}-${form.name}`);
@@ -7124,20 +7122,20 @@ function validateOverhaulFields(doc){
 const masteryValidateBalanceBase=validateBalanceConfig;
 validateBalanceConfig=function(input){
   const full=normalizeOverhaulDocument(input);validateOverhaulFields(full);const clean=clone(full);
-  for(const cls of clean.classes||[])for(const sk of cls.skills||[]){sk.prerequisites=normalizePrerequisites(sk.prerequisites).map(req=>({...req,level:1}));sk.powerPerLevel=0;if(sk.activation==='proc')sk.procChancePerLevel=0;}
-  for(const list of clean.supportSkills||[])for(const sk of list||[]){sk.prerequisites=normalizePrerequisites(sk.prerequisites).map(req=>({...req,level:1}));sk.effectPerLevel=0;}
+  for(const cls of clean.classes||[])for(const sk of cls.skills||[]){delete sk.prerequisites;delete sk.prerequisiteSkill;delete sk.prerequisiteLevel;sk.powerPerLevel=0;if(sk.activation==='proc')sk.procChancePerLevel=0;}
+  for(const list of clean.supportSkills||[])for(const sk of list||[]){delete sk.prerequisites;delete sk.prerequisiteSkill;delete sk.prerequisiteLevel;sk.effectPerLevel=0;}
   for(const slots of clean.equipmentForms||[])for(const form of slots?.[0]||[])delete form.weaponType;
   const out=masteryValidateBalanceBase(clean);
   out.balanceSettings=clone(full.balanceSettings);out.masteryTypes=clone(full.masteryTypes);
   for(let job=0;job<(out.classes||[]).length;job++)for(let i=0;i<(out.classes[job]?.skills||[]).length;i++){
     const src=full.classes[job].skills[i],dst=out.classes[job].skills[i];
     for(const key of ['mastery','requiredMastery','requiredMasteryLevel','weaponTypes'])dst[key]=clone(src[key]);
-    dst.prerequisites=normalizePrerequisites(src.prerequisites);dst.powerPerLevel=0;if(dst.activation==='proc')dst.procChancePerLevel=0;
+    delete dst.prerequisites;delete dst.prerequisiteSkill;delete dst.prerequisiteLevel;dst.powerPerLevel=0;if(dst.activation==='proc')dst.procChancePerLevel=0;
   }
   for(let job=0;job<(out.supportSkills||[]).length;job++)for(let i=0;i<(out.supportSkills[job]||[]).length;i++){
     const src=full.supportSkills[job][i],dst=out.supportSkills[job][i];
     for(const key of ['mastery','requiredMastery','requiredMasteryLevel','weaponTypes'])dst[key]=clone(src[key]);
-    dst.prerequisites=normalizePrerequisites(src.prerequisites);dst.effectPerLevel=0;
+    delete dst.prerequisites;delete dst.prerequisiteSkill;delete dst.prerequisiteLevel;dst.effectPerLevel=0;
   }
   for(let job=0;job<(out.equipmentForms||[]).length;job++)for(let i=0;i<(out.equipmentForms[job]?.[0]||[]).length;i++)out.equipmentForms[job][0][i].weaponType=full.equipmentForms[job][0][i].weaponType;
   return out;
@@ -7147,12 +7145,12 @@ function applyOverhaulMeta(doc){
   ensureMasterySettings(GAMEPLAY_SETTINGS);
   for(let job=0;job<CLASSES.length;job++)for(let i=0;i<CLASSES[job].skills.length;i++){
     const src=doc.classes?.[job]?.skills?.[i];if(!src)continue;const meta=runtimeCoreMeta(job,i);
-    Object.assign(meta,{mastery:src.mastery??null,requiredMastery:src.requiredMastery??null,requiredMasteryLevel:Math.max(0,Math.floor(Number(src.requiredMasteryLevel)||0)),weaponTypes:clone(src.weaponTypes||[]),prerequisites:normalizePrerequisites(src.prerequisites),powerPerLevel:0});
+    Object.assign(meta,{mastery:src.mastery??null,requiredMastery:src.requiredMastery??null,requiredMasteryLevel:Math.max(0,Math.min(100,Math.floor(Number(src.requiredMasteryLevel)||0))),weaponTypes:clone(src.weaponTypes||[]),powerPerLevel:0});delete meta.prerequisites;delete meta.prerequisiteSkill;delete meta.prerequisiteLevel;
     if(CLASSES[job].skills[i][1]==='proc')meta.procChancePerLevel=0;
   }
   for(let job=0;job<SUPPORT.length;job++)for(let i=0;i<SUPPORT[job].length;i++){
     const src=doc.supportSkills?.[job]?.[i];if(!src)continue;
-    Object.assign(SUPPORT[job][i],{mastery:src.mastery??null,requiredMastery:src.requiredMastery??null,requiredMasteryLevel:Math.max(0,Math.floor(Number(src.requiredMasteryLevel)||0)),weaponTypes:clone(src.weaponTypes||[]),prerequisites:normalizePrerequisites(src.prerequisites),effectPerLevel:0});
+    Object.assign(SUPPORT[job][i],{mastery:src.mastery??null,requiredMastery:src.requiredMastery??null,requiredMasteryLevel:Math.max(0,Math.min(100,Math.floor(Number(src.requiredMasteryLevel)||0))),weaponTypes:clone(src.weaponTypes||[]),effectPerLevel:0});delete SUPPORT[job][i].prerequisites;delete SUPPORT[job][i].prerequisiteSkill;delete SUPPORT[job][i].prerequisiteLevel;
   }
   migrateWeaponCatalog();migrateAllKnownWeapons();
   for(const h of party?.members||[])ensureHeroMastery(h);if(state)ensureHeroMastery(state);
@@ -7171,17 +7169,17 @@ exportableBalance=function(){
   const out=normalizeOverhaulDocument(masteryExportBalanceBase());ensureMasterySettings(out.balanceSettings);
   for(let job=0;job<(out.classes||[]).length;job++)for(let i=0;i<(out.classes[job]?.skills||[]).length;i++){
     const sk=out.classes[job].skills[i],meta=runtimeCoreMeta(job,i);
-    sk.mastery=meta.mastery??null;sk.requiredMastery=meta.requiredMastery??null;sk.requiredMasteryLevel=Math.max(0,Math.floor(Number(meta.requiredMasteryLevel)||0));sk.weaponTypes=clone(meta.weaponTypes||[]);sk.prerequisites=normalizePrerequisites(meta.prerequisites);
+    sk.mastery=meta.mastery??null;sk.requiredMastery=meta.requiredMastery??null;sk.requiredMasteryLevel=Math.max(0,Math.min(100,Math.floor(Number(meta.requiredMasteryLevel)||0)));sk.weaponTypes=clone(meta.weaponTypes||[]);delete sk.prerequisites;delete sk.prerequisiteSkill;delete sk.prerequisiteLevel;
     delete sk.powerPerLevel;if(sk.activation==='proc')delete sk.procChancePerLevel;
   }
   for(let job=0;job<(out.supportSkills||[]).length;job++)for(let i=0;i<(out.supportSkills[job]||[]).length;i++){
     const sk=out.supportSkills[job][i],live=SUPPORT[job][i];
-    sk.mastery=live.mastery??null;sk.requiredMastery=live.requiredMastery??null;sk.requiredMasteryLevel=Math.max(0,Math.floor(Number(live.requiredMasteryLevel)||0));sk.weaponTypes=clone(live.weaponTypes||[]);sk.prerequisites=normalizePrerequisites(live.prerequisites);delete sk.effectPerLevel;
+    sk.mastery=live.mastery??null;sk.requiredMastery=live.requiredMastery??null;sk.requiredMasteryLevel=Math.max(0,Math.min(100,Math.floor(Number(live.requiredMasteryLevel)||0)));sk.weaponTypes=clone(live.weaponTypes||[]);delete sk.prerequisites;delete sk.prerequisiteSkill;delete sk.prerequisiteLevel;delete sk.effectPerLevel;
   }
   migrateWeaponCatalog(out.equipmentForms);
   out.masteryTypes=MASTERIES_BY_JOB.map((types,job)=>({job,types:[...types]}));
   out.notes=(out.notes||[]).filter(x=>!/技能等級|每級|skill level|powerPerLevel|procChancePerLevel|effectPerLevel/i.test(String(x)));
-  out.notes.push('第一次大修：技能僅有未學／已學，技能點與技能等級不再參與遊戲計算。','mastery 保存精通 XP，等級由 balanceSettings.skills.mastery 的共用曲線即時計算。','技能 prerequisites 僅判斷是否已學會；mastery / requiredMastery / requiredMasteryLevel / weaponTypes 分別描述培養精通、學習精通條件與可用武器。','weaponType 與 mastery 為獨立概念；戰士／弓箭手普通攻擊依目前武器類型累積精通，法師／牧師則依技能 mastery 累積。');
+  out.notes.push('第一次大修：技能僅有未學／已學，技能點與技能等級不再參與遊戲計算。','mastery 保存精通 XP，等級由 balanceSettings.skills.mastery 的共用曲線即時計算。','mastery / requiredMastery / requiredMasteryLevel / weaponTypes 分別描述培養精通、學習精通條件與可用武器；學習精通等級要求限制為 0～100。','weaponType 與 mastery 為獨立概念；戰士／弓箭手普通攻擊依目前武器類型累積精通，法師／牧師則依技能 mastery 累積。');
   return out;
 };
 
@@ -7234,12 +7232,10 @@ function masteryRequirementText(meta){
 function coreRequirementParts(sk,i){
   const meta=M.coreMeta(state.job,i),parts=[`角色 LV${sk[2]}`];
   if(skillRequiresAdvanced(sk,i))parts.push('完成二轉');
-  if(skillPrerequisites(sk).length)parts.push('前置 '+skillPrerequisiteLabel(state.job,sk));
   return parts.concat(masteryRequirementText(meta));
 }
 function supportRequirementParts(sk,i){
   const parts=[`角色 LV${sk.level}`];if(i===2)parts.push('完成二轉');
-  if(skillPrerequisites(sk).length)parts.push('前置 '+skillPrerequisiteLabel(state.job,sk));
   return parts.concat(masteryRequirementText(sk));
 }
 function requirementHTML(parts,missing){
@@ -7293,7 +7289,7 @@ function devToolHTML(){
 }
 skillsView=function(){
   M.ensureHero(state);
-  return singlePagePanel('skills','技能',()=>`${masterySummaryHTML()}<div class="actions skill-subtabs"><button class="${skillPanel==='active'?'primary':''}" onclick="setSkillPanel('active')">主動技能</button><button class="${skillPanel==='proc'?'primary':''}" onclick="setSkillPanel('proc')">普攻觸發技能</button><button class="${skillPanel==='support'?'primary':''}" onclick="setSkillPanel('support')">輔助技能</button></div><p class="small">技能學會後即取得完整效果；角色等級、前置技能、精通與武器類型決定能否學習／使用。</p>${skillPanel==='active'?coreSkillRows():skillPanel==='proc'?procSkillRows():supportSkillRows()}${devToolHTML()}`);
+  return singlePagePanel('skills','技能',()=>`${masterySummaryHTML()}<div class="actions skill-subtabs"><button class="${skillPanel==='active'?'primary':''}" onclick="setSkillPanel('active')">主動技能</button><button class="${skillPanel==='proc'?'primary':''}" onclick="setSkillPanel('proc')">普攻觸發技能</button><button class="${skillPanel==='support'?'primary':''}" onclick="setSkillPanel('support')">輔助技能</button></div><p class="small">技能學會後即取得完整效果；角色等級、精通與武器類型決定能否學習／使用。</p>${skillPanel==='active'?coreSkillRows():skillPanel==='proc'?procSkillRows():supportSkillRows()}${devToolHTML()}`);
 };
 
 function stopForDev(){running=false;partyBusy=false;}
