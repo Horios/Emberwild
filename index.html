@@ -7102,18 +7102,20 @@ function normalizeOverhaulDocument(input){
 }
 function validateOverhaulFields(doc){
   const fail=msg=>{throw Error(msg);};
+  const masteryMax=Math.max(1,Math.floor(Number(doc.balanceSettings?.skills?.mastery?.maxLevel)||1)),advanceReq=Math.max(0,Math.floor(Number(doc.balanceSettings?.skills?.mastery?.advanceRequiredLevel)||0));
+  if(advanceReq>masteryMax)fail('二轉精通需求不可高於精通最高等級');
   for(let job=0;job<(doc.classes||[]).length;job++)for(let i=0;i<(doc.classes[job]?.skills||[]).length;i++){
     const sk=doc.classes[job].skills[i],valid=new Set(validMasteries(job));
     if(sk.mastery!=null&&!valid.has(sk.mastery))fail(`技能精通不存在：${job}-${i}-${sk.mastery}`);
     if(sk.requiredMastery!=null&&!valid.has(sk.requiredMastery))fail(`技能需求精通不存在：${job}-${i}-${sk.requiredMastery}`);
-    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0)fail(`技能精通等級需求無效：${job}-${i}`);
+    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0||sk.requiredMasteryLevel>masteryMax||!sk.requiredMastery&&sk.requiredMasteryLevel>0)fail(`技能精通等級需求無效：${job}-${i}`);
     if(!Array.isArray(sk.weaponTypes)||sk.weaponTypes.some(x=>!WEAPON_TYPES.has(x)))fail(`技能武器類型無效：${job}-${i}`);
   }
   for(let job=0;job<(doc.supportSkills||[]).length;job++)for(let i=0;i<(doc.supportSkills[job]||[]).length;i++){
     const sk=doc.supportSkills[job][i],valid=new Set(validMasteries(job));
     if(sk.mastery!=null&&!valid.has(sk.mastery))fail(`輔助技能精通不存在：${job}-${i}-${sk.mastery}`);
     if(sk.requiredMastery!=null&&!valid.has(sk.requiredMastery))fail(`輔助技能需求精通不存在：${job}-${i}-${sk.requiredMastery}`);
-    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0)fail(`輔助技能精通等級需求無效：${job}-${i}`);
+    if(!Number.isInteger(sk.requiredMasteryLevel)||sk.requiredMasteryLevel<0||sk.requiredMasteryLevel>masteryMax||!sk.requiredMastery&&sk.requiredMasteryLevel>0)fail(`輔助技能精通等級需求無效：${job}-${i}`);
     if(!Array.isArray(sk.weaponTypes)||sk.weaponTypes.some(x=>!WEAPON_TYPES.has(x)))fail(`輔助技能武器類型無效：${job}-${i}`);
   }
   for(let job=0;job<(doc.equipmentForms||[]).length;job++)for(const form of doc.equipmentForms[job]?.[0]||[])if(form.weaponType!=null&&!WEAPON_TYPES.has(form.weaponType))fail(`武器 weaponType 無效：${job}-${form.name}`);
