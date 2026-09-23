@@ -7189,6 +7189,7 @@ globalThis.__EMBERWILD_MASTERY={
 const M=globalThis.__EMBERWILD_MASTERY;if(!M)return;
 const weaponLabel=k=>M.weaponTypes[k]||k||'未設定';
 const masteryLabel=k=>M.masteryLabels[k]||k||'無';
+const DEV_WEAPONS_BY_JOB=[['sword','axe','hammer'],['staff','grimoire'],['bow','crossbow'],['prayerBook','holyStaff']];
 const masteryKeys=()=>M.validMasteries(state.job);
 function learnedCore(i){return Number(state.skills?.[i])>0;}
 function learnedSupport(i){return Number(state.supportLevels?.[i])>0;}
@@ -7250,7 +7251,7 @@ function masteryGainHTML(source){
   return entries.length?`<div class="mastery-gain-list">${entries.map(([key,xp])=>`<span class="tag">${esc(masteryLabel(key.split(':')[1]))} +${xp} XP</span>`).join('')}</div>`:'<span class="small">尚無紀錄</span>';
 }
 function devToolHTML(){
-  const weaponTypes=[...new Set((ITEM_FORMS[state.job]?.[0]||[]).map(x=>x.weaponType).filter(Boolean))];
+  const weaponTypes=DEV_WEAPONS_BY_JOB[state.job]||[];
   return `<details class="panel mastery-dev-tools"><summary>測試版開發工具</summary><p class="small">只存在 chatgpt-dev。直接改測試角色資料；長時間模擬會實際推進戰鬥、EXP、掉落與精通。</p><div class="mastery-dev-grid">
     <div class="mastery-dev-box"><b>角色進度</b><div class="actions"><label>LV <input id="dev-mastery-level" type="number" min="1" max="${RULES.maxLevel}" value="${state.lv}"></label><button onclick="devMasterySetLevel()">設定</button></div><div class="actions"><label>EXP <input id="dev-mastery-exp" type="number" min="0" value="${state.xp}"></label><button onclick="devMasterySetExp()">設定</button></div></div>
     <div class="mastery-dev-box"><b>精通 XP</b>${masteryKeys().map(key=>`<div class="actions"><span style="min-width:54px">${esc(masteryLabel(key))}</span><button onclick="devMasteryAdjust('${key}',-10)">−10</button><input id="dev-mastery-${key}" type="number" min="0" value="${state.mastery[key]}"><button onclick="devMasterySet('${key}')">設定</button><button onclick="devMasteryAdjust('${key}',10)">+10</button></div>`).join('')}<button onclick="devMasteryReset()">重置此角色精通</button></div>
@@ -7286,9 +7287,10 @@ globalThis.devMasteryToggleSupport=function(i){stopForDev();if(!SUPPORT[state.jo
 globalThis.devMasteryWeapon=function(type){
   stopForDev();if(!M.weaponTypes[type])return;let g=state.bag?.find(x=>Number(x.slot)===0&&x.weaponType===type);
   if(!g){
-    const index=(ITEM_FORMS[state.job]?.[0]||[]).findIndex(x=>x.weaponType===type);if(index<0)return toast('此職業目前沒有 '+weaponLabel(type)+' 武器變體');
+    let index=(ITEM_FORMS[state.job]?.[0]||[]).findIndex(x=>x.weaponType===type),synthetic=index<0;
     if(state.bag.length>=RULES.bagCapacity)return toast('背包已滿');
-    g=gear(1,0,0,state.job);g.formJob=state.job;g.form=index;g.weaponType=type;g.name=gearName(g);addGear(g);
+    if(index<0)index=0;
+    g=gear(1,0,0,state.job);g.formJob=state.job;g.form=index;g.weaponType=type;g.name=(synthetic?'【測試】'+weaponLabel(type)+' · ':'')+gearName(g);if(synthetic)g.devWeaponTypeOverride=true;addGear(g);
   }
   equipGear(g.id);save();render();toast('已切換為 '+weaponLabel(type));
 };
