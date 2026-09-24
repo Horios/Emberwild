@@ -20,6 +20,68 @@
 | `js/ui/*.js` | 文字設定、遠征、戰報版面、背包控制及專精介面。 |
 | `js/balance/*.js` | 遊戲端平衡設定 schema、匯入執行、數值壓縮與公式；私有設計器不在此 Repository。 |
 
+### 檔案對照
+
+| 檔案 | 原有區塊的用途 |
+| --- | --- |
+| `css/ally-row.css` | 隊員列可讀性樣式 |
+| `css/base.css` | 既有基礎與主要版面樣式 |
+| `css/battle-statistics.css` | 戰鬥統計樣式 |
+| `css/combat-contribution.css` | 戰鬥貢獻條樣式 |
+| `css/economy-inventory.css` | 經濟與背包樣式 |
+| `css/equipment-identity.css` | 裝備識別與品質樣式 |
+| `css/forge-navigation.css` | 鍛造列表導覽樣式 |
+| `css/healing-potions.css` | 治療藥水樣式 |
+| `css/inventory-controls.css` | 背包控制樣式 |
+| `css/json-description.css` | JSON 描述區樣式 |
+| `css/mastery-ui.css` | 專精介面樣式 |
+| `css/pending-gear-compact.css` | 待領裝備精簡列樣式 |
+| `css/pending-gear-detail.css` | 待領裝備詳細列表樣式 |
+| `css/pending-gear-loot.css` | 待領掉落樣式 |
+| `css/shop-inventory.css` | 商店背包樣式 |
+| `css/skill-rules-help.css` | 技能規則說明樣式 |
+| `css/skill-tooltip-reroll.css` | 技能提示與洗鍊樣式 |
+| `css/status-maker.css` | 自訂狀態介面樣式 |
+| `js/balance/balance-runtime.js` | 平衡設定匯入與執行時套用 |
+| `js/balance/balance-schema.js` | 平衡設定結構與驗證 |
+| `js/balance/numeric-compression-formula.js` | 現有壓縮數值與傷害公式覆寫 |
+| `js/character/class-growth.js` | 各職業初始與每級成長 |
+| `js/combat/action-turn-cooldown.js` | 行動回合冷卻與敵方技能 |
+| `js/combat/battle-statistics.js` | 戰鬥、死亡與掉落統計 |
+| `js/combat/combat-contribution.js` | 隊員傷害、治療、減傷貢獻 |
+| `js/combat/control-status-summon.js` | 控制狀態與召喚 |
+| `js/combat/manual-boss.js` | 手動 BOSS 挑戰 |
+| `js/combat/turn-duration.js` | 戰鬥回合節奏 |
+| `js/core/core-game.js` | 原有主流程、資料、渲染、存檔與相容層 |
+| `js/core/startup-guard.js` | 啟動失敗畫面 |
+| `js/equipment/affix-pool.js` | 分部位、等級的詞綴池 |
+| `js/equipment/economy-salvage.js` | 經濟、販售與分解 |
+| `js/equipment/equipment-identity.js` | 裝備識別、穿戴與品質 |
+| `js/equipment/equipment-stat-source.js` | 裝備屬性來源調整 |
+| `js/equipment/forge-navigation.js` | 鍛造列表導覽 |
+| `js/equipment/pending-gear-compact.js` | 待領裝備精簡操作 |
+| `js/equipment/pending-gear-detail.js` | 待領裝備詳細清單 |
+| `js/equipment/pending-gear-loot.js` | 戰鬥裝備暫存領取 |
+| `js/items/healing-potions.js` | 治療藥水規則 |
+| `js/items/shop-inventory.js` | 商店與物品背包 |
+| `js/skills/mastery-cleanup.js` | 專精後續相容清理 |
+| `js/skills/mastery-core.js` | 專精規則與資料 |
+| `js/skills/skill-tooltip-reroll.js` | 技能提示與自動洗鍊 |
+| `js/skills/status-maker.js` | 自訂狀態定義與套用 |
+| `js/skills/support-debuff.js` | 輔助技能與減益 |
+| `js/ui/expedition-density.js` | 遠征畫面密度 |
+| `js/ui/expedition-layout.js` | 遠征版面穩定 |
+| `js/ui/expedition-ui.js` | 遠征介面整理 |
+| `js/ui/inventory-controls.js` | 背包控制折疊 |
+| `js/ui/journal-split.js` | 戰報分割尺寸 |
+| `js/ui/mastery-ui.js` | 專精介面 |
+| `js/ui/ui-text-config.js` | 畫面文字設定 |
+| `js/world/custom-final-stage.js` | 自訂終局關卡 |
+| `js/world/dynamic-world.js` | 動態地圖與怪物 |
+| `js/world/final-map.js` | 終局地圖類型 |
+| `js/world/monster-drop-tables.js` | 怪物掉落表 |
+| `js/world/world-followup.js` | 世界執行時後續修補 |
+
 這些檔案代表原有載入區塊，並非重新建立獨立狀態。部分檔案會包裝或覆寫前面定義的函式；依賴以 `index.html` 的先後次序為準。公式與其後續覆寫位於 `core-game.js` 和 `js/balance/numeric-compression-formula.js`，設計器的 JSON 契約沒有改動。沒有新增 JSON 資料檔，因為原資料與執行時覆寫交織，這次不冒險改 schema。
 
 ## 驗證
