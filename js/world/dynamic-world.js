@@ -48,6 +48,12 @@
   function extendMonsterRow(m){
     if(!m||typeof m!=='object')return m;
     m.combatStats=normalizeMonsterCombatStats(m.combatStats);
+    const rawSkills=Array.isArray(m.skillAssignments)?m.skillAssignments:[];
+    const seenSkills=new Set();m.skillAssignments=[];
+    for(const a of rawSkills){
+      const skillId=typeof a==='string'?a:(typeof a?.skillId==='string'?a.skillId:'');
+      if(!skillId||seenSkills.has(skillId))continue;seenSkills.add(skillId);m.skillAssignments.push({skillId});
+    }
     m.enabled = m.kind==='normal' ? m.enabled!==false : true;
     m.eliteEnabled = m.kind==='normal' ? m.eliteEnabled!==false : false;
     if(!Number.isFinite(m.spawnWeight)||m.spawnWeight<=0)m.spawnWeight=1;
@@ -113,8 +119,8 @@
   const worldMergeDynamic=new Set(['maps.catalog','monsters.catalog','drops.entries','economy.materialPrices','equipment.salvage.extraRewards']);
   mergeGameplayShape=function mergeGameplayShapeWorld(def,src,path=''){
     if(Array.isArray(def)){
-      const sk=/^(drops\.entries\.\d+\.(sources|kinds))$/.test(path),dynamic=worldMergeDynamic.has(path)||sk;
-      if(dynamic){if(!Array.isArray(src))return cloneGameplaySettings(def);if(sk||!def.length)return cloneGameplaySettings(src);const template=def[0];return src.map((v,i)=>mergeGameplayShapeWorld(def[i]===undefined?template:def[i],v,path+'.'+i));}
+      const sk=/^(drops\.entries\.\d+\.(sources|kinds))$/.test(path),monsterSkills=/^monsters\.catalog\.\d+\.skillAssignments$/.test(path),dynamic=worldMergeDynamic.has(path)||sk||monsterSkills;
+      if(dynamic){if(!Array.isArray(src))return cloneGameplaySettings(def);if(sk||monsterSkills||!def.length)return cloneGameplaySettings(src);const template=def[0];return src.map((v,i)=>mergeGameplayShapeWorld(def[i]===undefined?template:def[i],v,path+'.'+i));}
       return def.map((v,i)=>mergeGameplayShapeWorld(v,Array.isArray(src)?src[i]:undefined,path?path+'.'+i:String(i)));
     }
     if(def&&typeof def==='object'){
