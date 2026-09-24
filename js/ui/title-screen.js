@@ -2,7 +2,13 @@
 (function(){
   let titleOpen=true,choosingCharacter=false,pendingCreation=null,approvedCreation=null,pendingDelete=null;
   let lastPlayTick=Date.now(),wasVisible=document.visibilityState!=='hidden',allowTitleSave=false;
-  const gameRender=render,gameStart=start,gameSave=save,gameAcceptImport=acceptImport;
+  const gameRender=render,gameStart=start,gameSave=save,gameNewGame=newGame,gameAcceptImport=acceptImport;
+
+  const playTimeKey=slot=>'emberwild-play-time-v1-slot-'+slot;
+  function cachedPlayTime(slot){
+    try{const value=Number(localStorage.getItem(playTimeKey(slot)));return Number.isSafeInteger(value)&&value>=0?value:0;}
+    catch{return 0;}
+  }
 
   function slotSnapshot(slot){
     try{return {primary:localStorage.getItem(saveKeyForSlot(slot)),backup:localStorage.getItem(backupKeyForSlot(slot))};}
@@ -16,7 +22,7 @@
       if(raw===null)continue;
       try{
         const data=JSON.parse(raw),members=data?.version===3?data.members:[1,2].includes(data?.version)?[data]:null;
-        if(Array.isArray(members)&&members.length>=1&&members.length<=4&&members.every(h=>Number.isInteger(h?.job)&&CLASSES[h.job]&&Number.isInteger(h.lv)&&h.lv>=1))return {members,playTimeMs:data.playTimeMs};
+        if(Array.isArray(members)&&members.length>=1&&members.length<=4&&members.every(h=>Number.isInteger(h?.job)&&CLASSES[h.job]&&Number.isInteger(h.lv)&&h.lv>=1))return {members,playTimeMs:Math.max(Number.isSafeInteger(data.playTimeMs)?data.playTimeMs:0,cachedPlayTime(slot))};
       }catch{}
     }
     return null;
@@ -56,8 +62,11 @@
   save=function(show=false){
     if(titleOpen&&!allowTitleSave){if(show)toast('請先選擇存檔欄位');return;}
     tallyPlayTime();
-    return gameSave(show);
+    const result=gameSave(show);
+    if(result===true&&party){try{localStorage.setItem(playTimeKey(ACTIVE_SAVE_SLOT),String(party.playTimeMs||0));}catch{}}
+    return result;
   };
+  newGame=function(){try{localStorage.removeItem(playTimeKey(ACTIVE_SAVE_SLOT));}catch{}return gameNewGame();};
   acceptImport=function(){allowTitleSave=true;try{return gameAcceptImport();}finally{allowTitleSave=false;}};
   document.addEventListener('visibilitychange',()=>{
     tallyPlayTime();wasVisible=document.visibilityState!=='hidden';
@@ -161,11 +170,12 @@
     }
     try{
       if(slot===ACTIVE_SAVE_SLOT){newGame();globalThis.__EMBERWILD_BOOT_SAVE_RAW=null;}
-      else{localStorage.removeItem(saveKeyForSlot(slot));localStorage.removeItem(backupKeyForSlot(slot));localStorage.removeItem(battleStatsKeyForSlot(slot));}
+      else{localStorage.removeItem(saveKeyForSlot(slot));localStorage.removeItem(backupKeyForSlot(slot));localStorage.removeItem(battleStatsKeyForSlot(slot));localStorage.removeItem(playTimeKey(slot));}
     }catch(e){console.warn('刪除存檔失敗',e);toast('刪除失敗，請檢查瀏覽器儲存權限');return;}
     pendingDelete=null;closeModal();render();toast('欄位 '+slot+' 已刪除');
   };
 
+  if(state&&party)party.playTimeMs=Math.max(party.playTimeMs||0,cachedPlayTime(ACTIVE_SAVE_SLOT));
   let intent=null;
   try{intent=sessionStorage.getItem(SAVE_SLOT_INTENT_KEY);sessionStorage.removeItem(SAVE_SLOT_INTENT_KEY);}catch{}
   render();
