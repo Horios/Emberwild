@@ -90,7 +90,7 @@
   function worldMapConfig(i){return GAMEPLAY_SETTINGS?.maps?.catalog?.[i]||GAMEPLAY_SETTINGS_DEFAULTS.maps.catalog[i]||null;}
   globalThis.worldMapConfig=worldMapConfig;
 
-  const worldMergeDynamic=new Set(['maps.catalog','monsters.skills','monsters.catalog','drops.entries','economy.materialPrices','equipment.salvage.extraRewards']);
+  const worldMergeDynamic=new Set(['maps.catalog','monsters.catalog','drops.entries','economy.materialPrices','equipment.salvage.extraRewards']);
   mergeGameplayShape=function mergeGameplayShapeWorld(def,src,path=''){
     if(Array.isArray(def)){
       const sk=/^(drops\.entries\.\d+\.(sources|kinds))$/.test(path),dynamic=worldMergeDynamic.has(path)||sk;

@@ -37,7 +37,7 @@
     foes=[];effects=[];actorCooldowns={};supportCooldowns={};for(const h of heroes())h.shield=0;
     for(let i=0;i<n;i++){const e=makeEnemy(party.map,weak);e.id='foe-'+uid();e.rewarded=false;foes.push(e);}enemy=foes[0];round=0;
     if(typeof beginBattleStatistics==='function')beginBattleStatistics();
-    if(typeof assignEnemySkill==='function'){enemySkillCooldowns={};for(const e of foes)assignEnemySkill(e);}
+    
     note(final?'遭遇終局首領。':'遭遇 '+foes.length+' 隻敵人。');
   };
 
