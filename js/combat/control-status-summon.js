@@ -143,31 +143,6 @@
     return frost?Math.max(1,Math.round(base*(1-clamp01(frost.slowPct,.30)))):base;
   };
 
-  const controlEnemySkillForBase=enemySkillFor;
-  enemySkillFor=function(e){
-    if(e?.__controlSkip)return null;
-    if(stateFor(e?.id,false)?.rage?.turns>0)return null;
-    return controlEnemySkillForBase(e);
-  };
-
-  const controlEnemySkillBase=performEnemySkill;
-  performEnemySkill=function(e,sk){
-    if(!e||e.__controlSkip)return;
-    const traps=combatSummons.filter(x=>x.hp>0);
-    if(traps.length&&sk?.target!=='weakest'){
-      const heroCount=living().length,total=heroCount+traps.length;
-      if(total>0&&rand(total)>=heroCount){
-        e.turn=(e.turn||0)+1;
-        const trap=traps[rand(traps.length)];
-        trap.hp=Math.max(0,trap.hp-1);
-        note(combatEnemyName(e)+'・'+sk.name+' → '+trap.name+'，陷阱生命 -1（剩餘 '+trap.hp+'）。');
-        onTrapHit(trap,e);
-        return;
-      }
-    }
-    return controlEnemySkillBase(e,sk);
-  };
-
   performEnemyBasic=function(e){
     if(!e||e.hp<=0)return;
     if(e.__controlSkip){note(combatEnemyName(e)+' 因'+e.__controlSkip+'無法行動。');return;}
