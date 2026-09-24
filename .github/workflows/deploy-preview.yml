@@ -55,6 +55,9 @@ jobs:
           test -f preview-source/index.html
           mkdir -p _site/preview
           cp production/index.html _site/index.html
+          if [ -d production/css ] && [ -d production/js ]; then
+            cp -R production/css production/js _site/
+          fi
           cp preview-source/index.html _site/preview/index.html
           if [ -d preview-source/css ] && [ -d preview-source/js ]; then
             cp -R preview-source/css preview-source/js _site/preview/
