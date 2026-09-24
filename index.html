@@ -3715,7 +3715,10 @@ render();
   spawnGroup=function(){
     const weak=[...heroes()].sort((a,b)=>a.lv-b.lv)[0],final=isFinalMap(party.map),g=GAMEPLAY_SETTINGS.combat.groupSize,min=Math.max(1,Math.round(g.min)),max=Math.max(min,Math.round(g.max)),n=final?1:min+rand(max-min+1);
     foes=[];effects=[];actorCooldowns={};supportCooldowns={};for(const h of heroes())h.shield=0;
-    for(let i=0;i<n;i++){const e=makeEnemy(party.map,weak);e.id='foe-'+uid();e.rewarded=false;foes.push(e);}enemy=foes[0];round=0;note(final?'遭遇終局首領。':'遭遇 '+foes.length+' 隻敵人。');
+    for(let i=0;i<n;i++){const e=makeEnemy(party.map,weak);e.id='foe-'+uid();e.rewarded=false;foes.push(e);}enemy=foes[0];round=0;
+    if(typeof beginBattleStatistics==='function')beginBattleStatistics();
+    if(typeof assignEnemySkill==='function'){enemySkillCooldowns={};for(const e of foes)assignEnemySkill(e);}
+    note(final?'遭遇終局首領。':'遭遇 '+foes.length+' 隻敵人。');
   };
 
   // Final-map clears are distinct from the one progression-gate clear.
@@ -5941,7 +5944,7 @@ if(state)render();
     else if(e.key==='bossDamagePct')v.bossDamage+=n/100;
   }
   stats=function(h=state){
-    const cls=CLASSES[h.job],v={hp:cls.hp+(h.lv-1)*GS('progression.statsPerLevel.hp',20)+h.stats[1]*GS('progression.statsPerPoint.hp',12),atk:cls.atk+(h.lv-1)*GS('progression.statsPerLevel.attack',4)+h.stats[0]*GS('progression.statsPerPoint.attack',2),def:cls.def+(h.lv-1)*GS('progression.statsPerLevel.defense',2)+h.stats[2]*GS('progression.statsPerPoint.defense',1.3),crit:h.job===2?GS('progression.baseCrit.archer',.17):GS('progression.baseCrit.default',.07),critDamage:GS('combat.baseCritDamage',1.5),pierce:0,defenseIgnore:0,lifesteal:0,evasion:0,elementBonus:0,bossDamage:0,elementDamage:{},raceDamage:{},resist:{}};
+    const cls=CLASSES[h.job],initial=typeof globalThis.classInitialStats==='function'?classInitialStats(cls,h.job):{hp:cls.hp,atk:cls.atk,def:cls.def,crit:h.job===2?GS('progression.baseCrit.archer',.17):GS('progression.baseCrit.default',.07),critDamage:GS('combat.baseCritDamage',1.5)},growth=typeof globalThis.classGrowthPerLevel==='function'?classGrowthPerLevel(cls):{hp:GS('progression.statsPerLevel.hp',20),atk:GS('progression.statsPerLevel.attack',4),def:GS('progression.statsPerLevel.defense',2),crit:0,critDamage:0},v={hp:initial.hp+(h.lv-1)*growth.hp+h.stats[1]*GS('progression.statsPerPoint.hp',12),atk:initial.atk+(h.lv-1)*growth.atk+h.stats[0]*GS('progression.statsPerPoint.attack',2),def:initial.def+(h.lv-1)*growth.def+h.stats[2]*GS('progression.statsPerPoint.defense',1.3),crit:initial.crit+(h.lv-1)*growth.crit,critDamage:initial.critDamage+(h.lv-1)*growth.critDamage,pierce:0,defenseIgnore:0,lifesteal:0,evasion:0,elementBonus:0,bossDamage:0,elementDamage:{},raceDamage:{},resist:{}};
     if(h.advanced){v.hp*=GS('progression.advance.hpMultiplier',1.18);v.atk*=GS('progression.advance.attackMultiplier',1.22);v.def*=GS('progression.advance.defenseMultiplier',1.15);}
     const attackBox={value:0};let fixedSpeed=0;
     for(const g of equipment(h)){
@@ -7600,35 +7603,44 @@ if(state)render();
       critDamage:Number.isFinite(Number(own.critDamage))?Number(own.critDamage):0
     };
   }
-  const baseStats=stats;
-  stats=function(h=state){
-    const v=baseStats(h),cls=CLASSES[h.job],initial=classInitial(cls,h.job),growth=classGrowth(cls),lv=Math.max(1,Number(h.lv)||1);
-    const legacy={
-      hp:Number(cls.hp)+(lv-1)*Number(GS('progression.statsPerLevel.hp',.9)),
-      atk:Number(cls.atk)+(lv-1)*Number(GS('progression.statsPerLevel.attack',.18)),
-      def:Number(cls.def)+(lv-1)*Number(GS('progression.statsPerLevel.defense',.1)),
-      crit:Number(h.job===2?GS('progression.baseCrit.archer',.17):GS('progression.baseCrit.default',.07)),
-      critDamage:Number(GS('combat.baseCritDamage',1.5))
-    };
-    const own={
-      hp:initial.hp+(lv-1)*growth.hp,
-      atk:initial.atk+(lv-1)*growth.atk,
-      def:initial.def+(lv-1)*growth.def,
-      crit:initial.crit+(lv-1)*growth.crit,
-      critDamage:initial.critDamage+(lv-1)*growth.critDamage
-    };
-    const hpAdv=h.advanced?Number(GS('progression.advance.hpMultiplier',1.12)):1;
-    const atkAdv=h.advanced?Number(GS('progression.advance.attackMultiplier',1.15)):1;
-    const defAdv=h.advanced?Number(GS('progression.advance.defenseMultiplier',1.12)):1;
-    v.hp+=(own.hp-legacy.hp)*hpAdv;
-    v.atk+=(own.atk-legacy.atk)*atkAdv;
-    v.def+=(own.def-legacy.def)*defAdv;
-    v.crit+=own.crit-legacy.crit;
-    v.critDamage+=own.critDamage-legacy.critDamage;
-    return v;
+  const classStatsValidateBase=validateBalanceConfig;
+  validateBalanceConfig=function(input){
+    for(const [job,cls] of (input?.classes||[]).entries())for(const field of ['initialStats','growthPerLevel']){
+      if(cls?.[field]===undefined)continue;
+      const values=cls[field];
+      if(!values||typeof values!=='object'||Array.isArray(values)||['hp','atk','def','crit','critDamage'].some(key=>!Number.isFinite(values[key])||values[key]<0)||(field==='initialStats'&&(values.hp<=0||values.atk<=0)))throw Error('職業初始／成長資料無效：'+job);
+    }
+    const out=classStatsValidateBase(input);
+    for(const [job,cls] of (input?.classes||[]).entries())for(const field of ['initialStats','growthPerLevel'])if(cls?.[field]!==undefined)out.classes[job][field]={...cls[field]};
+    return out;
+  };
+  const classStatsApplyBase=applyBalanceConfig;
+  applyBalanceConfig=function(input,{persist=true}={}){
+    const checked=validateBalanceConfig(input),out=classStatsApplyBase(checked,{persist:false});
+    for(const [job,cls] of checked.classes.entries())for(const field of ['initialStats','growthPerLevel']){
+      if(cls[field]===undefined)delete CLASSES[job][field];else CLASSES[job][field]={...cls[field]};
+    }
+    if(state){for(const h of party?.members||[state])withHero(h,clampVitals);render();}
+    if(persist)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));
+    return out;
+  };
+  const classStatsExportBase=exportableBalance;
+  exportableBalance=function(){
+    const out=classStatsExportBase();
+    out.classes.forEach((cls,job)=>{cls.initialStats=classInitial(CLASSES[job],job);cls.growthPerLevel=classGrowth(CLASSES[job]);});
+    return out;
   };
   globalThis.classInitialStats=classInitial;
   globalThis.classGrowthPerLevel=classGrowth;
+  // The early balance loader runs before this module installs its class fields.
+  try{
+    const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');
+    if(saved?.schema===BALANCE_SCHEMA){
+      const checked=validateBalanceConfig(saved);
+      checked.classes.forEach((cls,job)=>{for(const field of ['initialStats','growthPerLevel'])if(cls[field]!==undefined)CLASSES[job][field]={...cls[field]};});
+      if(state){for(const h of party?.members||[state])withHero(h,clampVitals);render();}
+    }
+  }catch(e){console.warn('職業初始／成長資料還原失敗',e);}
 })();
 </script>
 
