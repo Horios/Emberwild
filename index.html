@@ -4235,9 +4235,7 @@ render();
   .expedition-control-card .supply-actions{display:flex;gap:4px;flex-wrap:wrap}
   .expedition-control-card .supply-actions button{height:27px;font-size:11px;padding:2px 5px}
   .expedition-control-card .supply-actions label{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)}
-  .compact-battle-rules{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:6px 0 0}
-  .compact-battle-rules .rule-chip{font-size:10px;color:var(--muted);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:2px 6px}
-  .compact-battle-rules .icon-help{width:22px!important;height:22px!important;min-width:22px!important;padding:0!important;border-radius:999px;font-size:11px}
+  .party-combat>.actions>.icon-help{width:28px!important;height:28px!important;min-width:28px!important;padding:0!important;border-radius:999px;font-size:11px;flex:0 0 28px!important}
   /* Remove the superseded standalone panels that used to repeat the same controls. */
   .difficulty-panel,.pace-controls,.boss-meter-panel,.expedition-tools{display:none!important}
 
@@ -4305,8 +4303,9 @@ render();
         if(html.includes(marker))html=html.replace(marker,expeditionControlCard()+marker);
         else html+=expeditionControlCard();
       }
-      /* Hide repeated standalone controls; CSS also guards them. */
-      html=html.replace(/<p class="small combat-rule">[\s\S]*?<\/p>/,`<div class="compact-battle-rules"><span class="rule-chip">回合扣冷卻</span><span class="rule-chip">集火首位敵人</span><span class="rule-chip">戰後回滿</span>${tooltip('戰鬥規則','速度決定行動順序；倍速只改變等待時間。完整規則可由冒險指南查看。')}</div>`);
+      /* Keep combat rules available without occupying a separate row. */
+      html=html.replace(/<p class="small combat-rule">[\s\S]*?<\/p>/,'');
+      html=html.replace(/(<button class="primary" onclick="toggleBattle\(\)">[\s\S]*?<\/button>)/,`$1${tooltip('戰鬥規則','技能與治療藥水等以回合計算的冷卻，只在對應角色完成自己的行動時遞減 1，不受戰鬥倍速影響。自動戰鬥會集中攻擊敵方隊列中第一名仍存活的敵人，擊倒後再依序切換下一名。每次遭遇結束後，全隊生命回滿並清空護盾；技能冷卻會延續到下一場，不會因戰後恢復而重置。')}`);
       return html;
     };
   }
