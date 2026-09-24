@@ -1,6 +1,6 @@
 # Preview 拆檔報告（2026-09-24）
 
-基準：`chatgpt-dev` 的 `35a4b4c5388f422e8342ec7d22da767ad4399096`。遊戲拆檔只套用到測試版；正式遊戲 `main/index.html` 與獨立的私有平衡設計器均未修改，`main` 的部署 workflow 另有必要的資產複製調整。
+基準：`chatgpt-dev` 的 `35a4b4c5388f422e8342ec7d22da767ad4399096`。依後續授權，測試版與 `main` 都套用相同的遊戲拆檔；獨立的私有平衡設計器未修改，Pages workflow 另外複製兩個版本的附屬資產。
 
 ## 原本與目前結構
 
@@ -95,7 +95,7 @@
 
 ## 部署
 
-依本次追加授權，`main` 的 Pages workflow 在 `c1a6ce9` 增加複製 preview 的 `css/` 與 `js/`；正式遊戲的 `main/index.html` 沒有變動。測試版拆檔提交已快轉至 `chatgpt-dev`，線上 `/preview/` 已提供全部 57 個資產並可啟動。獨立平衡設計器維持原樣。
+Pages workflow 將 `main` 的 `css/`、`js/` 複製到正式站根目錄，並把 `chatgpt-dev` 的資產複製到 `/preview/`。兩個分支使用相同的遊戲 HTML、CSS、JavaScript；`/preview/` 已提供全部 57 個資產並可啟動。獨立平衡設計器維持原樣。
 
 ## 提交
 
