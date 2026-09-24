@@ -102,17 +102,17 @@
 
   function materialCount(key){if(key==='鍛鐵')return state.ore;if(key==='粉塵')return state.dust;return state.materials[key]||0;}
   function setMaterialCount(key,value){value=Math.max(0,Math.floor(value));if(key==='鍛鐵')state.ore=value;else if(key==='粉塵')state.dust=value;else state.materials[key]=value;}
-  function economyResourceSnapshot(){return {gold:state.gold,ore:state.ore,dust:state.dust,potions:state.potions,materials:economyClone(state.materials),consumables:economyClone(state.consumables),gems:[...state.gems]};}
-  function restoreEconomyResources(s){state.gold=s.gold;state.ore=s.ore;state.dust=s.dust;state.potions=s.potions;for(const k of Object.keys(state.materials))delete state.materials[k];Object.assign(state.materials,s.materials);for(const k of Object.keys(state.consumables))delete state.consumables[k];Object.assign(state.consumables,s.consumables);state.gems.splice(0,state.gems.length,...s.gems);}
+  function economyResourceSnapshot(){return {gold:state.gold,ore:state.ore,dust:state.dust,potions:state.potions,healingPotions:economyClone(healingInventory()),materials:economyClone(state.materials),consumables:economyClone(state.consumables),gems:[...state.gems]};}
+  function restoreEconomyResources(s){state.gold=s.gold;state.ore=s.ore;state.dust=s.dust;state.potions=s.potions;const inv=healingInventory();for(const k of Object.keys(inv))delete inv[k];Object.assign(inv,s.healingPotions);for(const k of Object.keys(state.materials))delete state.materials[k];Object.assign(state.materials,s.materials);for(const k of Object.keys(state.consumables))delete state.consumables[k];Object.assign(state.consumables,s.consumables);state.gems.splice(0,state.gems.length,...s.gems);}
 
   function salvageExtraRules(g){const q=gearQualityRank(g);return (GAMEPLAY_SETTINGS.equipment.salvage.extraRewards||[]).filter(r=>r.quality===q);}
   function grantEconomyReward(type,key,quantity){
     const n=Math.max(0,Math.floor(Number(quantity)||0));if(!n)return;
     if(type==='ore')state.ore+=n;
     else if(type==='dust')state.dust+=n;
-    else if(type==='potion')state.potions+=n;
+    else if(type==='potion'){const item=healPotionItems().find(x=>x.id==='heal_standard')||healPotionItems()[0];if(item)setHealPotionCount(item.id,healPotionCount(item.id)+n);else state.potions+=n;}
     else if(type==='material')state.materials[key]=(state.materials[key]||0)+n;
-    else if(type==='item'){if(SHOP.some(x=>x.id===key))state.consumables[key]=(state.consumables[key]||0)+n;}
+    else if(type==='item'){const item=SHOP.find(x=>x.id===key);if(isHealPotion(item))setHealPotionCount(key,healPotionCount(key)+n);else if(item)state.consumables[key]=(state.consumables[key]||0)+n;}
     else if(type==='gem'){for(let i=0;i<n;i++){const gi=key==='random'?rand(3):Number(key);if(Number.isInteger(gi)&&gi>=0&&gi<3)state.gems[gi]=(state.gems[gi]||0)+1;}}
   }
   function grantSalvageRewards(g,includeEnhance=true){const r=update12SalvageRewards(g,includeEnhance);state.ore+=r.ore;state.dust+=r.dust;for(const x of salvageExtraRules(g))grantEconomyReward(x.type,x.key,x.quantity);return r;}
