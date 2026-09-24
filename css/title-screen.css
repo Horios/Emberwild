@@ -1,0 +1,8 @@
+#app>.title-screen{height:100%;overflow:auto;display:grid;place-items:center;padding:24px}
+.title-screen-card{width:min(100%,560px);padding:clamp(24px,5vw,52px);border:1px solid var(--line);background:var(--panel);text-align:center}
+.title-screen-card h1{font-size:clamp(32px,6vw,52px);margin:12px 0}
+.title-screen-card p{margin:16px 0;white-space:pre-line}
+.title-screen-card .title-actions{margin:28px 0 12px}
+.title-screen-card .title-actions button{min-width:160px;min-height:42px;font-size:16px}
+.title-screen-card .small{color:var(--muted)}
+.title-back{margin:0 0 12px}
