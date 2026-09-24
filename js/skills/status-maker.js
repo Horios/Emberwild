@@ -137,6 +137,7 @@ function executeStatusPeriodic(inst,fx,immediate=false){
     return healed;
   }
   const amount=statusDamageAmount(raw,source,target,fx),dealt=statusApplyShieldAwareDamage(target,amount,fx.resolution==='true');
+  if(dealt>0&&statusIsHero(target)&&target.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(target,{name:inst.sourceName},inst.name+(immediate?'（立即傷害）':'（持續傷害）'));
   if(dealt>0&&source&&typeof recordCombatContribution==='function')recordCombatContribution(source,'damage',dealt);
   if(dealt>0)note(inst.name+'・'+prefix+'傷害 → '+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' '+dealt+' 傷害');
   return dealt;
@@ -155,7 +156,7 @@ function applyCustomStatus(defOrId,source,target){
   const def=typeof defOrId==='string'?statusById(defOrId):normalizeStatusDefinition(defOrId);if(!def||!target||target.hp<=0)return false;
   const targetKey=statusTargetKey(target),sourceJob=Number.isInteger(source?.job)?source.job:null;if(!targetKey)return false;
   activeStatuses=activeStatuses.filter(x=>!(x.statusId===def.id&&x.sourceJob===sourceJob&&x.targetKey===targetKey));
-  const inst={id:def.id+'@'+String(sourceJob)+'@'+targetKey,statusId:def.id,name:def.name,sourceJob,targetKey,appliedClock:partyClock,duration:def.duration,expiresClock:partyClock+def.duration,definition:deepClone(def)};
+  const inst={id:def.id+'@'+String(sourceJob)+'@'+targetKey,statusId:def.id,name:def.name,sourceJob,sourceName:source?(statusIsHero(source)?characterName(source):combatEnemyName(source)):'未知來源',targetKey,appliedClock:partyClock,duration:def.duration,expiresClock:partyClock+def.duration,definition:deepClone(def)};
   activeStatuses.push(inst);applyStatusControl(def,target,source);
   const regenRate=def.modifiers.filter(m=>m.kind==='regen').reduce((sum,m)=>sum+Math.max(0,Number(m.value)||0),0);
   if(regenRate>0&&statusIsHero(target)){
