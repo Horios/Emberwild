@@ -31,22 +31,16 @@
 
 沒有在這次驗證中確認可歸因於原版的遊戲 Bug；原本的死亡統計問題未在本次拆檔中修改，也沒有宣稱已修復。`core-game.js` 與若干後續覆寫層仍偏大，未做函式內部重構或移除歷史包裝。
 
-## 部署阻礙
+## 部署
 
-`main` 的 `.github/workflows/deploy-preview.yml` 目前只複製 `preview-source/index.html` 到 `_site/preview/index.html`。如果直接把此分支推到 `chatgpt-dev`，線上 `/preview/` 會缺少 `css/` 和 `js/`，遊戲會停在啟動畫面。要讓新結構能在 GitHub Pages 使用，該 workflow 至少需要在組裝 artifact 時增加：
-
-```sh
-cp -R preview-source/css preview-source/js _site/preview/
-```
-
-`main` 的正式遊戲內容不能修改，而該 workflow 只從 `main` context 執行；因此目前先在獨立檢查分支保留拆檔提交，未更新 `chatgpt-dev`。完成部署資產複製和瀏覽器驗收後，才能安全推進預覽分支。
+依本次追加授權，`main` 的 Pages workflow 在 `c1a6ce9` 增加複製 preview 的 `css/` 與 `js/`；正式遊戲的 `main/index.html` 沒有變動。測試版拆檔提交準備快轉至 `chatgpt-dev`，部署狀態另以 Actions 驗證。獨立平衡設計器維持原樣。
 
 ## 提交
 
 | Commit | 內容 |
 | --- | --- |
-| `3ad2135` | 原順序抽出 CSS。 |
-| `6db17e3` | 抽出啟動保護與原核心腳本。 |
-| `c89ab0e` | 抽出裝備、戰鬥、世界、設定等既有層。 |
-| `3df192c` | 抽出 UI、道具、戰鬥顯示層。 |
-| `c18c72a` | 抽出公式、專精、成長、自訂狀態層。 |
+| `28aa04c` | 原順序抽出 CSS。 |
+| `596bf42` | 抽出啟動保護與原核心腳本。 |
+| `15bff03` | 抽出裝備、戰鬥、世界、設定等既有層。 |
+| `976f8bb` | 抽出 UI、道具、戰鬥顯示層。 |
+| `89e3508` | 抽出公式、專精、成長、自訂狀態層。 |
