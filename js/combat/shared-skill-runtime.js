@@ -122,12 +122,45 @@
   const spawnBase=spawnGroup;
   spawnGroup=function(...args){const out=spawnBase(...args);enemySharedCooldowns=Object.create(null);for(const e of foes||[])cdBox(e);return out;};
 
+  const SHARED_USAGE_SCOPES=new Set(['character','monster','elite','boss','shared']);
+  function prepareSharedSkillInput(input){
+    const copy=JSON.parse(JSON.stringify(input||{})),monsters=copy.balanceSettings?.monsters;
+    if(monsters&&(Array.isArray(monsters.skills)||monsters.skillSystem!==undefined)){
+      delete monsters.skills;delete monsters.skillSystem;
+      for(const row of monsters.catalog||[])if(row&&typeof row==='object')delete row.skillAssignments;
+    }
+    return copy;
+  }
+  function validateSharedSkillInput(input){
+    const skillById=new Map();
+    for(const [job,c] of (input?.classes||[]).entries())for(const [index,sk] of (c?.skills||[]).entries()){
+      const id=typeof sk?.id==='string'&&sk.id.trim()?sk.id.trim():`job${job}-core${index}`;
+      if(skillById.has(id))throw Error('核心技能 ID 重複：'+id);
+      const usage=SHARED_USAGE_SCOPES.has(sk?.usageScope)?sk.usageScope:'character';
+      skillById.set(id,{id,usage,effect:sk?.effect||'',name:sk?.name||id});
+    }
+    for(const row of input?.balanceSettings?.monsters?.catalog||[]){
+      const seen=new Set();
+      for(const raw of row?.skillAssignments||[]){
+        const id=typeof raw==='string'?raw:raw?.skillId;
+        if(typeof id!=='string'||!id.trim())throw Error('怪物技能引用缺少 skillId：'+(row?.id||'未知怪物'));
+        if(seen.has(id))throw Error('怪物技能引用重複：'+(row?.id||'未知怪物')+' → '+id);seen.add(id);
+        const sk=skillById.get(id);if(!sk)throw Error('怪物引用不存在的核心技能：'+(row?.id||'未知怪物')+' → '+id);
+        const kind=row?.kind,allowed=sk.usage==='shared'||(kind==='normal'&&(sk.usage==='monster'||sk.usage==='elite'))||((kind==='boss'||kind==='final')&&sk.usage==='boss');
+        if(!allowed)throw Error('怪物技能用途分類不相容：'+(row?.id||'未知怪物')+' → '+sk.name);
+        if(!BASIC_EFFECTS.has(sk.effect))throw Error('此核心技能效果目前不支援怪物施放：'+sk.name);
+      }
+    }
+    return input;
+  }
+
   // Preserve stable IDs from imported balance data even though the compact runtime array itself is positional.
   const applyBase=applyBalanceConfig;
   applyBalanceConfig=function(input,options={}){
-    const ids=(input?.classes||[]).map((c,job)=>(c.skills||[]).map((sk,i)=>sk?.id||`job${job}-core${i}`));
-    const scopes=(input?.classes||[]).map(c=>(c.skills||[]).map(sk=>['character','monster','elite','boss','shared'].includes(sk?.usageScope)?sk.usageScope:'character'));
-    const persist=options?.persist!==false,out=applyBase(input,{...options,persist:false});
+    const prepared=validateSharedSkillInput(prepareSharedSkillInput(input));
+    const ids=(prepared?.classes||[]).map((c,job)=>(c.skills||[]).map((sk,i)=>sk?.id||`job${job}-core${i}`));
+    const scopes=(prepared?.classes||[]).map(c=>(c.skills||[]).map(sk=>SHARED_USAGE_SCOPES.has(sk?.usageScope)?sk.usageScope:'character'));
+    const persist=options?.persist!==false,out=applyBase(prepared,{...options,persist:false});
     for(let job=0;job<ids.length;job++)for(let i=0;i<ids[job].length;i++){const sk=CLASSES[job]?.skills?.[i];if(sk){sk[6]??={};sk[6].sharedId=ids[job][i];sk[6].usageScope=scopes[job][i];}}
     if(typeof syncAllHeroSkillArrays==='function')syncAllHeroSkillArrays();
     if(party?.members)for(const h of party.members)cleanHeroSkillSlots(h);else cleanHeroSkillSlots(state);
