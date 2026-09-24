@@ -4311,7 +4311,7 @@ render();
       }
       /* Keep combat rules available without occupying a separate row. */
       html=html.replace(/<p class="small combat-rule">[\s\S]*?<\/p>/,'');
-      html=html.replace(/(<button class="primary" onclick="toggleBattle\(\)">[\s\S]*?<\/button>)/,`$1${tooltip('戰鬥規則','技能與治療藥水等以回合計算的冷卻，只在對應角色完成自己的行動時遞減 1，不受戰鬥倍速影響。自動戰鬥會集中攻擊敵方隊列中第一名仍存活的敵人，擊倒後再依序切換下一名。每次遭遇結束後，全隊生命回滿並清空護盾；技能冷卻會延續到下一場，不會因戰後恢復而重置。')}`);
+      html=html.replace(/(<button class="primary" onclick="toggleBattle\(\)">[\s\S]*?<\/button>)/,`$1${tooltip('戰鬥規則','• 冷卻：技能與治療藥水等只在對應角色完成自己的行動時遞減 1，不受戰鬥倍速影響。\n• 自動攻擊：集中攻擊敵方隊列中第一名仍存活的敵人，擊倒後再依序切換下一名。\n• 遭遇結束：全隊生命回滿並清空護盾。\n• 技能冷卻：延續到下一場，不會因戰後恢復而重置。')}`);
       return html;
     };
   }
