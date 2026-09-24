@@ -8,7 +8,8 @@
     const out=[];
     for(let job=0;job<CLASSES.length;job++)for(let index=0;index<(CLASSES[job]?.skills?.length||0);index++){
       const sk=CLASSES[job].skills[index],meta=sk?.[6]&&typeof sk[6]==='object'?sk[6]:{};
-      out.push({id:idFor(job,index),job,index,name:sk[0],activation:sk[1],requiredLevel:sk[2],cooldown:Math.max(0,Math.round(Number(sk[3])||0)),power:Math.max(0,Number(sk[4])||0),effect:sk[5],element:SKILL_ELEMENTS[job]?.[index]||'physical',maxTargets:Math.max(1,Math.floor(Number(meta.maxTargets)||1)),meta});
+      const usageScope=['character','monster','elite','boss','shared'].includes(meta.usageScope)?meta.usageScope:'character';
+      out.push({id:idFor(job,index),job,index,name:sk[0],activation:sk[1],requiredLevel:sk[2],cooldown:Math.max(0,Math.round(Number(sk[3])||0)),power:Math.max(0,Number(sk[4])||0),effect:sk[5],element:SKILL_ELEMENTS[job]?.[index]||'physical',maxTargets:Math.max(1,Math.floor(Number(meta.maxTargets)||1)),usageScope,meta});
     }
     return out;
   }
@@ -16,7 +17,11 @@
   function sharedSkillById(id){return sharedCoreSkillPool().find(x=>x.id===id)||null;}
   globalThis.sharedSkillById=sharedSkillById;
   function monsterRow(e){return (GAMEPLAY_SETTINGS?.monsters?.catalog||[]).find(m=>m.id===e?.monsterId)||null;}
-  function assignments(e){return (monsterRow(e)?.skillAssignments||[]).map(a=>sharedSkillById(a?.skillId)).filter(Boolean).filter(sk=>e.lv>=sk.requiredLevel);}
+  function scopeAllowsEnemy(scope,kind){if(scope==='shared')return true;if(scope==='monster')return kind==='normal';if(scope==='elite')return kind==='elite';if(scope==='boss')return kind==='boss'||kind==='final';return false;}
+  function scopeAllowsHero(scope){return scope==='character'||scope==='shared';}
+  globalThis.sharedSkillScopeAllowsEnemy=scopeAllowsEnemy;
+  globalThis.sharedSkillScopeAllowsHero=scopeAllowsHero;
+  function assignments(e){return (monsterRow(e)?.skillAssignments||[]).map(a=>sharedSkillById(a?.skillId)).filter(Boolean).filter(sk=>e.lv>=sk.requiredLevel&&scopeAllowsEnemy(sk.usageScope,e.kind));}
   function cdBox(e){return enemySharedCooldowns[e.id]??=(Object.create(null));}
   function tickCooldowns(e){const box=cdBox(e);for(const k of Object.keys(box))box[k]=Math.max(0,Math.floor(Number(box[k])||0)-1);}
   function activeReady(e,previewTick=false){const box=cdBox(e);return assignments(e).find(sk=>sk.activation==='active'&&BASIC_EFFECTS.has(sk.effect)&&Math.max(0,(box[sk.id]||0)-(previewTick?1:0))<=0)||null;}
@@ -116,19 +121,40 @@
   // Preserve stable IDs from imported balance data even though the compact runtime array itself is positional.
   const applyBase=applyBalanceConfig;
   applyBalanceConfig=function(input,options={}){
-    const ids=(input?.classes||[]).map((c,job)=>(c.skills||[]).map((sk,i)=>sk?.id||`job${job}-core${i}`)),persist=options?.persist!==false;
-    const out=applyBase(input,{...options,persist:false});
-    for(let job=0;job<ids.length;job++)for(let i=0;i<ids[job].length;i++){const sk=CLASSES[job]?.skills?.[i];if(sk){sk[6]??={};sk[6].sharedId=ids[job][i];}}
-    if(persist){
-      const saved=exportableBalance();
-      for(let job=0;job<ids.length;job++)for(let i=0;i<ids[job].length;i++)if(saved.classes?.[job]?.skills?.[i])saved.classes[job].skills[i].id=ids[job][i];
-      localStorage.setItem(BALANCE_KEY,JSON.stringify(saved));
-    }
+    const ids=(input?.classes||[]).map((c,job)=>(c.skills||[]).map((sk,i)=>sk?.id||`job${job}-core${i}`));
+    const scopes=(input?.classes||[]).map(c=>(c.skills||[]).map(sk=>['character','monster','elite','boss','shared'].includes(sk?.usageScope)?sk.usageScope:'character'));
+    const persist=options?.persist!==false,out=applyBase(input,{...options,persist:false});
+    for(let job=0;job<ids.length;job++)for(let i=0;i<ids[job].length;i++){const sk=CLASSES[job]?.skills?.[i];if(sk){sk[6]??={};sk[6].sharedId=ids[job][i];sk[6].usageScope=scopes[job][i];}}
+    if(typeof syncAllHeroSkillArrays==='function')syncAllHeroSkillArrays();
+    if(party?.members)for(const h of party.members)cleanHeroSkillSlots(h);else cleanHeroSkillSlots(state);
+    if(persist)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));
     return out;
   };
-  for(let job=0;job<CLASSES.length;job++)for(let i=0;i<CLASSES[job].skills.length;i++){CLASSES[job].skills[i][6]??={};CLASSES[job].skills[i][6].sharedId??=`job${job}-core${i}`;}
+  for(let job=0;job<CLASSES.length;job++)for(let i=0;i<CLASSES[job].skills.length;i++){CLASSES[job].skills[i][6]??={};CLASSES[job].skills[i][6].sharedId??=`job${job}-core${i}`;CLASSES[job].skills[i][6].usageScope??='character';}
+
+  globalThis.coreSkillUsageScope=function(job,index){return sharedCoreSkillPool().find(x=>x.job===job&&x.index===index)?.usageScope||'character';};
+  globalThis.coreSkillAvailableToHero=function(job,index){return scopeAllowsHero(coreSkillUsageScope(job,index));};
+  function cleanHeroSkillSlots(h){
+    if(!h)return;
+    if(Array.isArray(h.active))h.active=h.active.map(i=>i===null||coreSkillAvailableToHero(h.job,i)?i:null);
+    if(Array.isArray(h.procSlots))h.procSlots=h.procSlots.map(i=>i===null||coreSkillAvailableToHero(h.job,i)?i:null);
+  }
+  if(typeof learn==='function'){const base=learn;learn=function(i){if(!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物學習');return base(i);};}
+  if(typeof equipSkill==='function'){const base=equipSkill;equipSkill=function(i,slot){if(!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物使用');return base(i,slot);};}
+  if(typeof slotProcSkill==='function'){const base=slotProcSkill;slotProcSkill=function(i,slot){if(i!==null&&!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物使用');return base(i,slot);};}
+  if(typeof validProcIndex==='function'){const base=validProcIndex;validProcIndex=function(h,i){return coreSkillAvailableToHero(h.job,i)&&base(h,i);};}
+  if(typeof castPartySkill==='function'){const base=castPartySkill;castPartySkill=function(h,i,v){if(!coreSkillAvailableToHero(h.job,i))return false;return base(h,i,v);};}
+
+  if(typeof exportableBalance==='function'){
+    const base=exportableBalance;
+    exportableBalance=function(){const out=base();for(let job=0;job<(out.classes||[]).length;job++)for(let i=0;i<(out.classes[job]?.skills||[]).length;i++){const def=sharedCoreSkillPool().find(x=>x.job===job&&x.index===i);if(def){out.classes[job].skills[i].id=def.id;out.classes[job].skills[i].usageScope=def.usageScope;}}return out;};
+  }
+
+  // Startup imports persisted balance before this late module exists. Reapply once after
+  // shared IDs/scopes are installed so monster assignments remain stable after reload.
   try{
     const saved=localStorage.getItem(BALANCE_KEY);
     if(saved)applyBalanceConfig(JSON.parse(saved),{persist:false});
+    else if(party?.members)for(const h of party.members)cleanHeroSkillSlots(h);
   }catch(e){console.warn('共用技能池後段重載失敗',e);}
 })();
