@@ -26,8 +26,28 @@
       bossEnabled:true,bossChance:final?1:Number(ec.bossChance)||0
     };});
   }
+  const MONSTER_COMBAT_STAT_DEFAULTS={
+    crit:0,critDamage:1.5,pierce:0,defenseIgnore:0,lifesteal:0,evasion:0,elementBonus:0,bossDamage:0,speedBonus:0,
+    elementDamage:{physical:0,fire:0,ice:0,wind:0,light:0,shadow:0},
+    raceDamage:{beast:0,plant:0,undead:0,construct:0,demon:0,spirit:0},
+    resist:{physical:0,fire:0,ice:0,wind:0,light:0,shadow:0}
+  };
+  function normalizeMonsterCombatStats(raw){
+    const src=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{},out={};
+    for(const key of ['crit','critDamage','pierce','defenseIgnore','lifesteal','evasion','elementBonus','bossDamage','speedBonus']){
+      const fallback=MONSTER_COMBAT_STAT_DEFAULTS[key],v=Number(src[key]);out[key]=Number.isFinite(v)?v:fallback;
+    }
+    out.crit=Math.max(0,out.crit);out.critDamage=Math.max(1,out.critDamage);out.pierce=Math.max(0,out.pierce);
+    out.defenseIgnore=Math.max(0,Math.min(1,out.defenseIgnore));out.lifesteal=Math.max(0,out.lifesteal);out.evasion=Math.max(0,Math.min(1,out.evasion));
+    for(const group of ['elementDamage','raceDamage','resist']){
+      out[group]={};for(const [key,fallback] of Object.entries(MONSTER_COMBAT_STAT_DEFAULTS[group])){const v=Number(src[group]?.[key]);out[group][key]=Number.isFinite(v)?v:fallback;}
+    }
+    return out;
+  }
+  globalThis.normalizeMonsterCombatStats=normalizeMonsterCombatStats;
   function extendMonsterRow(m){
     if(!m||typeof m!=='object')return m;
+    m.combatStats=normalizeMonsterCombatStats(m.combatStats);
     m.enabled = m.kind==='normal' ? m.enabled!==false : true;
     m.eliteEnabled = m.kind==='normal' ? m.eliteEnabled!==false : false;
     if(!Number.isFinite(m.spawnWeight)||m.spawnWeight<=0)m.spawnWeight=1;
