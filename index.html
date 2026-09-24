@@ -394,7 +394,7 @@ function reroll(id){let g=findGear(id);if(!g)return;const cost=rerollCostFor(g);
 guideView=function(){return `<section class="panel release-notes"><h2>2.0 · 成長與戰利品更新</h2><p>升級所需經驗依等級約為原版的 2.4–6.9 倍，打怪經驗維持原值。LV30 仍為上限；舊存檔等級、經驗、點數與物品全部保留。</p><p>技能上限提高為 10 級，每點增加該技能基礎效果 40%。角色每 3 級提高 1 級技能上限。稀有以上詞條可額外強化本職業特定技能的效果、冷卻或觸發率；效果加成加總、冷卻最低 2 回合、觸發率最高 85%。</p><p>委託每 20 分鐘刷新，亦可付費立即刷新。各區 BOSS 專屬材料保底掉落、25% 額外掉落專屬裝備；5 份材料可製造。既有裝備會轉為角色所屬職業，舊詞條列為尋常。</p><p>最終 BOSS 同步調整為 180,000 生命、1,000 攻擊。建議 LV30、二轉、10 級技能、星隕 +10、職業詞條與寶石配置，搭配治療藥水。</p></section>`+originalGuide().replace('85,000 生命、850 攻擊','180,000 生命、1,000 攻擊').replaceAll('核心技能 5 級','核心技能 10 級').replace('裝備職業通用：武器會依職業作為近戰、弓箭或法術攻擊來源。','裝備限定對應職業使用；劍／板甲／戰旗、法杖／法袍／魔典、弓／皮甲／箭袋、權杖／聖衣／聖徽分別對應四職業。');};
 
 const priorToggle=toggleBattle;toggleBattle=function(){motion={};priorToggle();};
-setInterval(()=>{if(state&&state.board?.next<=Date.now()){ensureBoard();if(tab==='quests')render();}},1000);
+setInterval(()=>{if(state&&state.board?.next<=Date.now()&&MAPS[questRegion()]?.mobs?.length){ensureBoard();if(tab==='quests')render();}},1000);
 
 // All portraits and bestiary art use the same pixel-art asset family.
 let lastDefeatedEnemy=null;
