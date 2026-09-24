@@ -65,7 +65,7 @@ button,.button,select{padding:5px 9px}input{padding:6px}h1{font-size:22px;margin
 .cards,.start .cards{grid-auto-rows:auto;align-items:start;gap:8px}.cards>.card,.start .card{height:auto;min-height:0;max-height:460px;padding:10px 12px;overflow:auto}.card p,.start .card p{font-size:13px}.card h2{font-size:16px}.card button{margin:3px 3px 0 0;padding:4px 7px}.card .icon{margin:0}.start{padding:20px 16px}.start h1{font-size:28px}.start .cards{margin-top:14px}.start .card button{margin-top:10px}.stat-grid{gap:4px;margin:8px 0}.stat-grid span{padding:6px 8px}.affixes{min-height:0;margin:5px 0}.affix{font-size:12px;line-height:1.55}.detail-stat{padding:8px}.skill-strip{gap:6px;margin-top:8px}.skill-slot{padding:8px}
 .difficulty-panel{height:auto;min-height:0;max-height:116px;padding:8px 10px;gap:8px;margin-bottom:8px}.difficulty-panel p{max-height:86px;font-size:12px;line-height:1.45}.difficulty-panel select{width:100px}
 .text-battle-layout{grid-template-columns:minmax(0,1fr) 280px;gap:8px}.party-combat{height:450px;padding:10px}.party-combat>.actions{height:32px;grid-template-rows:32px;gap:6px}.party-combat>.small{height:30px;margin:5px 0;font-size:11px;line-height:1.35}.squad-field{height:360px;min-height:0;gap:8px}.squad-allies,.squad-enemies{height:360px;gap:4px}.squad-field h3{height:23px;flex-basis:23px;font-size:13px}
-.squad-field .unit{height:108px;flex-basis:108px;padding:5px 7px;gap:2px;border-top:0;border-right:0;border-bottom:1px solid var(--line);background:transparent}.unit-title{height:20px;flex-basis:20px;font-size:12px;gap:4px}.unit-title b{font-size:12px}.unit-numbers{font-size:11px;line-height:1.35;display:flex;flex-wrap:wrap;gap:0 10px;max-height:30px;overflow:auto}.unit-numbers>span{display:inline-block}.squad-field .unit .unit-skills{height:30px;flex-basis:30px;line-height:1.35;font-size:11px}.unit-effects{height:18px;flex:1 1 18px;font-size:10px;line-height:1.3}.unit-effects .tag{font-size:10px;margin:0 3px 0 0;padding:0 3px}.squad-enemies .unit{height:51px;flex-basis:51px;padding:2px 6px;gap:0}.squad-enemies .unit-title{height:18px;flex-basis:18px}.squad-enemies .unit-numbers{max-height:16px;flex:0 0 16px;white-space:nowrap;display:block;overflow:auto}.squad-enemies .unit-numbers>span{margin-right:8px}.squad-enemies .unit-effects{min-height:12px;height:12px;flex-basis:12px}
+.squad-field .unit{height:108px;flex-basis:108px;padding:5px 7px;gap:2px;border-top:0;border-right:0;border-bottom:1px solid var(--line);background:transparent}.unit-title{height:20px;flex-basis:20px;font-size:12px;gap:4px}.unit-title b{font-size:12px}.unit-numbers{font-size:11px;line-height:1.35;display:flex;flex-wrap:wrap;gap:0 10px;max-height:30px;overflow:auto}.unit-numbers>span{display:inline-block}.squad-field .unit .unit-skills{height:30px;flex-basis:30px;line-height:1.35;font-size:11px}.unit-effects{height:18px;flex:1 1 18px;font-size:10px;line-height:1.3}.unit-effects .tag{font-size:10px;margin:0 3px 0 0;padding:0 3px}.combat-status-badge{cursor:help}.squad-enemies .unit{height:51px;flex-basis:51px;padding:2px 6px;gap:0}.squad-enemies .unit-title{height:18px;flex-basis:18px}.squad-enemies .unit-numbers{max-height:16px;flex:0 0 16px;white-space:nowrap;display:block;overflow:auto}.squad-enemies .unit-numbers>span{margin-right:8px}.squad-enemies .unit-effects{min-height:12px;height:12px;flex-basis:12px}
 .party-log{height:450px;padding:9px;margin:0}.party-log #liveLog{grid-template-rows:28px 260px minmax(0,1fr);gap:5px}.party-log #liveLog>.row{height:28px}.party-log h2{font-size:14px}.party-log .current-events{height:260px;line-height:1.55;margin:0}.party-log details{margin:0}.party-log summary{height:22px}.party-log .history-events{height:calc(100% - 22px);line-height:1.5}.empty{padding:14px}
 .party-destinations,.destination-panel{margin-top:8px;max-height:420px}.destination-grid{gap:5px;grid-auto-rows:50px}.destination-grid>button{height:50px;padding:4px 7px;font-size:12px;line-height:1.4}.party-destinations h3{margin-top:10px}details{margin:8px 0;font-size:13px;line-height:1.55}.material-panel,.material-panel:not([open]){height:auto;max-height:180px;padding:8px 12px}.material-tags{gap:5px}.resource-line{padding:5px 0;font-size:12px}.filters{min-height:0;max-height:110px;margin:8px 0;gap:8px}.filters label{font-size:12px;gap:4px}.inventory-toolbar{min-height:28px}.inventory-row{height:44px;min-height:44px;padding:4px 7px;gap:8px}.inventory-name>b{font-size:12px}.inventory-name>small{font-size:10px}.inventory-summary{font-size:11px}.inventory-table{height:auto;max-height:55dvh}.inventory-quality{font-size:11px}.inventory-quality small{font-size:10px}
 .forge-layout{height:auto;max-height:520px;gap:10px;margin-top:8px;overflow:auto}.forge-preview,.forge-controls{height:auto;max-height:500px;padding:10px}.forge-action{padding:8px;margin-bottom:8px}.gear-detail-header{min-height:0;margin-bottom:8px;gap:8px}.gear-detail-header h2{margin:5px 0;font-size:19px}.board-bar{gap:8px;margin-bottom:8px}.release-notes{margin-bottom:10px}dialog{height:auto;max-height:86dvh;padding:16px}.mobdrop{padding:6px 0}
@@ -717,7 +717,30 @@ function* pacedRound(){if(!party||!running||$('modal').open)return;currentEvents
 };
 function partyPicker(){return `<section class="party-picker"><div class="row"><b>目前操作角色</b><span id="party-status">${running?'戰鬥 '+partyClock+' 秒':'整備中'} · 出戰 ${heroes().length}/3</span></div><div class="party-tabs">${party.members.map(h=>`<div><button class="${state.job===h.job?'primary':''}" onclick="selectHero(${h.job})">${esc(characterName(h))} LV${h.lv}</button><button onclick="toggleMember(${h.job})">${party.active.includes(h.job)?'出戰中 → 候補':'候補 → 出戰'}</button></div>`).join('')}</div><div class="row">${CLASSES.map((c,j)=>party.members.some(h=>h.job===j)?'':`<button onclick="requestHeroName(${j},false)">招募${c.name}</button>`).join('')}<small>每職業一人；招募同出戰最低等級。背包、資源為共用。</small></div></section>`;}
 render=function(){solo.render();if(state&&party){const main=$('app');main.innerHTML=partyPicker()+main.innerHTML;}};
-function effectBadges(key){return effects.filter(e=>e.target===key&&e.until>partyClock).map(e=>`<span class="tag">${e.name} ${e.until-partyClock}s</span>`).join('');}
+function combatStatusDetail(e){
+ const pct=Number((Math.max(0,Number(e?.value)||0)*100).toFixed(1));
+ const detail={
+  attack:'攻擊增加 '+pct+'%',
+  guard:'受到傷害減少 '+pct+'%',
+  fracture:'防禦降低 '+pct+'%',
+  power:'技能效果增加 '+pct+'%',
+  weaken:'攻擊降低 '+pct+'%',
+  vulnerable:'承受傷害增加 '+pct+'%',
+  damageAmp:'承受傷害增加 '+pct+'%',
+  critical:'暴擊率增加 '+pct+'%',
+  regen:'每回合恢復最大生命 '+pct+'%（施放時也立即恢復一次）'
+ }[e?.kind];
+ if(detail)return detail;
+ if(e?.kind==='followup')return '受到攻擊時追加來源角色攻擊力 '+pct+'% 的'+(ELEMENTS[e.element]||e.element||'無')+'屬性追打';
+ return (EFFECT_NAMES[e?.kind]||e?.kind||'狀態效果')+(pct?' '+pct+'%':'');
+}
+function combatStatusBadge(name,turns,detail,labelExtra=''){
+ const left=Number(turns),time=Number.isFinite(left)?' '+Math.max(0,Math.ceil(left))+'t':'';
+ const label=String(name||'狀態')+(labelExtra?' '+labelExtra:'')+time;
+ const tooltip=String(detail||name||'狀態效果');
+ return `<span class="tag combat-status-badge" title="${esc(tooltip)}" aria-label="${esc(label+'：'+tooltip)}">${esc(label)}</span>`;
+}
+function effectBadges(key){return effects.filter(e=>e.target===key&&e.until>partyClock).map(e=>combatStatusBadge(e.name,e.until-partyClock,combatStatusDetail(e))).join('');}
 battleView=function(){const m=MAPS[party.map];
 const skillLine=(h,slots,list,cds)=>slots.map(i=>{if(i===null)return '未配置';const left=Math.max(0,Math.floor(cds[h.job+'-'+i]||0));return esc(Array.isArray(list[i])?list[i][0]:list[i].name)+' <em>'+(left?left+' 回合':'就緒')+'</em>';}).join(' ／ ');
 return heading('EXPEDITION / 遠征手札',m.name,`<span class="tag">${running?'探索中':foes.length?'已暫停':'整備中'} · 第 ${partyClock} 秒</span>`)+modePicker()+`<div class="text-battle-layout"><section class="panel party-combat"><div class="actions"><span class="tag">群怪 · 3～6 隻</span><button class="primary" onclick="toggleBattle()">${running?'暫停探索':'開始探索'}</button></div><p class="small combat-rule">1倍速每回合至少 6 秒 · 技能冷卻按各單位回合 · 集火首位存活敵人 · 戰後全隊回滿生命</p><div class="squad-field"><section class="squad-allies"><h3>出戰隊員 <small>${heroes().length} / 3</small></h3>${heroes().map(h=>{const v=solo.stats(h);return `<article data-combat-id="${heroKey(h)}" class="unit ${h.hp<=0?'fallen':''}" ${actionVisualStyle(heroKey(h))}><div class="unit-title"><b>${esc(characterName(h))}</b><span>LV ${h.lv} · ${h.hp<=0?'倒下':'出戰'}</span></div><div class="unit-numbers"><span>生命 <b>${Math.ceil(h.hp)} / ${v.hp}</b></span><span>護盾 <b>${Math.round(h.shield)}</b> · ${ELEMENTS[weaponElement(h)]}普攻 · 速度 ${v.speed}</span></div>${battleHealthMeter(h.hp,v.hp,battleShieldValue(h))}<div class="unit-skills"><div>主動｜${skillLine(h,h.active,CLASSES[h.job].skills,actorCooldowns)}</div><div>輔助｜${skillLine(h,h.supportSlots,SUPPORT[h.job],supportCooldowns)}</div></div><div class="unit-effects">${effectBadges(heroKey(h))}<span class="small supply-countdown" data-job="${h.job}">${supplyStatus(h)}</span></div></article>`;}).join('')}</section><section class="squad-enemies"><h3>遭遇敵人 <small>${foes.filter(e=>e.hp>0).length} / ${foes.length}</small></h3>${foes.length?foes.map((e,i)=>`<article data-combat-id="${e.id}" class="unit ${e.hp<=0?'fallen':''}" ${actionVisualStyle(e.id)}><div class="unit-title"><b>${esc(enemyDisplayName(e))}</b><span>LV ${e.lv} · ${e.hp<=0?'已擊敗':e.kind==='boss'||e.kind==='final'?'首領':e.kind==='elite'?'菁英':'普通'}</span></div><div class="unit-numbers"><span>生命 <b>${Math.ceil(e.hp)} / ${e.maxhp}</b></span><span class="element-${e.element}">${ELEMENTS[e.element]} · ${RACES[e.race]} · 攻擊 ${e.atk} / 防禦 ${e.def} · 速度 ${combatSpeed(e)}</span></div>${battleHealthMeter(e.hp,e.maxhp,battleShieldValue(e))}<div class="unit-effects">${effectBadges(e.id)}${enemySkillStatus(e)}</div></article>`).join(''):'<p class="empty">尚無遭遇<br>開始探索，遭遇3～6隻敵人。</p>'}</section></div></section></div>${battleBuffPanel()}<section class="panel expedition-tools"><div class="compact-supplies"><b>補給 · ${esc(characterName(state))}</b><button onclick="setTab('shop')">商店</button><button onclick="potion()" ${state.potions<1?'disabled':''}>喝藥 (${state.potions})</button><button onclick="buyPotion()" ${state.gold<75?'disabled':''}>藥水 +5／75 金幣</button><label class="auto-potion"><input type="checkbox" ${state.autoPotion?'checked':''} onchange="state.autoPotion=this.checked;save()">生命低於 35% 自動喝藥</label></div><div class="map-list-heading"><h2>探索地圖</h2><button onclick="showRegionBestiary()">圖鑑</button><span class="small">目前：${m.name} · 出戰全員須符合門檻</span></div><div class="compact-map-list" aria-label="探索地圖">${MAPS.map((area,i)=>`<button class="map-list-row ${party.map===i?'selected':''}" ${canVisit(i)?'':'disabled'} onclick="chooseMap(${i})"><span class="map-level">LV ${area.min}–${area.max}</span><b>${area.name}</b><span class="map-access">${party.map===i?'目前區域':canVisit(i)?'前往':'未解鎖'}</span></button>`).join('')}</div><details><summary>區域圖鑑與掉落</summary>${m.mobs.concat([m.boss]).map(x=>`<p><b>${x[0]}</b> · ${ELEMENTS[species.get(x[2])?.element||'physical']}／${RACES[species.get(x[2])?.race||'beast']}<br>專屬掉落：${x[2]}</p>`).join('')}</details></section>`;};
@@ -7872,11 +7895,11 @@ if(state)render();
   const controlEffectBadgesBase=effectBadges;
   effectBadges=function(key){
     let html=controlEffectBadgesBase(key),s=stateFor(key,false);if(!s)return html;
-    if(s.polymorph)html+='<span class="tag">變形 '+s.polymorph.turns+'回合 · 護盾 '+Math.round(s.polymorph.shield)+'</span>';
-    if(s.freeze)html+='<span class="tag">冰凍 '+s.freeze.turns+'回合</span>';
-    if(s.frost)html+='<span class="tag">結霜 -'+Math.round(s.frost.slowPct*100)+'%速度</span>';
-    if(s.rage)html+='<span class="tag">狂暴 '+s.rage.turns+'回合</span>';
-    if(s.fear)html+='<span class="tag">畏懼 '+s.fear.turns+'回合</span>';
+    if(s.polymorph)html+=combatStatusBadge('變形',s.polymorph.turns,'無法行動，護盾被打破時消失。剩餘護盾 '+Math.round(s.polymorph.shield)+'。');
+    if(s.freeze)html+=combatStatusBadge('冰凍',s.freeze.turns,'無法行動。');
+    if(s.frost)html+=combatStatusBadge('結霜',null,'速度降低 '+Math.round(s.frost.slowPct*100)+'%，持續至遭遇結束或被冰凍陷阱轉為冰凍。');
+    if(s.rage){const taunted=Number.isInteger(s.rage.tauntHeroJob);html+=combatStatusBadge(taunted?'嘲諷／狂暴':'狂暴',s.rage.turns,'無法使用技能，普攻傷害增加 '+Math.round(s.rage.basicAttackBonus*100)+'%。'+(taunted?'優先攻擊戰士。':''));}
+    if(s.fear)html+=combatStatusBadge('畏懼',s.fear.turns,'傷害降低 '+Math.round(s.fear.damageReduction*100)+'%，每回合 '+Math.round(s.fear.skipChance*100)+'% 機率無法行動。');
     return html;
   };
 
@@ -8152,6 +8175,33 @@ function customStatusSummary(def){
   if(def.periodic.length)bits.push(def.periodic.map(x=>(x.kind==='heal'?'恢復':'傷害')+' '+x.basis+'×'+x.coefficient+' / '+x.resolution).join('、'));
   if(def.tags.includes('instant'))bits.push('套用時立即結算持續效果 1 次');return bits.join('；')||'純標記狀態';
 }
+function customStatusTooltip(def){
+ if(!def)return '狀態效果';
+ const pct=v=>Number((Math.max(0,Number(v)||0)*100).toFixed(1))+'%';
+ const modifierLabels={attack:'攻擊增加',critical:'暴擊率增加',guard:'受到傷害減少',fracture:'防禦降低',power:'技能效果增加',weaken:'攻擊降低',vulnerable:'承受傷害增加',damageAmp:'承受傷害增加',regen:'每回合恢復最大生命'};
+ const basisLabels={fixed:'固定值',casterAttack:'施術者攻擊',casterMaxHp:'施術者最大生命',casterCurrentHp:'施術者目前生命',casterMissingHp:'施術者已損生命',casterDefense:'施術者防禦',casterShield:'施術者護盾',casterLevel:'施術者等級',targetAttack:'目標攻擊',targetMaxHp:'目標最大生命',targetCurrentHp:'目標目前生命',targetMissingHp:'目標已損生命',targetDefense:'目標防禦',targetShield:'目標護盾',targetLevel:'目標等級'};
+ const resolutionLabels={fixed:'固定傷害',defended:'受防禦減免',elemental:'屬性傷害',true:'真實傷害',heal:'治療',overflowShield:'溢出轉護盾'};
+ const bits=[];
+ for(const m of def.modifiers||[]){
+  if(m.kind==='followup')bits.push('受到攻擊時追加 '+(ELEMENTS[m.element]||m.element||'無')+'屬性追打，倍率 '+pct(m.value));
+  else bits.push((modifierLabels[m.kind]||m.kind)+' '+pct(m.value));
+ }
+ const c=def.control;
+ if(c){
+  if(c.kind==='polymorph')bits.push('無法行動，護盾被打破時消失；BOSS 無效');
+  else if(c.kind==='freeze')bits.push('無法行動'+(Number.isFinite(c.bossDuration)?'；BOSS 持續 '+c.bossDuration+' 回合':''));
+  else if(c.kind==='frost')bits.push('速度降低 '+pct(c.slowPct));
+  else if(c.kind==='rage')bits.push('無法使用技能，普攻傷害增加 '+pct(c.basicAttackBonus));
+  else if(c.kind==='fear')bits.push('傷害降低 '+pct(c.damageReduction)+'，每回合 '+pct(c.skipChance)+' 機率無法行動'+(Number.isFinite(c.bossSkipChance)?'（BOSS '+pct(c.bossSkipChance)+'）':''));
+  else if(c.kind==='tauntRage')bits.push('優先攻擊施術者，無法使用技能，普攻傷害增加 '+pct(c.basicAttackBonus));
+ }
+ for(const fx of def.periodic||[]){
+  const basis=basisLabels[fx.basis]||fx.basis,coef=Number(fx.coefficient)||0,amount=fx.basis==='fixed'?String(coef):basis+' × '+Number(coef.toFixed(3));
+  bits.push('每回合'+(fx.kind==='heal'?'恢復 ':'造成 ')+amount+(fx.kind==='damage'&&fx.element?' '+(ELEMENTS[fx.element]||fx.element)+'屬性':'')+'（'+(resolutionLabels[fx.resolution]||fx.resolution)+'）');
+ }
+ if(def.tags?.includes('instant')&&def.periodic?.length)bits.push('套用時立即結算持續效果 1 次');
+ return bits.join('；')||'狀態效果';
+}
 
 function triggerCustomStatusFollowups(target){
   if(!target||target.hp<=0)return 0;let total=0;
@@ -8198,7 +8248,7 @@ coreSkillDetail=function(job,i,h=state){const sk=CLASSES[job]?.skills?.[i];if(sk
 
 if(typeof effectBadges==='function'){
   const statusBadgesBase=effectBadges;
-  effectBadges=function(key){let html=statusBadgesBase(key);for(const x of activeStatuses.filter(s=>s.targetKey===key&&partyClock<s.expiresClock)){const left=Math.max(0,x.expiresClock-partyClock);html+='<span class="tag">'+esc(x.name)+' '+left+'回合</span>';}return html;};
+  effectBadges=function(key){let html=statusBadgesBase(key);for(const x of activeStatuses.filter(s=>s.targetKey===key&&partyClock<s.expiresClock)){const left=Math.max(0,x.expiresClock-partyClock);html+=combatStatusBadge(x.name,left,customStatusTooltip(x.definition));}return html;};
 }
 if(typeof battleBuffRows==='function'){
   const statusRowsBase=battleBuffRows;
