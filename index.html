@@ -7992,7 +7992,7 @@ const STATUS_HERO_ONLY_MODIFIERS=new Set(['attack','critical','guard','power','r
 const STATUS_ENEMY_ONLY_MODIFIERS=new Set(['fracture','weaken','vulnerable','damageAmp','followup']);
 function statusAllowedTargetsForDefinition(def){
   if(!def)return STATUS_TARGETS.slice();
-  const heroOnly=def.modifiers.some(m=>STATUS_HERO_ONLY_MODIFIERS.has(m.kind)),enemyOnly=!!def.control||def.modifiers.some(m=>STATUS_ENEMY_ONLY_MODIFIERS.has(m.kind));
+  const heroOnly=def.modifiers.some(m=>STATUS_HERO_ONLY_MODIFIERS.has(m.kind))||def.periodic.some(fx=>fx.kind==='heal'&&fx.resolution==='overflowShield'),enemyOnly=!!def.control||def.modifiers.some(m=>STATUS_ENEMY_ONLY_MODIFIERS.has(m.kind));
   if(heroOnly&&enemyOnly)return [];
   if(heroOnly)return ['self','weakest','allies'];
   if(enemyOnly)return ['enemy','enemies'];
