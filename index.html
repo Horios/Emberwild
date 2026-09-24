@@ -4046,7 +4046,7 @@ render();
   function spawnBossStage(){
     const ch=party?.bossChallenge;if(!ch?.active)return false;const mi=ch.mapIndex,entry=bossProgressEntry(mi);
     if(!ch.stagePaid){if(entry.charges<1){party.bossChallenge=null;clearEncounter();return false;}entry.charges--;ch.stagePaid=true;note(`進入 ${MAPS[mi].name} BOSS 關卡，消耗 1 次挑戰（剩餘 ${entry.charges}）。`);}
-    const weak=[...heroes()].sort((a,b)=>a.lv-b.lv)[0],rows=configuredBossStageRows(mi);clearEncounter();
+    const weak=[...heroes()].sort((a,b)=>a.lv-b.lv)[0],rows=configuredBossStageRows(mi);refillParty();clearEncounter();
     for(const spec of rows)for(let i=0;i<spec.count;i++){const e=enemyFromStageRow(spec.row,mi,weak,spec.kind,spec.order);e.id='foe-'+uid();e.rewarded=false;foes.push(e);}
     enemy=foes.find(e=>e.hp>0)||null;if(typeof beginBattleStatistics==='function')beginBattleStatistics();if(typeof assignEnemySkill==='function')for(const e of foes)assignEnemySkill(e);note(`BOSS 關卡開始：${foes.length} 隻敵人。`);return true;
   }
@@ -8285,7 +8285,7 @@ exportableBalance=function(){const out=statusExportBase();out.statusDefinitions=
 const statusResetEncounterBase=resetEncounter;
 resetEncounter=function(){activeStatuses=[];lastStatusTickClock=-1;return statusResetEncounterBase();};
 const statusSpawnBase=spawnGroup;
-spawnGroup=function(...args){activeStatuses=[];lastStatusTickClock=-1;return statusSpawnBase(...args);};
+spawnGroup=function(...args){activeStatuses=[];lastStatusTickClock=-1;if(party)refillParty();return statusSpawnBase(...args);};
 if(typeof resetBalanceJSON==='function'){
   const statusResetBalanceBase=resetBalanceJSON;
   resetBalanceJSON=function(){statusDefinitions=[];activeStatuses=[];lastStatusTickClock=-1;return statusResetBalanceBase();};
