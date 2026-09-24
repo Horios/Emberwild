@@ -32,6 +32,9 @@
   .expedition-control-card .supply-actions button{height:27px;font-size:11px;padding:2px 5px}
   .expedition-control-card .supply-actions label{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)}
   .party-combat>.actions>.icon-help{width:28px!important;height:28px!important;min-width:28px!important;padding:0!important;border-radius:999px;font-size:11px;flex:0 0 28px!important}
+  .party-combat>.actions{grid-template-columns:auto minmax(0,1fr) auto auto}
+  .party-combat>.actions>button[onclick="restartExploration()"]{width:auto;white-space:nowrap}
+  @media(max-width:700px){.party-combat>.actions{grid-template-columns:minmax(0,1fr) auto auto}.party-combat>.actions>.tag{display:none}}
   /* Remove the superseded standalone panels that used to repeat the same controls. */
   .difficulty-panel,.pace-controls,.boss-meter-panel,.expedition-tools{display:none!important}
 
@@ -66,6 +69,12 @@
   const finalRows=mi=>typeof globalThis.configuredFinalStageRows==='function'?globalThis.configuredFinalStageRows(mi):[];
   const fmt=n=>Math.round((Number(n)||0)*100)/100;
   function tooltip(label,text){return `<button type="button" class="icon-help" title="${safeEsc(text)}" aria-label="${safeEsc(label+'：'+text)}">?</button>`;}
+  globalThis.restartExploration=function(){
+    if(!party||!living().length)return toast('請先戰後恢復');
+    resetEncounter();
+    if(party.bossChallenge?.active)party.bossChallenge.stagePaid=false;
+    toggleBattle();save();
+  };
 
   function compactSupply(){
     const pc=Math.round(GS('quests.potion.buyCost',75)),pq=Math.round(GS('quests.potion.buyQuantity',5)),th=Math.round(GS('combat.autoPotionThreshold',.35)*10000)/100;
@@ -101,7 +110,7 @@
       }
       /* Keep combat rules available without occupying a separate row. */
       html=html.replace(/<p class="small combat-rule">[\s\S]*?<\/p>/,'');
-      html=html.replace(/(<button class="primary" onclick="toggleBattle\(\)">[\s\S]*?<\/button>)/,`$1${tooltip('戰鬥規則','• 冷卻：技能與治療藥水等只在對應角色完成自己的行動時遞減 1，不受戰鬥倍速影響。\n• 自動攻擊：集中攻擊敵方隊列中第一名仍存活的敵人，擊倒後再依序切換下一名。\n• 遭遇結束：全隊生命回滿並清空護盾。\n• 技能冷卻：每次新遭遇開始時重置。')}`);
+      html=html.replace(/(<button class="primary" onclick="toggleBattle\(\)">[\s\S]*?<\/button>)/,`$1<button onclick="restartExploration()" title="${party.bossChallenge?.active?'放棄本場 BOSS 關卡並消耗下一次挑戰；次數用完返回一般探索':'放棄目前遭遇，立即開始新一場'}">重新探索</button>${tooltip('戰鬥規則','• 冷卻：技能與治療藥水等只在對應角色完成自己的行動時遞減 1，不受戰鬥倍速影響。\n• 自動攻擊：集中攻擊敵方隊列中第一名仍存活的敵人，擊倒後再依序切換下一名。\n• 遭遇結束：全隊生命回滿並清空護盾。\n• 技能冷卻：每次新遭遇開始時重置。')}`);
       return html;
     };
   }

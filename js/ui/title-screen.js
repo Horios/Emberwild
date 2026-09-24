@@ -46,6 +46,10 @@
     if(titleOpen)return titleView();
     if(state)choosingCharacter=false;
     gameRender();
+    if(state&&party){
+      const nav=$('app').querySelector('.layout>aside nav');
+      if(nav)nav.insertAdjacentHTML('beforeend','<button onclick="returnToTitle()">回到標題</button>');
+    }
     if(choosingCharacter&&!state){
       const start=$('app').querySelector('.start');
       if(start)start.insertAdjacentHTML('afterbegin','<button class="title-back" onclick="backToTitle()">返回標題</button>');
@@ -149,6 +153,11 @@
     if(state)return;
     choosingCharacter=false;approvedCreation=null;titleOpen=true;render();
   };
+  window.returnToTitle=function(){
+    if(!state||!party)return;
+    running=false;save();
+    titleOpen=true;render();
+  };
   window.requestDeleteSlot=function(slot){
     if(![1,2,3].includes(slot))return;
     const snapshot=slotSnapshot(slot);
@@ -181,4 +190,5 @@
   render();
   if(intent==='open:'+ACTIVE_SAVE_SLOT){if(state&&party)continueFromTitle();else showLoadFailure(ACTIVE_SAVE_SLOT);}
   else if(intent==='create:'+ACTIVE_SAVE_SLOT)openCharacterCreation();
+  $('app').style.visibility='';
 })();
