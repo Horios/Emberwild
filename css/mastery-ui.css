@@ -1,0 +1,9 @@
+
+.mastery-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:10px 0 14px}
+.mastery-card{border:1px solid var(--line);background:#151c1d;border-radius:6px;padding:9px 10px}
+.mastery-card .row{gap:8px}.mastery-card .bar{margin-top:7px}.mastery-card .small{display:block;margin-top:5px}
+.skill-requirements{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.skill-requirements .tag.missing{border-color:#7c4b4b;color:#e5abab}
+.skill-state{font-size:11px;font-weight:700}.skill-state.learned{color:#9bd3a4}.skill-state.locked{color:#d9a0a0}
+.mastery-dev-tools{margin-top:14px}.mastery-dev-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px}.mastery-dev-box{border:1px solid var(--line);border-radius:6px;padding:9px;background:#111819}.mastery-dev-box input,.mastery-dev-box select{max-width:150px}
+.mastery-gain-list{display:flex;gap:6px;flex-wrap:wrap}.mastery-gain-list .tag{white-space:normal}
+@media(max-width:720px){.mastery-summary{grid-template-columns:1fr 1fr}.mastery-dev-grid{grid-template-columns:1fr}}
