@@ -8084,6 +8084,12 @@ function applyCustomStatus(defOrId,source,target){
   activeStatuses=activeStatuses.filter(x=>!(x.statusId===def.id&&x.sourceJob===sourceJob&&x.targetKey===targetKey));
   const inst={id:def.id+'@'+String(sourceJob)+'@'+targetKey,statusId:def.id,name:def.name,sourceJob,targetKey,appliedClock:partyClock,duration:def.duration,expiresClock:partyClock+def.duration,definition:deepClone(def)};
   activeStatuses.push(inst);applyStatusControl(def,target,source);
+  const regenRate=def.modifiers.filter(m=>m.kind==='regen').reduce((sum,m)=>sum+Math.max(0,Number(m.value)||0),0);
+  if(regenRate>0&&statusIsHero(target)){
+    const max=statusMaxHp(target),before=target.hp;target.hp=Math.min(max,target.hp+max*regenRate);const healed=Math.max(0,target.hp-before);
+    if(healed>0&&source&&typeof recordCombatContribution==='function')recordCombatContribution(source,'healing',healed);
+    if(healed>0)note(def.name+'・再生 → '+characterName(target)+' '+Math.round(healed)+' 生命');
+  }
   if(def.tags.includes('instant'))for(const fx of def.periodic)executeStatusPeriodic(inst,fx,true);
   note((source?characterName(source)+' → ':'')+(statusIsHero(target)?characterName(target):target.name)+' 獲得狀態「'+def.name+'」· '+def.duration+' 回合');
   return true;
