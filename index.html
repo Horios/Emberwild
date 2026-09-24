@@ -687,7 +687,7 @@ function supportAmount(job,index){const h=party.members.find(h=>h.job===job),sk=
 function effectTotal(target,kind){return effects.filter(e=>e.target===target&&e.kind===kind&&e.until>partyClock).reduce((sum,e)=>sum+e.value,0);}
 function heroKey(h){return 'hero-'+h.job;}
 function battleStats(h){const v=solo.stats(h),key=heroKey(h);v.atk=Math.round(v.atk*(1+effectTotal(key,'attack')));v.crit=Math.min(GAME_BALANCE.combat.statCaps.crit,v.crit+effectTotal(key,'critical'));return v;}
-function castSupport(h,index){const sk=SUPPORT[h.job][index];let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(e=>e.hp>0)?.id];for(const target of targets.filter(Boolean)){effects=effects.filter(e=>!(e.source===h.job&&e.skill===index&&e.target===target));effects.push({source:h.job,skill:index,target,kind:sk.kind,value:supportAmount(h.job,index),until:partyClock+sk.duration,name:sk.name});if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));}}note(characterName(h)+'施放 '+sk.name+' · '+sk.duration+' 回合');}
+function castSupport(h,index){const sk=SUPPORT[h.job][index];let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(enemyAvailableForSingleTarget)?.id];for(const target of targets.filter(Boolean)){effects=effects.filter(e=>!(e.source===h.job&&e.skill===index&&e.target===target));effects.push({source:h.job,skill:index,target,kind:sk.kind,value:supportAmount(h.job,index),until:partyClock+sk.duration,name:sk.name});if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));}}note(characterName(h)+'施放 '+sk.name+' · '+sk.duration+' 回合');}
 function learnSupport(i){const sk=SUPPORT[state.job][i];if(!sk||state.sp<1||state.supportLevels[i]>=Math.max(1,Math.floor(GS('skills.support.maxLevel',5)))||state.lv<sk.level||i===2&&!state.advanced||!skillPrerequisitesMet(sk,state))return;state.sp--;state.supportLevels[i]++;save();render();}
 function slotSupport(i,slot){if(![0,1].includes(slot)||i!==null&&(!Number.isInteger(i)||!state.supportLevels[i]))return;if(i!==null&&state.supportSlots[1-slot]===i)state.supportSlots[1-slot]=null;state.supportSlots[slot]=i;save();render();}
 function spawnGroup(){const weak=[...heroes()].sort((a,b)=>a.lv-b.lv)[0],n=3+rand(4);foes=[];effects=[];actorCooldowns={};supportCooldowns={};for(const h of heroes())h.shield=0;for(let i=0;i<n;i++){const mi=party.map===6&&i>0?5:party.map;const e=makeEnemy(mi,weak);e.id='foe-'+uid();e.rewarded=false;foes.push(e);}enemy=foes[0];round=0;note('遭遇 '+foes.length+' 隻敵人。');}
@@ -1063,7 +1063,7 @@ function initiativeOrder(){return [...living().map(h=>({actor:h,id:heroKey(h),si
 function recordAction(id,name,type){lastActionOrder.push({id,name,type});actionVisualTime=Date.now();}
 function actionVisualStyle(id){const last=lastActionOrder.at(-1),age=Date.now()-actionVisualTime;if(!last||last.id!==id||age>420||!running)return '';return `style="animation:${id.startsWith('foe-')?'enemy-strike':'combat-strike'} .42s ease ${-age/1000}s both !important"`;}
 
-function performHeroBasic(h){const v=battleStats(h),target=foes.find(e=>e.hp>0);const d=resolveHit(target,v.atk,h,weaponElement(h),Math.random()<v.crit);note(characterName(h)+' 普攻 → '+target.name+' '+d+' 傷害');for(let i=0;i<6;i++)if(foes.some(e=>e.hp>0)&&CLASSES[h.job].skills[i][1]==='proc'&&h.skills[i]>0&&Math.random()<procChance(i,h))castPartySkill(h,i,v);}
+function performHeroBasic(h){const v=battleStats(h),target=foes.find(enemyAvailableForSingleTarget);const d=resolveHit(target,v.atk,h,weaponElement(h),Math.random()<v.crit);note(characterName(h)+' 普攻 → '+combatEnemyName(target)+' '+d+' 傷害');for(let i=0;i<6;i++)if(foes.some(e=>e.hp>0)&&CLASSES[h.job].skills[i][1]==='proc'&&h.skills[i]>0&&Math.random()<procChance(i,h))castPartySkill(h,i,v);}
 function performEnemyBasic(e){e.turn++;const targets=living(),h=targets[rand(targets.length)],v=battleStats(h),multi=e.kind==='final'?(e.turn>45?4:e.turn%5===0?1.65:1):1+Math.max(0,e.lv-h.lv)*.12;let hit=Math.max(1,Math.round(e.atk*(1-Math.min(.7,effectTotal(e.id,'weaken')))*multi-v.def*.65));hit=Math.max(1,Math.round(hit*(1-Math.min(.75,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的攻擊');return;}const ward=activeSupply(h,'ward'),resist=Math.min(.75,(v.resist[e.element]||0)+(ward && ward.element===e.element ? .25 : 0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+' → '+characterName(h)+' 的護盾承受 '+Math.round(absorb)+' 傷害，剩餘 '+Math.round(h.shield));else if(absorb>0)note(e.name+' → '+characterName(h)+' 護盾承受 '+Math.round(absorb)+' 傷害，剩餘 '+Math.round(h.shield)+'；生命受到 '+Math.round(hpDamage)+' 傷害');else note(e.name+' → '+characterName(h)+' '+Math.round(hpDamage)+' 傷害');}
 function enemyDisplayName(e){
   if(!e)return '';
@@ -1071,6 +1071,12 @@ function enemyDisplayName(e){
   if(same.length<=1)return e.name;
   return e.name+(same.indexOf(e)+1);
 }
+function combatEnemyName(e){return enemyDisplayName(e)||e?.name||'敵人';}
+function enemyAvailableForSingleTarget(e){
+  if(!e||e.hp<=0)return false;
+  return !globalThis.__EMBERWILD_CONTROL_TEST_API?.isPolymorphed?.(e);
+}
+function singleTargetEnemyPool(){return foes.filter(enemyAvailableForSingleTarget);}
 function initiativeView(){
   const order=initiativeOrder();
   return `<section class="panel initiative-panel compact-initiative"><div class="row"><h2 title="依速度排序；速度相同時維持穩定順序。">行動順序</h2></div><div class="initiative-track initiative-name-line">${order.length?order.map(u=>`<span class="initiative-token ${u.side}"><b>${esc(u.side==='hero'?characterName(u.actor):enemyDisplayName(u.actor))}</b></span>`).join(''):'<span class="small">開始探索後顯示</span>'}</div></section>`;
@@ -1463,7 +1469,7 @@ function skillPrerequisiteLabel(job,sk){
 function syncHeroSkillArrays(h){const n=CLASSES[h.job].skills.length;while(h.skills.length<n)h.skills.push(0);while(h.sockets.length<n)h.sockets.push(null);if(h.skills.length>n)h.skills.length=n;if(h.sockets.length>n)h.sockets.length=n;h.active=h.active.map(i=>Number.isInteger(i)&&i<n?i:null);ensureProcSlots(h);}
 function syncAllHeroSkillArrays(){if(party)party.members.forEach(syncHeroSkillArrays);else if(state)syncHeroSkillArrays(state);}
 function shuffleCopy(list){const a=[...list];for(let i=a.length-1;i>0;i--){const j=rand(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
-function coreSkillTargets(sk){const alive=foes.filter(e=>e.hp>0),m=sk[6]||{},requested=m.target==='enemies'?alive.length:Math.max(1,Math.floor(Number(m.maxTargets)||1));return requested>=alive.length?alive:shuffleCopy(alive).slice(0,requested);}
+function coreSkillTargets(sk){const alive=foes.filter(e=>e.hp>0),m=sk[6]||{},requested=m.target==='enemies'?alive.length:Math.max(1,Math.floor(Number(m.maxTargets)||1));if(m.target==='enemies'||requested>1)return requested>=alive.length?alive:shuffleCopy(alive).slice(0,requested);const eligible=alive.filter(enemyAvailableForSingleTarget);return eligible.length?shuffleCopy(eligible).slice(0,1):[];}
 function coreSkillElement(job,i){return SKILL_ELEMENTS[job]?.[i]||'physical';}
 
 // Core attacks now honor maxTargets. When fewer monsters exist, all are hit; otherwise targets are chosen randomly without replacement.
@@ -1477,12 +1483,12 @@ castPartySkill=function(h,i,v){
  const storedBonus=sk[1]==='active'?Math.max(0,Number(h.nextActiveDamageBonus)||0):0,basePower=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),power=basePower*((storedBonus>0&&['damage','drain'].includes(sk[5]))?1+storedBonus:1),element=coreSkillElement(h.job,i);let success=false;
  if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(basePower));const recovered=Math.max(0,ally.hp-beforeHp);if(recovered>0)recordCombatContribution(h,'healing',recovered);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');success=true;}
  else if(sk[5]==='shield'){const shieldResult=applyPureShield(h,basePower);note(pureShieldCastLog(h,sk[0],shieldResult));success=true;}
- else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const d=resolveHit(e,power,h,element,Math.random()<v.crit);total+=d;results.push(e.name+' '+d);}if(sk[5]==='drain'){const beforeDrain=h.hp;h.hp=Math.min(v.hp,h.hp+total);const recovered=Math.max(0,h.hp-beforeDrain);if(recovered>0)recordCombatContribution(h,'healing',recovered);}note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害');success=true;}
+ else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const d=resolveHit(e,power,h,element,Math.random()<v.crit);total+=d;results.push(combatEnemyName(e)+' '+d);}if(sk[5]==='drain'){const beforeDrain=h.hp;h.hp=Math.min(v.hp,h.hp+total);const recovered=Math.max(0,h.hp-beforeDrain);if(recovered>0)recordCombatContribution(h,'healing',recovered);}note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害');success=true;}
  if(success&&sk[1]==='active'&&storedBonus>0)delete h.nextActiveDamageBonus;
  if(success&&h.sockets[i]===2&&sk[1]==='active'){const beforeGem=h.hp;h.hp=Math.min(v.hp,h.hp+Math.round(v.atk*GS('skills.gems.hybridActiveHealAttack',.15)));const recovered=Math.max(0,h.hp-beforeGem);if(recovered>0)recordCombatContribution(h,'healing',recovered);}
  return success;
 };
-const update09PerformHeroBasic=performHeroBasic;performHeroBasic=function(h){ensureProcSlots(h);const v=battleStats(h),target=foes.find(e=>e.hp>0);if(!target)return;const d=resolveHit(target,v.atk,h,weaponElement(h),Math.random()<v.crit);note(characterName(h)+' 普攻 → '+target.name+' '+d+' 傷害');for(const i of h.procSlots){if(!foes.some(e=>e.hp>0))break;if(i!==null&&validProcIndex(h,i)&&Math.random()<procChance(i,h))castPartySkill(h,i,v);}};
+const update09PerformHeroBasic=performHeroBasic;performHeroBasic=function(h){ensureProcSlots(h);const v=battleStats(h),target=foes.find(enemyAvailableForSingleTarget);if(!target)return;const d=resolveHit(target,v.atk,h,weaponElement(h),Math.random()<v.crit);note(characterName(h)+' 普攻 → '+combatEnemyName(target)+' '+d+' 傷害');for(const i of h.procSlots){if(!foes.some(e=>e.hp>0))break;if(i!==null&&validProcIndex(h,i)&&Math.random()<procChance(i,h))castPartySkill(h,i,v);}};
 const update09Socket=socket;socket=function(i,value){let g=Number(value);if(!Number.isInteger(i)||i<0||i>=CLASSES[state.job].skills.length||!state.skills[i]||!Number.isInteger(g)||g< -1||g>2)return;let old=state.sockets[i]??null;if(g===old)return;if(g>=0&&state.gems[g]<1)return;if(old!==null)state.gems[old]++;state.sockets[i]=g<0?null:g;if(g>=0)state.gems[g]--;save();render();};
 learn=function(i){let sk=CLASSES[state.job].skills[i],cap=skillCap();if(!sk)return;if(state.skills[i]>=cap)return toast(`目前技能上限 ${cap} 級；角色每 ${GS('skills.core.capLevelsPerStep',3)} 級提高 1 級上限，最高 ${RULES.skillMax} 級`);if(state.sp<1||state.lv<sk[2]||(skillRequiresAdvanced(sk,i)&&!state.advanced)||!skillPrerequisitesMet(sk,state))return;state.sp--;state.skills[i]++;save();render();};
 coreSkillRows=function(){syncHeroSkillArrays(state);const activeSlots=Array.from({length:2},(_,i)=>state.active?.[i]??null);return `<div class="actions active-slot-summary">${activeSlots.map((id,i)=>`<span>槽 ${i+1}：${id===null?'未配置':esc(CLASSES[state.job].skills[id]?.[0]||'未知技能')+skillTypeBadges(state.job,id)} <button onclick="clearActiveSkill(${i})">清空</button></span>`).join('')}</div><div class="skill-list">${CLASSES[state.job].skills.map((sk,i)=>{const advanced=skillRequiresAdvanced(sk,i),prereqs=skillPrerequisites(sk),prereqsMet=skillPrerequisitesMet(sk,state),locked=state.lv<sk[2]||(advanced&&!state.advanced)||!prereqsMet,gem=state.sockets[i]??null;return `<article class="skill-list-row"><div><div class="skill-list-title"><b>${esc(sk[0])}</b><span>Lv.${state.skills[i]}/${RULES.skillMax}</span><span>${sk[1]==='proc'?'普攻觸發':'主動'}</span></div>${skillTypeBadges(state.job,i)}${skillMechanicsDetails(state.job,i)}<p>${skillDescription(i)}</p><p>${sk[1]==='active'?'冷卻 '+skillCooldown(i)+' 回合':'普攻觸發率 '+Math.round(procChance(i)*100)+'%'} · 需求 LV${sk[2]}${advanced?'／二轉':''}${prereqs.length?'／前置 '+esc(skillPrerequisiteLabel(state.job,sk)):''}</p></div><div class="skill-list-controls"><button onclick="learn(${i})" ${locked||state.sp<1||state.skills[i]>=skillCap()?'disabled':''}>${locked?'尚未解鎖':state.skills[i]?'升級1點':'學習'}</button>${sk[1]==='active'?[0,1].map(slot=>`<button onclick="equipSkill(${i},${slot})" ${!state.skills[i]?'disabled':''}>${state.active[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join(''):'<span>需配置於觸發槽</span>'}<label>寶石 <select aria-label="${esc(sk[0])}寶石" onchange="socket(${i},this.value)" ${!state.skills[i]?'disabled':''}><option value="-1" ${gem===null?'selected':''}>不鑲嵌</option>${GEMS.map((g,j)=>`<option value="${j}" ${gem===j?'selected':''} ${state.gems[j]<1&&gem!==j?'disabled':''}>${esc(g.name)} ×${state.gems[j]} · ${esc(g.desc)}</option>`).join('')}</select></label></div></article>`;}).join('')}</div>`;};
@@ -2460,7 +2466,7 @@ resetEncounter=function(){enemySkillCooldowns={};return actionTurnResetEncounter
 const actionTurnSpawnGroupBase=spawnGroup;
 spawnGroup=function(){const r=actionTurnSpawnGroupBase();enemySkillCooldowns={};for(const e of foes)assignEnemySkill(e);return r;};
 function enemySkillTarget(sk){const targets=living();if(!targets.length)return null;if(sk.target==='weakest')return [...targets].sort((a,b)=>a.hp/battleStats(a).hp-b.hp/battleStats(b).hp)[0];return targets[rand(targets.length)];}
-function performEnemySkill(e,sk){e.turn=(e.turn||0)+1;const h=enemySkillTarget(sk);if(!h)return;const beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss;const levelMulti=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(Number.isFinite(sk.power)?sk.power:1)*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*levelMulti-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的「'+sk.name+'」');return;}const element=sk.element==='inherit'?e.element:sk.element,ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[element]||0)+(ward&&ward.element===element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0)recordCombatContribution(h,'mitigation',absorb);const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(e.name+'・'+sk.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(e.name+'・'+sk.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);}
+function performEnemySkill(e,sk){e.turn=(e.turn||0)+1;const h=enemySkillTarget(sk);if(!h)return;const beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss;const levelMulti=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(Number.isFinite(sk.power)?sk.power:1)*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*levelMulti-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+combatEnemyName(e)+'的「'+sk.name+'」');return;}const element=sk.element==='inherit'?e.element:sk.element,ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[element]||0)+(ward&&ward.element===element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0)recordCombatContribution(h,'mitigation',absorb);const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(combatEnemyName(e)+'・'+sk.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(combatEnemyName(e)+'・'+sk.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);}
 function performEnemyAction(e){const sk=enemySkillFor(e);if(sk){enemySkillCooldowns[e.id]=Math.max(0,cooldownLeft(enemySkillCooldowns,e.id)-1);if(enemySkillCooldowns[e.id]<=0){performEnemySkill(e,sk);enemySkillCooldowns[e.id]=rollEnemySkillCooldown(sk);return 'skill';}}performEnemyBasic(e);return 'basic';}
 pacedRound=function*(){if(!party||!running||$('modal').open)return;currentEvents=[];lastActionOrder=[];actionVisualTime=Date.now();partyClock++;round++;effects=effects.filter(e=>e.until>partyClock);if(!foes.some(e=>e.hp>0)){spawnGroup();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();return;}for(const h of living()){const v=battleStats(h),regen=effectTotal(heroKey(h),'regen'),beforeRegen=h.hp;h.hp=Math.min(v.hp,h.hp+v.hp*regen);const regenHealed=Math.max(0,h.hp-beforeRegen);if(regenHealed>0)recordRegenContribution(h,regenHealed);if(h.autoPotion&&h.hp<v.hp*GS('combat.autoPotionThreshold',.35)&&h.potions>0)withHero(h,()=>potion(true));}const order=initiativeOrder();for(const unit of order){if(!living().length||!foes.some(e=>e.hp>0))break;if(unit.actor.hp<=0)continue;if(unit.side==='hero'){const h=unit.actor;tickHeroCooldowns(h);for(const i of h.supportSlots){if(i===null)continue;const key=h.job+'-'+i;if(cooldownLeft(supportCooldowns,key)<=0&&castSupport(h,i)!==false){recordAction(heroKey(h),characterName(h),'輔助');supportCooldowns[key]=supportSkillCooldown(h,i);yield;if(!living().length||!foes.some(e=>e.hp>0))break;}}for(const i of h.active){if(i===null||!foes.some(e=>e.hp>0))continue;const key=h.job+'-'+i;if(cooldownLeft(actorCooldowns,key)<=0&&castPartySkill(h,i,battleStats(h))!==false){actorCooldowns[key]=Math.max(0,Math.round(skillCooldown(i,h)));recordAction(heroKey(h),characterName(h),'技能');yield;}}if(foes.some(e=>e.hp>0)){recordAction(unit.id,characterName(h),'普攻');performHeroBasic(h);yield;}}else{const sk=enemySkillFor(unit.actor),willSkill=sk&&Math.max(0,cooldownLeft(enemySkillCooldowns,unit.actor.id)-1)<=0;recordAction(unit.id,unit.actor.name,willSkill?'技能':'攻擊');performEnemyAction(unit.actor);yield;}}for(const e of foes)if(e.hp<=0)rewardGroupKill(e);if(!living().length){running=false;party.members[0].gold-=Math.floor(party.members[0].gold*GS('combat.defeatGoldLoss',.05));for(const h of heroes())h.shield=0;note('全隊戰敗，帳號失去 '+Math.round(GS('combat.defeatGoldLoss',.05)*10000)/100+'% 金幣。生命已全滿。');refillParty();foes=[];enemy=null;}else if(!foes.some(e=>e.hp>0)){refillParty();note('本次遭遇勝利，全隊生命已回滿。');if(foes.some(e=>e.kind==='final')){running=false;note('噬日者已倒下！LV30 成員解鎖 LV60，其他成員達 LV30 時解鎖。');}}save();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();if(activeBattleStat){if(activeBattleStat.pendingOutcome==='wipe')finalizeBattleStatistics('wipe');else if(foes.length&&foes.every(e=>e.hp<=0))finalizeBattleStatistics('victory');}};
 function actionTurnElementLabel(element){return element==='physical'?'無屬性':`${ELEMENTS[element]}屬性`;}
@@ -3722,7 +3728,7 @@ render();
       running=false;
       if(gateFinal){state.won=true;state.modeClears[mode]++;if(e.mat)state.materials[e.mat]=Math.max(1,state.materials[e.mat]||0);}
     }
-    awardXP(xp);state.hp=Math.min(stats().hp,state.hp+stats().hp*r.postVictoryHeal);state.shield=0;note(`擊敗 ${e.name}（${d.name}）· +${xp} EXP、${gold} 金幣`);enemy=null;
+    awardXP(xp);state.hp=Math.min(stats().hp,state.hp+stats().hp*r.postVictoryHeal);state.shield=0;note(`擊敗 ${combatEnemyName(e)}（${d.name}）· +${xp} EXP、${gold} 金幣`);enemy=null;
     if(e.kind==='final'&&!partyBusy){
       const title=gateFinal?(firstClear?'等級界限已突破':'再次完成突破關卡'):'終局首領已擊敗',body=gateFinal?(firstClear?'等級上限提升，通關後區域已解鎖。':'可繼續探索通關後區域，或挑戰其他終局地圖。'):`已完成「${MAPS[mi]?.name||'終局地圖'}」。此地圖不會改變等級上限。`;
       $('modal').innerHTML=`<h1>${title}</h1><p>${esc(body)}</p><button class="primary" onclick="closeModal()">繼續旅程</button>`;$('modal').showModal();
@@ -4503,7 +4509,7 @@ render();
   supplyStatus=function(h){return SUPPLY_KEYS.map(key=>{const b=activeSupply(h,key);return b?ELEMENTS[b.element]+{imbue:'附魔',ward:'抗性',elementTonic:'增幅'}[key]+' '+Math.ceil(b.remainingTurns)+' 回合':'';}).filter(Boolean).join(' ／ ');};
   supplyDetail=function(item){const effect=item.type==='imbue'?`普通攻擊轉為${ELEMENTS[item.element]}屬性`:item.type==='ward'?`${ELEMENTS[item.element]}屬性傷害減少 ${Math.round(GS('combat.supply.wardResistance',.25)*10000)/100}%`:item.type==='elementTonic'?`${ELEMENTS[item.element]}屬性傷害增加 ${Math.round(GS('combat.supply.elementTonicDamage',.2)*10000)/100}%`:'依道具效果生效';return `${effect} · ${item.duration?`持續 ${Math.round(item.duration)} 戰鬥回合`:'立即生效'} · 單價 ${item.cost} 金幣`;};
 
-  castSupport=function(h,index){const sk=SUPPORT[h.job][index];let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(e=>e.hp>0)?.id];for(const target of targets.filter(Boolean)){effects=effects.filter(e=>!(e.source===h.job&&e.skill===index&&e.target===target));effects.push({source:h.job,skill:index,target,kind:sk.kind,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));}}note(characterName(h)+'施放 '+sk.name+' · '+Math.round(sk.duration)+' 回合');};
+  castSupport=function(h,index){const sk=SUPPORT[h.job][index];let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(enemyAvailableForSingleTarget)?.id];for(const target of targets.filter(Boolean)){effects=effects.filter(e=>!(e.source===h.job&&e.skill===index&&e.target===target));effects.push({source:h.job,skill:index,target,kind:sk.kind,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));}}note(characterName(h)+'施放 '+sk.name+' · '+Math.round(sk.duration)+' 回合');};
   supportSkillDetail=function(job,i,h=state){const sk=SUPPORT[job]?.[i];if(!sk)return '';const level=Math.max(1,h?.supportLevels?.[i]||1),value=+((sk.value+Math.max(0,level-1)*(Number.isFinite(sk.effectPerLevel)?sk.effectPerLevel:GS('skills.support.effectPerExtraLevel',.2)))*100).toFixed(1),cd=supportSkillCooldown(h,i);return `${actionTurnElementLabel(sk.element)} · 目標 ${TARGET_NAMES[sk.target]} · ${EFFECT_NAMES[sk.kind]} ${value}% · 持續 ${Math.round(sk.duration)} 戰鬥回合 · 冷卻 ${cd} 回合 · 需求 LV${sk.level}${i===2?'／二轉':''}`;};
 
   battleBuffRows=function(){
@@ -5345,7 +5351,7 @@ if(state)render();
   // Keep support effects self-contained so imported JSON immediately gains the new semantics.
   castSupport=function(h,index){
     const sk=normalizeSupportDebuffSkill(SUPPORT[h.job][index]);
-    let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(e=>e.hp>0)?.id];
+    let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(enemyAvailableForSingleTarget)?.id];
     for(const target of targets.filter(Boolean)){
       effects=effects.filter(e=>!(e.source===h.job&&e.skill===index&&e.target===target));
       effects.push({source:h.job,skill:index,target,kind:sk.kind,element:sk.element,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});
@@ -5383,7 +5389,7 @@ if(state)render();
       target.hp=Math.max(0,target.hp-dealt);
       if(dealt>0)recordCombatContribution(caster,'damage',dealt);
       total+=dealt;
-      note(`${fx.name}追打 [${ELEMENTS[element]}] → ${target.name} ${dealt} 傷害${crit?'（暴擊）':''}`);
+      note(`${fx.name}追打 [${ELEMENTS[element]}] → ${combatEnemyName(target)} ${dealt} 傷害${crit?'（暴擊）':''}`);
     }
     return total;
   }
@@ -5427,7 +5433,7 @@ if(state)render();
       e.hp=Math.max(0,e.hp-dealt);
       if(dealt>0&&caster)recordCombatContribution(caster,'damage',dealt);
       total+=dealt;
-      note(`${fx.name} → ${e.name} ${dealt} 持續傷害`);
+      note(`${fx.name} → ${combatEnemyName(e)} ${dealt} 持續傷害`);
     }
     return total;
   }
@@ -6694,7 +6700,7 @@ if(state)render();
     const storedBonus=sk[1]==='active'?Math.max(0,Number(h.nextActiveDamageBonus)||0):0,basePower=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),power=basePower*((storedBonus>0&&['damage','drain'].includes(sk[5]))?1+storedBonus:1),element=coreSkillElement(h.job,i),profile=skillCombatProfile(h,i,v);let success=false;
     if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(basePower));const recovered=Math.max(0,ally.hp-beforeHp);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');success=true;}
     else if(sk[5]==='shield'){const shieldResult=applyPureShield(h,basePower);note(pureShieldCastLog(h,sk[0],shieldResult));success=true;}
-    else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const crit=Math.random()<profile.critChance,d=resolveHit(e,power,h,element,crit,{critDamage:profile.critDamage,defensePenetration:profile.defensePenetration,defenseIgnore:profile.defenseIgnore});total+=d;results.push(e.name+' '+d+(crit?'（暴擊）':''));}if(sk[5]==='drain'){const beforeDrain=h.hp;h.hp=Math.min(v.hp,h.hp+total);const recovered=Math.max(0,h.hp-beforeDrain);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害');success=true;}
+    else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const crit=Math.random()<profile.critChance,d=resolveHit(e,power,h,element,crit,{critDamage:profile.critDamage,defensePenetration:profile.defensePenetration,defenseIgnore:profile.defenseIgnore});total+=d;results.push(combatEnemyName(e)+' '+d+(crit?'（暴擊）':''));}if(sk[5]==='drain'){const beforeDrain=h.hp;h.hp=Math.min(v.hp,h.hp+total);const recovered=Math.max(0,h.hp-beforeDrain);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害');success=true;}
     if(success&&sk[1]==='active'&&storedBonus>0)delete h.nextActiveDamageBonus;
     if(success&&h.sockets[i]===2&&sk[1]==='active'){const beforeGem=h.hp;h.hp=Math.min(v.hp,h.hp+Math.round(v.atk*GS('skills.gems.hybridActiveHealAttack',.10)));const recovered=Math.max(0,h.hp-beforeGem);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}
     return success;
@@ -7634,7 +7640,7 @@ if(state)render();
   const CONTROL_META_KEYS=['controlId','duration','bossDuration','slowPct','basicAttackBonus','skipChance','bossSkipChance','damageReduction','trapHp'];
   const CONTROL_SKILLS=[
     {job:0,controlId:'warrior-taunt',name:'嘲諷',level:9,cooldown:6,power:0,effect:'tauntRage',element:'physical',maxTargets:1,description:'挑釁敵方攻擊力最高者，使其陷入狂暴並優先攻擊戰士。',duration:3,bossDuration:1,basicAttackBonus:.20},
-    {job:1,controlId:'mage-polymorph',name:'變形術',level:12,cooldown:7,power:1.0,effect:'polymorph',element:'physical',maxTargets:1,description:'將敵人變形並賦予護盾；護盾存在期間無法行動，護盾被打破時立即解除。對 BOSS 無效。',duration:3,bossDuration:0},
+    {job:1,controlId:'mage-polymorph',name:'變形術',level:12,cooldown:7,power:1.0,effect:'polymorph',element:'physical',maxTargets:1,description:'將敵人變形並賦予護盾；護盾存在期間無法行動且不會成為單體目標，護盾被打破時立即解除。對 BOSS 無效。',duration:3,bossDuration:0},
     {job:1,controlId:'mage-frost-nova',name:'冰霜新星',level:8,cooldown:6,power:0,effect:'frost',element:'ice',maxTargets:99,description:'使全部存活敵人結霜，降低速度。',slowPct:.30},
     {job:1,controlId:'mage-ice-arrow',name:'寒冰箭',level:5,cooldown:5,power:0,effect:'freeze',element:'ice',maxTargets:1,description:'凍結一名敵人，使其無法行動。',duration:2,bossDuration:1},
     {job:2,controlId:'archer-freeze-trap',name:'冰凍陷阱',level:8,cooldown:6,power:0,effect:'summonFreezeTrap',element:'ice',maxTargets:1,description:'召喚 2 點生命的冰凍陷阱。每次受擊固定失去 1 點生命，並使敵方全體結霜；已結霜者改為冰凍 1 回合。',trapHp:2,slowPct:.30},
@@ -7648,6 +7654,7 @@ if(state)render();
   function int0(v,fallback=0){v=Number(v);return Number.isFinite(v)?Math.max(0,Math.round(v)):fallback;}
   function isBossEnemy(e){return !!e&&(e.kind==='boss'||e.kind==='final');}
   function stateFor(id,create=true){if(!id)return null;if(!controlStates[id]&&create)controlStates[id]={};return controlStates[id]||null;}
+  function isPolymorphed(e){const p=stateFor(e?.id,false)?.polymorph;return !!(e&&e.hp>0&&p&&p.shield>0&&p.turns>0);}
   function cleanState(id){const s=stateFor(id,false);if(s&&!Object.keys(s).length)delete controlStates[id];}
   function normalizeControlMeta(meta,effect){
     meta=meta&&typeof meta==='object'&&!Array.isArray(meta)?meta:{};
@@ -7700,11 +7707,11 @@ if(state)render();
 
   function applyPolymorph(e,shield,meta){
     if(!e||e.hp<=0)return false;
-    if(isBossEnemy(e)){note(e.name+' 對變形免疫。');return true;}
+    if(isBossEnemy(e)){note(combatEnemyName(e)+' 對變形免疫。');return true;}
     meta=normalizeControlMeta(meta,'polymorph');
     const s=stateFor(e.id),amount=Math.max(1,Math.round(Number(shield)||1));
     s.polymorph={turns:Math.max(1,meta.duration),total:Math.max(1,meta.duration),shield:amount,maxShield:amount};
-    note(e.name+' 進入變形：護盾 '+amount+'，'+s.polymorph.turns+' 回合無法行動。');
+    note(combatEnemyName(e)+' 進入變形：護盾 '+amount+'，'+s.polymorph.turns+' 回合無法行動且不會成為單體目標。');
     return true;
   }
   function applyFreeze(e,meta,forcedTurns=null){
@@ -7712,24 +7719,24 @@ if(state)render();
     const turns=forcedTurns===null?(isBossEnemy(e)?meta.bossDuration:meta.duration):Math.max(1,int0(forcedTurns,1));
     if(turns<=0)return true;
     const s=stateFor(e.id);s.freeze={turns,total:turns};
-    note(e.name+' 冰凍 '+turns+' 回合。');return true;
+    note(combatEnemyName(e)+' 冰凍 '+turns+' 回合。');return true;
   }
   function applyFrost(e,meta){
     if(!e||e.hp<=0)return false;meta=normalizeControlMeta(meta,'frost');
     const s=stateFor(e.id);s.frost={slowPct:meta.slowPct};
-    note(e.name+' 結霜：速度 -'+Math.round(meta.slowPct*100)+'%。');return true;
+    note(combatEnemyName(e)+' 結霜：速度 -'+Math.round(meta.slowPct*100)+'%。');return true;
   }
   function applyRage(e,meta,tauntHeroJob=null){
     if(!e||e.hp<=0)return false;meta=normalizeControlMeta(meta,'rage');
     const turns=isBossEnemy(e)?meta.bossDuration:meta.duration;if(turns<=0)return true;
     const s=stateFor(e.id);s.rage={turns,total:turns,basicAttackBonus:meta.basicAttackBonus,tauntHeroJob:Number.isInteger(tauntHeroJob)?tauntHeroJob:null};
-    note(e.name+' 狂暴 '+turns+' 回合：無法使用技能，普攻傷害 +'+Math.round(meta.basicAttackBonus*100)+'%。');return true;
+    note(combatEnemyName(e)+' 狂暴 '+turns+' 回合：無法使用技能，普攻傷害 +'+Math.round(meta.basicAttackBonus*100)+'%。');return true;
   }
   function applyFear(e,meta){
     if(!e||e.hp<=0)return false;meta=normalizeControlMeta(meta,'fear');
     const turns=Math.max(1,meta.duration),chance=isBossEnemy(e)?meta.bossSkipChance:meta.skipChance;
     const s=stateFor(e.id);s.fear={turns,total:turns,damageReduction:meta.damageReduction,skipChance:chance};
-    note(e.name+' 陷入畏懼 '+turns+' 回合：傷害 -'+Math.round(meta.damageReduction*100)+'%，每回合 '+Math.round(chance*100)+'% 機率無法行動。');return true;
+    note(combatEnemyName(e)+' 陷入畏懼 '+turns+' 回合：傷害 -'+Math.round(meta.damageReduction*100)+'%，每回合 '+Math.round(chance*100)+'% 機率無法行動。');return true;
   }
   function summonTrap(owner,kind,meta){
     meta=normalizeControlMeta(meta,kind);
@@ -7761,7 +7768,7 @@ if(state)render();
     const proxy={...e,hp:polymorph.shield,maxhp:polymorph.maxShield};
     const dealt=controlResolveHitBase(proxy,amount,h,element,crit,options);
     polymorph.shield=Math.max(0,proxy.hp);
-    if(polymorph.shield<=0){const s=stateFor(e.id,false);if(s)delete s.polymorph;cleanState(e.id);note(e.name+' 的變形護盾被打破，變形解除。');}
+    if(polymorph.shield<=0){const s=stateFor(e.id,false);if(s)delete s.polymorph;cleanState(e.id);note(combatEnemyName(e)+' 的變形護盾被打破，變形解除。');}
     return dealt;
   };
 
@@ -7788,7 +7795,7 @@ if(state)render();
         e.turn=(e.turn||0)+1;
         const trap=traps[rand(traps.length)];
         trap.hp=Math.max(0,trap.hp-1);
-        note(e.name+'・'+sk.name+' → '+trap.name+'，陷阱生命 -1（剩餘 '+trap.hp+'）。');
+        note(combatEnemyName(e)+'・'+sk.name+' → '+trap.name+'，陷阱生命 -1（剩餘 '+trap.hp+'）。');
         onTrapHit(trap,e);
         return;
       }
@@ -7798,7 +7805,7 @@ if(state)render();
 
   performEnemyBasic=function(e){
     if(!e||e.hp<=0)return;
-    if(e.__controlSkip){note(e.name+' 因'+e.__controlSkip+'無法行動。');return;}
+    if(e.__controlSkip){note(combatEnemyName(e)+' 因'+e.__controlSkip+'無法行動。');return;}
     e.turn=(e.turn||0)+1;
     const s=stateFor(e.id,false),rage=s?.rage;
     let target=null;
@@ -7809,18 +7816,18 @@ if(state)render();
       target=candidates[rand(candidates.length)];
     }
     if(target.__controlSummon){
-      target.hp=Math.max(0,target.hp-1);note(e.name+' 攻擊 '+target.name+'，陷阱生命 -1（剩餘 '+target.hp+'）。');onTrapHit(target,e);return;
+      target.hp=Math.max(0,target.hp-1);note(combatEnemyName(e)+' 攻擊 '+target.name+'，陷阱生命 -1（剩餘 '+target.hp+'）。');onTrapHit(target,e);return;
     }
     const h=target,beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss,multi=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:e.turn%Math.max(1,Math.round(fb.specialEveryTurns))===0?fb.specialMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;
     let hit=Math.max(1,Math.round(e.atk*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*multi-v.def*c.defenseEffectiveness));
     hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));
-    if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+e.name+'的攻擊');return;}
+    if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+combatEnemyName(e)+'的攻擊');return;}
     const ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+(ward&&ward.element===e.element?c.supply.wardResistance:0));
     hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;
     if(absorb>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'mitigation',absorb);
     const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);
-    if(absorb>0&&hpDamage===0)note(e.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');
-    else note(e.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?'（護盾吸收 '+absorb+'，剩餘 '+Math.round(h.shield)+'）':''));
+    if(absorb>0&&hpDamage===0)note(combatEnemyName(e)+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');
+    else note(combatEnemyName(e)+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?'（護盾吸收 '+absorb+'，剩餘 '+Math.round(h.shield)+'）':''));
     if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,'普通攻擊');
   };
 
@@ -7863,8 +7870,8 @@ if(state)render();
     else if(effect==='rage'){for(const e of targets)applyRage(e,meta,null);success=targets.length>0;}
     else if(effect==='fear'){for(const e of targets)applyFear(e,meta);success=targets.length>0;}
     else if(effect==='tauntRage'){
-      const e=[...foes].filter(x=>x.hp>0).sort((a,b)=>b.atk-a.atk)[0];
-      if(e){applyRage(e,meta,h.job);note(characterName(h)+' 嘲諷 '+e.name+'，其普通攻擊將優先鎖定戰士。');success=true;}
+      const e=singleTargetEnemyPool().sort((a,b)=>b.atk-a.atk)[0];
+      if(e){applyRage(e,meta,h.job);note(characterName(h)+' 嘲諷 '+combatEnemyName(e)+'，其普通攻擊將優先鎖定戰士。');success=true;}
     }else if(effect==='summonMorphTrap'||effect==='summonFreezeTrap'){
       const trapMeta={...meta,controlId:sk[6]?.controlId,powerMultiplier:Math.max(0,skillPower(i,h))};
       success=summonTrap(h,effect,trapMeta);
@@ -7881,7 +7888,7 @@ if(state)render();
   coreSkillDetail=function(job,i,h=state){
     const sk=CLASSES[job]?.skills?.[i],effect=sk?.[5];if(!sk||!CONTROL_EFFECTS.has(effect))return controlCoreDetailBase(job,i,h);
     const m=normalizeControlMeta(sk[6],effect),cd=sk[1]==='active'?skillCooldown(i,h):0,head=actionTurnElementLabel(coreSkillElement(job,i))+' · 冷卻 '+cd+' 回合 · 需求 LV'+sk[2];
-    if(effect==='polymorph')return head+' · 變形護盾＝攻擊×'+Number(skillPower(i,h).toFixed(2))+' · 無法行動 '+m.duration+' 回合 · 護盾破裂立即解除 · BOSS 無效';
+    if(effect==='polymorph')return head+' · 變形護盾＝攻擊×'+Number(skillPower(i,h).toFixed(2))+' · 無法行動 '+m.duration+' 回合 · 不會成為單體目標 · 護盾破裂立即解除 · BOSS 無效';
     if(effect==='freeze')return head+' · 冰凍：無法行動 '+m.duration+' 回合；BOSS '+m.bossDuration+' 回合';
     if(effect==='frost')return head+' · 敵方全體結霜：速度 -'+Math.round(m.slowPct*100)+'% · 持續至遭遇結束或被陷阱轉為冰凍';
     if(effect==='rage')return head+' · 狂暴 '+m.duration+' 回合（BOSS '+m.bossDuration+'）· 禁用技能 · 普攻 +'+Math.round(m.basicAttackBonus*100)+'%';
@@ -7895,7 +7902,7 @@ if(state)render();
   const controlEffectBadgesBase=effectBadges;
   effectBadges=function(key){
     let html=controlEffectBadgesBase(key),s=stateFor(key,false);if(!s)return html;
-    if(s.polymorph)html+=combatStatusBadge('變形',s.polymorph.turns,'無法行動，護盾被打破時消失。剩餘護盾 '+Math.round(s.polymorph.shield)+'。');
+    if(s.polymorph)html+=combatStatusBadge('變形',s.polymorph.turns,'無法行動，且不會成為單體目標；護盾被打破時消失。剩餘護盾 '+Math.round(s.polymorph.shield)+'。');
     if(s.freeze)html+=combatStatusBadge('冰凍',s.freeze.turns,'無法行動。');
     if(s.frost)html+=combatStatusBadge('結霜',null,'速度降低 '+Math.round(s.frost.slowPct*100)+'%，持續至遭遇結束或被冰凍陷阱轉為冰凍。');
     if(s.rage){const taunted=Number.isInteger(s.rage.tauntHeroJob);html+=combatStatusBadge(taunted?'嘲諷／狂暴':'狂暴',s.rage.turns,'無法使用技能，普攻傷害增加 '+Math.round(s.rage.basicAttackBonus*100)+'%。'+(taunted?'優先攻擊戰士。':''));}
@@ -7964,7 +7971,7 @@ if(state)render();
       const meta=CLASSES[job]?.skills?.[i]?.[6]||{};if(!CONTROL_EFFECTS.has(CLASSES[job]?.skills?.[i]?.[5]))return;
       for(const k of CONTROL_META_KEYS)if(meta[k]!==undefined)sk[k]=meta[k];
     }));
-    out.notes=[...(out.notes||[]),'控制狀態以目標自己的行動回合計數；結霜持續到遭遇結束或被冰凍陷阱轉為冰凍。','BOSS 對變形免疫；冰凍與狂暴使用 bossDuration；畏懼保留傷害降低與持續時間，但 BOSS 使用較低 bossSkipChance。','陷阱是可被敵方普通攻擊選中的召喚物；嘲諷中的敵人優先攻擊戰士。'];
+    out.notes=[...(out.notes||[]),'控制狀態以目標自己的行動回合計數；結霜持續到遭遇結束或被冰凍陷阱轉為冰凍。','BOSS 對變形免疫；變形期間不會成為單體攻擊、隨機單體或依能力排序的單體指定目標，但仍會被範圍技能擊中；冰凍與狂暴使用 bossDuration；畏懼保留傷害降低與持續時間，但 BOSS 使用較低 bossSkipChance。','陷阱是可被敵方普通攻擊選中的召喚物；嘲諷中的敵人優先攻擊戰士。'];
     return out;
   };
 
@@ -7975,7 +7982,7 @@ if(state)render();
 
   globalThis.__EMBERWILD_CONTROL_TEST_API={
     get states(){return controlStates;},get summons(){return combatSummons;},
-    applyPolymorph,applyFreeze,applyFrost,applyRage,applyFear,ensureControlSkills
+    applyPolymorph,applyFreeze,applyFrost,applyRage,applyFear,isPolymorphed,ensureControlSkills
   };
   if(state){syncAllHeroSkillArrays();render();}
 })();
@@ -8089,7 +8096,7 @@ function statusApplyShieldAwareDamage(target,amount,bypassShield=false){
     const absorb=Math.min(Math.max(0,Number(target.shield)||0),amount);target.shield=Math.max(0,(Number(target.shield)||0)-absorb);hpDamage=Math.max(0,amount-absorb);if(absorb>0&&typeof recordCombatContribution==='function')recordCombatContribution(target,'mitigation',absorb);
   }else if(!bypassShield&&!statusIsHero(target)){
     const api=globalThis.__EMBERWILD_CONTROL_TEST_API,p=api?.states?.[target.id]?.polymorph;
-    if(p?.shield>0){const absorb=Math.min(p.shield,amount);p.shield=Math.max(0,p.shield-absorb);hpDamage=Math.max(0,amount-absorb);if(p.shield<=0){delete api.states[target.id].polymorph;note(target.name+' 的變形護盾被持續效果打破，變形解除。');}}
+    if(p?.shield>0){const absorb=Math.min(p.shield,amount);p.shield=Math.max(0,p.shield-absorb);hpDamage=Math.max(0,amount-absorb);if(p.shield<=0){delete api.states[target.id].polymorph;note(combatEnemyName(target)+' 的變形護盾被持續效果打破，變形解除。');}}
   }
   target.hp=Math.max(0,before-hpDamage);return Math.max(0,before-target.hp);
 }
@@ -8120,12 +8127,12 @@ function executeStatusPeriodic(inst,fx,immediate=false){
     const max=statusMaxHp(target),before=target.hp;target.hp=Math.min(max,target.hp+Math.max(0,Math.round(raw)));let healed=Math.max(0,target.hp-before);
     if(fx.resolution==='overflowShield'&&raw>healed){const overflow=Math.max(0,Math.round(raw-healed));target.shield=Math.max(Number(target.shield)||0,overflow);}
     if(healed>0&&source&&typeof recordCombatContribution==='function')recordCombatContribution(source,'healing',healed);
-    if(healed>0||fx.resolution==='overflowShield')note(inst.name+'・'+prefix+'恢復 → '+(statusIsHero(target)?characterName(target):target.name)+' '+healed+' 生命');
+    if(healed>0||fx.resolution==='overflowShield')note(inst.name+'・'+prefix+'恢復 → '+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' '+healed+' 生命');
     return healed;
   }
   const amount=statusDamageAmount(raw,source,target,fx),dealt=statusApplyShieldAwareDamage(target,amount,fx.resolution==='true');
   if(dealt>0&&source&&typeof recordCombatContribution==='function')recordCombatContribution(source,'damage',dealt);
-  if(dealt>0)note(inst.name+'・'+prefix+'傷害 → '+(statusIsHero(target)?characterName(target):target.name)+' '+dealt+' 傷害');
+  if(dealt>0)note(inst.name+'・'+prefix+'傷害 → '+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' '+dealt+' 傷害');
   return dealt;
 }
 function applyStatusControl(def,target,source){
@@ -8151,7 +8158,7 @@ function applyCustomStatus(defOrId,source,target){
     if(healed>0)note(def.name+'・再生 → '+characterName(target)+' '+Math.round(healed)+' 生命');
   }
   if(def.tags.includes('instant'))for(const fx of def.periodic)executeStatusPeriodic(inst,fx,true);
-  note((source?characterName(source)+' → ':'')+(statusIsHero(target)?characterName(target):target.name)+' 獲得狀態「'+def.name+'」· '+def.duration+' 回合');
+  note((source?characterName(source)+' → ':'')+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' 獲得狀態「'+def.name+'」· '+def.duration+' 回合');
   return true;
 }
 function tickCustomStatuses(){
@@ -8166,7 +8173,7 @@ function tickCustomStatuses(){
 }
 function statusTargetsForSkill(h,meta){
   const mode=STATUS_TARGETS.includes(meta?.statusTarget)?meta.statusTarget:'enemy';
-  if(mode==='self')return [h];if(mode==='allies')return living();if(mode==='weakest'){const xs=[...living()].sort((a,b)=>a.hp/statusMaxHp(a)-b.hp/statusMaxHp(b));return xs.length?[xs[0]]:[];}if(mode==='enemies')return foes.filter(e=>e.hp>0);const e=foes.find(e=>e.hp>0);return e?[e]:[];
+  if(mode==='self')return [h];if(mode==='allies')return living();if(mode==='weakest'){const xs=[...living()].sort((a,b)=>a.hp/statusMaxHp(a)-b.hp/statusMaxHp(b));return xs.length?[xs[0]]:[];}if(mode==='enemies')return foes.filter(e=>e.hp>0);const e=foes.find(enemyAvailableForSingleTarget);return e?[e]:[];
 }
 function customStatusSummary(def){
   if(!def)return '未指定狀態';const bits=[];
@@ -8188,7 +8195,7 @@ function customStatusTooltip(def){
  }
  const c=def.control;
  if(c){
-  if(c.kind==='polymorph')bits.push('無法行動，護盾被打破時消失；BOSS 無效');
+  if(c.kind==='polymorph')bits.push('無法行動且不會成為單體目標，護盾被打破時消失；BOSS 無效');
   else if(c.kind==='freeze')bits.push('無法行動'+(Number.isFinite(c.bossDuration)?'；BOSS 持續 '+c.bossDuration+' 回合':''));
   else if(c.kind==='frost')bits.push('速度降低 '+pct(c.slowPct));
   else if(c.kind==='rage')bits.push('無法使用技能，普攻傷害增加 '+pct(c.basicAttackBonus));
@@ -8219,7 +8226,7 @@ function triggerCustomStatusFollowups(target){
     const crit=Math.random()<Math.max(0,Math.min(GAME_BALANCE?.combat?.statCaps?.crit??1,Number(v.crit)||0));if(crit)amount=Math.round(amount*Math.max(1,Number(v.critDamage)||1));
     amount=Math.max(minimumDamage,Math.round(amount*elementFactor(m.element||'physical',target.element)*(1-Math.min(GAMEPLAY_SETTINGS?.combat?.caps?.guard??.75,effectTotal(target.id,'guard')))));
     const dealt=statusApplyShieldAwareDamage(target,amount,false);if(dealt>0&&typeof recordCombatContribution==='function')recordCombatContribution(caster,'damage',dealt);total+=dealt;
-    if(dealt>0)note(inst.name+'・受擊追打 ['+((typeof ELEMENTS==='object'&&ELEMENTS[m.element])||m.element||'physical')+'] → '+target.name+' '+dealt+' 傷害'+(crit?'（暴擊）':''));
+    if(dealt>0)note(inst.name+'・受擊追打 ['+((typeof ELEMENTS==='object'&&ELEMENTS[m.element])||m.element||'physical')+'] → '+combatEnemyName(target)+' '+dealt+' 傷害'+(crit?'（暴擊）':''));
   }
   return total;
 }
