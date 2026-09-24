@@ -1,0 +1,111 @@
+
+/* Update 30: combat status durations use battle turns instead of seconds. */
+(function installTurnDurationSystem(){
+  const TIME_UNITS={supportDuration:'battleRounds',itemDuration:'battleRounds'};
+  const SUPPLY_KEYS=['imbue','ward','elementTonic'];
+  const roundReferenceMs=cfg=>Math.max(1,Number(cfg?.balanceSettings?.combat?.pacing?.roundMinimumMs ?? (typeof GS==='function'?GS('combat.pacing.roundMinimumMs',6000):6000))||6000);
+  const clone=v=>JSON.parse(JSON.stringify(v));
+  function turnsFromLegacySeconds(seconds,cfg){return Math.max(1,Math.ceil(Math.max(0,Number(seconds)||0)/(roundReferenceMs(cfg)/1000)));}
+  function normalizeTurnConfig(input){
+    const out=clone(input||{}),legacyItems=out?.timeUnits?.itemDuration!=='battleRounds';
+    if(Array.isArray(out.supportSkills))for(const list of out.supportSkills||[])for(const sk of list||[]){
+      if(Number.isFinite(sk.duration))sk.duration=Math.max(0,Math.round(sk.duration));
+      if(Number.isFinite(sk.cooldown))sk.cooldown=Math.max(0,Math.round(sk.cooldown));
+    }
+    if(Array.isArray(out.items))for(const item of out.items){
+      if(Number.isFinite(item.duration))item.duration=legacyItems&&item.duration>0?turnsFromLegacySeconds(item.duration,out):Math.max(0,Math.round(item.duration));
+    }
+    out.timeUnits={...(out.timeUnits||{}),...TIME_UNITS};
+    return out;
+  }
+  function migrateSupplyBuff(buff){
+    if(!buff||typeof buff!=='object')return null;
+    if(Number.isFinite(buff.remainingTurns)){
+      const left=Math.max(0,Math.ceil(buff.remainingTurns));if(left<=0)return null;
+      return {...buff,remainingTurns:left,totalTurns:Math.max(left,Math.ceil(Number(buff.totalTurns)||left)),until:0};
+    }
+    if(Number.isFinite(buff.until)&&buff.until>Date.now()){
+      const left=Math.max(1,Math.ceil((buff.until-Date.now())/roundReferenceMs()));
+      return {element:buff.element,remainingTurns:left,totalTurns:left,until:0};
+    }
+    return null;
+  }
+  function migrateHeroSupplyTurns(h){if(!h)return;for(const key of SUPPLY_KEYS)h[key]=migrateSupplyBuff(h[key]);}
+  function migratePartySupplyTurns(){if(party?.members)for(const h of party.members)migrateHeroSupplyTurns(h);else if(state)migrateHeroSupplyTurns(state);}
+  function decrementSupplyTurns(){
+    if(!party)return;
+    for(const h of heroes())for(const key of SUPPLY_KEYS){const b=activeSupply(h,key);if(!b)continue;b.remainingTurns=Math.max(0,Math.ceil(b.remainingTurns)-1);b.until=0;if(b.remainingTurns<=0)h[key]=null;}
+  }
+
+  EFFECT_NAMES.regen='每回合回復生命';
+  activeSupply=function(h,key){const b=h?.[key];return b&&Number.isFinite(b.remainingTurns)&&b.remainingTurns>0?b:null;};
+  useSupply=function(id){const item=SHOP.find(x=>x.id===id);if(!item||(state.consumables[id]||0)<1)return;state.consumables[id]--;const turns=Math.max(1,Math.round(Number(item.duration)||1));state[item.type]={element:item.element,remainingTurns:turns,totalTurns:turns,until:0};save();render();toast('已使用'+item.name);};
+  supplyStatus=function(h){return SUPPLY_KEYS.map(key=>{const b=activeSupply(h,key);return b?ELEMENTS[b.element]+{imbue:'附魔',ward:'抗性',elementTonic:'增幅'}[key]+' '+Math.ceil(b.remainingTurns)+' 回合':'';}).filter(Boolean).join(' ／ ');};
+  supplyDetail=function(item){const effect=item.type==='imbue'?`普通攻擊轉為${ELEMENTS[item.element]}屬性`:item.type==='ward'?`${ELEMENTS[item.element]}屬性傷害減少 ${Math.round(GS('combat.supply.wardResistance',.25)*10000)/100}%`:item.type==='elementTonic'?`${ELEMENTS[item.element]}屬性傷害增加 ${Math.round(GS('combat.supply.elementTonicDamage',.2)*10000)/100}%`:'依道具效果生效';return `${effect} · ${item.duration?`持續 ${Math.round(item.duration)} 戰鬥回合`:'立即生效'} · 單價 ${item.cost} 金幣`;};
+
+  castSupport=function(h,index){const sk=SUPPORT[h.job][index];let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(enemyAvailableForSingleTarget)?.id];for(const target of targets.filter(Boolean)){effects=effects.filter(e=>!(e.source===h.job&&e.skill===index&&e.target===target));effects.push({source:h.job,skill:index,target,kind:sk.kind,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));}}note(characterName(h)+'施放 '+sk.name+' · '+Math.round(sk.duration)+' 回合');};
+  supportSkillDetail=function(job,i,h=state){const sk=SUPPORT[job]?.[i];if(!sk)return '';const level=Math.max(1,h?.supportLevels?.[i]||1),value=+((sk.value+Math.max(0,level-1)*(Number.isFinite(sk.effectPerLevel)?sk.effectPerLevel:GS('skills.support.effectPerExtraLevel',.2)))*100).toFixed(1),cd=supportSkillCooldown(h,i);return `${actionTurnElementLabel(sk.element)} · 目標 ${TARGET_NAMES[sk.target]} · ${EFFECT_NAMES[sk.kind]} ${value}% · 持續 ${Math.round(sk.duration)} 戰鬥回合 · 冷卻 ${cd} 回合 · 需求 LV${sk.level}${i===2?'／二轉':''}`;};
+
+  battleBuffRows=function(){
+    const rows=[],row=(who,name,detail,time,clock)=>`<tr><td>${esc(who)}</td><td>${esc(name)}</td><td>${esc(detail)}</td><td class="buff-time">${esc(time)}</td><td>${esc(clock)}</td></tr>`,names={attack:'攻擊提升',power:'技能威力提升',guard:'傷害減免',fracture:'防禦降低',weaken:'攻擊降低',vulnerable:'承受傷害增加',critical:'暴擊率提升',regen:'每回合恢復最大生命'};
+    for(const e of effects.filter(e=>e.until>partyClock)){
+      const h=party.members.find(h=>heroKey(h)===e.target),foe=foes.find(f=>f.id===e.target);if(!h&&!foe)continue;const sk=SUPPORT[e.source]?.[e.skill],total=Math.max(0,Math.round(sk?.duration??0));
+      rows.push(row(h?characterName(h):foe.name,e.name,(names[e.kind]||e.kind)+' '+Number((e.value*100).toFixed(1))+'%',Math.max(0,Math.ceil(e.until-partyClock))+' / '+(total||'—')+' 回合','戰鬥回合'));
+    }
+    for(const h of party.members){
+      const who=characterName(h)+(party.active.includes(h.job)?'':'（候補）');
+      for(const key of SUPPLY_KEYS){const b=activeSupply(h,key);if(!b)continue;const labels={imbue:['附魔藥水','普攻改為'+ELEMENTS[b.element]+'屬性'],ward:['抗性藥水',ELEMENTS[b.element]+'傷害減免 '+Math.round(GS('combat.supply.wardResistance',.25)*10000)/100+'%'],elementTonic:['增幅藥水',ELEMENTS[b.element]+'傷害增加 '+Math.round(GS('combat.supply.elementTonicDamage',.2)*10000)/100+'%']};rows.push(row(who,ELEMENTS[b.element]+labels[key][0],labels[key][1],Math.ceil(b.remainingTurns)+' / '+Math.ceil(b.totalTurns||b.remainingTurns)+' 回合','出戰回合'));}
+      if(h.shield>0)rows.push(row(who,'護盾','可抵擋所有來源傷害 · 剩餘 '+Math.round(h.shield),'無回合期限','耗盡或戰鬥結束'));
+    }
+    return rows.join('')||'<tr><td colspan="5" class="no-buffs">目前沒有生效中的 BUFF、DEBUFF 或消耗品效果。</td></tr>';
+  };
+  showBattleEffects=function(){if(!party)return;const modal=$('modal');modal.innerHTML=`<h2>生效效果與持續回合</h2><p class="small">BUFF／DEBUFF 依戰鬥回合計時；消耗品只在該角色出戰的戰鬥回合扣減。</p><div class="effects-modal-scroll"><table class="effects-modal-table"><thead><tr><th>對象</th><th>效果</th><th>能力變化</th><th>剩餘／總回合</th><th>計時方式</th></tr></thead><tbody id="battle-effect-modal-rows">${battleBuffRows()}</tbody></table></div><button onclick="closeModal()">關閉</button>`;modal.showModal();};
+
+  const pacedRoundTurnDurationBase=pacedRound;
+  pacedRound=function*(){const hadCombat=!!party&&foes.some(e=>e.hp>0);yield* pacedRoundTurnDurationBase();if(hadCombat&&party)decrementSupplyTurns();};
+
+  if(typeof battleView==='function'){
+    const turnDurationBattleViewBase=battleView;
+    battleView=function(){return turnDurationBattleViewBase().replace(/第 (\d+) 秒/g,'第 $1 回合');};
+  }
+  if(typeof shopView==='function'){
+    const turnDurationShopBase=shopView;
+    shopView=function(){return turnDurationShopBase().replace(/消耗品按現實時間計時，暫停或關閉遊戲仍會到期。/g,'消耗品效果以戰鬥回合計時；只有角色出戰的戰鬥回合會扣減，暫停或關閉遊戲不會消耗回合。').replace(/持續 (\d+) 秒/g,'持續 $1 回合');};
+  }
+  if(typeof guideView==='function'){
+    const turnDurationGuideBase=guideView;
+    guideView=function(){return `<section class="panel"><h2>BUFF／DEBUFF 回合制</h2><p>輔助技能的 BUFF／DEBUFF 持續時間統一使用「戰鬥回合」；回復效果每戰鬥回合觸發一次。消耗品效果同樣使用回合數，只有該角色實際出戰的戰鬥回合會扣減。暫停、關閉頁面與候補狀態都不會消耗消耗品回合。</p><p>技能冷卻仍使用施放者自己的行動回合；護盾沒有回合期限，只在耗盡或戰鬥結束時消失。</p></section>`+turnDurationGuideBase().replace(/消耗品按現實時間計時，暫停或關閉遊戲仍會到期。/g,'消耗品效果按戰鬥回合計時。');};
+  }
+
+  if(typeof exportableBalance==='function'){
+    const turnDurationExportBase=exportableBalance;
+    exportableBalance=function(){const out=turnDurationExportBase();out.timeUnits={...(out.timeUnits||{}),...TIME_UNITS};out.notes=[...(out.notes||[]),'supportSkills[].duration 單位為戰鬥回合；其數值原本實際就是依 partyClock 回合推進，因此舊數值直接保留。','items[].duration 單位為角色出戰的戰鬥回合；舊版現實秒會依 1× 每回合最短時間換算為回合後匯入。'];return out;};
+  }
+  if(typeof validateBalanceConfig==='function'){
+    const turnDurationValidateBase=validateBalanceConfig;
+    validateBalanceConfig=function(input){const copy=normalizeTurnConfig(input),out=turnDurationValidateBase(copy);for(const [job,list] of (out.supportSkills||[]).entries())for(const [i,sk] of (list||[]).entries()){if(!Number.isInteger(sk.duration)||sk.duration<0)throw Error(`輔助技能持續回合無效：${job}-${i}`);if(!Number.isInteger(sk.cooldown)||sk.cooldown<0)throw Error(`輔助技能冷卻回合無效：${job}-${i}`);}for(const item of out.items||[])if(!Number.isInteger(item.duration)||item.duration<0)throw Error('道具持續回合無效：'+(item.id||'未知'));out.timeUnits={...(out.timeUnits||{}),...TIME_UNITS};return out;};
+  }
+  if(typeof balanceReference==='function'){
+    const turnDurationReferenceBase=balanceReference;
+    balanceReference=function(){const r=turnDurationReferenceBase();r.units??={};r.units.duration='BUFF／DEBUFF 為戰鬥回合；消耗品為角色出戰回合';r.units.cooldown='技能冷卻為施放者自身行動回合';return r;};
+  }
+  if(typeof applyBalanceConfig==='function'){
+    const turnDurationApplyBase=applyBalanceConfig;
+    applyBalanceConfig=function(input,{persist=true}={}){const copy=normalizeTurnConfig(input),result=turnDurationApplyBase(copy,{persist:false});if(persist)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));if(state)render();return result;};
+  }
+
+  /* Migrate an already loaded old balance/save once. Support duration numbers are
+     preserved because the old runtime already advanced them by partyClock rounds. */
+  try{
+    const raw=localStorage.getItem(BALANCE_KEY);let legacyBalance=null;
+    if(raw){try{legacyBalance=JSON.parse(raw);}catch{}}
+    if(!raw || legacyBalance?.timeUnits?.itemDuration!=='battleRounds'){
+      const ref=legacyBalance||{balanceSettings:GAMEPLAY_SETTINGS};
+      for(const item of SHOP)item.duration=turnsFromLegacySeconds(item.duration,ref);
+      if(raw)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));
+    }
+    migratePartySupplyTurns();
+    if(party)save();
+  }catch(e){console.warn('回合制 BUFF／消耗品遷移失敗',e);}
+  if(state)render();
+})();
