@@ -7628,6 +7628,12 @@ if(state)render();
   exportableBalance=function(){
     const out=classStatsExportBase();
     out.classes.forEach((cls,job)=>{cls.initialStats=classInitial(CLASSES[job],job);cls.growthPerLevel=classGrowth(CLASSES[job]);});
+    const skills=out.balanceSettings?.skills;
+    if(skills){
+      for(const key of ['maxLevel','initialCap','capLevelsPerStep','effectPerExtraLevel'])delete skills.core?.[key];
+      delete skills.proc?.perSkillLevel;
+      for(const key of ['maxLevel','effectPerExtraLevel'])delete skills.support?.[key];
+    }
     return out;
   };
   globalThis.classInitialStats=classInitial;
