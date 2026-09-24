@@ -1,7 +1,7 @@
 
 /* Persistent per-map battle statistics. One battle = one completed group encounter. */
 const BATTLE_STATS_LIMIT=300;
-const BATTLE_STATS_STORAGE_KEY='emberwild-battle-statistics-v1';
+const BATTLE_STATS_STORAGE_KEY=battleStatsKeyForSlot(ACTIVE_SAVE_SLOT);
 let activeBattleStat=null;
 let statsRewardingKill=false;
 

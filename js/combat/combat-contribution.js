@@ -7,7 +7,7 @@
   function storageKey(){
     const root=party?.members?.[0];
     const id=Number.isFinite(Number(root?.created))?String(root.created):'default';
-    return BASE_KEY+':'+id;
+    return BASE_KEY+':'+id+(ACTIVE_SAVE_SLOT===1?'':':slot-'+ACTIVE_SAVE_SLOT);
   }
   function activeSignature(){
     if(!party?.active)return '';

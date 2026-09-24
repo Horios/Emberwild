@@ -14,7 +14,12 @@ const CLASSES=[{name:'戰士',advanced:'破曉騎士',icon:'',desc:'堅守前線
 const MAPS=[{name:'苔光林地',min:1,max:5,icon:'',color:'#34483a',mobs:[['苔原史萊姆','','黏稠凝膠'],['林間野狼','','完整狼牙'],['迷路樹精','','活性樹芯']],boss:['古木守望者','','古木年輪']},{name:'風蝕礦坑',min:6,max:10,icon:'',color:'#494333',mobs:[['洞穴蝙蝠','','薄翼膜'],['岩背蜥蜴','','堅硬石鱗'],['礦坑魔偶','','魔偶齒輪']],boss:['礦脈巨人','','礦脈之心']},{name:'暮色沼澤',min:11,max:15,icon:'≋',color:'#3d394b',mobs:[['劇毒蛙','','劇毒腺體'],['幽光飛蛾','','微光鱗粉'],['沼地亡魂','','怨念碎片']],boss:['泥沼女巫','‍','女巫符印']},{name:'霜眠山脊',min:16,max:20,icon:'△',color:'#364956',mobs:[['霜牙雪狼','','霜牙'],['冰晶妖精','','冰晶翅片'],['雪原巨熊','‍','厚暖熊皮']],boss:['凜冬巨獸','','永凍結晶']},{name:'熔火遺跡',min:21,max:25,icon:'',color:'#57392e',mobs:[['熔岩蟲','','灼熱甲殼'],['火羽渡鴉','‍','不熄火羽'],['失控鎧甲','','焦黑鋼片']],boss:['熔爐暴君','','熔核']},{name:'星隕荒原',min:26,max:30,icon:'',color:'#3c3c53',mobs:[['虛空獵犬','','虛空尖牙'],['星塵水母','','星塵觸鬚'],['墜星魔像','','隕鐵核心']],boss:['星隕監視者','','星隕稜鏡']},{name:'終焉王座',min:40,max:40,icon:'',color:'#4a2c3b',mobs:[],boss:['噬日者・厄爾','','日蝕王冠']}];
 const GEMS=[{name:'赤焰石',desc:'技能效果 +18%',icon:''},{name:'疾風石',desc:'主動冷卻 −1 回合（最低 2）／觸發率 +10%',icon:''},{name:'共鳴石',desc:'技能效果 +10%，觸發率 +5%／施放時回復攻擊力 15% 生命',icon:''}];
 const SLOTS=['武器','護甲','副手','飾品'];const RARITY=['普通','精良','稀有','傳說'];const AFFIX=['攻擊','生命','防禦','暴擊'];
-const KEY='emberwild-save-v1',BACKUP_KEY='emberwild-save-v1-backup';let state=null,tab='battle',running=false,enemy=null,round=0,cd={},logs=[],timer=null;let toastTimer;
+const SAVE_SLOT_SESSION_KEY='emberwild-selected-slot-v1',SAVE_SLOT_INTENT_KEY='emberwild-slot-intent-v1';
+const ACTIVE_SAVE_SLOT=(()=>{try{const slot=Number(sessionStorage.getItem(SAVE_SLOT_SESSION_KEY));return [1,2,3].includes(slot)?slot:1;}catch{return 1;}})();
+const saveKeyForSlot=slot=>'emberwild-save-v1'+(slot===1?'':'-slot-'+slot);
+const backupKeyForSlot=slot=>saveKeyForSlot(slot)+'-backup';
+const battleStatsKeyForSlot=slot=>'emberwild-battle-statistics-v1'+(slot===1?'':'-slot-'+slot);
+const KEY=saveKeyForSlot(ACTIVE_SAVE_SLOT),BACKUP_KEY=backupKeyForSlot(ACTIVE_SAVE_SLOT);let state=null,tab='battle',running=false,enemy=null,round=0,cd={},logs=[],timer=null;let toastTimer;
 // Do not persist a partially hydrated save while later modules are still loading.
 let saveReady=false;
 let migrateWorldSave=data=>data;
@@ -415,7 +420,7 @@ const EFFECT_NAMES={attack:'攻擊',guard:'減傷',fracture:'破甲',power:'技�
 const TARGET_NAMES={allies:'我方全體',weakest:'生命比例最低的隊友',enemies:'敵方全體',enemy:'目前集火目標'};
 function initHero(h){h.name??='';h.supportLevels??=[1,0,0];h.supportSlots??=[0,null];return h;}
 initial=function(job){return initHero(solo.initial(job));};
-function createParty(hero){return {version:3,members:[initHero(hero)],active:[hero.job],selected:hero.job,map:hero.map,difficulty:hero.difficulty||0,encounterMode:'group',etherBossClaims:[],cleared:hero.won};}
+function createParty(hero){return {version:3,members:[initHero(hero)],active:[hero.job],selected:hero.job,map:hero.map,difficulty:hero.difficulty||0,encounterMode:'group',etherBossClaims:[],cleared:hero.won,playTimeMs:0};}
 function heroes(){return party?party.active.map(job=>party.members.find(h=>h.job===job)):state?[state]:[];}
 function living(){return heroes().filter(h=>h.hp>0);}
 function withHero(hero,fn){const previous=state;state=hero;try{return fn();}finally{state=previous;}}
@@ -445,7 +450,8 @@ save=function(show=false){
 function validateParty(data){
  if(data?.version!==3){const h=initHero(solo.validateSave(data));return createParty(h);}
  if(!Array.isArray(data.members)||data.members.length<1||data.members.length>4||!Array.isArray(data.active)||data.active.length<1||data.active.length>3||new Set(data.active).size!==data.active.length||!['single','group'].includes(data.encounterMode)||!Number.isInteger(data.map)||!MAPS[data.map]||![0,1,2].includes(data.difficulty)||typeof data.cleared!=='boolean')throw Error('隊伍資料無效');
- const result={version:3,members:[],active:[...data.active],selected:data.selected,map:data.map,difficulty:data.difficulty,encounterMode:'group',cleared:data.cleared};
+ const playTimeMs=Number.isSafeInteger(data.playTimeMs)&&data.playTimeMs>=0?data.playTimeMs:0;
+ const result={version:3,members:[],active:[...data.active],selected:data.selected,map:data.map,difficulty:data.difficulty,encounterMode:'group',cleared:data.cleared,playTimeMs};
  for(const raw of data.members){
   // Reserves may be below the expedition level; validate their personal data at home.
   const h=solo.validateSave({...raw,map:0});initHero(h);

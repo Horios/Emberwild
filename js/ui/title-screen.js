@@ -1,17 +1,39 @@
-/* The title is shown only after every save hydration layer has finished. */
+/* Save slots are selected before boot; switching slots reloads the complete hydration chain. */
 (function(){
-  let titleOpen=true,choosingCharacter=false,pendingCreation=null,approvedCreation=null;
-  const gameRender=render,gameStart=start;
+  let titleOpen=true,choosingCharacter=false,pendingCreation=null,approvedCreation=null,pendingDelete=null;
+  let lastPlayTick=Date.now(),wasVisible=document.visibilityState!=='hidden',allowTitleSave=false;
+  const gameRender=render,gameStart=start,gameSave=save,gameAcceptImport=acceptImport;
 
-  function localSaveSnapshot(){
-    try{return {primary:localStorage.getItem(KEY),backup:localStorage.getItem(BACKUP_KEY)};}
+  function slotSnapshot(slot){
+    try{return {primary:localStorage.getItem(saveKeyForSlot(slot)),backup:localStorage.getItem(backupKeyForSlot(slot))};}
     catch(e){console.warn('無法檢查本地存檔',e);return null;}
   }
-  function hasLocalSave(snapshot){return snapshot.primary!==null||snapshot.backup!==null;}
+  function hasSave(snapshot){return snapshot.primary!==null||snapshot.backup!==null;}
+  function slotInfo(snapshot,slot){
+    if(!snapshot||!hasSave(snapshot))return null;
+    if(slot===ACTIVE_SAVE_SLOT&&state&&party)return party;
+    for(const raw of [snapshot.primary,snapshot.backup]){
+      if(raw===null)continue;
+      try{
+        const data=JSON.parse(raw),members=data?.version===3?data.members:[1,2].includes(data?.version)?[data]:null;
+        if(Array.isArray(members)&&members.length>=1&&members.length<=4&&members.every(h=>Number.isInteger(h?.job)&&CLASSES[h.job]&&Number.isInteger(h.lv)&&h.lv>=1))return {members,playTimeMs:data.playTimeMs};
+      }catch{}
+    }
+    return null;
+  }
+  function playTimeText(ms){
+    const minutes=Math.floor((Number.isSafeInteger(ms)&&ms>0?ms:0)/60000);
+    return minutes<1?'未滿 1 分鐘':minutes<60?minutes+' 分鐘':Math.floor(minutes/60)+' 小時 '+minutes%60+' 分鐘';
+  }
+  function slotRow(slot){
+    const snapshot=slotSnapshot(slot),info=slotInfo(snapshot,slot),occupied=snapshot&&hasSave(snapshot);
+    const members=info?.members?.map(h=>esc((typeof h.name==='string'&&h.name.trim()?h.name.trim():CLASSES[h.job].name).slice(0,20))+' LV'+h.lv).join('、');
+    const details=!snapshot?'無法檢查本地存檔':!occupied?'空欄位 · 點選建立角色':info?`隊伍等級：${members}<br>遊玩總時間：${playTimeText(info.playTimeMs)}`:'存檔資料無法判讀 · 點選查看備份方式';
+    return `<div class="save-slot"><button class="save-slot-select" onclick="selectSaveSlot(${slot})" ${snapshot?'':'disabled'}><strong>存檔欄位 ${slot}</strong><span>${details}</span></button><button class="danger save-slot-delete" onclick="requestDeleteSlot(${slot})" ${occupied?'':'disabled'} aria-label="刪除存檔欄位 ${slot}">刪除存檔</button></div>`;
+  }
   function titleView(){
-    const snapshot=localSaveSnapshot(),canContinue=!!(state&&party);
     $('wallet').textContent='';
-    $('app').innerHTML=`<section class="title-screen"><div class="title-screen-card"><span class="eyebrow">${esc(resolveUIText(UI_TEXT.gameSubtitle))}</span><h1>${esc(resolveUIText(UI_TEXT.gameTitle))}</h1><p>${esc(resolveUIText(UI_TEXT.homeTitle))}</p><div class="title-actions"><button class="primary" onclick="${canContinue?'continueFromTitle()':'openCharacterCreation()'}">${canContinue?'繼續遊戲':'創建角色'}</button></div>${!canContinue&&snapshot&&hasLocalSave(snapshot)?'<p class="small">偵測到本地存檔，但目前無法載入。創建角色前會要求確認。</p>':!canContinue&&!snapshot?'<p class="small">無法檢查本地存檔，暫時無法建立角色。</p>':''}</div></section>`;
+    $('app').innerHTML=`<section class="title-screen"><div class="title-screen-card"><span class="eyebrow">${esc(resolveUIText(UI_TEXT.gameSubtitle))}</span><h1>${esc(resolveUIText(UI_TEXT.gameTitle))}</h1><p>${esc(resolveUIText(UI_TEXT.homeTitle))}</p><div class="save-slots">${[1,2,3].map(slotRow).join('')}</div><p class="small">舊存檔保留在欄位 1。遊玩時間從本次更新後開始累計。</p></div></section>`;
     applyUITextDOM();
   }
   render=function(){
@@ -23,70 +45,130 @@
       if(start)start.insertAdjacentHTML('afterbegin','<button class="title-back" onclick="backToTitle()">返回標題</button>');
     }
   };
+  function tallyPlayTime(){
+    const now=Date.now();
+    if(wasVisible&&!titleOpen&&!choosingCharacter&&state&&party){
+      const old=Number.isSafeInteger(party.playTimeMs)&&party.playTimeMs>=0?party.playTimeMs:0;
+      party.playTimeMs=Math.min(Number.MAX_SAFE_INTEGER,old+Math.max(0,now-lastPlayTick));
+    }
+    lastPlayTick=now;
+  }
+  save=function(show=false){
+    if(titleOpen&&!allowTitleSave){if(show)toast('請先選擇存檔欄位');return;}
+    tallyPlayTime();
+    return gameSave(show);
+  };
+  acceptImport=function(){allowTitleSave=true;try{return gameAcceptImport();}finally{allowTitleSave=false;}};
+  document.addEventListener('visibilitychange',()=>{
+    tallyPlayTime();wasVisible=document.visibilityState!=='hidden';
+    if(!wasVisible&&!titleOpen&&state&&party)save();
+  });
   function showCharacterSelection(snapshot){
-    pendingCreation=null;
-    closeModal();
-    titleOpen=false;
-    choosingCharacter=true;
-    approvedCreation=snapshot;
-    render();
+    pendingCreation=null;closeModal();titleOpen=false;choosingCharacter=true;approvedCreation=snapshot;
+    lastPlayTick=Date.now();render();
   }
   start=function(job){
     if(!Number.isInteger(job)||!CLASSES[job])return;
     if(choosingCharacter&&!state){
-      const current=localSaveSnapshot();
+      const current=slotSnapshot(ACTIVE_SAVE_SLOT);
       if(!current){toast('無法確認本地存檔，已取消建立角色');return;}
       if(!approvedCreation||current.primary!==approvedCreation.primary||current.backup!==approvedCreation.backup){
         choosingCharacter=false;approvedCreation=null;titleOpen=true;
-        render();openCharacterCreation();
-        return;
+        render();openCharacterCreation();return;
       }
-      approvedCreation=null;
-      newGame();
+      approvedCreation=null;newGame();lastPlayTick=Date.now();
     }
     return gameStart(job);
   };
   window.continueFromTitle=function(){
-    if(!state||!party)return render();
-    titleOpen=false;
-    render();
+    if(!state||!party)return showLoadFailure(ACTIVE_SAVE_SLOT);
+    lastPlayTick=Date.now();titleOpen=false;render();
+  };
+  window.selectSaveSlot=function(slot){
+    if(![1,2,3].includes(slot))return;
+    const snapshot=slotSnapshot(slot);
+    if(!snapshot)return toast('無法檢查本地存檔');
+    const action=hasSave(snapshot)?'open':'create';
+    if(slot===ACTIVE_SAVE_SLOT){
+      if(action==='open')return state&&party?continueFromTitle():showLoadFailure(slot);
+      return openCharacterCreation();
+    }
+    try{
+      sessionStorage.setItem(SAVE_SLOT_SESSION_KEY,String(slot));
+      sessionStorage.setItem(SAVE_SLOT_INTENT_KEY,action+':'+slot);
+      location.reload();
+    }catch(e){console.warn('無法切換存檔欄位',e);toast('無法切換存檔欄位');}
   };
   window.openCharacterCreation=function(){
-    const snapshot=localSaveSnapshot();
+    const snapshot=slotSnapshot(ACTIVE_SAVE_SLOT);
     if(!snapshot){toast('無法確認本地存檔，請檢查瀏覽器儲存權限');return;}
-    if(!hasLocalSave(snapshot))return showCharacterSelection(snapshot);
+    if(!hasSave(snapshot))return showCharacterSelection(snapshot);
     pendingCreation=snapshot;
-    $('modal').innerHTML=`<h2>發現本地存檔</h2><p>此瀏覽器仍有存檔資料，即使目前無法正確讀取或解析。繼續創建角色會清除並覆寫原有進度；請先備份原始資料。</p><div class="actions">${snapshot.primary!==null?'<button onclick="downloadRawLocalSave(\'primary\')">下載原始主存檔</button>':''}${snapshot.backup!==null?'<button onclick="downloadRawLocalSave(\'backup\')">下載原始備份存檔</button>':''}<button class="danger" onclick="confirmTitleCreation()">仍要創建角色</button><button onclick="closeModal()">取消</button></div>`;
+    $('modal').innerHTML=`<h2>欄位 ${ACTIVE_SAVE_SLOT} 已有本地存檔</h2><p>即使目前無法正確解析，建立新角色仍會覆寫這份進度。建議先下載原始存檔。</p><div class="actions">${rawDownloadButtons(ACTIVE_SAVE_SLOT,snapshot)}<button class="danger" onclick="confirmTitleCreation()">仍要創建角色</button><button onclick="closeModal()">取消</button></div>`;
     $('modal').showModal();
   };
   window.confirmTitleCreation=function(){
     if(!pendingCreation)return;
-    const current=localSaveSnapshot();
+    const current=slotSnapshot(ACTIVE_SAVE_SLOT);
     if(!current){toast('無法確認本地存檔，已取消建立角色');return;}
-    if(current.primary!==pendingCreation.primary||current.backup!==pendingCreation.backup){
-      closeModal();pendingCreation=null;
-      openCharacterCreation();
-      return;
-    }
+    if(current.primary!==pendingCreation.primary||current.backup!==pendingCreation.backup){closeModal();pendingCreation=null;openCharacterCreation();return;}
     showCharacterSelection(current);
   };
-  window.downloadRawLocalSave=function(which){
-    const key=which==='primary'?KEY:which==='backup'?BACKUP_KEY:null;
-    if(!key)return;
-    let raw;
-    try{raw=localStorage.getItem(key);}catch{toast('無法讀取本地存檔');return;}
-    if(raw===null){toast('這份本地存檔已不存在');return;}
+  function rawDownloadButtons(slot,snapshot){
+    return ['primary','backup'].filter(which=>snapshot[which]!==null).map(which=>{
+      let validJSON=false;try{JSON.parse(snapshot[which]);validJSON=true;}catch{}
+      return `<button onclick="downloadRawLocalSave('${which}',${slot})">${validJSON?'匯出':'下載'}${which==='primary'?'主':'備份'}存檔${validJSON?' JSON':'原始文字'}</button>`;
+    }).join('');
+  }
+  window.downloadRawLocalSave=function(which,slot=ACTIVE_SAVE_SLOT){
+    if(![1,2,3].includes(slot)||!['primary','backup'].includes(which))return;
+    const snapshot=slotSnapshot(slot),raw=snapshot?.[which];
+    if(raw===null||raw===undefined){toast('這份本地存檔已不存在');return;}
+    let validJSON=false;try{JSON.parse(raw);validJSON=true;}catch{}
     const link=document.createElement('a');
-    link.href=URL.createObjectURL(new Blob([raw],{type:'text/plain;charset=utf-8'}));
-    link.download=`emberwild-${which}-raw-${new Date().toISOString().slice(0,10)}.txt`;
+    link.href=URL.createObjectURL(new Blob([raw],{type:validJSON?'application/json':'text/plain;charset=utf-8'}));
+    link.download=`emberwild-slot-${slot}-${which}-raw-${new Date().toISOString().slice(0,10)}.${validJSON?'json':'txt'}`;
     link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
   };
+  function showLoadFailure(slot){
+    const snapshot=slotSnapshot(slot);
+    $('modal').innerHTML=`<h2>欄位 ${slot} 存檔讀取失敗</h2><p>原始資料仍保留在瀏覽器。若能匯出 JSON，可以先下載備份，再從 JSON 匯入重試。若資料不是合法 JSON，請下載原始文字留存；它無法直接匯入。</p><div class="actions">${snapshot?rawDownloadButtons(slot,snapshot):''}<button class="primary" onclick="retryImportFromTitle()">匯入 JSON 重試</button>${snapshot&&hasSave(snapshot)?'<button onclick="closeModal();openCharacterCreation()">在此欄新建角色</button>':''}<button onclick="closeModal()">關閉</button></div>`;
+    $('modal').showModal();
+  }
+  window.retryImportFromTitle=function(){closeModal();document.querySelector('header input[type="file"]')?.click();};
   window.backToTitle=function(){
     if(state)return;
-    choosingCharacter=false;
-    approvedCreation=null;
-    titleOpen=true;
-    render();
+    choosingCharacter=false;approvedCreation=null;titleOpen=true;render();
   };
+  window.requestDeleteSlot=function(slot){
+    if(![1,2,3].includes(slot))return;
+    const snapshot=slotSnapshot(slot);
+    if(!snapshot||!hasSave(snapshot))return;
+    pendingDelete={slot,snapshot};
+    $('modal').innerHTML=`<h2>刪除存檔欄位 ${slot}？</h2><p>此操作會刪除該欄位的主存檔、備份存檔及戰鬥統計。建議先匯出備份。</p><div class="actions">${rawDownloadButtons(slot,snapshot)}<button class="danger" onclick="confirmDeleteSlotStep()">繼續刪除</button><button onclick="closeModal()">取消</button></div>`;
+    $('modal').showModal();
+  };
+  window.confirmDeleteSlotStep=function(){
+    if(!pendingDelete)return;
+    const slot=pendingDelete.slot;
+    $('modal').innerHTML=`<h2>再次確認：永久刪除欄位 ${slot}</h2><p>刪除後無法從此瀏覽器復原。確定要刪除嗎？</p><div class="actions"><button class="danger" onclick="deleteSaveSlot()">確認永久刪除</button><button onclick="closeModal()">取消</button></div>`;
+  };
+  window.deleteSaveSlot=function(){
+    if(!pendingDelete)return;
+    const {slot,snapshot}=pendingDelete,current=slotSnapshot(slot);
+    if(!current||current.primary!==snapshot.primary||current.backup!==snapshot.backup){
+      pendingDelete=null;closeModal();toast('存檔已變動，請重新確認刪除');render();return;
+    }
+    try{
+      if(slot===ACTIVE_SAVE_SLOT){newGame();globalThis.__EMBERWILD_BOOT_SAVE_RAW=null;}
+      else{localStorage.removeItem(saveKeyForSlot(slot));localStorage.removeItem(backupKeyForSlot(slot));localStorage.removeItem(battleStatsKeyForSlot(slot));}
+    }catch(e){console.warn('刪除存檔失敗',e);toast('刪除失敗，請檢查瀏覽器儲存權限');return;}
+    pendingDelete=null;closeModal();render();toast('欄位 '+slot+' 已刪除');
+  };
+
+  let intent=null;
+  try{intent=sessionStorage.getItem(SAVE_SLOT_INTENT_KEY);sessionStorage.removeItem(SAVE_SLOT_INTENT_KEY);}catch{}
   render();
+  if(intent==='open:'+ACTIVE_SAVE_SLOT){if(state&&party)continueFromTitle();else showLoadFailure(ACTIVE_SAVE_SLOT);}
+  else if(intent==='create:'+ACTIVE_SAVE_SLOT)openCharacterCreation();
 })();
