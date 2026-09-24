@@ -89,14 +89,18 @@
   }
   globalThis.castEnemySharedSkill=castEnemySharedSkill;
   function procChance(sk){const m=sk.meta||{},base=Number(m.procBaseChance);return Math.max(0,Math.min(1,Number.isFinite(base)?base:Number(GS('skills.proc.baseChance',.22))||.22));}
+  function enemyControlState(e){return globalThis.__EMBERWILD_CONTROL_TEST_API?.states?.[e?.id]||null;}
   globalThis.performSharedEnemyAction=function(e){
+    const control=enemyControlState(e);
+    if(e?.__controlSkip||control?.rage?.turns>0){performEnemyBasic(e);return 'controlled';}
     tickCooldowns(e);const sk=activeReady(e);
-    if(sk&&castEnemySharedSkill(e,sk)){cdBox(e)[sk.id]=sk.cooldown;return 'skill';}
+    if(sk&&castEnemySharedSkill(e,sk)){e.turn=(e.turn||0)+1;cdBox(e)[sk.id]=sk.cooldown;return 'skill';}
     performEnemyBasic(e);
     for(const proc of assignments(e).filter(x=>x.activation==='proc'&&BASIC_EFFECTS.has(x.effect)))if(Math.random()<procChance(proc))castEnemySharedSkill(e,proc);
     return 'attack';
   };
-  globalThis.sharedEnemyActionLabel=function(e){return activeReady(e,true)?'技能':'攻擊';};
+  globalThis.performEnemyActionCore=globalThis.performSharedEnemyAction;
+  globalThis.sharedEnemyActionLabel=function(e){const control=enemyControlState(e);return e?.__controlSkip||control?.rage?.turns>0?'攻擊':activeReady(e,true)?'技能':'攻擊';};
   globalThis.enemySharedSkillStatus=function(e){
     const rows=assignments(e);if(!rows.length||e.hp<=0)return '';
     const box=cdBox(e);return rows.map(sk=>'<span class="tag">'+esc(sk.name)+(sk.activation==='active'?' · '+((box[sk.id]||0)>0?'冷卻 '+box[sk.id]:'就緒'):' · 普攻觸發')+'</span>').join('');
