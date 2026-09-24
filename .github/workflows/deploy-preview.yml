@@ -56,6 +56,9 @@ jobs:
           mkdir -p _site/preview
           cp production/index.html _site/index.html
           cp preview-source/index.html _site/preview/index.html
+          if [ -d preview-source/css ] && [ -d preview-source/js ]; then
+            cp -R preview-source/css preview-source/js _site/preview/
+          fi
           python3 - <<'PY'
           from pathlib import Path
 
