@@ -1,0 +1,13 @@
+
+.inventory-control-fold{margin:7px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#151d20}
+.inventory-control-fold+ .inventory-control-fold{margin-top:-1px}
+.inventory-control-fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px;min-height:30px;padding:4px 8px;color:#d9dfdc;font-size:12px;font-weight:600;user-select:none}
+.inventory-control-fold>summary::-webkit-details-marker{display:none}
+.inventory-control-fold>summary::before{content:"▸";width:12px;color:var(--muted)}
+.inventory-control-fold[open]>summary::before{content:"▾"}
+.inventory-control-fold[open]>summary{border-bottom:1px solid var(--line);background:#182124}
+.inventory-control-fold-body{padding:6px 9px 8px}
+.inventory-control-fold-body>.filters{margin:0}
+.inventory-control-fold-body>.small:first-child{margin-top:0}
+.inventory-control-fold-body>.ui-help:last-child{margin-bottom:0}
+.inventory-control-fold-body>.bulk-sell-actions:last-child{margin-bottom:0}

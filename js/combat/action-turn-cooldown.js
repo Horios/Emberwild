@@ -1,0 +1,83 @@
+
+GAME_BALANCE_DEFAULTS.affixes.extendedValues.allCooldownReduction ??= {normal:0,fine:0,rare:1,legendary:2};
+GAME_BALANCE=normalizeRuntimeBalance(GAME_BALANCE);
+GAMEPLAY_SETTINGS_DEFAULTS.monsters.skillSystem ??= {assignChance:{normal:.30,elite:.65,boss:1,final:1}};
+GAMEPLAY_SETTINGS_DEFAULTS.monsters.skills ??= [
+  {id:'heavy_strike',name:'沉重打擊',enabled:true,weight:1,minLevel:1,kind:'all',race:'all',power:1.35,cooldownMin:2,cooldownMax:4,element:'inherit',target:'random'},
+  {id:'feral_rush',name:'狂野突進',enabled:true,weight:.8,minLevel:8,kind:'elite',race:'all',power:1.55,cooldownMin:3,cooldownMax:5,element:'inherit',target:'weakest'},
+  {id:'boss_crush',name:'首領重壓',enabled:true,weight:1,minLevel:1,kind:'boss',race:'all',power:1.7,cooldownMin:3,cooldownMax:5,element:'inherit',target:'random'}
+];
+mergeGameplayShape=function mergeGameplayShapeActionTurns(def,src,path=''){
+  if(Array.isArray(def)){
+    if(path==='monsters.skills'){
+      if(!Array.isArray(src))return cloneGameplaySettings(def);
+      if(!def.length)return cloneGameplaySettings(src);
+      const template=def[0];
+      return src.map((v,i)=>mergeGameplayShapeActionTurns(def[i]===undefined?template:def[i],v,path+'.'+i));
+    }
+    return def.map((v,i)=>mergeGameplayShapeActionTurns(v,Array.isArray(src)?src[i]:undefined,path?path+'.'+i:String(i)));
+  }
+  if(def&&typeof def==='object'){const out={};for(const k of Object.keys(def)){const next=path?path+'.'+k:k;out[k]=mergeGameplayShapeActionTurns(def[k],src&&typeof src==='object'?src[k]:undefined,next);}return out;}
+  if(typeof def==='number')return typeof src==='number'&&Number.isFinite(src)?src:def;
+  return typeof src===typeof def?src:def;
+};
+const actionTurnValidateGameplayBase=validateGameplaySettings;
+validateGameplaySettings=function(cfg){
+  cfg=actionTurnValidateGameplayBase(cfg);
+  const allowedKind=new Set(['all','normal','elite','boss','final']),allowedRace=new Set(['all',...Object.keys(RACES)]),allowedElement=new Set(['inherit',...Object.keys(ELEMENTS)]),allowedTarget=new Set(['random','weakest']);
+  const chances=cfg.monsters.skillSystem?.assignChance||{};
+  for(const k of ['normal','elite','boss','final'])if(!Number.isFinite(chances[k])||chances[k]<0||chances[k]>1)throw Error('敵人技能配置機率需介於 0~1：'+k);
+  if(!Array.isArray(cfg.monsters.skills))throw Error('敵人技能必須是陣列');
+  const ids=new Set();
+  for(const [i,sk] of cfg.monsters.skills.entries()){
+    if(!sk||typeof sk.id!=='string'||!sk.id.trim()||ids.has(sk.id))throw Error('敵人技能 ID 無效或重複：'+i);ids.add(sk.id);
+    if(typeof sk.name!=='string'||!sk.name.trim()||typeof sk.enabled!=='boolean'||!Number.isFinite(sk.weight)||sk.weight<=0||!Number.isFinite(sk.minLevel)||sk.minLevel<1||!Number.isFinite(sk.power)||sk.power<0||!Number.isFinite(sk.cooldownMin)||!Number.isFinite(sk.cooldownMax)||sk.cooldownMin<0||sk.cooldownMax<sk.cooldownMin||!allowedKind.has(sk.kind)||!allowedRace.has(sk.race)||!allowedElement.has(sk.element)||!allowedTarget.has(sk.target))throw Error('敵人技能資料無效：'+(sk.id||i));
+    sk.minLevel=Math.max(1,Math.floor(sk.minLevel));sk.cooldownMin=Math.max(0,Math.floor(sk.cooldownMin));sk.cooldownMax=Math.max(sk.cooldownMin,Math.floor(sk.cooldownMax));
+  }
+  return cfg;
+};
+normalizeGameplaySettings=function(input){return validateGameplaySettings(mergeGameplayShape(GAMEPLAY_SETTINGS_DEFAULTS,input||{}));};
+GAMEPLAY_SETTINGS=normalizeGameplaySettings(GAMEPLAY_SETTINGS);globalThis.__EMBERWILD_GAMEPLAY_SETTINGS=GAMEPLAY_SETTINGS;applyGameplaySettingsSideEffects();
+const actionTurnBalanceReferenceBase=balanceReference;
+balanceReference=function(){const r=actionTurnBalanceReferenceBase();r.affixTypes['16']='全主動／輔助技能冷卻減少（回合）';r.balancePaths['balance.affixes.extendedValues.allCooldownReduction']='新全技能冷卻詞條；只影響有冷卻的主動與輔助技能，單位為角色回合';r.units.cooldown='回合；只有該角色實際輪到行動時才推進';return r;};
+EXTRA_AFFIX_NAMES[16]='全技能冷卻';
+rollAffixes=function(g){return oldAffixRoll(g).map(a=>{const cfg=GAME_BALANCE.affixes,key=balanceQualityKey(a.rank);if(Math.random()>cfg.extendedPoolChance)return a;const attackPct=Number(cfg.extendedValues.attackPercent[key])||0,allCd=Number(cfg.extendedValues.allCooldownReduction?.[key])||0;const specialTypes=[6,7,8,9,12,13,14,...(a.rank>=2&&attackPct>0?[15]:[]),...(allCd>0?[16]:[])],type=specialTypes[rand(specialTypes.length)];const value=type===16?allCd:type===15?attackPct:type===6?cfg.extendedValues.critDamage[key]:type===7?cfg.extendedValues.pierce[key]:type===8?cfg.extendedValues.lifesteal[key]:type===9?cfg.extendedValues.evasion[key]:type===12?cfg.extendedValues.elementDamage[key]:type===13?cfg.extendedValues.raceDamage[key]:cfg.extendedValues.resist[key];const result={type,rank:a.rank,value};if(type===12||type===14)result.element=['fire','ice','wind','light','shadow'][rand(5)];if(type===13)result.race=Object.keys(RACES)[rand(6)];return result;});};
+const actionTurnAffixLabelBase=affixLabel;
+affixLabel=function(a,g){
+  if(a?.type===16)return `全主動／輔助技能冷卻 −${a.value} 回合`;
+  if(a?.type===5){const sk=CLASSES[g?.job??state.job]?.skills?.[a.skill??0];if(sk?.[1]==='active')return `${sk[0]} 冷卻 −${a.value} 回合`;}
+  return actionTurnAffixLabelBase(a,g);
+};
+/* Keep the unified equipment filter model; affix type 16 needs no separate filter override. */
+filteredGear=function(){return state.bag.filter(g=>(filters.slot==='all'||g.slot===Number(filters.slot))&&(filters.job==='all'||gearWearableJobs(g).includes(Number(filters.job)))&&(filters.boss==='all'||(filters.boss==='boss')===(g.boss!==undefined))&&(filters.effectRank==='all'||gearQualityRank(g)===Number(filters.effectRank))).sort((a,b)=>Number(!!gearWearer(b.id))-Number(!!gearWearer(a.id))||b.tier-a.tier||gearQualityRank(b)-gearQualityRank(a));};
+function allSkillCooldownReduction(h=state){return equipment(h).filter(g=>g.job===h.job||g.slot===1).flatMap(g=>g.affix||[]).filter(a=>a.type===16).reduce((n,a)=>n+(Number(a.value)||0),0);}
+skillCooldown=function(i,h=state){return Math.max(GAME_BALANCE.combat.minimumActiveCooldown,CLASSES[h.job].skills[i][3]-(h.sockets[i]===1?GS('skills.gems.cooldownReduction',1):0)-bonusFor(i,5,h)-allSkillCooldownReduction(h));};
+function supportSkillCooldown(h,index){return Math.max(1,Math.round(SUPPORT[h.job][index].cooldown-allSkillCooldownReduction(h)));}
+function tickHeroCooldowns(h){for(const key of Object.keys(actorCooldowns))if(key.startsWith(h.job+'-'))actorCooldowns[key]=Math.max(0,Math.floor(actorCooldowns[key])-1);for(const key of Object.keys(supportCooldowns))if(key.startsWith(h.job+'-'))supportCooldowns[key]=Math.max(0,Math.floor(supportCooldowns[key])-1);}
+function cooldownLeft(cds,key){return Math.max(0,Math.floor(cds[key]||0));}
+let enemySkillCooldowns={};
+function enemySkillPool(){return Array.isArray(GAMEPLAY_SETTINGS.monsters.skills)?GAMEPLAY_SETTINGS.monsters.skills:[];}
+function enemySkillEligible(e,sk){return sk.enabled!==false&&e.lv>=sk.minLevel&&(sk.kind==='all'||sk.kind===e.kind)&&(sk.race==='all'||sk.race===e.race);}
+function chooseWeightedEnemySkill(list){let total=list.reduce((n,s)=>n+Math.max(0,Number(s.weight)||0),0);if(total<=0)return null;let r=Math.random()*total;for(const s of list){r-=Math.max(0,Number(s.weight)||0);if(r<=0)return s;}return list.at(-1)||null;}
+function rollEnemySkillCooldown(sk){const lo=Math.max(0,Math.floor(sk.cooldownMin||0)),hi=Math.max(lo,Math.floor(sk.cooldownMax||lo));return lo+rand(hi-lo+1);}
+function assignEnemySkill(e){const chance=GAMEPLAY_SETTINGS.monsters.skillSystem?.assignChance?.[e.kind]??0;if(Math.random()>=chance){delete e.enemySkillId;delete enemySkillCooldowns[e.id];return;}const sk=chooseWeightedEnemySkill(enemySkillPool().filter(x=>enemySkillEligible(e,x)));if(!sk){delete e.enemySkillId;delete enemySkillCooldowns[e.id];return;}e.enemySkillId=sk.id;enemySkillCooldowns[e.id]=rollEnemySkillCooldown(sk);}
+function enemySkillFor(e){return enemySkillPool().find(sk=>sk.id===e?.enemySkillId&&enemySkillEligible(e,sk))||null;}
+function enemySkillStatus(e){const sk=enemySkillFor(e);if(!sk||e.hp<=0)return '';const left=cooldownLeft(enemySkillCooldowns,e.id);return `<span class="tag">技能 ${esc(sk.name)} · ${left?`冷卻 ${left} 回合`:'就緒'}</span>`;}
+const actionTurnResetEncounterBase=resetEncounter;
+resetEncounter=function(){enemySkillCooldowns={};return actionTurnResetEncounterBase();};
+const actionTurnSpawnGroupBase=spawnGroup;
+spawnGroup=function(){const r=actionTurnSpawnGroupBase();enemySkillCooldowns={};for(const e of foes)assignEnemySkill(e);return r;};
+function enemySkillTarget(sk){const targets=living();if(!targets.length)return null;if(sk.target==='weakest')return [...targets].sort((a,b)=>a.hp/battleStats(a).hp-b.hp/battleStats(b).hp)[0];return targets[rand(targets.length)];}
+function performEnemySkill(e,sk){e.turn=(e.turn||0)+1;const h=enemySkillTarget(sk);if(!h)return;const beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss;const levelMulti=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;let hit=Math.max(1,Math.round(e.atk*(Number.isFinite(sk.power)?sk.power:1)*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*levelMulti-v.def*c.defenseEffectiveness));hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+combatEnemyName(e)+'的「'+sk.name+'」');return;}const element=sk.element==='inherit'?e.element:sk.element,ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[element]||0)+(ward&&ward.element===element?c.supply.wardResistance:0));hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0)recordCombatContribution(h,'mitigation',absorb);const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);if(absorb>0&&hpDamage===0)note(combatEnemyName(e)+'・'+sk.name+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');else note(combatEnemyName(e)+'・'+sk.name+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?`（護盾吸收 ${absorb}，剩餘 ${Math.round(h.shield)}）`:''));if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);}
+function performEnemyAction(e){const sk=enemySkillFor(e);if(sk){enemySkillCooldowns[e.id]=Math.max(0,cooldownLeft(enemySkillCooldowns,e.id)-1);if(enemySkillCooldowns[e.id]<=0){performEnemySkill(e,sk);enemySkillCooldowns[e.id]=rollEnemySkillCooldown(sk);return 'skill';}}performEnemyBasic(e);return 'basic';}
+pacedRound=function*(){if(!party||!running||$('modal').open)return;currentEvents=[];lastActionOrder=[];actionVisualTime=Date.now();partyClock++;round++;effects=effects.filter(e=>e.until>partyClock);if(!foes.some(e=>e.hp>0)){spawnGroup();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();return;}for(const h of living()){const v=battleStats(h),regen=effectTotal(heroKey(h),'regen'),beforeRegen=h.hp;h.hp=Math.min(v.hp,h.hp+v.hp*regen);const regenHealed=Math.max(0,h.hp-beforeRegen);if(regenHealed>0)recordRegenContribution(h,regenHealed);if(h.autoPotion&&h.hp<v.hp*GS('combat.autoPotionThreshold',.35)&&h.potions>0)withHero(h,()=>potion(true));}const order=initiativeOrder();for(const unit of order){if(!living().length||!foes.some(e=>e.hp>0))break;if(unit.actor.hp<=0)continue;if(unit.side==='hero'){const h=unit.actor;tickHeroCooldowns(h);for(const i of h.supportSlots){if(i===null)continue;const key=h.job+'-'+i;if(cooldownLeft(supportCooldowns,key)<=0&&castSupport(h,i)!==false){recordAction(heroKey(h),characterName(h),'輔助');supportCooldowns[key]=supportSkillCooldown(h,i);yield;if(!living().length||!foes.some(e=>e.hp>0))break;}}for(const i of h.active){if(i===null||!foes.some(e=>e.hp>0))continue;const key=h.job+'-'+i;if(cooldownLeft(actorCooldowns,key)<=0&&castPartySkill(h,i,battleStats(h))!==false){actorCooldowns[key]=Math.max(0,Math.round(skillCooldown(i,h)));recordAction(heroKey(h),characterName(h),'技能');yield;}}if(singleTargetEnemyPool().length){recordAction(unit.id,characterName(h),'普攻');performHeroBasic(h);yield;}}else{const sk=enemySkillFor(unit.actor),willSkill=sk&&Math.max(0,cooldownLeft(enemySkillCooldowns,unit.actor.id)-1)<=0;recordAction(unit.id,unit.actor.name,willSkill?'技能':'攻擊');performEnemyAction(unit.actor);yield;}}for(const e of foes)if(e.hp<=0)rewardGroupKill(e);if(!living().length){running=false;party.members[0].gold-=Math.floor(party.members[0].gold*GS('combat.defeatGoldLoss',.05));for(const h of heroes())h.shield=0;note('全隊戰敗，帳號失去 '+Math.round(GS('combat.defeatGoldLoss',.05)*10000)/100+'% 金幣。生命已全滿。');refillParty();foes=[];enemy=null;}else if(!foes.some(e=>e.hp>0)){refillParty();note('本次遭遇勝利，全隊生命已回滿。');if(foes.some(e=>e.kind==='final')){running=false;note('噬日者已倒下！LV30 成員解鎖 LV60，其他成員達 LV30 時解鎖。');}}save();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();if(activeBattleStat){if(activeBattleStat.pendingOutcome==='wipe')finalizeBattleStatistics('wipe');else if(foes.length&&foes.every(e=>e.hp<=0))finalizeBattleStatistics('victory');}};
+function actionTurnElementLabel(element){return element==='physical'?'無屬性':`${ELEMENTS[element]}屬性`;}
+coreSkillDetail=function(job,i,h=state){const sk=CLASSES[job]?.skills?.[i];if(!sk)return '';const old=state;if(h&&h!==state)state=h;let power=0,cdText='',proc=0;try{power=Math.round(skillPower(i,h)*100);if(sk[1]==='active')cdText=`冷卻 ${skillCooldown(i,h)} 回合`;else{proc=Math.round(procChance(i,h)*100);cdText=`普攻觸發率 ${proc}% · 冷卻 無`;}}finally{state=old;}const effectLabel={damage:'傷害倍率',heal:'治療倍率',shield:'護盾倍率',drain:'傷害／吸血倍率'}[sk[5]]||'效果倍率';return `${actionTurnElementLabel(coreSkillElement(job,i))} · ${effectLabel} ${power}% · 目標 ${coreSkillTargetText(sk)} · ${cdText} · 需求 LV${sk[2]}${skillRequiresAdvanced(sk,i)?'／二轉':''}`;};
+supportSkillDetail=function(job,i,h=state){const sk=SUPPORT[job]?.[i];if(!sk)return '';const level=Math.max(1,h?.supportLevels?.[i]||1),value=+((sk.value+Math.max(0,level-1)*(Number.isFinite(sk.effectPerLevel)?sk.effectPerLevel:GS('skills.support.effectPerExtraLevel',.2)))*100).toFixed(1),cd=supportSkillCooldown(h,i);return `${actionTurnElementLabel(sk.element)} · 目標 ${TARGET_NAMES[sk.target]} · ${EFFECT_NAMES[sk.kind]} ${value}% · 持續 ${sk.duration} 戰鬥回合 · 冷卻 ${cd} 回合 · 需求 LV${sk.level}${i===2?'／二轉':''}`;};
+const actionTurnApplyGameplaySettingsBase=applyGameplaySettingsSideEffects;
+applyGameplaySettingsSideEffects=function(){actionTurnApplyGameplaySettingsBase();GEMS[1].desc='主動技能冷卻 −'+GS('skills.gems.cooldownReduction',1)+' 回合／觸發率 +'+Math.round(GS('skills.gems.cooldownProcBonus',.10)*10000)/100+'%';};
+applyGameplaySettingsSideEffects();
+const actionTurnGuideBase=guideView;
+guideView=function(){return `<section class="panel"><h2>行動回合冷卻</h2><p>主動與輔助技能的冷卻只在該角色自己的行動回合推進；其他隊員與敵人行動不會扣除冷卻，戰鬥倍速也只改變播放速度。敵人若配置技能，同樣只在自己的行動回合推進，施放後會依平衡設定重新隨機冷卻。</p><p>裝備可出現「全主動／輔助技能冷卻」詞條；它與指定主動技能冷卻詞條可同時生效，主動技能仍受最低冷卻限制。</p></section>`+actionTurnGuideBase();};
+try{GAMEPLAY_SETTINGS=normalizeGameplaySettings(GAMEPLAY_SETTINGS);globalThis.__EMBERWILD_GAMEPLAY_SETTINGS=GAMEPLAY_SETTINGS;applyGameplaySettingsSideEffects();}catch(e){console.warn('行動回合／敵人技能設定初始化失敗',e);}
+if(state&&party){resetEncounter();save();render();}

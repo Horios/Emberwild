@@ -1,0 +1,8 @@
+
+.equipment-identity-source{display:grid;gap:5px;margin-top:7px}
+.equipment-identity-line{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(0,1.5fr);gap:9px;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:#171d2d}
+.equipment-identity-line b{color:#dec48c;font-size:11px}.equipment-identity-line span{color:#c8c5d4}
+.forge-power-reroll{margin-top:12px;padding:12px;border:1px solid #514763;background:#1b1e31;border-radius:6px}
+.forge-power-reroll h3{margin:0 0 6px}.forge-power-reroll .actions{margin-top:9px}
+.boss-exclusive-note{border-color:#76543b;background:#261d18}
+@media(max-width:780px){.equipment-identity-line{grid-template-columns:1fr}.forge-power-reroll{padding:10px}}
