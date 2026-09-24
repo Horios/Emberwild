@@ -541,17 +541,23 @@ function validateSave(input) {
   if(!int(s.job,0,3)||!int(s.lv,1,RULES.maxLevel)||!int(s.map,0,MAPS.length-1))fail('角色或地圖無效');
   for(const k of ['gold','ore','dust','sp','ap','totalKills','repeat','potions','xp'])if(!int(s[k]))fail('資源數值無效');
   for(const k of ['hp','shield'])if(!num(s[k]))fail('生命資料無效');
-  const skillCount=CLASSES[s.job].skills.length;
-  // Older saves may lack newly appended skills, but malformed existing entries stay invalid.
+  const skillCount=CLASSES[s.job].skills.length,MAX_SAVE_SKILLS=64;
+  // Boot-time validation runs before some late modules append their built-in skills.
+  // Preserve a bounded trailing skill/socket segment here and validate it again after
+  // those modules are installed; otherwise a save written by the same build cannot reload.
   if(Array.isArray(s.skills)&&s.skills.length<skillCount)while(s.skills.length<skillCount)s.skills.push(0);
   if(Array.isArray(s.sockets)&&s.sockets.length<skillCount)while(s.sockets.length<skillCount)s.sockets.push(null);
-  for(const [k,n,max] of [['stats',3,100000],['skills',skillCount,RULES.skillMax],['gems',3,1e9]])
-    if(!array(s[k],n)||!s[k].every(v=>int(v,0,max)))fail('角色陣列無效');
+  if(!array(s.stats,3)||!s.stats.every(v=>int(v,0,100000)))fail('能力值陣列無效');
+  if(!Array.isArray(s.skills)||s.skills.length<skillCount||s.skills.length>MAX_SAVE_SKILLS||!s.skills.every(v=>int(v,0,RULES.skillMax)))fail('技能陣列無效');
+  if(!array(s.gems,3)||!s.gems.every(v=>int(v,0,1e9)))fail('寶石陣列無效');
   for(const k of ['advanced','won','autoPotion'])if(typeof s[k]!=='boolean')fail('角色狀態無效');
   if(!int(s.tutorial,0,3)||s.advanced&&s.lv<GS('progression.advance.level',15)||s.won&&s.lv<GS('progression.levelCaps.beforeClear',30))fail('角色進度無效');
   for(let i=0;i<skillCount;i++)if(s.skills[i]>0&&(s.lv<CLASSES[s.job].skills[i][2]||skillRequiresAdvanced(CLASSES[s.job].skills[i],i)&&!s.advanced))fail('尚未解鎖的技能');
-  if(!array(s.active,2)||!s.active.every(i=>i===null||int(i,0,skillCount-1)&&CLASSES[s.job].skills[i][1]==='active'&&s.skills[i]>0)||s.active[0]!==null&&s.active[0]===s.active[1])fail('主動槽無效');
-  if(!array(s.sockets,skillCount)||!s.sockets.every((v,i)=>v===null||int(v,0,2)&&s.skills[i]>0))fail('寶石插槽無效');
+  if(!array(s.active,2)||!s.active.every(i=>i===null||int(i,0,s.skills.length-1)&&s.skills[i]>0&&(i>=skillCount||CLASSES[s.job].skills[i][1]==='active'))||s.active[0]!==null&&s.active[0]===s.active[1])fail('主動槽無效');
+  // Unknown trailing active slots belong to late-installed skills. Do not expose them
+  // to early renderers; the original boot bytes are rehydrated after those skills exist.
+  if(s.active.some(i=>i!==null&&i>=skillCount))s.active=s.active.map(i=>i!==null&&i>=skillCount?null:i);
+  if(!Array.isArray(s.sockets)||s.sockets.length!==s.skills.length||s.sockets.length>MAX_SAVE_SKILLS||!s.sockets.every((v,i)=>v===null||int(v,0,2)&&s.skills[i]>0))fail('寶石插槽無效');
   if(!Array.isArray(s.bag)||s.bag.length>RULES.bagCapacity)fail('背包無效');
   const ids=new Set();
   for(const g of s.bag) {
@@ -564,7 +570,7 @@ function validateSave(input) {
     if(g.boss!==undefined&&!int(g.boss,0,5))fail('首領裝備無效');
     if(g.difficulty!==undefined&&!int(g.difficulty,0,2))fail('裝備難度無效');
     if(g.region!==undefined&&(!int(g.region,0,MAPS.length-1)||g.region===6||g.boss===undefined||regionFamily(g.region)!==g.boss||regionTier(g.region)!==g.tier))fail('裝備來源無效');
-    for(const a of g.affix)if(!object(a)||!int(a.type,0,legacy?3:17)||!num(a.value,0,RULES.affixMax)||!legacy&&!int(a.rank,0,3)||[4,5].includes(a.type)&&!int(a.skill,0,CLASSES[g.job??s.job].skills.length-1)||[12,14].includes(a.type)&&!['fire','ice','wind','light','shadow'].includes(a.element)||a.type===13&&!['beast','plant','undead','construct','demon','spirit'].includes(a.race))fail('詞條資料無效');
+    for(const a of g.affix)if(!object(a)||!int(a.type,0,legacy?3:17)||!num(a.value,0,RULES.affixMax)||!legacy&&!int(a.rank,0,3)||[4,5].includes(a.type)&&!int(a.skill,0,MAX_SAVE_SKILLS-1)||[12,14].includes(a.type)&&!['fire','ice','wind','light','shadow'].includes(a.element)||a.type===13&&!['beast','plant','undead','construct','demon','spirit'].includes(a.race))fail('詞條資料無效');
   }
   if(!array(s.equipped,5)||new Set(s.equipped.filter(Boolean)).size!==s.equipped.filter(Boolean).length||!s.equipped.every((id,i)=>id===null||s.bag.some(g=>g.id===id&&gearEquipPositions(g).includes(i)&&(legacy||gearWearableJobs(g).includes(s.job))&&s.lv>=gearRequiredLevelByTier(g.tier))))fail('穿戴資料無效');
   for(const k of ['materials','kills'])if(!object(s[k])||Object.entries(s[k]).some(([key,n])=>key.length>80||/[<>]/.test(key)||['__proto__','constructor','prototype'].includes(key)||!int(n,0,1e9)))fail('素材資料無效');
@@ -7651,6 +7657,23 @@ if(state)render();
     if(typeof syncAllHeroSkillArrays==='function')syncAllHeroSkillArrays();
   }
   ensureControlSkills();
+
+  // Saves written after control skills were appended contain longer skill/socket arrays.
+  // Earlier boot passes intentionally preserve the original bytes; now that the full
+  // control-skill catalog exists, hydrate those bytes once more so learned/slot state is
+  // restored instead of being rejected or truncated by the core six-skill schema.
+  try{
+    const raw=globalThis.__EMBERWILD_BOOT_SAVE_RAW??localStorage.getItem(KEY);
+    if(raw){
+      const parsed=JSON.parse(raw),fallbackStats=party?.battleStatistics;
+      loadParty(migrateWorldSave(parsed));
+      if(!parsed.battleStatistics&&fallbackStats&&typeof normalizeBattleStatistics==='function')party.battleStatistics=normalizeBattleStatistics(fallbackStats);
+      save();
+    }
+  }catch(e){
+    console.warn('控制技能安裝後重新載入存檔失敗',e);
+    if(!state){state=null;party=null;toast('存檔未能載入：'+e.message+'；可匯入備份。');}
+  }
 
   function applyPolymorph(e,shield,meta){
     if(!e||e.hp<=0)return false;
