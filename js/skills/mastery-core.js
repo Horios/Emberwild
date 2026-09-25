@@ -152,9 +152,17 @@ migrateWeaponCatalog();
 
 function ensureGearWeaponType(g){
   if(!g||Number(g.slot)!==0)return g;
-  if(WEAPON_TYPES.has(g.weaponType))return g;
   const form=typeof itemForm==='function'?itemForm(g):null;
-  if(WEAPON_TYPES.has(form?.weaponType))g.weaponType=form.weaponType;
+  // The equipment form is authoritative. Starter gear is created through gear() first
+  // and then its form is replaced, so an already-valid weaponType can otherwise be
+  // left pointing at the randomly-created form (for example 闊刃劍 carrying "axe").
+  if(WEAPON_TYPES.has(form?.weaponType)){
+    g.weaponType=form.weaponType;
+    return g;
+  }
+  if(WEAPON_TYPES.has(g.weaponType))return g;
+  const mapped=LEGACY_WEAPON_BY_NAME[g.name];
+  if(mapped)g.weaponType=mapped;
   else if(Number.isInteger(Number(g.job))&&DEFAULT_WEAPON_BY_JOB[Number(g.job)])g.weaponType=DEFAULT_WEAPON_BY_JOB[Number(g.job)];
   return g;
 }
