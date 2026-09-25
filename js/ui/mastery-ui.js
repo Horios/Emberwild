@@ -60,7 +60,25 @@ supportSkillRows=function(){
 
 
 let skillTurn=1,skillSelection=null,skillSelectionJob=null;
-const SKILL_ICON_GLYPHS={sword:'⚔',axe:'🪓',hammer:'🔨',bow:'🏹',crossbow:'⌖',shield:'🛡',heal:'✚',fire:'🔥',ice:'❄',wind:'≋',light:'☀',shadow:'☾',magic:'✦',buff:'↑',debuff:'↓',drain:'◒',trigger:'ϟ'};
+const SKILL_ICON_PATHS={
+sword:'<path d="M34 6l8 8-21 21-7 2 2-7L37 9zM14 34l-8 8m5-5 5 5"/>',
+axe:'<path d="M27 8c7 0 11 3 14 7-3 6-8 9-15 9l-5-5 6-11zM23 21L9 42"/>',
+hammer:'<path d="M10 8h23l5 6-5 7H10l-4-7 4-6zm14 13v21"/>',
+bow:'<path d="M14 5c16 10 16 28 0 38M14 5l14 19-14 19M27 24h15m-6-5 6 5-6 5"/>',
+crossbow:'<path d="M7 14c10 8 24 8 34 0M24 14v28M12 24h24M24 24l-8 8m8-8 8 8"/>',
+shield:'<path d="M24 5l15 6v11c0 10-6 17-15 21-9-4-15-11-15-21V11l15-6zM24 11v25"/>',
+heal:'<path d="M24 41S8 32 8 19c0-7 8-11 16-4 8-7 16-3 16 4 0 13-16 22-16 22zM24 18v12m-6-6h12"/>',
+fire:'<path d="M28 5c2 9-5 11-2 18 2-4 6-6 9-5 4 10-1 25-12 25S8 34 12 25c2-5 6-8 10-12 0 6 3 7 6 8"/>',
+ice:'<path d="M24 5v38M8 14l32 20M40 14L8 34M19 9l5 5 5-5M19 39l5-5 5 5M10 20l7 1-1-7M38 28l-7-1 1 7M38 20l-7 1 1-7M10 28l7-1-1 7"/>',
+wind:'<path d="M7 17h22c8 0 8-10 1-10-4 0-6 2-7 5M7 24h31M7 31h20c8 0 8 10 1 10-4 0-6-2-7-5"/>',
+light:'<circle cx="24" cy="24" r="8"/><path d="M24 4v7m0 26v7M4 24h7m26 0h7M10 10l5 5m18 18 5 5M38 10l-5 5M15 33l-5 5"/>',
+shadow:'<path d="M35 36A17 17 0 1 1 28 7c-7 5-9 15-4 22 3 5 7 7 11 7z"/>',
+magic:'<path d="M24 5l5 13 14 6-14 6-5 13-5-13L5 24l14-6 5-13z"/>',
+buff:'<path d="M24 42V12m0 0L13 23m11-11 11 11M8 38h32M9 9l3 3m27-3-3 3"/>',
+debuff:'<path d="M24 6v30m0 0L13 25m11 11 11-11M8 10h32M10 40l28-28"/>',
+drain:'<path d="M24 5S11 21 11 31a13 13 0 0 0 26 0C37 21 24 5 24 5zM18 31c1 4 3 6 7 7"/>',
+trigger:'<path d="M28 4L11 27h12l-3 17 17-24H25l3-16z"/>'
+};
 function skillTurnOfCore(sk,i){return skillRequiresAdvanced(sk,i)?2:1;}
 function skillTurnOfSupport(sk,i){return i===2?2:1;}
 function inferredCoreIcon(sk,i){
@@ -84,7 +102,7 @@ function inferredSupportIcon(sk){
   if(['attack','power','critical'].includes(sk?.kind))return 'buff';
   return 'magic';
 }
-function skillIconHTML(type){return `<span class="skill-icon-glyph icon-${esc(type)}" aria-hidden="true">${esc(SKILL_ICON_GLYPHS[type]||SKILL_ICON_GLYPHS.magic)}</span>`;}
+function skillIconHTML(type){const key=SKILL_ICON_PATHS[type]?type:'magic';return `<span class="skill-icon-glyph icon-${esc(key)}" aria-hidden="true"><svg viewBox="0 0 48 48" focusable="false">${SKILL_ICON_PATHS[key]}</svg></span>`;}
 function skillMasteryTooltip(meta){
   if(!meta?.requiredMastery)return '精通要求：無';
   const lv=Math.max(0,Math.floor(Number(meta.requiredMasteryLevel)||0)),current=M.masteryLevelFromXp(state.mastery?.[meta.requiredMastery]||0);
