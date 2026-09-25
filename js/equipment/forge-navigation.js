@@ -14,7 +14,7 @@
     return 0;
   }
   function forgeSortedGear(){
-    const items=state.bag.filter(g=>forgeWearFilter==='equipped'?!!gearWearer(g.id):!gearWearer(g.id));
+    const items=state.bag.filter(g=>!g.starterPack&&(forgeWearFilter==='equipped'?!!gearWearer(g.id):!gearWearer(g.id)));
     items.sort((a,b)=>{
       let diff=0;
       if(forgeSortKey==='name')diff=equipmentDisplayName(a).localeCompare(equipmentDisplayName(b),'zh-Hant');
@@ -70,7 +70,8 @@
     if(!g)return `<div class="inventory-detail-empty"><b>沒有可顯示的裝備</b><p class="small">調整左側篩選條件後選擇裝備。</p></div>`;
     const wearer=gearWearer(g.id),worn=!!wearer,draft=inlineAffixDrafts.has(affixDraftKey(g)),locked=!!g.locked;
     const wearButtons=eligibleWearers(g).map(h=>`<button class="primary" onclick="previewEquip('${g.id}',${h.job})" ${h.equipped.includes(g.id)?'disabled':''}>${h.equipped.includes(g.id)?esc(characterName(h))+'已穿戴':'給 '+esc(characterName(h))+' 穿戴'}</button>`).join('');
-    return `<div class="inventory-detail-pane"><div class="inventory-detail-heading"><div><div class="eyebrow">EQUIPMENT DETAIL / 裝備詳細</div><h2>${equipmentNameHTML(g)}</h2></div><span class="tag">${qualityTag(g)}${locked?' · 已鎖定':''}</span></div><div class="inventory-detail-meta">${gearWearableJobsText(g)} · ${CLASS_GEAR[g.job][g.slot]} · LV ${gearRequiredLevelByTier(g.tier)}${worn?' · 目前由 '+esc(characterName(wearer))+' 穿戴':''}</div><section class="inventory-detail-section"><h3>裝備能力</h3><p class="inventory-detail-stats equipment-total-summary">${globalThis.equipmentTotalSummaryText(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g)}</section><section class="inventory-detail-section"><h3>操作</h3><div class="actions inventory-detail-actions">${wearButtons||'<span class="small">尚無可穿戴角色</span>'}<button onclick="openForge('${g.id}')">強化／洗鍊</button><button onclick="toggleGearLock('${g.id}')">${locked?'解除鎖定':'鎖定'}</button><button class="danger" onclick="salvage('${g.id}')" ${worn||draft||locked?'disabled':''}>分解</button></div>${draft?'<p class="inventory-detail-forge-note">這件裝備有待確認的洗鍊結果，請前往「裝備強化」處理。</p>':''}</section></div>`;
+    const forgeAction=g.starterPack?'<span class="small starter-forge-lock-note">新手裝備無法強化、洗鍊。</span>':`<button onclick="openForge('${g.id}')">強化／洗鍊</button>`;
+    return `<div class="inventory-detail-pane"><div class="inventory-detail-heading"><div><div class="eyebrow">EQUIPMENT DETAIL / 裝備詳細</div><h2>${equipmentNameHTML(g)}</h2></div><span class="tag">${qualityTag(g)}${locked?' · 已鎖定':''}</span></div><div class="inventory-detail-meta">${gearWearableJobsText(g)} · ${CLASS_GEAR[g.job][g.slot]} · LV ${gearRequiredLevelByTier(g.tier)}${worn?' · 目前由 '+esc(characterName(wearer))+' 穿戴':''}</div><section class="inventory-detail-section"><h3>裝備能力</h3><p class="inventory-detail-stats equipment-total-summary">${globalThis.equipmentTotalSummaryText(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g)}</section><section class="inventory-detail-section"><h3>操作</h3><div class="actions inventory-detail-actions">${wearButtons||'<span class="small">尚無可穿戴角色</span>'}${forgeAction}<button onclick="toggleGearLock('${g.id}')">${locked?'解除鎖定':'鎖定'}</button><button class="danger" onclick="salvage('${g.id}')" ${worn||draft||locked?'disabled':''}>分解</button></div>${draft?'<p class="inventory-detail-forge-note">這件裝備有待確認的洗鍊結果，請前往「裝備強化」處理。</p>':''}</section></div>`;
   };
 
   // Forge is now an account-level workbench: no character tabs, a sortable
@@ -81,7 +82,7 @@
     if(items.length&&!items.some(g=>g.id===forgeSelection))forgeSelection=items[0].id;
     if(!items.length)forgeSelection=null;
     const selected=items.find(g=>g.id===forgeSelection)||null;
-    const equippedCount=state.bag.filter(g=>!!gearWearer(g.id)).length,unequippedCount=state.bag.length-equippedCount;
+    const forgeEligible=state.bag.filter(g=>!g.starterPack),equippedCount=forgeEligible.filter(g=>!!gearWearer(g.id)).length,unequippedCount=forgeEligible.length-equippedCount;
     const sortOptions=[['equipped','穿戴狀態'],['tier','裝備階級'],['plus','強化等級'],['quality','詞條品質'],['slot','部位'],['job','職業'],['name','名稱']];
     const wearLabel=forgeWearFilter==='equipped'?'已穿戴':'未穿戴';
     return heading('FORGE / 裝備強化','強化與洗鍊',`<span class="tag">${wearLabel} · ${items.length} 件</span>`)+`<section class="panel forge-account-shell">${resourceLine()}${uiHelp('強化說明','背包與強化資源皆為帳號共用；此頁直接從左側裝備列表選擇目標，不需要先選角色。強化必定成功，最高 +'+RULES.enhanceMax+'。')}<div class="forge-workbench"><section class="forge-gear-pane"><div class="forge-gear-toolbar"><div class="row"><b>選擇裝備</b><span class="small">${items.length} 件</span></div><div class="forge-wear-toggle" role="group" aria-label="裝備穿戴狀態"><button type="button" class="${forgeWearFilter==='equipped'?'primary':''}" onclick="setForgeWearFilter('equipped')">已穿戴 ${equippedCount}</button><button type="button" class="${forgeWearFilter==='unequipped'?'primary':''}" onclick="setForgeWearFilter('unequipped')">未穿戴 ${unequippedCount}</button></div><div class="row"><label>排序 <select onchange="setForgeSort(this.value)">${sortOptions.map(([value,label])=>`<option value="${value}" ${forgeSortKey===value?'selected':''}>${label}</option>`).join('')}</select></label><button class="forge-sort-direction" onclick="toggleForgeSortDirection()">${forgeSortLabel()}</button></div></div><div class="forge-gear-list">${items.map(g=>forgeListItem(g,g===selected)).join('')||`<p class="inventory-list-empty">沒有${wearLabel}裝備。</p>`}</div></section><section class="forge-detail-pane">${forgeDetail(selected)}</section></div></section>`;
