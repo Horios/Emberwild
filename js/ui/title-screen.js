@@ -14,6 +14,22 @@
     try{return {primary:localStorage.getItem(saveKeyForSlot(slot)),backup:localStorage.getItem(backupKeyForSlot(slot))};}
     catch(e){console.warn('無法檢查本地存檔',e);return null;}
   }
+  function tryLateHydrateActiveSave(){
+    if(state&&party)return true;
+    const raw=globalThis.__EMBERWILD_BOOT_SAVE_RAW;
+    if(!raw)return false;
+    try{
+      loadParty(JSON.parse(raw));
+      globalThis.__EMBERWILD_BOOT_SAVE_ERROR=null;
+      if(state&&party)party.playTimeMs=Math.max(party.playTimeMs||0,cachedPlayTime(ACTIVE_SAVE_SLOT));
+      return !!(state&&party);
+    }catch(e){
+      globalThis.__EMBERWILD_BOOT_SAVE_ERROR=String(e?.message||e);
+      console.warn('完整模組載入後仍無法讀取存檔',e);
+      state=null;party=null;
+      return false;
+    }
+  }
   function hasSave(snapshot){return snapshot.primary!==null||snapshot.backup!==null;}
   function slotInfo(snapshot,slot){
     if(!snapshot||!hasSave(snapshot))return null;
@@ -103,7 +119,7 @@
     if(!snapshot)return toast('無法檢查本地存檔');
     const action=hasSave(snapshot)?'open':'create';
     if(slot===ACTIVE_SAVE_SLOT){
-      if(action==='open')return state&&party?continueFromTitle():showLoadFailure(slot);
+      if(action==='open')return (state&&party)||tryLateHydrateActiveSave()?continueFromTitle():showLoadFailure(slot);
       return openCharacterCreation();
     }
     try{
@@ -144,8 +160,8 @@
     link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
   };
   function showLoadFailure(slot){
-    const snapshot=slotSnapshot(slot);
-    $('modal').innerHTML=`<h2>欄位 ${slot} 存檔讀取失敗</h2><p>原始資料仍保留在瀏覽器。若能匯出 JSON，可以先下載備份，再從 JSON 匯入重試。若資料不是合法 JSON，請下載原始文字留存；它無法直接匯入。</p><div class="actions">${snapshot?rawDownloadButtons(slot,snapshot):''}<button class="primary" onclick="retryImportFromTitle()">匯入 JSON 重試</button>${snapshot&&hasSave(snapshot)?'<button onclick="closeModal();openCharacterCreation()">在此欄新建角色</button>':''}<button onclick="closeModal()">關閉</button></div>`;
+    const snapshot=slotSnapshot(slot),reason=globalThis.__EMBERWILD_BOOT_SAVE_ERROR;
+    $('modal').innerHTML=`<h2>欄位 ${slot} 存檔讀取失敗</h2><p>原始資料仍保留在瀏覽器。若能匯出 JSON，可以先下載備份，再從 JSON 匯入重試。若資料不是合法 JSON，請下載原始文字留存；它無法直接匯入。</p>${reason?`<p class="small">讀取錯誤：${esc(reason)}</p>`:''}<div class="actions">${snapshot?rawDownloadButtons(slot,snapshot):''}<button class="primary" onclick="retryImportFromTitle()">匯入 JSON 重試</button>${snapshot&&hasSave(snapshot)?'<button onclick="closeModal();openCharacterCreation()">在此欄新建角色</button>':''}<button onclick="closeModal()">關閉</button></div>`;
     $('modal').showModal();
   }
   window.retryImportFromTitle=function(){closeModal();document.querySelector('header input[type="file"]')?.click();};
@@ -188,7 +204,13 @@
   let intent=null;
   try{intent=sessionStorage.getItem(SAVE_SLOT_INTENT_KEY);sessionStorage.removeItem(SAVE_SLOT_INTENT_KEY);}catch{}
   render();
-  if(intent==='open:'+ACTIVE_SAVE_SLOT){if(state&&party)continueFromTitle();else showLoadFailure(ACTIVE_SAVE_SLOT);}
-  else if(intent==='create:'+ACTIVE_SAVE_SLOT)openCharacterCreation();
-  $('app').style.visibility='';
+  const finishTitleBoot=()=>{
+    if(intent==='open:'+ACTIVE_SAVE_SLOT){
+      if((state&&party)||tryLateHydrateActiveSave())continueFromTitle();
+      else showLoadFailure(ACTIVE_SAVE_SLOT);
+    }else if(intent==='create:'+ACTIVE_SAVE_SLOT)openCharacterCreation();
+    $('app').style.visibility='';
+  };
+  if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',finishTitleBoot,{once:true});
+  else setTimeout(finishTitleBoot,0);
 })();
