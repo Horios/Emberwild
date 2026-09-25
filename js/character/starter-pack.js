@@ -376,6 +376,21 @@
     };
   }
 
+  if(typeof forgeView==='function'){
+    const starterForgeViewBase=forgeView;
+    forgeView=function(){
+      const g=typeof findGear==='function'?(findGear(forgeSelection)||equipment(state)[0]||state.bag[0]):null;
+      let html=starterForgeViewBase();
+      if(!g?.starterPack)return html;
+      const locked='<button disabled>新手裝備固定，無法操作</button>';
+      html=html.replace(/<button[^>]*onclick="enhance\('[^']+'\)"[^>]*>[\s\S]*?<\/button>/g,locked);
+      html=html.replace(/<button[^>]*onclick="reroll\('[^']+'\)"[^>]*>[\s\S]*?<\/button>/g,locked);
+      html=html.replace(/<button[^>]*onclick="autoReroll\('[^']+',\s*[23]\)"[^>]*>[\s\S]*?<\/button>/g,locked);
+      html=html.replace(/<button[^>]*onclick="rerollEquipmentPowerTier\('[^']+'\)"[^>]*>[\s\S]*?<\/button>/g,locked);
+      return html;
+    };
+  }
+
   function createStarterGear(job,position,entry){
     const g=gear(1,entry.slot,0,job);
     g.job=job;
