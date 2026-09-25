@@ -59,15 +59,17 @@
 .mastery-icon-box .skill-icon-glyph{width:100%;height:100%}
 .mastery-icon-box .skill-icon-glyph svg{width:30px;height:30px}
 .mastery-icon-item:hover .mastery-icon-box,.mastery-icon-item:focus-visible .mastery-icon-box{border-color:var(--gold)}
-.mastery-icon-tooltip{position:absolute;left:50%;top:calc(100% + 8px);bottom:auto;transform:translateX(-50%) translateY(-3px);z-index:45;width:max-content;max-width:260px;min-width:190px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#0e1415;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.35);text-align:left;white-space:normal;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .12s ease,transform .12s ease}
+.mastery-icon-tooltip{position:absolute;left:0;top:calc(100% + 8px);bottom:auto;transform:translateY(-3px);z-index:45;width:max-content;max-width:min(260px,calc(100vw - 48px));min-width:190px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#0e1415;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.35);text-align:left;white-space:normal;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .12s ease,transform .12s ease}
 .mastery-icon-tooltip b,.mastery-icon-tooltip span{display:block}
 .mastery-icon-tooltip span{margin-top:3px;font-size:11px;color:var(--muted);line-height:1.35}
-.mastery-icon-item:hover .mastery-icon-tooltip,.mastery-icon-item:focus-visible .mastery-icon-tooltip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.mastery-icon-item:hover .mastery-icon-tooltip,.mastery-icon-item:focus-visible .mastery-icon-tooltip{opacity:1;visibility:visible;transform:translateY(0)}
+.mastery-icon-item:last-child .mastery-icon-tooltip{left:auto;right:0}
 @media(max-width:720px){
   .mastery-icon-summary{gap:8px}
   .mastery-icon-item{min-width:82px}
   .mastery-icon-box{width:48px;height:48px}
-  .mastery-icon-tooltip{left:0;transform:translateY(-3px);max-width:min(250px,72vw)}
+  .mastery-icon-tooltip{left:0;right:auto;transform:translateY(-3px);max-width:min(250px,calc(100vw - 36px));min-width:min(190px,calc(100vw - 36px))}
+  .mastery-icon-item:last-child .mastery-icon-tooltip{left:auto;right:0}
   .mastery-icon-item:hover .mastery-icon-tooltip,.mastery-icon-item:focus-visible .mastery-icon-tooltip{transform:translateY(0)}
 }
 
