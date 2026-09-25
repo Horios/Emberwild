@@ -58,6 +58,79 @@ supportSkillRows=function(){
   }).join('')}</div>`;
 };
 
+
+let skillTurn=1,skillSelection=null,skillSelectionJob=null;
+const SKILL_ICON_GLYPHS={sword:'⚔',axe:'🪓',hammer:'🔨',bow:'🏹',crossbow:'⌖',shield:'🛡',heal:'✚',fire:'🔥',ice:'❄',wind:'≋',light:'☀',shadow:'☾',magic:'✦',buff:'↑',debuff:'↓',drain:'◒',trigger:'ϟ'};
+function skillTurnOfCore(sk,i){return skillRequiresAdvanced(sk,i)?2:1;}
+function skillTurnOfSupport(sk,i){return i===2?2:1;}
+function inferredCoreIcon(sk,i){
+  const meta=M.coreMeta(state.job,i),explicit=meta?.iconType;
+  if(explicit&&explicit!=='auto')return explicit;
+  if(['shield','shieldLowest'].includes(sk[5]))return 'shield';
+  if(sk[5]==='heal')return 'heal';
+  const element=typeof coreSkillElement==='function'?coreSkillElement(state.job,i):(SKILL_ELEMENTS[state.job]?.[i]||'physical');
+  if(['fire','ice','wind','light','shadow'].includes(element))return element;
+  if(['sword','axe','hammer','bow','crossbow'].includes(meta?.mastery))return meta.mastery;
+  if(sk[5]==='drain')return 'drain';
+  if(sk[1]==='proc')return 'trigger';
+  return 'magic';
+}
+function inferredSupportIcon(sk){
+  const explicit=sk?.iconType;if(explicit&&explicit!=='auto')return explicit;
+  if(sk?.kind==='guard')return 'shield';
+  if(sk?.kind==='regen')return 'heal';
+  if(['fire','ice','wind','light','shadow'].includes(sk?.element))return sk.element;
+  if(['fracture','weaken','vulnerable','damageAmp'].includes(sk?.kind))return 'debuff';
+  if(['attack','power','critical'].includes(sk?.kind))return 'buff';
+  return 'magic';
+}
+function skillIconHTML(type){return `<span class="skill-icon-glyph icon-${esc(type)}" aria-hidden="true">${esc(SKILL_ICON_GLYPHS[type]||SKILL_ICON_GLYPHS.magic)}</span>`;}
+function skillMasteryTooltip(meta){
+  if(!meta?.requiredMastery)return '精通要求：無';
+  const lv=Math.max(0,Math.floor(Number(meta.requiredMasteryLevel)||0)),current=M.masteryLevelFromXp(state.mastery?.[meta.requiredMastery]||0);
+  return `精通要求：${masteryLabel(meta.requiredMastery)}精通 Lv${lv}（目前 Lv${current}）`;
+}
+function skillCatalogEntries(){
+  M.ensureHero(state);syncHeroSkillArrays(state);ensureProcSlots(state);
+  const core=CLASSES[state.job].skills.map((sk,i)=>({type:'core',i,sk,name:sk[0],level:Math.max(1,Math.floor(Number(sk[2])||1)),turn:skillTurnOfCore(sk,i),icon:inferredCoreIcon(sk,i),meta:M.coreMeta(state.job,i)})).filter(x=>typeof coreSkillAvailableToHero!=='function'||coreSkillAvailableToHero(state.job,x.i));
+  const support=SUPPORT[state.job].map((sk,i)=>({type:'support',i,sk,name:sk.name,level:Math.max(1,Math.floor(Number(sk.level)||1)),turn:skillTurnOfSupport(sk,i),icon:inferredSupportIcon(sk),meta:sk}));
+  return [...core,...support].sort((a,b)=>a.level-b.level||a.type.localeCompare(b.type)||a.i-b.i);
+}
+function skillTileHTML(entry){
+  const learned=entry.type==='core'?learnedCore(entry.i):learnedSupport(entry.i),selected=skillSelection?.type===entry.type&&skillSelection?.i===entry.i;
+  const missing=entry.type==='core'?M.coreMissingRequirements(state,entry.i,false):M.supportMissingRequirements(state,entry.i,false);
+  const kind=entry.type==='support'?'輔助技能':entry.sk[1]==='proc'?'普攻觸發技能':'主動技能';
+  const requirements=entry.type==='core'?coreRequirementParts(entry.sk,entry.i):supportRequirementParts(entry.sk,entry.i);
+  return `<button type="button" class="skill-icon-tile ${learned?'learned':'locked'} ${selected?'selected':''}" onclick="selectSkillTile('${entry.type}',${entry.i})" aria-label="${esc(entry.name)}">${skillIconHTML(entry.icon)}<span class="skill-icon-status" aria-hidden="true">${learned?'✓':''}</span><span class="skill-icon-tooltip"><b>${esc(entry.name)}</b><span>${esc(kind)} · LV${entry.level}</span><span>${esc(skillMasteryTooltip(entry.meta))}</span><span>學習條件：${esc(requirements.join(' · '))}</span>${missing.length?`<span class="missing">尚缺：${esc(missing.join('、'))}</span>`:''}</span></button>`;
+}
+function skillLevelBoardHTML(entries){
+  if(!entries.length)return '<section class="panel"><p class="empty">此轉職階段目前沒有技能。</p></section>';
+  const groups=new Map();for(const entry of entries){if(!groups.has(entry.level))groups.set(entry.level,[]);groups.get(entry.level).push(entry);}
+  return `<div class="skill-level-board">${[...groups.entries()].map(([level,list])=>`<section class="skill-level-row"><div class="skill-level-label"><span>LV</span><strong>${level}</strong></div><div class="skill-level-icons">${list.map(skillTileHTML).join('')}</div></section>`).join('')}</div>`;
+}
+function coreSelectedDetail(i){
+  const sk=CLASSES[state.job].skills[i];if(!sk)return '';
+  const kind=sk[1],learned=learnedCore(i),missing=learned?M.coreMissingRequirements(state,i,true):M.coreMissingRequirements(state,i,false),usable=learned&&!M.coreMissingRequirements(state,i,true).length,gem=state.sockets[i]??null,parts=coreRequirementParts(sk,i);
+  const slots=kind==='active'?Array.from({length:2},(_,slot)=>state.active?.[slot]??null):state.procSlots,clearFn=kind==='active'?'clearActiveSkill':'clearProcSkill',slotFn=kind==='active'?'equipSkill':'slotProcSkill';
+  return `<section class="panel skill-selected-panel"><div class="skill-selected-heading">${skillIconHTML(inferredCoreIcon(sk,i))}<div><h2>${esc(sk[0])}</h2><div class="skill-list-title"><span class="skill-state ${learned?'learned':'locked'}">${learned?'已學':'未學'}</span><span>${kind==='proc'?'普攻觸發':'主動'}</span></div></div></div>${skillTypeBadges(state.job,i)}${skillMechanicsDetails(state.job,i)}<p class="skill-flavor"><b>說明：</b>${esc(typeof coreSkillFlavor==='function'?coreSkillFlavor(state.job,i):'')}</p><p class="skill-detail"><b>詳細：</b>${esc(coreDetailText(i))}</p>${requirementHTML(parts,missing)}${learned&&!usable?`<p class="small">目前無法使用：${esc(M.coreMissingRequirements(state,i,true).join('、'))}</p>`:''}<div class="actions active-slot-summary">${slots.map((id,slot)=>`<span>槽 ${slot+1}：${id===null?'未配置':esc(CLASSES[state.job].skills[id]?.[0]||'未知技能')} <button onclick="${clearFn}(${slot})">清空</button></span>`).join('')}</div><div class="skill-selected-controls"><button onclick="learn(${i})" ${learned||missing.length?'disabled':''}>${learned?'已學會':missing.length?'尚未達成':'學習'}</button>${[0,1].map(slot=>`<button onclick="${slotFn}(${i},${slot})" ${learned?'':'disabled'}>${slots[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join('')}<label>寶石 <select aria-label="${esc(sk[0])}寶石" onchange="socket(${i},this.value)" ${learned?'':'disabled'}><option value="-1" ${gem===null?'selected':''}>不鑲嵌</option>${GEMS.map((g,j)=>`<option value="${j}" ${gem===j?'selected':''} ${state.gems[j]<1&&gem!==j?'disabled':''}>${esc(g.name)} ×${state.gems[j]} · ${esc(g.desc)}</option>`).join('')}</select></label></div></section>`;
+}
+function supportSelectedDetail(i){
+  const sk=SUPPORT[state.job]?.[i];if(!sk)return '';
+  const learned=learnedSupport(i),missing=learned?M.supportMissingRequirements(state,i,true):M.supportMissingRequirements(state,i,false),usable=learned&&!M.supportMissingRequirements(state,i,true).length,parts=supportRequirementParts(sk,i);
+  let detail='';try{detail=supportSkillDetail(state.job,i,state);}catch{detail=`${TARGET_NAMES[sk.target]||sk.target} · ${EFFECT_NAMES[sk.kind]||sk.kind} ${Number((supportAmount(state.job,i)*100).toFixed(1))}% · 冷卻 ${sk.cooldown} 回合`;}
+  if(sk.mastery)detail+=` · 使用時培養 ${masteryLabel(sk.mastery)}精通`;
+  return `<section class="panel skill-selected-panel"><div class="skill-selected-heading">${skillIconHTML(inferredSupportIcon(sk))}<div><h2>${esc(sk.name)}</h2><div class="skill-list-title"><span class="skill-state ${learned?'learned':'locked'}">${learned?'已學':'未學'}</span><span>輔助</span></div></div></div>${skillTypeBadges(state.job,i,'support')}${skillMechanicsDetails(state.job,i,'support')}<p class="skill-flavor"><b>說明：</b>${esc(sk.description||'')}</p><p class="skill-detail"><b>詳細：</b>${esc(detail)}</p>${requirementHTML(parts,missing)}${learned&&!usable?`<p class="small">目前無法使用：${esc(M.supportMissingRequirements(state,i,true).join('、'))}</p>`:''}<div class="actions active-slot-summary">${state.supportSlots.map((id,slot)=>`<span>槽 ${slot+1}：${id===null?'未配置':esc(SUPPORT[state.job][id]?.name||'未知技能')} <button onclick="slotSupport(null,${slot})">清空</button></span>`).join('')}</div><div class="skill-selected-controls"><button onclick="learnSupport(${i})" ${learned||missing.length?'disabled':''}>${learned?'已學會':missing.length?'尚未達成':'學習'}</button>${[0,1].map(slot=>`<button onclick="slotSupport(${i},${slot})" ${learned?'':'disabled'}>${state.supportSlots[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join('')}</div></section>`;
+}
+function selectedSkillDetailHTML(entries){
+  if(skillSelectionJob!==state.job){skillSelectionJob=state.job;skillSelection=null;skillTurn=1;}
+  const visible=entries.filter(x=>x.turn===skillTurn);
+  if(!visible.length){skillSelection=null;return '';}
+  if(!skillSelection||!visible.some(x=>x.type===skillSelection.type&&x.i===skillSelection.i))skillSelection={type:visible[0].type,i:visible[0].i};
+  return skillSelection.type==='core'?coreSelectedDetail(skillSelection.i):supportSelectedDetail(skillSelection.i);
+}
+globalThis.setSkillTurn=function(turn){turn=Number(turn);if(![1,2].includes(turn)||turn===skillTurn)return;skillTurn=turn;skillSelection=null;render();};
+globalThis.selectSkillTile=function(type,i){i=Number(i);if(!['core','support'].includes(type)||!Number.isInteger(i))return;skillSelection={type,i};skillSelectionJob=state.job;render();};
+
 function masteryGainHTML(source){
   const entries=Object.entries(source||{}).filter(([key])=>key.startsWith(state.job+':'));
   return entries.length?`<div class="mastery-gain-list">${entries.map(([key,xp])=>`<span class="tag">${esc(masteryLabel(key.split(':')[1]))} +${xp} XP</span>`).join('')}</div>`:'<span class="small">尚無紀錄</span>';
@@ -73,7 +146,7 @@ function devToolHTML(){
 }
 skillsView=function(){
   M.ensureHero(state);
-  return singlePagePanel('skills','技能',()=>`${masterySummaryHTML()}<div class="actions skill-subtabs"><button class="${skillPanel==='active'?'primary':''}" onclick="setSkillPanel('active')">主動技能</button><button class="${skillPanel==='proc'?'primary':''}" onclick="setSkillPanel('proc')">普攻觸發技能</button><button class="${skillPanel==='support'?'primary':''}" onclick="setSkillPanel('support')">輔助技能</button></div><p class="small">技能學會後即取得完整效果；角色等級、精通與武器類型決定能否學習／使用。</p>${skillPanel==='active'?coreSkillRows():skillPanel==='proc'?procSkillRows():supportSkillRows()}${devToolHTML()}`);
+  return singlePagePanel('skills','技能',()=>{const entries=skillCatalogEntries();if(skillSelectionJob!==state.job){skillSelectionJob=state.job;skillSelection=null;skillTurn=1;}const visible=entries.filter(x=>x.turn===skillTurn),detail=selectedSkillDetailHTML(entries);return `<div class="actions skill-turn-tabs"><button class="${skillTurn===1?'primary':''}" onclick="setSkillTurn(1)">一轉</button><button class="${skillTurn===2?'primary':''}" onclick="setSkillTurn(2)">二轉</button></div>${masterySummaryHTML()}<p class="small skill-board-help">技能依學習角色等級分列；移到圖示上可查看精通與其他學習條件，點擊圖示可查看詳細資料與配置。</p>${skillLevelBoardHTML(visible)}${detail}${devToolHTML()}`;});
 };
 
 function stopForDev(){running=false;partyBusy=false;}
