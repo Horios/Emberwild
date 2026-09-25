@@ -22,7 +22,7 @@
 .skill-icon-tile:hover,.skill-icon-tile:focus-visible,.skill-icon-tile.selected{border-color:var(--gold);outline:none}
 .skill-icon-tile.locked{opacity:.58}
 .skill-icon-tile.learned{opacity:1}
-.skill-icon-glyph{font-size:27px;line-height:1;font-family:inherit}
+.skill-icon-glyph{font-size:27px;line-height:1;font-family:inherit;display:grid;place-items:center}.skill-icon-glyph svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
 .skill-icon-status{position:absolute;right:3px;bottom:2px;font-size:11px;font-weight:800;line-height:1;color:#9bd3a4}
 .skill-icon-tooltip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(3px);z-index:40;width:max-content;max-width:310px;min-width:190px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#0e1415;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.35);text-align:left;white-space:normal;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .12s ease,transform .12s ease}
 .skill-icon-tooltip b,.skill-icon-tooltip span{display:block}
