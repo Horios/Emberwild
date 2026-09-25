@@ -1561,9 +1561,29 @@ const masteryPreloadApplyBalanceBase=applyBalanceConfig;
 applyBalanceConfig=function(input,options={}){const copy=migrateMasteryRequiredLevelsDocument(JSON.parse(JSON.stringify(input)));return masteryPreloadApplyBalanceBase(copy,options);};
 
 // Load persisted test balance before validating the player save.
-try{const savedBalance=localStorage.getItem(BALANCE_KEY);if(savedBalance)applyBalanceConfig(JSON.parse(savedBalance),{persist:false});}catch(e){console.warn('早期測試設定載入失敗，保留原資料並等待後續模組重試',e);}
+// Late modules add metadata (for example equipment weaponType) that the early core
+// validator does not know yet. Strip only those late metadata fields for the bootstrap
+// pass; the original persisted balance is loaded again by the owning late module.
+function prepareBalanceForBootstrap(input){
+  const copy=JSON.parse(JSON.stringify(input));
+  for(const slots of copy?.equipmentForms||[])for(const form of slots?.[0]||[])delete form.weaponType;
+  return copy;
+}
+try{
+  const savedBalance=localStorage.getItem(BALANCE_KEY);
+  if(savedBalance)applyBalanceConfig(prepareBalanceForBootstrap(JSON.parse(savedBalance)),{persist:false});
+}catch(e){console.warn('早期測試設定載入失敗，保留原資料並等待後續模組重試',e);}
 
-try{const raw=localStorage.getItem(KEY);globalThis.__EMBERWILD_BOOT_SAVE_RAW=raw;if(raw){loadParty(JSON.parse(raw));note('隊伍存檔已載入。');}}catch(e){state=null;party=null;toast('存檔未能載入：'+e.message+'；可匯入備份。');}
+try{
+  const raw=localStorage.getItem(KEY);
+  globalThis.__EMBERWILD_BOOT_SAVE_RAW=raw;
+  globalThis.__EMBERWILD_BOOT_SAVE_ERROR=null;
+  if(raw){loadParty(JSON.parse(raw));note('隊伍存檔已載入。');}
+}catch(e){
+  state=null;party=null;
+  globalThis.__EMBERWILD_BOOT_SAVE_ERROR=String(e?.message||e);
+  toast('存檔未能載入：'+globalThis.__EMBERWILD_BOOT_SAVE_ERROR+'；將在完整模組載入後再重試。');
+}
 render();window.emberwildBootComplete=true;timer=setInterval(tick,50);setInterval(()=>save(),5000);window.addEventListener('beforeunload',()=>save());
 
 /* Unified equipment quality: equipment itself has no rarity; quality comes from highest affix rank. */
