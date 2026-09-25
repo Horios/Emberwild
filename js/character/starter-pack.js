@@ -396,6 +396,8 @@
     g.job=job;
     g.formJob=entry.group;
     g.form=entry.form;
+    const selectedForm=typeof itemForm==='function'?itemForm(g):null;
+    if(selectedForm?.weaponType)g.weaponType=selectedForm.weaponType;
     g.rar=0;
     g.plus=entry.plus;
     g.affix=(entry.affixes||[]).filter(Boolean).map(clone);
