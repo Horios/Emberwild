@@ -164,7 +164,7 @@ function devToolHTML(){
 }
 skillsView=function(){
   M.ensureHero(state);
-  return singlePagePanel('skills','技能',()=>{const entries=skillCatalogEntries();if(skillSelectionJob!==state.job){skillSelectionJob=state.job;skillSelection=null;skillTurn=1;}const visible=entries.filter(x=>x.turn===skillTurn),detail=selectedSkillDetailHTML(entries);return `<div class="actions skill-turn-tabs"><button class="${skillTurn===1?'primary':''}" onclick="setSkillTurn(1)">一轉</button><button class="${skillTurn===2?'primary':''}" onclick="setSkillTurn(2)">二轉</button></div>${masterySummaryHTML()}<p class="small skill-board-help">技能依學習角色等級分列；移到圖示上可查看精通與其他學習條件，點擊圖示可查看詳細資料與配置。</p>${skillLevelBoardHTML(visible)}${detail}${devToolHTML()}`;});
+  return singlePagePanel('skills','技能',()=>{const entries=skillCatalogEntries();if(skillSelectionJob!==state.job){skillSelectionJob=state.job;skillSelection=null;skillTurn=1;}const visible=entries.filter(x=>x.turn===skillTurn),detail=selectedSkillDetailHTML(entries);return `<div class="actions skill-turn-tabs"><button class="${skillTurn===1?'primary':''}" onclick="setSkillTurn(1)">一轉</button><button class="${skillTurn===2?'primary':''}" onclick="setSkillTurn(2)">二轉</button></div>${masterySummaryHTML()}<p class="small skill-board-help">技能依學習角色等級分列；移到圖示上可查看精通與其他學習條件，點擊圖示可查看詳細資料與配置。</p><div class="skill-layout-split"><div class="skill-tree-pane">${skillLevelBoardHTML(visible)}</div><div class="skill-detail-pane">${detail}</div></div>${devToolHTML()}`;});
 };
 
 function stopForDev(){running=false;partyBusy=false;}
