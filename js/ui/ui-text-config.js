@@ -77,8 +77,8 @@ try{
 // equipment actions, but show a dense selectable list at left and one detailed
 // equipment pane at right.
 let inventorySelectedGearId=null;
-let inventorySortKey='quality';
-let inventorySortDirection='desc';
+let inventorySortKey='job';
+let inventorySortDirection='asc';
 const inventoryVisibleSlots=new Set([0,1,2,3]);
 const inventoryVisibleJobs=new Set([0,1,2,3]);
 function selectInventoryGear(id){inventorySelectedGearId=id;render();}
