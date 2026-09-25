@@ -28,7 +28,7 @@ function requirementHTML(parts,missing){
 }
 function masterySummaryHTML(){
   M.ensureHero(state);const currentWeapon=M.currentWeaponType(state);
-  return `<section class="panel"><div class="row"><div><h2>精通</h2><p class="small">精通 XP 由符合體系的實際戰鬥行為取得；等級由共用 XP 曲線即時計算。</p></div><span class="tag">目前武器：${esc(weaponLabel(currentWeapon))}</span></div><div class="mastery-summary">${masteryKeys().map(key=>{const p=M.masteryProgress(state.mastery[key]);return `<div class="mastery-card"><div class="row"><b>${esc(masteryLabel(key))}精通</b><span>Lv${p.level}</span></div>${p.next?meter(p.current,p.next,'gold'):'<div class="bar gold"><i style="width:100%"></i></div>'}<span class="small">${p.next?`${p.current} / ${p.next} XP`:`${p.xp} XP · 已達上限`}</span></div>`;}).join('')}</div></section>`;
+  return `<section class="panel"><div class="row"><div><h2>精通</h2><p class="small">精通 XP 由符合體系的實際戰鬥行為取得；移到圖示上可查看目前進度。</p></div><span class="tag">目前武器：${esc(weaponLabel(currentWeapon))}</span></div><div class="mastery-summary mastery-icon-summary">${masteryKeys().map(key=>{const p=M.masteryProgress(state.mastery[key]),xpText=p.next?`${p.current} / ${p.next} XP`:`${p.xp} XP · 已達上限`;return `<div class="mastery-icon-item" tabindex="0" aria-label="${esc(masteryLabel(key))}精通 Lv${p.level}，${esc(xpText)}"><span class="mastery-icon-level">Lv${p.level}</span><span class="mastery-icon-box">${skillIconHTML(key)}</span><span class="mastery-icon-tooltip"><b>${esc(masteryLabel(key))}精通</b><span>目前／最大經驗：${esc(xpText)}</span></span></div>`;}).join('')}</div></section>`;
 }
 function coreDetailText(i){
   const sk=CLASSES[state.job].skills[i],meta=M.coreMeta(state.job,i),gain=meta.mastery?` · 使用時培養 ${masteryLabel(meta.mastery)}精通`:'';
