@@ -79,6 +79,8 @@ try{
 let inventorySelectedGearId=null;
 let inventorySortKey='quality';
 let inventorySortDirection='desc';
+const inventoryVisibleSlots=new Set([0,1,2,3]);
+const inventoryVisibleJobs=new Set([0,1,2,3]);
 function selectInventoryGear(id){inventorySelectedGearId=id;render();}
 function inventorySortValue(g,key){
   if(key==='quality')return gearQualityRank(g);
@@ -87,7 +89,7 @@ function inventorySortValue(g,key){
   return 0;
 }
 function sortedFilteredGear(){
-  const items=[...filteredGear()];
+  const items=filteredGear().filter(g=>inventoryVisibleSlots.has(Number(g.slot))&&gearWearableJobs(g).some(job=>inventoryVisibleJobs.has(Number(job))));
   items.sort((a,b)=>{
     let diff=0;
     if(inventorySortKey==='job'){
@@ -108,9 +110,13 @@ function sortedFilteredGear(){
 }
 function inventorySortControls(){
   const options=[['quality','稀有度'],['plus','強化度'],['job','職業']];
-  return '<div class="inventory-sortbar"><label>排序 <select onchange="setInventorySort(this.value)">'+
+  const slotOptions=[[0,'武器'],[1,'護甲'],[2,'副手'],[3,'飾品']];
+  const jobOptions=CLASSES.map((c,i)=>[i,c.name]);
+  const checks=(kind,options,selected)=>'<div class="inventory-visibility-group"><span class="small">'+(kind==='slot'?'裝備種類':'職業裝備')+'</span>'+options.map(([value,label])=>'<label><input type="checkbox" '+(selected.has(value)?'checked':'')+' onchange="setInventoryVisibility(\''+kind+'\','+value+',this.checked)"> '+esc(label)+'</label>').join('')+'</div>';
+  return '<div class="inventory-sortbar"><div class="inventory-sort-row"><label>排序 <select onchange="setInventorySort(this.value)">'+
     options.map(([value,label])=>'<option value="'+value+'" '+(inventorySortKey===value?'selected':'')+'>'+label+'</option>').join('')+
-    '</select></label><button type="button" onclick="toggleInventorySortDirection()">'+(inventorySortDirection==='desc'?'高 → 低':'低 → 高')+'</button></div>';
+    '</select></label><button type="button" onclick="toggleInventorySortDirection()">'+(inventorySortDirection==='desc'?'高 → 低':'低 → 高')+'</button></div>'+
+    '<div class="inventory-visibility-filters">'+checks('slot',slotOptions,inventoryVisibleSlots)+checks('job',jobOptions,inventoryVisibleJobs)+'</div></div>';
 }
 globalThis.setInventorySort=function(key){
   if(!['quality','plus','job'].includes(key))return;
@@ -118,6 +124,13 @@ globalThis.setInventorySort=function(key){
 };
 globalThis.toggleInventorySortDirection=function(){
   inventorySortDirection=inventorySortDirection==='desc'?'asc':'desc';render();
+};
+globalThis.setInventoryVisibility=function(kind,value,checked){
+  const target=kind==='slot'?inventoryVisibleSlots:kind==='job'?inventoryVisibleJobs:null;
+  if(!target)return;
+  value=Number(value);
+  if(checked)target.add(value);else target.delete(value);
+  render();
 };
 function inventoryGearListItem(g,selected){
   const wearer=gearWearer(g.id),worn=!!wearer,locked=!!g.locked;
@@ -166,10 +179,16 @@ inlineInventoryView=function(){
   .inventory-master-pane,.inventory-detail-wrap{min-height:0;border:1px solid var(--line);background:#141c1f}
   .inventory-master-pane{display:grid;grid-template-rows:38px minmax(0,1fr);overflow:hidden}
   .inventory-master-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);background:#182124}
-  .inventory-sortbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .inventory-sortbar{display:grid;gap:7px;margin-top:7px}
+  .inventory-sort-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .inventory-sortbar label{display:flex;align-items:center;gap:5px;font-size:12px}
   .inventory-sortbar select{min-width:108px}
   .inventory-sortbar button{padding:4px 8px;font-size:11px}
+  .inventory-visibility-filters{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .inventory-visibility-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .inventory-visibility-group>.small{min-width:max-content}
+  .inventory-visibility-group label{color:#d9dfdc}
+  .inventory-visibility-group input{margin:0}
   .inventory-list-scroll{display:block;margin:0;overflow:auto;min-height:0;scrollbar-gutter:stable}
   .inventory-list-item{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:22px 18px;width:100%;height:48px;padding:4px 8px;text-align:left;border:0;border-bottom:1px solid #2e3b3f;border-radius:0;background:transparent;gap:0 8px;overflow:hidden}
   .inventory-list-item:hover{background:#202c30}.inventory-list-item.selected{background:#2a383c;box-shadow:inset 3px 0 var(--green)}
