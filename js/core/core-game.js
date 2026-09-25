@@ -312,9 +312,42 @@ function gearDesc(g) {
 }
 function migrateLegacyEquipmentSlotsInSave(s){
  if(!s||!Array.isArray(s.bag))return s;
- for(const g of s.bag){if(g?.slot!==2||g.formJob!==undefined)continue;if(g.boss===5){g.slot=3;continue;}if(g.boss===undefined&&Number.isInteger(g.form)&&g.form>0){g.slot=3;g.form=Math.max(0,g.form-1);}}
- if(!Array.isArray(s.equipped)||s.equipped.length!==3)return s;const oldEquipped=[...s.equipped];
- s.equipped=[oldEquipped[0]??null,oldEquipped[1]??null,null,null,null];const oldThird=oldEquipped[2];if(oldThird!==null&&oldThird!==undefined){const gear=s.bag.find(g=>g.id===oldThird),positions=gearEquipPositions(gear);if(positions.length)s.equipped[positions[0]]=oldThird;}return s;
+ const movedToAccessory=new Set();
+ for(const g of s.bag){
+  if(g?.slot!==2)continue;
+  if(g.boss===5&&g.formJob===undefined){g.slot=3;movedToAccessory.add(g.id);continue;}
+  if(g.boss!==undefined||!Number.isInteger(g.form)||g.form<1)continue;
+  // Older saves used one mixed third equipment slot. After it was split into
+  // off-hand + accessories, form 0 stayed in slot 2 and form 1+ moved to slot 3.
+  // Some transitional saves already had formJob, so the old migration's
+  // "formJob is undefined" check missed them.
+  if(itemForm(g))continue;
+  const candidate={...g,slot:3,form:g.form-1};
+  if(itemForm(candidate)){g.slot=3;g.form=candidate.form;movedToAccessory.add(g.id);}
+ }
+ if(!Array.isArray(s.equipped))return s;
+ if(s.equipped.length===3){
+  const oldEquipped=[...s.equipped];
+  s.equipped=[oldEquipped[0]??null,oldEquipped[1]??null,null,null,null];
+  const oldThird=oldEquipped[2];
+  if(oldThird!==null&&oldThird!==undefined){
+   const gear=s.bag.find(g=>g.id===oldThird),positions=gearEquipPositions(gear);
+   if(positions.length)s.equipped[positions[0]]=oldThird;
+  }
+  return s;
+ }
+ if(s.equipped.length===5&&movedToAccessory.size){
+  for(let position=0;position<s.equipped.length;position++){
+   const id=s.equipped[position];
+   if(!movedToAccessory.has(id))continue;
+   const gear=s.bag.find(g=>g.id===id),positions=gearEquipPositions(gear);
+   if(positions.includes(position))continue;
+   s.equipped[position]=null;
+   const target=positions.find(p=>s.equipped[p]===null||s.equipped[p]===undefined);
+   if(target!==undefined)s.equipped[target]=id;
+  }
+ }
+ return s;
 }
 // Validate a private copy; migrations never modify an untrusted caller object.
 function validateSave(input) {
@@ -715,7 +748,7 @@ skillDescription=function(i){return '['+ELEMENTS[SKILL_ELEMENTS[state.job][i]]+'
 gearDesc=function(g){const form=itemForm(g);return expansionGearDesc(g)+(form?' / '+[form.element?ELEMENTS[form.element]+'屬性':'',...['critDamage','pierce','lifesteal','evasion','elementBonus'].filter(k=>form[k]).map(k=>({critDamage:'暴傷',pierce:'穿透',lifesteal:'吸血',evasion:'閃避',elementBonus:'屬傷'}[k])+' +'+form[k]+'%')].filter(Boolean).join('、'):'');};
 guideView=function(){return `<section class="panel"><h2>元素遠征</h2><p>每次遭遇結束（勝利或全隊戰敗）後，全隊含候補回滿生命。暫停、換圖、換人、切換模式不視為戰鬥結束，不會回復。戰敗仍扣 5% 金幣並停止探索，恢復後可重新開始。</p><p>主動技能只受冷卻時間限制；冷卻完成後即可施放。觸發技能依普攻觸發率判定，輔助技能使用各自冷卻。</p><p>火剋風、風剋冰、冰剋火：傷害 ×1.3；逆向 ×0.85；同屬性 ×0.8。光暗互剋 ×1.3；無屬性不參與剋制。附魔只改普攻，技能使用標示屬性。種族增傷與屬性增傷相乘。抗性最高 75%、穿透最高 65%、閃避最高 45%、裝備吸血最高 25%。</p><p>新增 12 個同級區域，各有四種一般怪物及專屬首領；每 5 級有兩個地區可選。怪物有各自素材、種族和屬性。裝備以文字顯示職業、部位與變體。</p></section>`+expansionGuide();};
 const expansionValidateParty=validateParty;
-validateParty=function(data){const p=expansionValidateParty(data);for(const h of p.members){if(!h.consumables||Array.isArray(h.consumables)||typeof h.consumables!=='object'||Object.entries(h.consumables).some(([id,n])=>id!=='mana'&&id!=='power_tier_reroll'&&!SHOP.some(x=>x.id===id)||!Number.isInteger(n)||n<0||n>1e6))throw Error('道具資料無效');delete h.consumables.mana;delete h.mp;for(const key of ['imbue','ward','elementTonic']){const b=h[key];if(b!==null&&(!b||!Object.keys(ELEMENTS).includes(b.element)||b.element==='physical'||!Number.isFinite(b.until)||b.until<0||b.until>8.64e15))throw Error('附魔資料無效');}for(const g of h.bag){if(g.formJob!==undefined&&(!Number.isInteger(g.formJob)||g.formJob<0||g.formJob>=ITEM_FORMS.length))throw Error('裝備來源類別無效');if(g.form!==undefined&&(!Number.isInteger(g.form)||!itemForm(g)))throw Error('裝備類型無效');}}return p;};
+validateParty=function(data){const p=expansionValidateParty(data);for(const h of p.members){if(!h.consumables||Array.isArray(h.consumables)||typeof h.consumables!=='object'||Object.entries(h.consumables).some(([id,n])=>id!=='mana'&&id!=='power_tier_reroll'&&!SHOP.some(x=>x.id===id)||!Number.isInteger(n)||n<0||n>1e6))throw Error('道具資料無效');delete h.consumables.mana;delete h.mp;for(const key of ['imbue','ward','elementTonic']){const b=h[key];if(b!==null&&(!b||!Object.keys(ELEMENTS).includes(b.element)||b.element==='physical'||!Number.isFinite(b.until)||b.until<0||b.until>8.64e15))throw Error('附魔資料無效');}for(const g of h.bag){if(g.formJob!==undefined&&(!Number.isInteger(g.formJob)||g.formJob<0||g.formJob>=ITEM_FORMS.length))throw Error('裝備來源類別無效');if(g.form!==undefined&&(!Number.isInteger(g.form)||!itemForm(g)))throw Error(`裝備類型無效：${g.name||g.id||'未知裝備'}（來源 ${g.formJob??g.job}／部位 ${g.slot}／類型 ${g.form}）`);}}return p;};
 
 
 const expansionClampVitals=clampVitals;
