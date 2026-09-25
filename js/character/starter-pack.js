@@ -379,8 +379,8 @@
   if(typeof forgeView==='function'){
     const starterForgeViewBase=forgeView;
     forgeView=function(){
-      const g=typeof findGear==='function'?(findGear(forgeSelection)||equipment(state)[0]||state.bag[0]):null;
       let html=starterForgeViewBase();
+      const g=typeof findGear==='function'?findGear(forgeSelection):null;
       if(!g?.starterPack)return html;
       const locked='<button disabled>新手裝備固定，無法操作</button>';
       html=html.replace(/<button[^>]*onclick="enhance\('[^']+'\)"[^>]*>[\s\S]*?<\/button>/g,locked);

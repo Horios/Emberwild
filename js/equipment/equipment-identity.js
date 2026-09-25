@@ -554,7 +554,7 @@
   const identityForgeViewBase=forgeView;
   forgeView=function(){
     let html=identityForgeViewBase();
-    const items=typeof forgeSortedGear==='function'?forgeSortedGear():allKnownGear(),g=items.find(x=>x.id===forgeSelection)||items[0];
+    const g=typeof findGear==='function'?findGear(forgeSelection):null;
     if(!g)return html;
     ensureGearIdentityMeta(g);
     if(g.boss!==undefined){
