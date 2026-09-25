@@ -2,6 +2,7 @@
 (()=>{
   let forgeSortKey='equipped';
   let forgeSortDirection='desc';
+  let forgeWearFilter='equipped';
 
   function forgeSortValue(g,key){
     if(key==='equipped')return gearWearer(g.id)?1:0;
@@ -13,7 +14,7 @@
     return 0;
   }
   function forgeSortedGear(){
-    const items=[...state.bag];
+    const items=state.bag.filter(g=>forgeWearFilter==='equipped'?!!gearWearer(g.id):!gearWearer(g.id));
     items.sort((a,b)=>{
       let diff=0;
       if(forgeSortKey==='name')diff=equipmentDisplayName(a).localeCompare(equipmentDisplayName(b),'zh-Hant');
@@ -36,6 +37,18 @@
     forgeSortKey=key;render();
   };
   globalThis.toggleForgeSortDirection=function(){forgeSortDirection=forgeSortDirection==='desc'?'asc':'desc';render();};
+  globalThis.setForgeWearFilter=function(mode){
+    if(!['equipped','unequipped'].includes(mode)||forgeWearFilter===mode)return;
+    forgeWearFilter=mode;
+    render();
+  };
+
+  const forgeNavigationOpenForgeBase=openForge;
+  openForge=function(id){
+    const g=findGear(id);
+    if(g)forgeWearFilter=gearWearer(g.id)?'equipped':'unequipped';
+    return forgeNavigationOpenForgeBase(id);
+  };
 
   function forgeListItem(g,selected){
     const wearer=gearWearer(g.id),quality=gearQualityRank(g);
@@ -68,8 +81,10 @@
     if(items.length&&!items.some(g=>g.id===forgeSelection))forgeSelection=items[0].id;
     if(!items.length)forgeSelection=null;
     const selected=items.find(g=>g.id===forgeSelection)||null;
+    const equippedCount=state.bag.filter(g=>!!gearWearer(g.id)).length,unequippedCount=state.bag.length-equippedCount;
     const sortOptions=[['equipped','穿戴狀態'],['tier','裝備階級'],['plus','強化等級'],['quality','詞條品質'],['slot','部位'],['job','職業'],['name','名稱']];
-    return heading('FORGE / 裝備強化','強化與洗鍊',`<span class="tag">${items.length} 件裝備</span>`)+`<section class="panel forge-account-shell">${resourceLine()}${uiHelp('強化說明','背包與強化資源皆為帳號共用；此頁直接從左側裝備列表選擇目標，不需要先選角色。強化必定成功，最高 +'+RULES.enhanceMax+'。')}<div class="forge-workbench"><section class="forge-gear-pane"><div class="forge-gear-toolbar"><div class="row"><b>選擇裝備</b><span class="small">${items.length} 件</span></div><div class="row"><label>排序 <select onchange="setForgeSort(this.value)">${sortOptions.map(([value,label])=>`<option value="${value}" ${forgeSortKey===value?'selected':''}>${label}</option>`).join('')}</select></label><button class="forge-sort-direction" onclick="toggleForgeSortDirection()">${forgeSortLabel()}</button></div></div><div class="forge-gear-list">${items.map(g=>forgeListItem(g,g===selected)).join('')||'<p class="inventory-list-empty">背包沒有裝備。</p>'}</div></section><section class="forge-detail-pane">${forgeDetail(selected)}</section></div></section>`;
+    const wearLabel=forgeWearFilter==='equipped'?'已穿戴':'未穿戴';
+    return heading('FORGE / 裝備強化','強化與洗鍊',`<span class="tag">${wearLabel} · ${items.length} 件</span>`)+`<section class="panel forge-account-shell">${resourceLine()}${uiHelp('強化說明','背包與強化資源皆為帳號共用；此頁直接從左側裝備列表選擇目標，不需要先選角色。強化必定成功，最高 +'+RULES.enhanceMax+'。')}<div class="forge-workbench"><section class="forge-gear-pane"><div class="forge-gear-toolbar"><div class="row"><b>選擇裝備</b><span class="small">${items.length} 件</span></div><div class="forge-wear-toggle" role="group" aria-label="裝備穿戴狀態"><button type="button" class="${forgeWearFilter==='equipped'?'primary':''}" onclick="setForgeWearFilter('equipped')">已穿戴 ${equippedCount}</button><button type="button" class="${forgeWearFilter==='unequipped'?'primary':''}" onclick="setForgeWearFilter('unequipped')">未穿戴 ${unequippedCount}</button></div><div class="row"><label>排序 <select onchange="setForgeSort(this.value)">${sortOptions.map(([value,label])=>`<option value="${value}" ${forgeSortKey===value?'selected':''}>${label}</option>`).join('')}</select></label><button class="forge-sort-direction" onclick="toggleForgeSortDirection()">${forgeSortLabel()}</button></div></div><div class="forge-gear-list">${items.map(g=>forgeListItem(g,g===selected)).join('')||`<p class="inventory-list-empty">沒有${wearLabel}裝備。</p>`}</div></section><section class="forge-detail-pane">${forgeDetail(selected)}</section></div></section>`;
   };
 
   if(state)render();
