@@ -490,40 +490,51 @@
   globalThis.equipmentAttributeDetailsHTML=function(g,options={}){
     if(!g)return '';
     ensureGearIdentityMeta(g);
-    const b=gearStatBreakdown(g),lines=[],effects=[],form=baseFormForGear(g),
+    const b=gearStatBreakdown(g),lines=[],form=baseFormForGear(g),
       push=(label,text,cls='')=>lines.push('<div class="equipment-attribute-line '+cls+'"><b>'+esc(label)+'</b><span>'+esc(text)+'</span></div>'),
-      pushEffect=(label,html,raw=false)=>effects.push('<div class="equipment-attribute-line equipment-effect-line"><b>'+esc(label)+'</b><span>'+(raw?html:esc(html))+'</span></div>');
-    // The expandable detail is only the numeric breakdown behind the summed stats.
-    push((g.boss!==undefined?(b.bossProfile?.name||'BOSS 專屬'):(form?.name||CLASS_GEAR[g.job??0]?.[g.slot]||'基底'))+'基礎',statText(b.body));
-    push('強度 T'+b.powerTier+'（'+sourceDifficulty(g)+'來源 · ×'+Number(b.mult.toFixed(3))+'）',statText(b.grade));
-    push('+'+(g.plus||0)+' 強化',statText(b.enhance));
-    // Total-attack modifiers affect the final summed attack, so keep one compact source line here too.
-    const totalAttackPct=identityEffectEntriesForGear(g).filter(e=>e.key==='attackPct').reduce((n,e)=>n+(Number(e.value)||0),0)+(Array.isArray(g.affix)?g.affix:[]).map(a=>convertLegacyManaAffix(a,g)).filter(a=>a.type===15).reduce((n,a)=>n+(Number(a.value)||0),0);
-    if(Math.abs(totalAttackPct)>.00001)push('詞綴',(totalAttackPct>=0?'+':'')+Number(totalAttackPct.toFixed(2))+'%');
+      pushRaw=(label,html,cls='')=>lines.push('<div class="equipment-attribute-line '+cls+'"><b>'+esc(label)+'</b><span>'+html+'</span></div>');
 
-    // Equipment effects / affixes belong one level above the summed-stat detail.
+    push('基底數值',statText(b.body));
+    const baseEffects=baseEffectEntries(g);
+    if(baseEffects.length)baseEffects.forEach((effect,i)=>push('基底效果'+(baseEffects.length>1?' '+(i+1):''),effectText(effect)));
+
     if(g.boss===undefined){
-      for(const e of baseEffectEntries(g))pushEffect('基底效果',effectText(e));
       const p=prefixById(g.prefixId),s=suffixById(g.suffixId);
-      pushEffect('前綴－'+(p?.name||'無'),p?effectText(p.effect):'無效果');
-      pushEffect('後綴－'+(s?.name||'無'),s?effectText(s.effect):'無效果');
-      if(options.includeAffixes!==false){
-        const affixes=Array.isArray(g.affix)?g.affix:[];
-        if(affixes.length)for(const a of affixes)pushEffect('隨機詞條',affixHTML(a,g),true);
-        else pushEffect('隨機詞條','無詞條');
+      push('前綴加成',p?(p.name+' · '+effectText(p.effect)):'無');
+      push('後綴加成',s?(s.name+' · '+effectText(s.effect)):'無');
+      const affixes=Array.isArray(g.affix)?g.affix:[];
+      for(let i=0;i<2;i++){
+        const a=affixes[i];
+        if(a)pushRaw('詞綴加成 '+(i+1),affixHTML(a,g));
+        else push('詞綴加成 '+(i+1),'無');
       }
     }else{
       const profile=b.bossProfile;
-      (profile?.effects||[]).forEach((e,i)=>pushEffect('BOSS 專屬 '+(i+1),effectText(e)));
+      (profile?.effects||[]).forEach((effect,i)=>push('BOSS 專屬 '+(i+1),effectText(effect)));
     }
 
-    const effectBlock=effects.length?'<div class="equipment-effect-summary"><div class="equipment-effect-heading">裝備效果／詞綴</div>'+effects.join('')+'</div>':'';
-    const wearabilityBlock=globalThis.equipmentWearableJobsDetailsHTML?globalThis.equipmentWearableJobsDetailsHTML(g):'';return effectBlock+wearabilityBlock+'<details class="equipment-attribute-details"><summary>'+esc(options.summary||'加總數據詳細')+'</summary><div class="equipment-attribute-list">'+lines.join('')+'</div></details>';
+    push('強度 T'+b.powerTier+'（'+sourceDifficulty(g)+'來源 · ×'+Number(b.mult.toFixed(3))+'）',statText(b.grade));
+    push('強化 +'+(g.plus||0),statText(b.enhance));
+
+    let summaryRows='';
+    if(g.boss===undefined){
+      const affixes=Array.isArray(g.affix)?g.affix:[];
+      summaryRows=[0,1].map(i=>'<div class="equipment-affix-summary-line">'+(affixes[i]?affixHTML(affixes[i],g):'<span class="affix effect-quality-0">[無] 無詞綴</span>')+'</div>').join('');
+    }else{
+      const profile=b.bossProfile;
+      summaryRows=(profile?.effects||[]).map(effect=>'<div class="equipment-affix-summary-line"><span class="affix">[專屬] '+esc(effectText(effect))+'</span></div>').join('');
+    }
+
+    const summaryBlock='<div class="equipment-affix-summary">'+summaryRows+'</div>';
+    const detailBlock='<details class="equipment-attribute-details"><summary>'+esc(options.summary||'裝備數值詳細')+'</summary><div class="equipment-attribute-list">'+lines.join('')+'</div></details>';
+    const wearable=typeof gearWearableJobsText==='function'?gearWearableJobsText(g):'無';
+    const wearabilityBlock='<div class="equipment-wearable-inline"><b>可穿戴職業：</b><span>'+esc(wearable)+'</span></div>';
+    return summaryBlock+detailBlock+wearabilityBlock;
   };
   if(!document.getElementById('equipment-effect-summary-style')){
     const style=document.createElement('style');
     style.id='equipment-effect-summary-style';
-    style.textContent='.equipment-effect-summary{margin:7px 0 8px;padding:7px 9px;border:1px solid var(--line);background:#1c2921}.equipment-effect-heading{margin-bottom:3px;font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}.equipment-effect-summary .equipment-attribute-line:last-child{border-bottom:0}.equipment-effect-line .affix{display:inline;font-size:12px;line-height:1.55}';
+    style.textContent='.equipment-affix-summary{display:grid;gap:3px;margin:5px 0 7px}.equipment-affix-summary-line{min-height:20px}.equipment-affix-summary-line .affix{display:inline;font-size:12px;line-height:1.55}.equipment-wearable-inline{display:flex;gap:6px;align-items:baseline;margin-top:6px;font-size:12px}.equipment-wearable-inline b{color:var(--muted);font-weight:700}.equipment-wearable-inline span{color:var(--text)}';
     document.head.appendChild(style);
   }
   exclusiveEquipmentText=function(g){
