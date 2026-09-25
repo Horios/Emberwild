@@ -66,7 +66,7 @@
   }
 
   function normalizeGrowth(raw,job,basePowerTier){
-    const maxLevel=Math.max(1,Math.floor(Number(globalThis.RULES?.maxLevel||60)));
+    const maxLevel=Math.max(1,Math.floor(Number(typeof RULES!=='undefined'?RULES.maxLevel:60)));
     const src=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
     const enabled=!!src.enabled;
     const startLevel=Number.isInteger(Number(src.startLevel))?Number(src.startLevel):1;
@@ -85,7 +85,7 @@
     if(!Number.isInteger(ref.group)||!Number.isInteger(ref.slot)||!Number.isInteger(ref.form)||ref.slot!==slot||!formWearableByJob(forms,ref.group,ref.slot,ref.form,job)){
       throw Error(`starterPacks[${job}][${position}] 的${POSITION_NAMES[position]}設定無效`);
     }
-    const enhanceMax=Math.max(0,Math.floor(Number(globalThis.RULES?.enhanceMax||10)));
+    const enhanceMax=Math.max(0,Math.floor(Number(typeof RULES!=='undefined'?RULES.enhanceMax:10)));
     const powerTier=raw?.powerTier===undefined?1:Number(raw.powerTier);
     const plus=raw?.plus===undefined?0:Number(raw.plus);
     if(!Number.isInteger(powerTier)||powerTier<1||powerTier>10)throw Error(`starterPacks[${job}][${position}] 的初始 T 階無效`);
