@@ -10,11 +10,11 @@
   const POWER_ITEM_TYPE='gearTierReroll';
   const POWER_ITEM_ID='power_tier_reroll';
   const VALID_ELEMENTS=new Set(['physical','fire','ice','wind','light','shadow']);
-  const REGULAR_EFFECT_KEYS=new Set(['basicElement','basicAdvanceNextRound','attackPct','crit','critDamage','pierce','defenseIgnore','lifesteal','evasion','elementBonus','allCooldownReduction','dropRateBonus']);
+  const REGULAR_EFFECT_KEYS=new Set(['basicElement','basicAdvanceNextRound','flatHp','gearHpPct','hpPct','flatDefense','gearDefPct','defensePct','attackPct','crit','critDamage','pierce','defenseIgnore','lifesteal','evasion','elementBonus','allCooldownReduction','dropRateBonus']);
   const BASE_EFFECT_KEYS=new Set([...EQUIPMENT_FIXED_EFFECT_KEYS]);
   const BOSS_EFFECT_KEYS=new Set([...REGULAR_EFFECT_KEYS,'gearAtkPct','gearHpPct','gearDefPct','bossDamagePct']);
   const EFFECT_LABELS={
-    flatAttack:'固定攻擊',flatHp:'固定生命',flatDefense:'固定防禦',basicElement:'普通攻擊屬性',basicAdvanceNextRound:'普攻後下回合前移',gearAtkPct:'此裝備基礎攻擊',gearHpPct:'此裝備基礎生命',gearDefPct:'此裝備基礎防禦',
+    flatAttack:'固定攻擊',flatHp:'固定最大生命',flatDefense:'固定防禦',basicElement:'普通攻擊屬性',basicAdvanceNextRound:'普攻後下回合前移',gearAtkPct:'此裝備基礎攻擊',gearHpPct:'此裝備生命',gearDefPct:'此裝備防禦',hpPct:'角色最大生命',defensePct:'角色防禦',
     attackPct:'攻擊力',crit:'暴擊率',critDamage:'暴擊傷害',pierce:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避率',elementBonus:'全屬性增傷',bossDamagePct:'對 BOSS 傷害',speed:'速度',
     allCooldownReduction:'全主動／輔助技能冷卻',dropRateBonus:'掉寶率',elementDamagePct:'屬性傷害',elementResistPct:'屬性抗性',raceDamagePct:'種族增傷',skillEffectPct:'核心技能效果',skillCooldownReduction:'核心技能冷卻／觸發'
   };
@@ -394,6 +394,8 @@
   function applyIdentityStatEffect(v,e,attackBox){
     const n=Number(e.value)||0;
     if(e.key==='attackPct')attackBox.value+=n;
+    else if(e.key==='hpPct')attackBox.hp+=n;
+    else if(e.key==='defensePct')attackBox.defense+=n;
     else if(e.key==='crit')v.crit+=n/100;
     else if(e.key==='critDamage')v.critDamage+=n/100;
     else if(e.key==='pierce')v.pierce+=n;
@@ -406,7 +408,7 @@
   stats=function(h=state){
     const cls=CLASSES[h.job],initial=typeof globalThis.classInitialStats==='function'?classInitialStats(cls,h.job):{hp:cls.hp,atk:cls.atk,def:cls.def,crit:h.job===2?GS('progression.baseCrit.archer',.17):GS('progression.baseCrit.default',.07),critDamage:GS('combat.baseCritDamage',1.5)},growth=typeof globalThis.classGrowthPerLevel==='function'?classGrowthPerLevel(cls):{hp:GS('progression.statsPerLevel.hp',20),atk:GS('progression.statsPerLevel.attack',4),def:GS('progression.statsPerLevel.defense',2),crit:0,critDamage:0},v={hp:initial.hp+(h.lv-1)*growth.hp+h.stats[1]*GS('progression.statsPerPoint.hp',12),atk:initial.atk+(h.lv-1)*growth.atk+h.stats[0]*GS('progression.statsPerPoint.attack',2),def:initial.def+(h.lv-1)*growth.def+h.stats[2]*GS('progression.statsPerPoint.defense',1.3),crit:initial.crit+(h.lv-1)*growth.crit,critDamage:initial.critDamage+(h.lv-1)*growth.critDamage,pierce:0,defenseIgnore:0,lifesteal:0,evasion:0,elementBonus:0,bossDamage:0,elementDamage:{},raceDamage:{},resist:{}};
     if(h.advanced){v.hp*=GS('progression.advance.hpMultiplier',1.18);v.atk*=GS('progression.advance.attackMultiplier',1.22);v.def*=GS('progression.advance.defenseMultiplier',1.15);}
-    const attackBox={value:0};let fixedSpeed=0;
+    const attackBox={value:0,hp:0,defense:0};let fixedSpeed=0;
     for(const g of equipment(h)){
       const base=gearBaseStats(g);v.atk+=base.atk;v.hp+=base.hp;v.def+=base.def;
       for(const e of identityEffectEntriesForGear(g)){
@@ -435,6 +437,8 @@
       }
     }
     if(attackBox.value)v.atk*=1+attackBox.value/100;
+    if(attackBox.hp)v.hp*=1+attackBox.hp/100;
+    if(attackBox.defense)v.def*=1+attackBox.defense/100;
     v.crit=Math.min(GAME_BALANCE.combat.statCaps.crit,v.crit);v.pierce=Math.min(GAME_BALANCE.combat.statCaps.pierce,v.pierce);v.defenseIgnore=Math.min(GAME_BALANCE.combat.statCaps.defenseIgnore??.75,v.defenseIgnore);v.evasion=Math.min(GAME_BALANCE.combat.statCaps.evasion,v.evasion);v.lifesteal=Math.min(GAME_BALANCE.combat.statCaps.lifesteal,v.lifesteal);
     const heroBase=GS('combat.speed.heroBase',[102,108,116,96]);v.speed=Math.round((heroBase[h.job]??100)+h.lv*GS('combat.speed.heroPerLevel',.5)+Math.min(GS('combat.speed.bonusCap',5),(v.evasion||0)*GS('combat.speed.evasionWeight',10)+(v.crit||0)*GS('combat.speed.critWeight',5))+fixedSpeed);
     for(const k of ['hp','atk','def'])v[k]=Math.round(v[k]);
@@ -576,7 +580,7 @@
   if(typeof update12BossMemberView==='function'){
     update12BossMemberView=function(){
       const mode=state.difficulty||0,b=GAMEPLAY_SETTINGS.equipment.boss,needMat=Math.max(0,Math.round(b.craftMaterialCount));
-      return heading('BOSS WORKSHOP / 首領製作',MODES[mode].name+'模式專屬裝備')+modePicker()+'<section class="panel">'+resourceLine()+uiHelp('製作說明','BOSS 專屬裝備固定三條專屬詞綴，不抽前綴／後綴，也不能洗鍊隨機詞條；T 級仍依難度抽選。')+'</section><div class="cards boss-recipes">'+MAPS.map((m,i)=>{if(i===6)return '';const family=regionFamily(i),tier=regionTier(i),g={job:state.job,slot:bossEquipmentSlot(family),tier,boss:family,region:i,difficulty:mode,rar:0,plus:0,affix:[],powerTier:strengthAnchor(mode)},profile=bossProfileForGear(g),mat=bossMaterial(i,mode),n=state.materials[mat]||0,cost=Math.round(tier*b.craftGoldPerTier*(mode+1)),ready=canVisit(i)&&state.lv>=m.min&&state.gold>=cost&&n>=needMat;return '<article class="card boss-recipe">'+equipmentArt(g)+'<span class="tag">'+esc(m.name)+'</span><h3>'+equipmentNameHTML(g)+'</h3><p class="small">'+esc(characterName(state))+' · LV'+m.min+'</p><p class="small">'+(profile?.effects||[]).map(effectText).map(esc).join('<br>')+'</p><div class="recipe-cost"><span>'+esc(mat)+' '+n+'/'+needMat+'</span><span>◈ '+cost+'</span></div><button class="primary" onclick="craftBoss('+i+')" '+(ready?'':'disabled')+'>'+(!canVisit(i)?'尚未解鎖':ready?'製作裝備':'等級／材料不足')+'</button></article>';}).join('')+'</div>';
+      return heading('BOSS WORKSHOP / 首領製作',MODES[mode].name+'模式專屬裝備')+modePicker()+'<section class="panel">'+resourceLine()+uiHelp('製作說明','BOSS 專屬裝備固定三條專屬詞綴，不抽前綴／後綴，也不能洗鍊隨機詞條；T 級仍依難度抽選。')+'</section><div class="cards boss-recipes">'+MAPS.map((m,i)=>{if(i===6)return '';const family=regionFamily(i),tier=regionTier(i),g={job:state.job,slot:bossEquipmentSlot(family),tier,boss:family,region:i,difficulty:mode,rar:0,plus:0,affix:[],powerTier:strengthAnchor(mode)},mat=bossMaterial(i,mode),n=state.materials[mat]||0,cost=Math.round(tier*b.craftGoldPerTier*(mode+1)),ready=canVisit(i)&&state.lv>=m.min&&state.gold>=cost&&n>=needMat;return '<article class="card boss-recipe">'+equipmentArt(g)+'<span class="tag">'+esc(m.name)+'</span><h3>'+equipmentNameHTML(g)+'</h3><p class="small">'+esc(characterName(state))+' · LV'+m.min+'</p><p class="equipment-total-summary">'+globalThis.equipmentTotalSummaryText(g)+'</p>'+globalThis.equipmentAttributeDetailsHTML(g)+'<div class="recipe-cost"><span>'+esc(mat)+' '+n+'/'+needMat+'</span><span>◈ '+cost+'</span></div><button class="primary" onclick="craftBoss('+i+')" '+(ready?'':'disabled')+'>'+(!canVisit(i)?'尚未解鎖':ready?'製作裝備':'等級／材料不足')+'</button></article>';}).join('')+'</div>';
     };
   }
 
