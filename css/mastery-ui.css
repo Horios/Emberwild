@@ -43,3 +43,10 @@
   .skill-icon-tooltip{left:0;transform:translateY(3px);max-width:min(280px,75vw)}
   .skill-icon-tile:hover .skill-icon-tooltip,.skill-icon-tile:focus-visible .skill-icon-tooltip{transform:translateY(0)}
 }
+
+
+.skill-layout-split{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(380px,1.1fr);gap:14px;align-items:start;margin-top:10px}
+.skill-tree-pane,.skill-detail-pane{min-width:0}
+.skill-tree-pane .skill-level-board{margin-top:0}
+.skill-detail-pane .skill-selected-panel{margin-top:0}
+@media(max-width:980px){.skill-layout-split{grid-template-columns:1fr}.skill-detail-pane .skill-selected-panel{margin-top:0}}
