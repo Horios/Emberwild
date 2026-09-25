@@ -221,9 +221,18 @@
     };
   }
 
+  if(typeof globalThis.equipmentTotalSummaryText==='function'){
+    const starterSummaryBase=globalThis.equipmentTotalSummaryText;
+    globalThis.equipmentTotalSummaryText=function(g){
+      syncStarterGearGrowth(g);
+      return starterSummaryBase(g);
+    };
+  }
+
   if(typeof globalThis.equipmentAttributeDetailsHTML==='function'){
     const starterDetailsBase=globalThis.equipmentAttributeDetailsHTML;
     globalThis.equipmentAttributeDetailsHTML=function(g,options={}){
+      syncStarterGearGrowth(g);
       const html=starterDetailsBase(g,options);
       const meta=g?.starterPack,growth=meta?.growth;
       if(!meta)return html;
