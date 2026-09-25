@@ -348,7 +348,7 @@ function validateSave(input) {
   if(!Array.isArray(s.bag)||s.bag.length>RULES.bagCapacity)fail('背包無效');
   const ids=new Set();
   for(const g of s.bag) {
-    // Types 16/17 are persisted by later gameplay modules, so boot-time validation must accept them before those modules execute.
+    // Types 16/17/18 are persisted by later gameplay modules, so boot-time validation must accept them before those modules execute.
     if(!object(g)||typeof g.id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(g.id)||ids.has(g.id)||typeof g.name!=='string'||g.name.length>80||/[<>]/.test(g.name)||!int(g.tier,1,12)||!int(g.slot,0,3)||!int(g.rar,0,3)||!int(g.plus,0,RULES.enhanceMax)||!Array.isArray(g.affix)||g.affix.length>2)fail('裝備資料無效');
     ids.add(g.id);
     if(g.rerolled!==undefined&&typeof g.rerolled!=='boolean')fail('洗鍊紀錄無效');
