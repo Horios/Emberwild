@@ -226,7 +226,7 @@ function gearName(g){return (g.difficulty?'【'+MODES[g.difficulty].name+'】':'
 function bossPower(g){return g.boss!==undefined?[1,1.25,1.55][g.difficulty||0]:1;}
 
 function modeAffixes(g,mode){if(mode===0)return;g.difficulty=mode;g.name=gearName(g);if(g.affix.length||Math.random()<(mode===1?.65:.9)){g.affix=rollAffixes(g);let a=g.affix[0],r=Math.random();a.rank=mode===1?(r<.7?1:r<.95?2:3):(r<.35?1:r<.85?2:3);if(Math.random()<.4){a.type=4;a.skill=rand(6);a.value=[0,18,30,45][a.rank];}else{a.type=rand(4);a.value=a.type===0?Math.round(g.tier*5*[1,1.4,1.9,2.6][a.rank]):a.type===1?Math.round(g.tier*25*[1,1.4,1.9,2.6][a.rank]):a.type===2?g.tier*(3+a.rank):4+a.rank*3;}}}
-function bossGear(mi,job=state.job,mode=state.difficulty||0){let family=regionFamily(mi),g=gear(regionTier(mi),bossEquipmentSlot(family),mode===2?3:2,job);g.boss=family;g.region=mi;g.difficulty=mode;g.name=gearName(g);g.affix[0]={type:4,rank:mode===2?3:2,skill:family,value:[30,40,55][mode]};return g;};
+function bossGear(mi,job=state.job,mode=state.difficulty||0){let family=regionFamily(mi),g=gear(regionTier(mi),bossEquipmentSlot(family),mode===2?3:2,job);g.boss=family;g.region=mi;g.difficulty=mode;delete g.form;delete g.formJob;delete g.weaponType;g.name=gearName(g);g.affix[0]={type:4,rank:mode===2?3:2,skill:family,value:[30,40,55][mode]};return g;};
 function craftBoss(mi){if(mi===6||!canVisit(mi))return;let mode=state.difficulty||0,mat=bossMaterial(mi,mode),cost=regionTier(mi)*250*(mode+1);if(state.lv<MAPS[mi].min||state.gold<cost||(state.materials[mat]||0)<5)return toast('等級、金幣或對應難度的 BOSS 素材不足');if(state.bag.length>=RULES.bagCapacity)return toast('背包已滿，請先整理再製作');state.gold-=cost;state.materials[mat]-=5;addGear(bossGear(mi));save();render();toast('已製作'+MODES[mode].name+' BOSS 專屬裝備');};
 function makeEnemy(mi=state.map,s=state,rng=Math.random){let e=makeBaseEnemy(mi,s,rng),mode=s.difficulty||0,d=MODES[mode];if(e.lv>30&&e.kind!=='final'){let progress=e.lv-30;e.hp=Math.round(e.hp*(2+progress*.1));e.maxhp=e.hp;e.atk=Math.round(e.atk*(2+progress*.06));e.def=Math.round(e.def*1.6);}e.hp=Math.round(e.hp*d.hp);e.maxhp=e.hp;e.atk=Math.round(e.atk*d.atk);e.def=Math.round(e.def*d.def);e.difficulty=mode;e.region=mi;return e;};
 
@@ -314,9 +314,17 @@ function migrateLegacyEquipmentSlotsInSave(s){
  if(!s||!Array.isArray(s.bag))return s;
  const movedToAccessory=new Set();
  for(const g of s.bag){
-  if(g?.slot!==2)continue;
-  if(g.boss===5&&g.formJob===undefined){g.slot=3;movedToAccessory.add(g.id);continue;}
-  if(g.boss!==undefined||!Number.isInteger(g.form)||g.form<1)continue;
+  if(g?.boss!==undefined){
+    // BOSS equipment has its own fixed identity/profile and must not retain the
+    // random base-form metadata produced by gear() before it becomes boss gear.
+    const expectedSlot=bossEquipmentSlot(g.boss);
+    if(Number.isInteger(expectedSlot)&&g.slot!==expectedSlot){g.slot=expectedSlot;movedToAccessory.add(g.id);}
+    delete g.form;
+    delete g.formJob;
+    delete g.weaponType;
+    continue;
+  }
+  if(g?.slot!==2||!Number.isInteger(g.form)||g.form<1)continue;
   // Older saves used one mixed third equipment slot. After it was split into
   // off-hand + accessories, form 0 stayed in slot 2 and form 1+ moved to slot 3.
   // Some transitional saves already had formJob, so the old migration's
@@ -748,7 +756,7 @@ skillDescription=function(i){return '['+ELEMENTS[SKILL_ELEMENTS[state.job][i]]+'
 gearDesc=function(g){const form=itemForm(g);return expansionGearDesc(g)+(form?' / '+[form.element?ELEMENTS[form.element]+'屬性':'',...['critDamage','pierce','lifesteal','evasion','elementBonus'].filter(k=>form[k]).map(k=>({critDamage:'暴傷',pierce:'穿透',lifesteal:'吸血',evasion:'閃避',elementBonus:'屬傷'}[k])+' +'+form[k]+'%')].filter(Boolean).join('、'):'');};
 guideView=function(){return `<section class="panel"><h2>元素遠征</h2><p>每次遭遇結束（勝利或全隊戰敗）後，全隊含候補回滿生命。暫停、換圖、換人、切換模式不視為戰鬥結束，不會回復。戰敗仍扣 5% 金幣並停止探索，恢復後可重新開始。</p><p>主動技能只受冷卻時間限制；冷卻完成後即可施放。觸發技能依普攻觸發率判定，輔助技能使用各自冷卻。</p><p>火剋風、風剋冰、冰剋火：傷害 ×1.3；逆向 ×0.85；同屬性 ×0.8。光暗互剋 ×1.3；無屬性不參與剋制。附魔只改普攻，技能使用標示屬性。種族增傷與屬性增傷相乘。抗性最高 75%、穿透最高 65%、閃避最高 45%、裝備吸血最高 25%。</p><p>新增 12 個同級區域，各有四種一般怪物及專屬首領；每 5 級有兩個地區可選。怪物有各自素材、種族和屬性。裝備以文字顯示職業、部位與變體。</p></section>`+expansionGuide();};
 const expansionValidateParty=validateParty;
-validateParty=function(data){const p=expansionValidateParty(data);for(const h of p.members){if(!h.consumables||Array.isArray(h.consumables)||typeof h.consumables!=='object'||Object.entries(h.consumables).some(([id,n])=>id!=='mana'&&id!=='power_tier_reroll'&&!SHOP.some(x=>x.id===id)||!Number.isInteger(n)||n<0||n>1e6))throw Error('道具資料無效');delete h.consumables.mana;delete h.mp;for(const key of ['imbue','ward','elementTonic']){const b=h[key];if(b!==null&&(!b||!Object.keys(ELEMENTS).includes(b.element)||b.element==='physical'||!Number.isFinite(b.until)||b.until<0||b.until>8.64e15))throw Error('附魔資料無效');}for(const g of h.bag){if(g.formJob!==undefined&&(!Number.isInteger(g.formJob)||g.formJob<0||g.formJob>=ITEM_FORMS.length))throw Error('裝備來源類別無效');if(g.form!==undefined&&(!Number.isInteger(g.form)||!itemForm(g)))throw Error(`裝備類型無效：${g.name||g.id||'未知裝備'}（來源 ${g.formJob??g.job}／部位 ${g.slot}／類型 ${g.form}）`);}}return p;};
+validateParty=function(data){const p=expansionValidateParty(data);for(const h of p.members){if(!h.consumables||Array.isArray(h.consumables)||typeof h.consumables!=='object'||Object.entries(h.consumables).some(([id,n])=>id!=='mana'&&id!=='power_tier_reroll'&&!SHOP.some(x=>x.id===id)||!Number.isInteger(n)||n<0||n>1e6))throw Error('道具資料無效');delete h.consumables.mana;delete h.mp;for(const key of ['imbue','ward','elementTonic']){const b=h[key];if(b!==null&&(!b||!Object.keys(ELEMENTS).includes(b.element)||b.element==='physical'||!Number.isFinite(b.until)||b.until<0||b.until>8.64e15))throw Error('附魔資料無效');}for(const g of h.bag){if(g.boss===undefined&&g.formJob!==undefined&&(!Number.isInteger(g.formJob)||g.formJob<0||g.formJob>=ITEM_FORMS.length))throw Error('裝備來源類別無效');if(g.boss===undefined&&g.form!==undefined&&(!Number.isInteger(g.form)||!itemForm(g)))throw Error(`裝備類型無效：${g.name||g.id||'未知裝備'}（來源 ${g.formJob??g.job}／部位 ${g.slot}／類型 ${g.form}）`);}}return p;};
 
 
 const expansionClampVitals=clampVitals;
