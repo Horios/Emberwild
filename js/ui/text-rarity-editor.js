@@ -1,8 +1,20 @@
 /* Test-build editor and balance JSON lifecycle for text rarity presets. */
 (()=>{
-  const TEXT_EFFECTS={glow:'光暈',shadow:'深色陰影',light:'浮雕高光',crisp:'細描邊'};
-  const BLOCK_EFFECTS={gradient:'漸層反光',stripes:'斜紋',inset:'內側微光'};
-  const BORDER_EFFECTS={glow:'外框光暈',dashed:'虛線',double:'雙線'};
+  const TEXT_EFFECTS={
+    glow:'光暈',shadow:'深色陰影',light:'浮雕高光',crisp:'細描邊',
+    neon:'霓虹光',fire:'火焰光',ice:'冰霜光',chromatic:'紅藍色差',
+    rainbow:'彩虹文字',flow:'彩色流光',aurora:'極光流動',gold:'金屬金',silver:'金屬銀',holo:'全息幻彩',shimmer:'文字掃光',
+    blink:'閃爍',flicker:'燈管閃動',pulse:'呼吸亮度',glitch:'科技故障',jitter:'微抖動',float:'上下浮動'
+  };
+  const BLOCK_EFFECTS={
+    gradient:'漸層反光',stripes:'斜紋',inset:'內側微光',glass:'玻璃質感',
+    grid:'科技網格',scanlines:'掃描線',dots:'點陣',carbon:'碳纖紋',
+    aurora:'極光流動',shimmer:'流光掃過',spotlight:'聚光',checker:'棋盤格'
+  };
+  const BORDER_EFFECTS={
+    glow:'外框光暈',dashed:'虛線',double:'雙線',dotted:'點線',groove:'凹槽',
+    inset:'內凹',neon:'霓虹外框',rainbow:'彩虹循環',pulse:'光暈脈動',electric:'電流閃動',march:'行進虛線'
+  };
   const COLOR_KEYS=['textColor','blockColor','borderColor'];
   const EFFECT_KEYS={textEffect1:TEXT_EFFECTS,textEffect2:TEXT_EFFECTS,blockEffect:BLOCK_EFFECTS,borderEffect:BORDER_EFFECTS};
   const empty=id=>({id,name:'',textColor:'',textEffect1:'',textEffect2:'',blockColor:'',blockEffect:'',borderColor:'',borderEffect:''});
@@ -57,19 +69,20 @@
   equipmentNameHTML=function(g){
     const html=baseNameHTML(g),style=styleForGear(g);
     if(!style)return html;
-    const {classes,attrs}=textRarityPresentation(style);
-    return html.replace(/class="enhanced-name ([^"]*)"/,(_,original)=>`class="enhanced-name ${classes} ${original}"${attrs}`);
+    const {textClasses}=textRarityPresentation(style);
+    const named=html.replace(/class="enhanced-name ([^"]*)"/,(_,original)=>`class="enhanced-name ${textClasses} ${original}"`);
+    return textRarityFrameHTML(named,style);
   };
 
   function opts(values,value){return `<option value="" ${!value?'selected':''}>無特效</option>`+Object.entries(values).map(([id,label])=>`<option value="${id}" ${value===id?'selected':''}>${label}</option>`).join('');}
   function colorField(key,label,defaultColor){const value=draft[key];return `<label>${label}<span class="text-rarity-color"><input type="checkbox" data-color-on="${key}" ${value?'checked':''}> 自訂 <input type="color" data-color="${key}" value="${value||defaultColor}" ${value?'':'disabled'}></span></label>`;}
   function field(key,label,choices){return `<label>${label}<select data-effect="${key}">${opts(choices,draft[key])}</select></label>`;}
-  function preview(){const {classes,attrs}=textRarityPresentation(draft);return `<div class="text-rarity-preview"><span class="${classes}"${attrs}>${esc(draft.name||'預覽文字')}</span><span class="small">裝備／道具名稱預覽</span></div>`;}
+  function preview(){const {textClasses}=textRarityPresentation(draft);return `<div class="text-rarity-preview">${textRarityFrameHTML(`<span class="${textClasses}">${esc(draft.name||'預覽文字')}</span>`,draft)}<span class="small">裝備／道具名稱預覽</span></div>`;}
   function referenceCount(id){const doc=exportableBalance();let n=0;for(const slots of doc.equipmentForms||[])for(const forms of slots||[])for(const x of forms||[])if(x.textStyleId===id)n++;for(const x of doc.equipmentPowerSystem?.bossAffixes||[])if(x.textStyleId===id)n++;for(const x of doc.items||[])if(x.textStyleId===id)n++;return n;}
   function view(){
     const list=current();if(list!==seenStyles){seenStyles=list;draft=null;}
     if(!draft&&list.length){selectedId=list.some(x=>x.id===selectedId)?selectedId:list[0].id;draft=structuredClone(list.find(x=>x.id===selectedId));}
-    return heading('TEXT RARITY / 外觀設計','文字稀有度設計器')+`<section class="panel text-rarity-editor"><div class="text-rarity-head"><p class="small">建立樣式後，在平衡設計器的裝備、BOSS 裝備及各道具欄位套用；測試設定 JSON 可雙向匯入、匯出。未選顏色與特效的欄位沿用原有外觀。</p><button onclick="newTextRarity()">新增新文字特效</button></div><div class="text-rarity-layout"><div class="text-rarity-list">${list.map(x=>`<button class="${selectedId===x.id?'primary':''}" onclick="selectTextRarity('${x.id}')">${esc(x.name)}</button>`).join('')||'<span class="small">目前沒有自訂特效</span>'}</div>${draft?`<div class="text-rarity-form"><label>特效命名<input id="textRarityName" maxlength="60" value="${esc(draft.name)}"></label>${colorField('textColor','文字底色（字色）','#e8edf0')}${field('textEffect1','文字特效 1',TEXT_EFFECTS)}${field('textEffect2','文字特效 2',TEXT_EFFECTS)}${colorField('blockColor','區塊底色','#263f55')}${field('blockEffect','區塊特效',BLOCK_EFFECTS)}${colorField('borderColor','外框顏色','#8ecaff')}${field('borderEffect','外框特效',BORDER_EFFECTS)}<div id="textRarityPreview">${preview()}</div><div class="actions"><button class="primary" id="saveTextRarity">儲存</button>${list.some(x=>x.id===draft.id)?'<button class="danger" id="deleteTextRarity">刪除</button>':''}</div></div>`:'<div class="small">點選「新增新文字特效」開始設計。</div>'}</div></section>`;
+    return heading('TEXT RARITY / 外觀設計','文字稀有度設計器')+`<section class="panel text-rarity-editor"><div class="text-rarity-head"><p class="small">建立樣式後，在平衡設計器的裝備、BOSS 裝備及各道具欄位套用；測試設定 JSON 可雙向匯入、匯出。未選顏色與特效的欄位沿用原有外觀。若選兩種彩色填色，以文字特效 1 優先。</p><button onclick="newTextRarity()">新增新文字特效</button></div><div class="text-rarity-layout"><div class="text-rarity-list">${list.map(x=>`<button class="${selectedId===x.id?'primary':''}" onclick="selectTextRarity('${x.id}')">${esc(x.name)}</button>`).join('')||'<span class="small">目前沒有自訂特效</span>'}</div>${draft?`<div class="text-rarity-form"><label>特效命名<input id="textRarityName" maxlength="60" value="${esc(draft.name)}"></label>${colorField('textColor','文字底色（字色）','#e8edf0')}${field('textEffect1','文字特效 1',TEXT_EFFECTS)}${field('textEffect2','文字特效 2',TEXT_EFFECTS)}${colorField('blockColor','區塊底色','#263f55')}${field('blockEffect','區塊特效',BLOCK_EFFECTS)}${colorField('borderColor','外框顏色','#8ecaff')}${field('borderEffect','外框特效',BORDER_EFFECTS)}<div id="textRarityPreview">${preview()}</div><div class="actions"><button class="primary" id="saveTextRarity">儲存</button>${list.some(x=>x.id===draft.id)?'<button class="danger" id="deleteTextRarity">刪除</button>':''}</div></div>`:'<div class="small">點選「新增新文字特效」開始設計。</div>'}</div></section>`;
   }
   function bind(){
     if(!draft)return;
