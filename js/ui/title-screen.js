@@ -21,6 +21,7 @@
     try{
       loadParty(JSON.parse(raw));
       globalThis.__EMBERWILD_BOOT_SAVE_ERROR=null;
+      delete globalThis.__EMBERWILD_DEFERRED_CUSTOM_FORM_SAVE;
       if(state&&party)party.playTimeMs=Math.max(party.playTimeMs||0,cachedPlayTime(ACTIVE_SAVE_SLOT));
       return !!(state&&party);
     }catch(e){
@@ -63,7 +64,8 @@
   }
   function titleView(){
     const previewBuild=/(?:^|\/)preview(?:\/|$)/.test(location.pathname)||!!document.getElementById('preview-build-banner');
-    const testImport=previewBuild?`<div class="title-actions"><button type="button" onclick="document.getElementById('title-test-json-import')?.click()">匯入測試 JSON</button><input id="title-test-json-import" type="file" accept=".json,application/json" onchange="importTestJSONFromTitle(event)" hidden></div><p class="small">只套用測試設定，不會匯入角色存檔。</p>`:'';
+    const missingTestForm=previewBuild&&!state&&String(globalThis.__EMBERWILD_BOOT_SAVE_ERROR||'').startsWith('裝備類型無效：');
+    const testImport=previewBuild?`<div class="title-actions"><button type="button" onclick="document.getElementById('title-test-json-import')?.click()">匯入測試 JSON</button><input id="title-test-json-import" type="file" accept=".json,application/json" onchange="importTestJSONFromTitle(event)" hidden></div><p class="small">只套用測試設定，不會匯入角色存檔。</p>${missingTestForm?'<p class="small">目前存檔使用測試 JSON 中的自訂裝備類型。請先匯入建立該存檔時使用的測試 JSON；原存檔仍保留，不會被覆寫。</p>':''}`:'';
     $('wallet').textContent='';
     $('app').innerHTML=`<section class="title-screen"><div class="title-screen-card"><span class="eyebrow">${esc(resolveUIText(UI_TEXT.gameSubtitle))}</span><h1>${esc(resolveUIText(UI_TEXT.gameTitle))}</h1><p>${esc(resolveUIText(UI_TEXT.homeTitle))}</p><div class="save-slots">${[1,2,3].map(slotRow).join('')}</div><p class="small">舊存檔保留在欄位 1。遊玩時間從本次更新後開始累計。</p>${testImport}</div></section>`;
     applyUITextDOM();
@@ -171,7 +173,11 @@
   };
   function showLoadFailure(slot){
     const snapshot=slotSnapshot(slot),reason=globalThis.__EMBERWILD_BOOT_SAVE_ERROR;
-    $('modal').innerHTML=`<h2>欄位 ${slot} 存檔讀取失敗</h2><p>原始資料仍保留在瀏覽器。若能匯出 JSON，可以先下載備份，再從 JSON 匯入重試。若資料不是合法 JSON，請下載原始文字留存；它無法直接匯入。</p>${reason?`<p class="small">讀取錯誤：${esc(reason)}</p>`:''}<div class="actions">${snapshot?rawDownloadButtons(slot,snapshot):''}<button class="primary" onclick="retryImportFromTitle()">匯入 JSON 重試</button>${snapshot&&hasSave(snapshot)?'<button onclick="closeModal();openCharacterCreation()">在此欄新建角色</button>':''}<button onclick="closeModal()">關閉</button></div>`;
+    const previewBuild=/(?:^|\/)preview(?:\/|$)/.test(location.pathname)||!!document.getElementById('preview-build-banner');
+    const missingTestForm=previewBuild&&String(reason||'').startsWith('裝備類型無效：');
+    const help=missingTestForm?'這份存檔使用目前尚未載入的測試裝備類型。原始存檔仍保留，請先匯入建立這份存檔時使用的測試 JSON；匯入成功後會自動重新讀取。':'原始資料仍保留在瀏覽器。若能匯出 JSON，可以先下載備份，再從 JSON 匯入重試。若資料不是合法 JSON，請下載原始文字留存；它無法直接匯入。';
+    const retry=missingTestForm?'<button class="primary" onclick="closeModal();document.getElementById(\'title-test-json-import\')?.click()">匯入測試 JSON 後重試</button>':'<button class="primary" onclick="retryImportFromTitle()">匯入存檔 JSON 重試</button>';
+    $('modal').innerHTML=`<h2>欄位 ${slot} 存檔讀取失敗</h2><p>${help}</p>${reason?`<p class="small">讀取錯誤：${esc(reason)}</p>`:''}<div class="actions">${snapshot?rawDownloadButtons(slot,snapshot):''}${retry}${snapshot&&hasSave(snapshot)?'<button onclick="closeModal();openCharacterCreation()">在此欄新建角色</button>':''}<button onclick="closeModal()">關閉</button></div>`;
     $('modal').showModal();
   }
   window.retryImportFromTitle=function(){closeModal();document.querySelector('header input[type="file"]')?.click();};

@@ -64,10 +64,19 @@
       loadParty(migrateWorldSave(parsed));
       if(!parsed.battleStatistics&&fallbackStats&&typeof normalizeBattleStatistics==='function')party.battleStatistics=normalizeBattleStatistics(fallbackStats);
       save();delete globalThis.__EMBERWILD_PRE_CONTROL_SAVE_RAW;
+      delete globalThis.__EMBERWILD_DEFERRED_CUSTOM_FORM_SAVE;
+      globalThis.__EMBERWILD_BOOT_SAVE_ERROR=null;
     }
   }catch(e){
     console.warn('控制技能安裝後重新載入存檔失敗',e);
-    if(!state){state=null;party=null;toast('存檔未能載入：'+e.message+'；可匯入備份。');}
+    const message=String(e?.message||e);
+    globalThis.__EMBERWILD_BOOT_SAVE_ERROR=message;
+    if(!state){
+      state=null;party=null;
+      const previewBuild=/(?:^|\/)preview(?:\/|$)/.test(location.pathname)||!!document.getElementById('preview-build-banner');
+      if(previewBuild&&message.startsWith('裝備類型無效：'))globalThis.__EMBERWILD_DEFERRED_CUSTOM_FORM_SAVE=true;
+      else toast('存檔未能載入：'+message+'；可匯入備份。');
+    }
   }
 
   function applyPolymorph(e,shield,meta){

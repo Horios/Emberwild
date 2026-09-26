@@ -1624,8 +1624,13 @@ try{
   if(raw){loadParty(JSON.parse(raw));note('隊伍存檔已載入。');}
 }catch(e){
   state=null;party=null;
-  globalThis.__EMBERWILD_BOOT_SAVE_ERROR=String(e?.message||e);
-  toast('存檔未能載入：'+globalThis.__EMBERWILD_BOOT_SAVE_ERROR+'；將在完整模組載入後再重試。');
+  const message=String(e?.message||e);
+  globalThis.__EMBERWILD_BOOT_SAVE_ERROR=message;
+  const previewBuild=/(?:^|\/)preview(?:\/|$)/.test(location.pathname)||!!document.getElementById('preview-build-banner');
+  if(previewBuild&&message.startsWith('裝備類型無效：')){
+    globalThis.__EMBERWILD_DEFERRED_CUSTOM_FORM_SAVE=true;
+    console.warn('存檔使用尚未載入的測試裝備類型，等待完整模組或測試 JSON 後重試',e);
+  }else toast('存檔未能載入：'+message+'；將在完整模組載入後再重試。');
 }
 render();window.emberwildBootComplete=true;timer=setInterval(tick,50);setInterval(()=>save(),5000);window.addEventListener('beforeunload',()=>save());
 
