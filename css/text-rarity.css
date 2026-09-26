@@ -38,7 +38,7 @@
 .text-rarity-name.tr-border-groove{border-style:groove;border-width:3px;border-color:var(--tr-border,currentColor)}
 .text-rarity-name.tr-border-inset{border-style:inset;border-width:3px;border-color:var(--tr-border,currentColor)}
 .text-rarity-name.tr-border-neon{border-color:var(--tr-border,#70f0ff);box-shadow:0 0 4px var(--tr-border,#70f0ff),0 0 12px var(--tr-border,#70f0ff),inset 0 0 5px var(--tr-border,#70f0ff)}
-.text-rarity-name.tr-border-rainbow{border-color:#ff82a5}
+.text-rarity-name.tr-border-rainbow{border-color:var(--tr-border,#ff82a5)}
 .text-rarity-name.tr-border-pulse{border-color:var(--tr-border,currentColor)}
 .text-rarity-name.tr-border-electric{border-color:var(--tr-border,#79dfff)}
 .text-rarity-name.tr-border-march{border-color:transparent}
@@ -58,7 +58,7 @@
 @keyframes tr-glitch{0%,91%,95%,100%{transform:none;clip-path:none}92%{transform:translate(2px,-1px) skew(-5deg);clip-path:inset(0 0 45% 0)}93%{transform:translate(-2px,1px);clip-path:inset(45% 0 0 0)}94%{transform:translate(1px,0);clip-path:none}}
 @keyframes tr-jitter{0%,75%,100%{transform:none}25%{transform:translate(1px,-1px)}50%{transform:translate(-1px,1px)}}
 @keyframes tr-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
-@keyframes tr-border-rainbow{0%,100%{border-color:#ff82a5;box-shadow:0 0 7px #ff82a5}25%{border-color:#ffe576;box-shadow:0 0 7px #ffe576}50%{border-color:#78e9b8;box-shadow:0 0 7px #78e9b8}75%{border-color:#91aaff;box-shadow:0 0 7px #91aaff}}
+@keyframes tr-border-rainbow{0%,100%{border-color:var(--tr-border,#ff82a5);box-shadow:0 0 7px var(--tr-border,#ff82a5)}25%{border-color:#ffe576;box-shadow:0 0 7px #ffe576}50%{border-color:#78e9b8;box-shadow:0 0 7px #78e9b8}75%{border-color:#91aaff;box-shadow:0 0 7px #91aaff}}
 @keyframes tr-border-pulse{0%,100%{box-shadow:0 0 2px var(--tr-border,currentColor)}50%{box-shadow:0 0 14px 3px var(--tr-border,currentColor)}}
 @keyframes tr-border-electric{0%,89%,94%,100%{box-shadow:0 0 3px var(--tr-border,#79dfff)}90%,93%{box-shadow:2px -1px 8px var(--tr-border,#79dfff),-2px 1px 7px #ff7edb}91%,92%{box-shadow:-2px 1px 12px var(--tr-border,#79dfff),2px -1px 5px #ff7edb}}
 @keyframes tr-border-march{to{background-position:10px 0,-10px 100%,0 -10px,100% 10px}}
