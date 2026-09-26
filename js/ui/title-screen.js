@@ -30,6 +30,14 @@
       return false;
     }
   }
+  window.importTestJSONFromTitle=async function(ev){
+    if(!await importBalanceJSON(ev))return;
+    if(!state&&globalThis.__EMBERWILD_BOOT_SAVE_RAW){
+      if(tryLateHydrateActiveSave()){
+        render();toast('測試設定已套用，存檔可點選繼續遊玩');
+      }else toast('測試設定已套用，但存檔仍無法載入：'+globalThis.__EMBERWILD_BOOT_SAVE_ERROR);
+    }
+  };
   function hasSave(snapshot){return snapshot.primary!==null||snapshot.backup!==null;}
   function slotInfo(snapshot,slot){
     if(!snapshot||!hasSave(snapshot))return null;
@@ -55,7 +63,7 @@
   }
   function titleView(){
     const previewBuild=/(?:^|\/)preview(?:\/|$)/.test(location.pathname)||!!document.getElementById('preview-build-banner');
-    const testImport=previewBuild?`<div class="title-actions"><button type="button" onclick="document.getElementById('title-test-json-import')?.click()">匯入測試 JSON</button><input id="title-test-json-import" type="file" accept=".json,application/json" onchange="importBalanceJSON(event)" hidden></div><p class="small">只套用測試設定，不會匯入角色存檔。</p>`:'';
+    const testImport=previewBuild?`<div class="title-actions"><button type="button" onclick="document.getElementById('title-test-json-import')?.click()">匯入測試 JSON</button><input id="title-test-json-import" type="file" accept=".json,application/json" onchange="importTestJSONFromTitle(event)" hidden></div><p class="small">只套用測試設定，不會匯入角色存檔。</p>`:'';
     $('wallet').textContent='';
     $('app').innerHTML=`<section class="title-screen"><div class="title-screen-card"><span class="eyebrow">${esc(resolveUIText(UI_TEXT.gameSubtitle))}</span><h1>${esc(resolveUIText(UI_TEXT.gameTitle))}</h1><p>${esc(resolveUIText(UI_TEXT.homeTitle))}</p><div class="save-slots">${[1,2,3].map(slotRow).join('')}</div><p class="small">舊存檔保留在欄位 1。遊玩時間從本次更新後開始累計。</p>${testImport}</div></section>`;
     applyUITextDOM();
