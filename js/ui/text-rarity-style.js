@@ -29,11 +29,18 @@
     const motionClasses=effects.filter(x=>motions.has(x)).map(x=>'tr-motion-'+x);
     const block=blocks.has(style.blockEffect)?style.blockEffect:'';
     const edge=borders.has(style.borderEffect)?style.borderEffect:'';
-    const classes=['text-rarity-name',bg||border||block||edge?'tr-frame':'',block?'tr-block-'+block:'',edge?'tr-border-'+edge:''].filter(Boolean).join(' ');
+    const classes=['text-rarity-name',border||edge?'tr-frame':'',edge?'tr-border-'+edge:''].filter(Boolean).join(' ');
     const textClasses=['tr-text',tc?'tr-custom-color':'',fill?'tr-fill-'+fill:'',shadows.length?'tr-text-effect':''].filter(Boolean).join(' ');
-    const animations=[blockAnimation[block],borderAnimation[edge]].filter(Boolean);
-    const vars=[tc&&`--tr-color:${tc}`,bg&&`--tr-bg:${bg}`,border&&`--tr-border:${border}`,shadows.length&&`--tr-shadow:${shadows.join(',')}`,animations.length&&`animation:${animations.join(',')}`].filter(Boolean).join(';');
+    const animations=[borderAnimation[edge]].filter(Boolean);
+    const vars=[tc&&`--tr-color:${tc}`,border&&`--tr-border:${border}`,shadows.length&&`--tr-shadow:${shadows.join(',')}`,animations.length&&`animation:${animations.join(',')}`].filter(Boolean).join(';');
     return {classes,attrs:vars?` style="${vars}"`:'',textClasses,motionClasses};
+  };
+  globalThis.textRarityBlockPresentation=style=>{
+    if(!style)return {classes:'',attrs:'',bg:'',block:'',animation:''};
+    const bg=color(style.blockColor),block=blocks.has(style.blockEffect)?style.blockEffect:'',animation=blockAnimation[block]||'';
+    const classes=['tr-rarity-row',block?'tr-block-'+block:''].filter(Boolean).join(' ');
+    const vars=[bg&&`--tr-row-bg:${bg}`,animation&&`animation:${animation}`].filter(Boolean).join(';');
+    return {classes,attrs:vars?` style="${vars}"`:'',bg,block,animation};
   };
   globalThis.textRarityFrameHTML=(content,style)=>{
     const {classes,attrs,motionClasses}=textRarityPresentation(style);
