@@ -162,7 +162,7 @@
         }
         used.add(effects[i].key);
       }
-      return {...def,name,effects};
+      return {...def,name,effects,textStyleId:typeof x.textStyleId==='string'?x.textStyleId:''};
     });
   }
   function normalizePower(src){
@@ -176,7 +176,7 @@
     out.strength.multipliers=Array.from({length:10},(_,i)=>finite(st.multipliers?.[i],DEFAULT_POWER.strength.multipliers[i],.01,100));
     out.strength.weightsByDifficulty=Array.from({length:3},(_,d)=>Array.from({length:10},(_,i)=>finite(st.weightsByDifficulty?.[d]?.[i],DEFAULT_POWER.strength.weightsByDifficulty[d][i],0,1e9)));
     const r=src.rerollItem&&typeof src.rerollItem==='object'?src.rerollItem:{};
-    out.rerollItem={id:POWER_ITEM_ID,name:typeof r.name==='string'&&r.name.trim()?r.name.trim():DEFAULT_POWER.rerollItem.name,description:typeof r.description==='string'?r.description:DEFAULT_POWER.rerollItem.description,cost:0,sellPrice:finite(r.sellPrice,80,0,1e9),shopEnabled:false,shopChance:finite(r.shopChance,.06,0,1),shopPrice:Math.round(finite(r.shopPrice,650,1,1e9)),dropRuleInitialized:!!r.dropRuleInitialized};
+    out.rerollItem={id:POWER_ITEM_ID,name:typeof r.name==='string'&&r.name.trim()?r.name.trim():DEFAULT_POWER.rerollItem.name,description:typeof r.description==='string'?r.description:DEFAULT_POWER.rerollItem.description,cost:0,sellPrice:finite(r.sellPrice,80,0,1e9),shopEnabled:false,shopChance:finite(r.shopChance,.06,0,1),shopPrice:Math.round(finite(r.shopPrice,650,1,1e9)),dropRuleInitialized:!!r.dropRuleInitialized,textStyleId:typeof r.textStyleId==='string'?r.textStyleId:''};
     return out;
   }
 
@@ -190,7 +190,7 @@
   }
   normalizeBaseFormsV2();
 
-  function rerollItemData(power=EQUIPMENT_POWER){const r=power.rerollItem;return {id:POWER_ITEM_ID,type:POWER_ITEM_TYPE,cost:0,sellPrice:r.sellPrice,duration:0,name:r.name,description:r.description,desc:r.description,shopEnabled:false};}
+  function rerollItemData(power=EQUIPMENT_POWER){const r=power.rerollItem;return {id:POWER_ITEM_ID,type:POWER_ITEM_TYPE,cost:0,sellPrice:r.sellPrice,duration:0,name:r.name,description:r.description,desc:r.description,shopEnabled:false,textStyleId:r.textStyleId||''};}
   function syncRerollItem(){
     const src=rerollItemData(),i=SHOP.findIndex(x=>x.id===POWER_ITEM_ID);
     if(i<0)SHOP.push(src);else Object.assign(SHOP[i],src);

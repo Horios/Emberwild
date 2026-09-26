@@ -1,5 +1,7 @@
 <!doctype html><html lang="zh-Hant"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>餘燼荒野 · Emberwild</title><link rel="stylesheet" href="css/base.css"><body><header><a class="brand" href="#"> <span>餘燼荒野<small>EMBERWILD / IDLE RPG · 4.0</small></span></a><span class="chapter">遠征者手札 <b>純文字遠征手札</b></span><div id="wallet"></div><button onclick="save(true)">儲存</button><button onclick="exportSave()">匯出存檔 JSON</button><label class="button">匯入存檔<input type="file" accept=".json" onchange="importSave(event)" hidden></label></header><div id="app" style="visibility:hidden"><section class="panel" style="margin:32px"><h1>正在啟動餘燼荒野…</h1><p>若這段文字一直沒有消失，請將 HTML 下載到電腦，再使用 Chrome 或 Edge 開啟；部分檔案預覽不執行遊戲程式。</p></section></div><noscript><p style="padding:24px">目前環境未允許 JavaScript。請下載 HTML 後使用瀏覽器開啟。</p></noscript><div id="toast" role="status"></div><dialog id="modal"></dialog><script data-startup-guard src="js/core/startup-guard.js"></script>
 <script src="js/core/core-game.js"></script>
+<link rel="stylesheet" href="css/text-rarity.css">
+<script src="js/ui/text-rarity-style.js"></script>
 <link id="ally-row-readability-fix" rel="stylesheet" href="css/ally-row.css">
 
 <link id="json-description-layout" rel="stylesheet" href="css/json-description.css">
@@ -123,4 +125,5 @@
 <script src="js/ui/title-screen.js"></script>
 <script src="js/ui/interaction-guard.js"></script>
 <script id="initial-class-starter-pack-v1" src="js/character/starter-pack.js"></script>
+<script src="js/ui/text-rarity-editor.js"></script>
 </body></html>
