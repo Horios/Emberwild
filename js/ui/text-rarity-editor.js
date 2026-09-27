@@ -6,6 +6,9 @@
     neon:'霓虹光',fire:'火焰光',ice:'冰霜光',chromatic:'紅藍色差',toxicGlow:'毒液光',voidGlow:'虛空光',holyGlow:'聖光',bloodGlow:'血色光',electricGlow:'電弧光',
     rainbow:'彩虹文字',flow:'彩色流光',aurora:'極光流動',gold:'金屬金',silver:'金屬銀',bronze:'青銅',copper:'紅銅',roseGold:'玫瑰金',chrome:'鉻金屬',holo:'全息幻彩',shimmer:'文字掃光',
     obsidian:'黑曜石',magma:'熔岩',frost:'冰晶',electric:'電流',toxic:'毒液',void:'虛空',sunset:'夕照',ocean:'海洋',forest:'翠綠',ruby:'紅寶石',sapphire:'藍寶石',emerald:'翡翠',candy:'糖果彩',plasma:'電漿',cosmic:'星雲',
+    alphaDemo:'展示・半透明',warmGradientDemo:'展示・暖色漸層',movingRainbowDemo:'展示・動態彩虹',
+    multiGlowDemo:'展示・多層光暈',breatheGoldDemo:'展示・金色呼吸光',goldShineDemo:'展示・黃金掃光',
+    strokeShadowDemo:'展示・描邊＋陰影',ultimateDemo:'展示・終極彩光',maxEnhanceDemo:'展示・滿強化彩字',
     blink:'閃爍',flicker:'燈管閃動',pulse:'呼吸亮度',glitch:'科技故障',jitter:'微抖動',float:'上下浮動',shake:'震動',bounce:'彈跳',sway:'左右搖擺',swing:'鐘擺',tilt:'傾斜擺動',zoom:'縮放呼吸',heartbeat:'心跳',hue:'色相循環',blur:'失焦脈動',stretch:'水平伸縮',flip:'翻轉'
   };
   const BLOCK_EFFECTS={
