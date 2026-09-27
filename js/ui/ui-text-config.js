@@ -134,8 +134,9 @@ globalThis.setInventoryVisibility=function(kind,value,checked){
 };
 function inventoryGearListItem(g,selected){
   const wearer=gearWearer(g.id),worn=!!wearer,locked=!!g.locked;
-  const rowColor=globalThis.textRarityEquipmentRowColor?.(g)||'';
-  return `<button type="button" class="inventory-list-item ${selected?'selected':''} ${rowColor?'tr-rarity-row':''}"${rowColor?` style="--tr-row-bg:${rowColor}"`:''} onclick="selectInventoryGear('${g.id}')" title="${esc(equipmentDisplayName(g))}">
+  const rarityRow=globalThis.textRarityEquipmentBlockPresentation?.(g);
+  const styledRow=rarityRow&&(rarityRow.bg||rarityRow.block);
+  return `<button type="button" class="inventory-list-item ${selected?'selected':''} ${styledRow?rarityRow.classes:''}"${styledRow?rarityRow.attrs:''} onclick="selectInventoryGear('${g.id}')" title="${esc(equipmentDisplayName(g))}">
     <span class="inventory-list-name">${equipmentNameHTML(g)}</span>
     <span class="inventory-list-meta">${gearWearableJobsText(g)} · ${CLASS_GEAR[g.job][g.slot]} · LV ${gearRequiredLevelByTier(g.tier)}${worn?' · '+esc(characterName(wearer))+'已穿戴':''}${locked?' · 已鎖定':''}</span>
     <span class="inventory-list-quality effect-quality-${gearQualityRank(g)}">${qualityTag(g)}</span>
