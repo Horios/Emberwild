@@ -47,7 +47,7 @@
       if(raw===null)continue;
       try{
         const data=JSON.parse(raw),members=data?.version===3?data.members:[1,2].includes(data?.version)?[data]:null;
-        if(Array.isArray(members)&&members.length>=1&&members.length<=4&&members.every(h=>Number.isInteger(h?.job)&&CLASSES[h.job]&&Number.isInteger(h.lv)&&h.lv>=1))return {members,playTimeMs:Math.max(Number.isSafeInteger(data.playTimeMs)?data.playTimeMs:0,cachedPlayTime(slot))};
+        if(Array.isArray(members)&&members.length>=1&&members.length<=9&&members.every(h=>Number.isInteger(h?.job)&&CLASSES[h.job]&&Number.isInteger(h.lv)&&h.lv>=1))return {members,playTimeMs:Math.max(Number.isSafeInteger(data.playTimeMs)?data.playTimeMs:0,cachedPlayTime(slot))};
       }catch{}
     }
     return null;

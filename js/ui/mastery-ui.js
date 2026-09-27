@@ -140,14 +140,14 @@ function supportSelectedDetail(i){
   return `<section class="panel skill-selected-panel"><div class="skill-selected-heading">${skillIconHTML(inferredSupportIcon(sk))}<div><h2>${esc(sk.name)}</h2><div class="skill-list-title"><span class="skill-state ${learned?'learned':'locked'}">${learned?'已學':'未學'}</span><span>輔助</span></div></div></div>${skillTypeBadges(state.job,i,'support')}${skillMechanicsDetails(state.job,i,'support')}<p class="skill-flavor"><b>說明：</b>${esc(sk.description||'')}</p><p class="skill-detail"><b>詳細：</b>${esc(detail)}</p>${requirementHTML(parts,missing)}${learned&&!usable?`<p class="small">目前無法使用：${esc(M.supportMissingRequirements(state,i,true).join('、'))}</p>`:''}<div class="skill-selected-controls"><button onclick="learnSupport(${i})" ${learned||missing.length?'disabled':''}>${learned?'已學會':missing.length?'尚未達成':'學習'}</button>${[0,1].map(slot=>`<button onclick="slotSupport(${i},${slot})" ${learned?'':'disabled'}>${state.supportSlots[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join('')}</div></section>`;
 }
 function selectedSkillDetailHTML(entries){
-  if(skillSelectionJob!==state.job){skillSelectionJob=state.job;skillSelection=null;skillTurn=1;}
+  if(skillSelectionJob!==memberKey(state)){skillSelectionJob=memberKey(state);skillSelection=null;skillTurn=1;}
   const visible=entries.filter(x=>x.turn===skillTurn);
   if(!visible.length){skillSelection=null;return '';}
   if(!skillSelection||!visible.some(x=>x.type===skillSelection.type&&x.i===skillSelection.i))skillSelection={type:visible[0].type,i:visible[0].i};
   return skillSelection.type==='core'?coreSelectedDetail(skillSelection.i):supportSelectedDetail(skillSelection.i);
 }
 globalThis.setSkillTurn=function(turn){turn=Number(turn);if(![1,2].includes(turn)||turn===skillTurn)return;skillTurn=turn;skillSelection=null;render();};
-globalThis.selectSkillTile=function(type,i){i=Number(i);if(!['core','support'].includes(type)||!Number.isInteger(i))return;skillSelection={type,i};skillSelectionJob=state.job;render();};
+globalThis.selectSkillTile=function(type,i){i=Number(i);if(!['core','support'].includes(type)||!Number.isInteger(i))return;skillSelection={type,i};skillSelectionJob=memberKey(state);render();};
 
 function skillLoadoutSummaryHTML(){
   syncHeroSkillArrays(state);ensureProcSlots(state);
@@ -172,7 +172,7 @@ function devToolHTML(){
 }
 skillsView=function(){
   M.ensureHero(state);
-  return singlePagePanel('skills','技能',()=>{const entries=skillCatalogEntries();if(skillSelectionJob!==state.job){skillSelectionJob=state.job;skillSelection=null;skillTurn=1;}const visible=entries.filter(x=>x.turn===skillTurn),detail=selectedSkillDetailHTML(entries);return `${skillLoadoutSummaryHTML()}<div class="actions skill-turn-tabs"><button class="${skillTurn===1?'primary':''}" onclick="setSkillTurn(1)">一轉</button><button class="${skillTurn===2?'primary':''}" onclick="setSkillTurn(2)">二轉</button></div>${masterySummaryHTML()}<p class="small skill-board-help">技能依學習角色等級分列；移到圖示上可查看精通與其他學習條件，點擊圖示可查看詳細資料與配置。</p><div class="skill-layout-split"><div class="skill-tree-pane">${skillLevelBoardHTML(visible)}</div><div class="skill-detail-pane">${detail}</div></div>${devToolHTML()}`;});
+  return singlePagePanel('skills','技能',()=>{const entries=skillCatalogEntries();if(skillSelectionJob!==memberKey(state)){skillSelectionJob=memberKey(state);skillSelection=null;skillTurn=1;}const visible=entries.filter(x=>x.turn===skillTurn),detail=selectedSkillDetailHTML(entries);return `${skillLoadoutSummaryHTML()}<div class="actions skill-turn-tabs"><button class="${skillTurn===1?'primary':''}" onclick="setSkillTurn(1)">一轉</button><button class="${skillTurn===2?'primary':''}" onclick="setSkillTurn(2)">二轉</button></div>${masterySummaryHTML()}<p class="small skill-board-help">技能依學習角色等級分列；移到圖示上可查看精通與其他學習條件，點擊圖示可查看詳細資料與配置。</p><div class="skill-layout-split"><div class="skill-tree-pane">${skillLevelBoardHTML(visible)}</div><div class="skill-detail-pane">${detail}</div></div>${devToolHTML()}`;});
 };
 
 function stopForDev(){running=false;partyBusy=false;}

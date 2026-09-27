@@ -30,7 +30,7 @@
     const scrubHero=h=>{if(!h||typeof h!=='object')return;if(Array.isArray(h.bag))h.bag.forEach(scrubGear);scrubBoard(h.board);};
     if(d.version===3){
       if(Array.isArray(d.members))d.members.forEach(scrubHero);
-      const activeRows=Array.isArray(d.active)&&Array.isArray(d.members)?d.active.map(job=>d.members.find(h=>h?.job===job)).filter(Boolean):[];
+      const activeRows=Array.isArray(d.active)&&Array.isArray(d.members)?d.active.map(key=>d.members.find(h=>(h?.companionId??h?.job)===key)).filter(Boolean):[];
       const usable=i=>validMap(i)&&activeRows.length>0&&activeRows.every(h=>{try{return solo.canVisit(i,h);}catch{return false;}});
       if(!usable(d.map)){const fallback=MAPS.findIndex((_,i)=>usable(i));d.map=fallback>=0?fallback:0;}
       if(Array.isArray(d.members))for(const h of d.members)h.map=d.map;

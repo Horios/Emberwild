@@ -127,7 +127,7 @@ function statusDamageAmount(raw,source,target,fx){
   return out;
 }
 function executeStatusPeriodic(inst,fx,immediate=false){
-  const source=party?.members?.find(h=>h.job===inst.sourceJob)||null,target=statusTargetByKey(inst.targetKey);if(!target||target.hp<=0)return 0;
+  const source=partyMember(inst.sourceKey??inst.sourceJob)||null,target=statusTargetByKey(inst.targetKey);if(!target||target.hp<=0)return 0;
   const raw=Math.max(0,statusBasisValue(fx.basis,source,target)*fx.coefficient),prefix=immediate?'立即':'持續';
   if(fx.kind==='heal'){
     const max=statusMaxHp(target),before=target.hp;target.hp=Math.min(max,target.hp+Math.max(0,Math.round(raw)));let healed=Math.max(0,target.hp-before);
@@ -149,14 +149,14 @@ function applyStatusControl(def,target,source){
   else if(c.kind==='freeze')api.applyFreeze(target,meta);
   else if(c.kind==='rage')api.applyRage(target,meta,null);
   else if(c.kind==='fear')api.applyFear(target,meta);
-  else if(c.kind==='tauntRage')api.applyRage(target,meta,source?.job??null);
+  else if(c.kind==='tauntRage')api.applyRage(target,meta,source?memberKey(source):null);
   // frost is handled by combatSpeed wrapper below so it expires with the custom status itself.
 }
 function applyCustomStatus(defOrId,source,target){
   const def=typeof defOrId==='string'?statusById(defOrId):normalizeStatusDefinition(defOrId);if(!def||!target||target.hp<=0)return false;
-  const targetKey=statusTargetKey(target),sourceJob=Number.isInteger(source?.job)?source.job:null;if(!targetKey)return false;
-  activeStatuses=activeStatuses.filter(x=>!(x.statusId===def.id&&x.sourceJob===sourceJob&&x.targetKey===targetKey));
-  const inst={id:def.id+'@'+String(sourceJob)+'@'+targetKey,statusId:def.id,name:def.name,sourceJob,sourceName:source?(statusIsHero(source)?characterName(source):combatEnemyName(source)):'未知來源',targetKey,appliedClock:partyClock,duration:def.duration,expiresClock:partyClock+def.duration,definition:deepClone(def)};
+  const targetKey=statusTargetKey(target),sourceJob=Number.isInteger(source?.job)?source.job:null,sourceKey=sourceJob===null?null:memberKey(source);if(!targetKey)return false;
+  activeStatuses=activeStatuses.filter(x=>!(x.statusId===def.id&&(x.sourceKey??x.sourceJob)===sourceKey&&x.targetKey===targetKey));
+  const inst={id:def.id+'@'+String(sourceKey)+'@'+targetKey,statusId:def.id,name:def.name,sourceJob,sourceKey,sourceName:source?(statusIsHero(source)?characterName(source):combatEnemyName(source)):'未知來源',targetKey,appliedClock:partyClock,duration:def.duration,expiresClock:partyClock+def.duration,definition:deepClone(def)};
   activeStatuses.push(inst);applyStatusControl(def,target,source);
   const regenRate=def.modifiers.filter(m=>m.kind==='regen').reduce((sum,m)=>sum+Math.max(0,Number(m.value)||0),0);
   if(regenRate>0&&statusIsHero(target)){
@@ -225,7 +225,7 @@ function triggerCustomStatusFollowups(target){
   }
   for(const {inst,m} of entries){
     if(target.hp<=0)break;
-    const caster=party?.members?.find(h=>h.job===inst.sourceJob);if(!caster)continue;
+    const caster=partyMember(inst.sourceKey??inst.sourceJob);if(!caster)continue;
     const v=battleStats(caster),formula=GAMEPLAY_SETTINGS?.combat?.damageFormula||{},attackCoefficient=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defenseCoefficient=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:(GAMEPLAY_SETTINGS?.combat?.defenseEffectiveness??.55),minimumDamage=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
     const fracture=Math.min(GAMEPLAY_SETTINGS?.combat?.caps?.fracture??.75,effectTotal(target.id,'fracture')),ignore=Math.min(GAME_BALANCE?.combat?.statCaps?.defenseIgnore??.75,Math.max(0,Number(v.defenseIgnore)||0)),penetration=Math.min(GAME_BALANCE?.combat?.statCaps?.pierce??10000,Math.max(0,Number(v.pierce)||0));
     const effectiveDefense=Math.max(0,Math.max(0,Number(target.def)||0)*(1-fracture)*(1-ignore)-penetration);

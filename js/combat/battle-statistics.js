@@ -15,7 +15,8 @@ function normalizeBattleStatistics(raw){
       if(!r||typeof r!=='object')continue;
       const deaths=Array.isArray(r.deaths)?r.deaths.slice(0,8).flatMap(d=>{
         if(!d||!Number.isInteger(d.job)||d.job<0||d.job>=CLASSES.length)return [];
-        return [{job:d.job,name:String(d.name||CLASSES[d.job].name).slice(0,60),cause:String(d.cause||'未知').slice(0,160)}];
+        const memberId=COMPANION_JOBS[d.memberId]===d.job?d.memberId:d.job;
+        return [{job:d.job,memberId,name:String(d.name||CLASSES[d.job].name).slice(0,60),cause:String(d.cause||'未知').slice(0,160)}];
       }):[];
       const drops={};
       if(r.drops&&typeof r.drops==='object'&&!Array.isArray(r.drops))for(const [name,n] of Object.entries(r.drops).slice(0,600)){
@@ -47,7 +48,7 @@ function addBattleStatDrop(name,count=1){
 }
 function recordBattleDeath(h,e,cause){
   if(!activeBattleStat||!h||!e)return;
-  activeBattleStat.deaths.push({job:h.job,name:characterName(h),cause:`${e.name}－${cause}`});
+  activeBattleStat.deaths.push({job:h.job,memberId:memberKey(h),name:characterName(h),cause:`${e.name}－${cause}`});
   if(!living().length)activeBattleStat.pendingOutcome='wipe';
 }
 function finalizeBattleStatistics(result){
@@ -100,15 +101,15 @@ addGear=function(g){if(statsRewardingKill&&activeBattleStat)addBattleStatDrop(eq
 const battleStatsRewardGroupKillBase=rewardGroupKill;
 rewardGroupKill=function(e){if(e?.rewarded)return;const before=battleStatLootSnapshot();statsRewardingKill=true;try{return battleStatsRewardGroupKillBase(e);}finally{statsRewardingKill=false;collectBattleStatLootDiff(before,battleStatLootSnapshot());}};
 const battleStatsEnemyBasicBase=performEnemyBasic;
-performEnemyBasic=function(e){const before=new Map(heroes().map(h=>[h.job,h.hp]));const r=battleStatsEnemyBasicBase(e);for(const h of heroes())if((before.get(h.job)||0)>0&&h.hp<=0)recordBattleDeath(h,e,battleDeathMoveName(e));return r;};
+performEnemyBasic=function(e){const before=new Map(heroes().map(h=>[memberKey(h),h.hp]));const r=battleStatsEnemyBasicBase(e);for(const h of heroes())if((before.get(memberKey(h))||0)>0&&h.hp<=0)recordBattleDeath(h,e,battleDeathMoveName(e));return r;};
 const battleStatsPacedRoundBase=pacedRound;
 pacedRound=function*(){yield* battleStatsPacedRoundBase();if(!activeBattleStat)return;if(activeBattleStat.pendingOutcome==='wipe')finalizeBattleStatistics('wipe');else if(foes.length&&foes.every(e=>e.hp<=0))finalizeBattleStatistics('victory');};
 
 function aggregateCurrentMapStatistics(){
   const records=currentMapBattleRecords(),drops=new Map(),memberData=new Map();let xp=0,wipes=0,deaths=0;
-  for(const h of party.members)memberData.set(h.job,{count:0,recent:[]});
-  for(const r of records){xp+=r.xp||0;if(r.result==='wipe')wipes++;for(const [name,n] of Object.entries(r.drops||{}))drops.set(name,(drops.get(name)||0)+n);deaths+=(r.deaths||[]).length;for(const d of r.deaths||[]){if(!memberData.has(d.job))memberData.set(d.job,{count:0,recent:[]});memberData.get(d.job).count++;}}
-  for(let i=records.length-1;i>=0;i--)for(let j=(records[i].deaths||[]).length-1;j>=0;j--){const d=records[i].deaths[j],m=memberData.get(d.job);if(m&&m.recent.length<5)m.recent.push(d.cause);}
+  for(const h of party.members)memberData.set(memberKey(h),{count:0,recent:[]});
+  for(const r of records){xp+=r.xp||0;if(r.result==='wipe')wipes++;for(const [name,n] of Object.entries(r.drops||{}))drops.set(name,(drops.get(name)||0)+n);deaths+=(r.deaths||[]).length;for(const d of r.deaths||[]){const key=d.memberId??d.job;if(!memberData.has(key))memberData.set(key,{count:0,recent:[]});memberData.get(key).count++;}}
+  for(let i=records.length-1;i>=0;i--)for(let j=(records[i].deaths||[]).length-1;j>=0;j--){const d=records[i].deaths[j],m=memberData.get(d.memberId??d.job);if(m&&m.recent.length<5)m.recent.push(d.cause);}
   return {records,xp,wipes,deaths,drops:[...drops.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'zh-Hant')),memberData};
 }
 function statisticsView(){
@@ -122,7 +123,7 @@ function statisticsView(){
     <article class="card"><span class="statistics-number">${a.deaths.toLocaleString()}</span><span class="statistics-label">總死亡次數</span></article>
   </section><p class="small">統計只計算在此地圖完成的群怪遭遇；中途換圖、換隊員或切換難度不計場次。模式場次：${MODES.map((d,i)=>`${d.name} ${difficultyCounts[i]}`).join(' ／ ')}</p>
   <div class="statistics-layout"><section class="panel"><h2>掉落道具</h2><div class="statistics-loot-list">${a.drops.length?a.drops.map(([name,n])=>`<div class="statistics-loot-row"><span>${esc(name)}</span><b>×${n.toLocaleString()}</b></div>`).join(''):'<p class="statistics-empty">最近的戰鬥尚無掉落紀錄。</p>'}</div></section>
-  <section class="panel"><h2>隊員死亡統計</h2><div class="statistics-members">${party.members.map(h=>{const d=a.memberData.get(h.job)||{count:0,recent:[]};return `<article class="statistics-member"><h3><span>${esc(characterName(h))}</span><span class="tag">死亡 ${d.count}</span></h3>${d.recent.length?`<ol class="statistics-deaths">${d.recent.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'<p class="statistics-empty">最近 300 場內沒有死亡紀錄。</p>'}</article>`;}).join('')}</div><p class="small">每名隊員最多顯示最近 5 次直接致死來源，格式為「怪物名稱－招式名稱」。</p></section></div>`;
+  <section class="panel"><h2>隊員死亡統計</h2><div class="statistics-members">${party.members.map(h=>{const d=a.memberData.get(memberKey(h))||{count:0,recent:[]};return `<article class="statistics-member"><h3><span>${esc(characterName(h))}</span><span class="tag">死亡 ${d.count}</span></h3>${d.recent.length?`<ol class="statistics-deaths">${d.recent.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'<p class="statistics-empty">最近 300 場內沒有死亡紀錄。</p>'}</article>`;}).join('')}</div><p class="small">每名隊員最多顯示最近 5 次直接致死來源，格式為「怪物名稱－招式名稱」。</p></section></div>`;
 }
 function ensureStatisticsNavButton(){
   const nav=document.querySelector('#app nav');if(!nav)return;

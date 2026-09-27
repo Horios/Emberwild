@@ -145,7 +145,7 @@ function inventoryGearListItem(g,selected){
 function inventoryGearDetail(g){
   if(!g)return `<div class="inventory-detail-empty"><b>沒有可顯示的裝備</b><p class="small">調整左側篩選條件後選擇裝備。</p></div>`;
   const wearer=gearWearer(g.id),worn=!!wearer,draft=inlineAffixDrafts.has(affixDraftKey(g)),locked=!!g.locked;
-  const wearButtons=eligibleWearers(g).map(h=>`<button class="primary" onclick="previewEquip('${g.id}',${h.job})" ${h.equipped.includes(g.id)?'disabled':''}>${h.equipped.includes(g.id)?esc(characterName(h))+'已穿戴':'給 '+esc(characterName(h))+' 穿戴'}</button>`).join('');
+  const wearButtons=eligibleWearers(g).map(h=>`<button class="primary" onclick="previewEquip('${g.id}',${memberKey(h)})" ${h.equipped.includes(g.id)?'disabled':''}>${h.equipped.includes(g.id)?esc(characterName(h))+'已穿戴':'給 '+esc(characterName(h))+' 穿戴'}</button>`).join('');
   return `<div class="inventory-detail-pane">
     <div class="inventory-detail-heading">
       <div><div class="eyebrow">EQUIPMENT DETAIL / 裝備詳細</div><h2>${equipmentNameHTML(g)}</h2></div>
@@ -373,7 +373,7 @@ inlineInventoryView=function(){
     forgeView=function(){
       let html=auditedForgeViewBase();
       const h=typeof pageHero==='function'?pageHero('forge'):state;
-      const selectedId=typeof teamForgeSelection!=='undefined'?teamForgeSelection.get(h?.job):null;
+      const selectedId=typeof teamForgeSelection!=='undefined'?teamForgeSelection.get(memberKey(h)):null;
       const g=h?.bag?.find(x=>x.id===selectedId)||(h?equipment(h)[0]:null)||h?.bag?.[0];
       if(g){
         const boss=g.boss!==undefined?' · BOSS 專屬':'';
@@ -436,7 +436,7 @@ inlineInventoryView=function(){
   function validatePendingGearArray(raw,validatedParty=null){
     if(raw===undefined)return [];
     if(!Array.isArray(raw))throw Error('待結算裝備資料無效');
-    const members=validatedParty?.members||[state],hero=validatedParty?members.find(h=>h.job===validatedParty.selected):state;
+    const members=validatedParty?.members||[state],hero=validatedParty?members.find(h=>memberKey(h)===validatedParty.selected):state;
     const existing=new Set(members.flatMap(h=>(h?.bag||[]).map(g=>g.id))),seen=new Set(),out=[],template=clonePlain(hero);
     for(const item of raw){
       if(!item||typeof item.id!=='string'||existing.has(item.id)||seen.has(item.id))throw Error('待結算裝備 ID 無效');

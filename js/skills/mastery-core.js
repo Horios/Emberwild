@@ -244,7 +244,7 @@ procChance=function(i,h=state){
 supportAmount=function(job,index){const sk=SUPPORT[job]?.[index];return sk?Number(sk.value)||0:0;};
 
 let currentBattleMastery={},lastBattleMastery={};
-function masteryGainKey(h,key){return `${h.job}:${key}`;}
+function masteryGainKey(h,key){return `${memberKey(h)}:${key}`;}
 function gainMastery(h,key,amount){
   if(!h||!key||!validMasteries(h.job).includes(key))return 0;
   ensureHeroMastery(h);const add=Math.max(0,Math.floor(Number(amount)||0));if(!add)return 0;
@@ -303,7 +303,7 @@ validateParty=function(input){
   const raw=clone(input),prepared=prepSaveForLegacyValidator(input),p=masteryValidatePartyBase(prepared);
   const rawRows=raw?.version===3?raw.members:[raw];
   for(const h of p.members||[]){
-    const source=rawRows?.find(x=>Number(x?.job)===Number(h.job)),rawMastery=source?.mastery;
+    const source=rawRows?.find(x=>memberKey(x)===memberKey(h)),rawMastery=source?.mastery;
     if(rawMastery!==undefined){
       if(!rawMastery||typeof rawMastery!=='object'||Array.isArray(rawMastery))throw Error('精通資料無效');
       const valid=new Set(validMasteries(h.job));

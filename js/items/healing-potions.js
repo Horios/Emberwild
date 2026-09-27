@@ -100,9 +100,9 @@
     return true;
   }
   globalThis.useAutoHealingPotion=useAutoHealingPotion;
-  globalThis.setHeroAutoPotion=function(job,on){const h=party?.members.find(x=>x.job===job);if(!h)return;h.autoPotion=!!on;save();render();refreshHealingSettingsModal();};
-  globalThis.setHeroAutoPotionThreshold=function(job,value){const h=party?.members.find(x=>x.job===job);if(!h)return;const n=Number(value);h.autoPotionThresholdPct=Number.isFinite(n)?Math.max(1,Math.min(99,Math.round(n))):35;save();render();refreshHealingSettingsModal();};
-  globalThis.setHeroAutoPotionItem=function(job,id){const h=party?.members.find(x=>x.job===job);if(!h||!healPotionItems().some(x=>x.id===id))return;h.autoPotionId=id;save();render();refreshHealingSettingsModal();};
+  globalThis.setHeroAutoPotion=function(key,on){const h=partyMember(key);if(!h)return;h.autoPotion=!!on;save();render();refreshHealingSettingsModal();};
+  globalThis.setHeroAutoPotionThreshold=function(key,value){const h=partyMember(key);if(!h)return;const n=Number(value);h.autoPotionThresholdPct=Number.isFinite(n)?Math.max(1,Math.min(99,Math.round(n))):35;save();render();refreshHealingSettingsModal();};
+  globalThis.setHeroAutoPotionItem=function(key,id){const h=partyMember(key);if(!h||!healPotionItems().some(x=>x.id===id))return;h.autoPotionId=id;save();render();refreshHealingSettingsModal();};
   globalThis.buyHealingPotion=function(id){const item=healPotionItems().find(x=>x.id===id);if(!item)return;if(state.gold<item.cost)return toast('金幣不足');state.gold-=item.cost;setHealPotionCount(id,healPotionCount(id)+1);save();render();};
 
   if(typeof tickHeroCooldowns==='function'){
@@ -132,7 +132,7 @@
     return party.members.map(h=>{
       normalizeHeroHealingSettings(h);
       const item=selectedHealPotion(h);
-      return `<div class="heal-auto-row"><b>${esc(characterName(h))}</b><label><input type="checkbox" ${h.autoPotion?'checked':''} onchange="setHeroAutoPotion(${h.job},this.checked)">自動喝藥</label><label>HP ≤ <input type="number" min="1" max="99" step="1" value="${h.autoPotionThresholdPct}" onchange="setHeroAutoPotionThreshold(${h.job},this.value)">%</label><label>使用 <select onchange="setHeroAutoPotionItem(${h.job},this.value)">${items.map(x=>`<option value="${esc(x.id)}" ${x.id===h.autoPotionId?'selected':''}>${esc(x.name)} ×${healPotionCount(x.id)}</option>`).join('')}</select></label><span class="heal-auto-detail">${item?`${esc(item.name)}：恢復最大生命 ${pct(item.healFraction)}% · 冷卻 ${item.cooldown} 回合 · <span class="heal-stock">共用庫存 ${healPotionCount(item.id)}</span>`:'沒有可用治療藥水'}${h.healPotionCooldownRemaining>0?`<br><span class="heal-auto-cd">目前冷卻剩餘 ${h.healPotionCooldownRemaining} 回合</span>`:''}</span></div>`;
+      return `<div class="heal-auto-row"><b>${esc(characterName(h))}</b><label><input type="checkbox" ${h.autoPotion?'checked':''} onchange="setHeroAutoPotion(${memberKey(h)},this.checked)">自動喝藥</label><label>HP ≤ <input type="number" min="1" max="99" step="1" value="${h.autoPotionThresholdPct}" onchange="setHeroAutoPotionThreshold(${memberKey(h)},this.value)">%</label><label>使用 <select onchange="setHeroAutoPotionItem(${memberKey(h)},this.value)">${items.map(x=>`<option value="${esc(x.id)}" ${x.id===h.autoPotionId?'selected':''}>${esc(x.name)} ×${healPotionCount(x.id)}</option>`).join('')}</select></label><span class="heal-auto-detail">${item?`${esc(item.name)}：恢復最大生命 ${pct(item.healFraction)}% · 冷卻 ${item.cooldown} 回合 · <span class="heal-stock">共用庫存 ${healPotionCount(item.id)}</span>`:'沒有可用治療藥水'}${h.healPotionCooldownRemaining>0?`<br><span class="heal-auto-cd">目前冷卻剩餘 ${h.healPotionCooldownRemaining} 回合</span>`:''}</span></div>`;
     }).join('');
   }
 

@@ -54,8 +54,8 @@
     const sk=normalizeSupportDebuffSkill(SUPPORT[h.job][index]);
     let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(enemyAvailableForSingleTarget)?.id];
     for(const target of targets.filter(Boolean)){
-      effects=effects.filter(e=>!(e.source===h.job&&e.skill===index&&e.target===target));
-      effects.push({source:h.job,skill:index,target,kind:sk.kind,element:sk.element,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});
+      effects=effects.filter(e=>!((e.sourceKey??e.source)===memberKey(h)&&e.skill===index&&e.target===target));
+      effects.push({source:h.job,sourceKey:memberKey(h),skill:index,target,kind:sk.kind,element:sk.element,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});
       if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);if(ally){const before=ally.hp;ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));const recovered=Math.max(0,ally.hp-before);if(recovered>0)recordCombatContribution(h,'healing',recovered);}}
     }
     note(characterName(h)+'施放 '+sk.name+' · '+Math.round(sk.duration)+' 回合');
@@ -68,7 +68,7 @@
     for(const fx of followupEffects(target.id)){
       if(target.hp<=0)break;
       const sk=normalizeSupportDebuffSkill(SUPPORT[fx.source]?.[fx.skill]);
-      const caster=party?.members?.find(h=>h.job===fx.source);
+      const caster=partyMember(fx.sourceKey??fx.source);
       if(!sk||!caster)continue;
       const element=SUPPORT_ELEMENT_KEYS.has(sk.element)?sk.element:'physical';
       // Elemental follow-up damage uses the same defense order as normal skills:
@@ -124,7 +124,7 @@
     const dots=effects.filter(fx=>fx.target===e.id&&fx.until>partyClock&&(fx.kind==='dotAttack'||fx.kind==='dotMaxHp'));
     for(const fx of dots){
       if(e.hp<=0)break;
-      const caster=party?.members?.find(h=>h.job===fx.source);
+      const caster=partyMember(fx.sourceKey??fx.source);
       let raw=0;
       if(fx.kind==='dotAttack'){
         if(caster)raw=battleStats(caster).atk*Math.max(0,Number(fx.value)||0);
@@ -166,7 +166,7 @@
       rows.push(row(h?characterName(h):foe.name,e.name,detail,Math.max(0,Math.ceil(e.until-partyClock))+' / '+(total||'—')+' 回合','戰鬥回合'));
     }
     for(const h of party.members){
-      const who=characterName(h)+(party.active.includes(h.job)?'':'（候補）');
+      const who=characterName(h)+(party.active.includes(memberKey(h))?'':'（候補）');
       for(const key of ['imbue','ward','elementTonic']){const b=activeSupply(h,key);if(!b)continue;const labels={imbue:['附魔藥水','普攻改為'+ELEMENTS[b.element]+'屬性'],ward:['抗性藥水',ELEMENTS[b.element]+'傷害減免 '+Math.round(GS('combat.supply.wardResistance',.25)*10000)/100+'%'],elementTonic:['增幅藥水',ELEMENTS[b.element]+'傷害增加 '+Math.round(GS('combat.supply.elementTonicDamage',.2)*10000)/100+'%']};rows.push(row(who,ELEMENTS[b.element]+labels[key][0],labels[key][1],Math.ceil(b.remainingTurns)+' / '+Math.ceil(b.totalTurns||b.remainingTurns)+' 回合','出戰回合'));}
       if(h.shield>0)rows.push(row(who,'護盾','可抵擋所有來源傷害 · 剩餘 '+Math.round(h.shield),'無回合期限','耗盡或戰鬥結束'));
     }

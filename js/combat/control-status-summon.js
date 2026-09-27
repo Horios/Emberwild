@@ -115,7 +115,7 @@
   function summonTrap(owner,kind,meta){
     meta=normalizeControlMeta(meta,kind);
     const hp=kind==='summonFreezeTrap'?Math.max(1,meta.trapHp):1;
-    const trap={id:'summon-'+uid(),name:kind==='summonFreezeTrap'?'冰凍陷阱':'變形陷阱',kind,ownerJob:owner.job,hp,maxhp:hp,power:Math.max(0,skillPower(CLASSES[owner.job].skills.findIndex(sk=>sk?.[6]?.controlId===meta.controlId),owner)||0),meta:{...meta},__controlSummon:true};
+    const trap={id:'summon-'+uid(),name:kind==='summonFreezeTrap'?'冰凍陷阱':'變形陷阱',kind,ownerJob:owner.job,ownerKey:memberKey(owner),hp,maxhp:hp,power:Math.max(0,skillPower(CLASSES[owner.job].skills.findIndex(sk=>sk?.[6]?.controlId===meta.controlId),owner)||0),meta:{...meta},__controlSummon:true};
     combatSummons.push(trap);note(characterName(owner)+' 召喚 '+trap.name+'（生命 '+hp+'）。');return true;
   }
   function onTrapHit(trap,attacker){
@@ -129,7 +129,7 @@
       }
     }
     if(trap.hp<=0&&trap.kind==='summonMorphTrap'){
-      const owner=party?.members?.find(h=>h.job===trap.ownerJob),shield=owner?battleStats(owner).atk*Math.max(0,Number(trap.meta.powerMultiplier??1)):1;
+      const owner=partyMember(trap.ownerKey??trap.ownerJob),shield=owner?battleStats(owner).atk*Math.max(0,Number(trap.meta.powerMultiplier??1)):1;
       applyPolymorph(attacker,shield,trap.meta);
     }
     if(trap.hp<=0)combatSummons=combatSummons.filter(x=>x.id!==trap.id);
@@ -158,7 +158,7 @@
     e.turn=(e.turn||0)+1;
     const s=stateFor(e.id,false),rage=s?.rage;
     let target=null;
-    if(rage&&Number.isInteger(rage.tauntHeroJob))target=living().find(h=>h.job===rage.tauntHeroJob)||null;
+    if(rage&&Number.isInteger(rage.tauntHeroJob))target=living().find(h=>memberKey(h)===rage.tauntHeroJob)||null;
     if(!target){
       const candidates=[...living(),...combatSummons.filter(x=>x.hp>0)];
       if(!candidates.length)return;
@@ -220,7 +220,7 @@
     else if(effect==='fear'){for(const e of targets)applyFear(e,meta);success=targets.length>0;}
     else if(effect==='tauntRage'){
       const e=singleTargetEnemyPool().sort((a,b)=>b.atk-a.atk)[0];
-      if(e){applyRage(e,meta,h.job);note(characterName(h)+' 嘲諷 '+combatEnemyName(e)+'，其普通攻擊將優先鎖定戰士。');success=true;}
+      if(e){applyRage(e,meta,memberKey(h));note(characterName(h)+' 嘲諷 '+combatEnemyName(e)+'，其普通攻擊將優先鎖定戰士。');success=true;}
     }else if(effect==='summonMorphTrap'||effect==='summonFreezeTrap'){
       const trapMeta={...meta,controlId:sk[6]?.controlId,powerMultiplier:Math.max(0,skillPower(i,h))};
       success=summonTrap(h,effect,trapMeta);
@@ -280,7 +280,7 @@
     const controlBattleViewBase=battleView;
     battleView=function(){
       let html=controlBattleViewBase();if(!combatSummons.length)return html;
-      const summonHtml='<section class="control-summons"><h3>召喚物 <small>'+combatSummons.filter(x=>x.hp>0).length+'</small></h3>'+combatSummons.filter(x=>x.hp>0).map(x=>'<article data-combat-id="'+x.id+'" class="unit"><div class="unit-title"><b>'+esc(x.name)+'</b><span>召喚物</span></div><div class="unit-numbers"><span>生命 <b>'+x.hp+' / '+x.maxhp+'</b></span><span>'+esc(characterName(party.members.find(h=>h.job===x.ownerJob)))+' 的陷阱</span></div></article>').join('')+'</section>';
+      const summonHtml='<section class="control-summons"><h3>召喚物 <small>'+combatSummons.filter(x=>x.hp>0).length+'</small></h3>'+combatSummons.filter(x=>x.hp>0).map(x=>'<article data-combat-id="'+x.id+'" class="unit"><div class="unit-title"><b>'+esc(x.name)+'</b><span>召喚物</span></div><div class="unit-numbers"><span>生命 <b>'+x.hp+' / '+x.maxhp+'</b></span><span>'+esc(characterName(partyMember(x.ownerKey??x.ownerJob)))+' 的陷阱</span></div></article>').join('')+'</section>';
       return html.replace('<section class="squad-enemies">',summonHtml+'<section class="squad-enemies">');
     };
   }
