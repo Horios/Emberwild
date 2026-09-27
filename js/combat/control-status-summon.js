@@ -229,7 +229,8 @@
       const before=h.hp;h.hp=Math.min(profileV.hp,h.hp+Math.round(profileV.atk*GS('skills.gems.hybridActiveHealAttack',.10)));
       const recovered=Math.max(0,h.hp-before);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);
     }
-    if(success&&sk[6]?.mastery&&typeof gainMastery==='function')gainMastery(h,sk[6].mastery,masterySettings().skillUseXp);
+    const mastery=globalThis.__EMBERWILD_MASTERY;
+    if(success&&sk[6]?.mastery&&mastery?.gainMastery)mastery.gainMastery(h,sk[6].mastery,mastery.masterySettings().skillUseXp);
     return success;
   };
 
@@ -335,4 +336,3 @@
   };
   if(state){syncAllHeroSkillArrays();render();}
 })();
-
