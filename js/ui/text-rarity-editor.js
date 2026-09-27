@@ -2,14 +2,22 @@
 (()=>{
   const TEXT_EFFECTS={
     glow:'光暈',shadow:'深色陰影',light:'浮雕高光',crisp:'細描邊',
-    neon:'霓虹光',fire:'火焰光',ice:'冰霜光',chromatic:'紅藍色差',
-    rainbow:'彩虹文字',flow:'彩色流光',aurora:'極光流動',gold:'金屬金',silver:'金屬銀',holo:'全息幻彩',shimmer:'文字掃光',
-    blink:'閃爍',flicker:'燈管閃動',pulse:'呼吸亮度',glitch:'科技故障',jitter:'微抖動',float:'上下浮動'
+    softGlow:'柔和光暈',hardShadow:'硬邊陰影',longShadow:'長陰影',emboss:'浮雕',engrave:'內刻',outlineLight:'亮色描邊',outlineDark:'暗色描邊',
+    neon:'霓虹光',fire:'火焰光',ice:'冰霜光',chromatic:'紅藍色差',toxicGlow:'毒液光',voidGlow:'虛空光',holyGlow:'聖光',bloodGlow:'血色光',electricGlow:'電弧光',
+    rainbow:'彩虹文字',flow:'彩色流光',aurora:'極光流動',gold:'金屬金',silver:'金屬銀',bronze:'青銅',copper:'紅銅',roseGold:'玫瑰金',chrome:'鉻金屬',holo:'全息幻彩',shimmer:'文字掃光',
+    obsidian:'黑曜石',magma:'熔岩',frost:'冰晶',electric:'電流',toxic:'毒液',void:'虛空',sunset:'夕照',ocean:'海洋',forest:'翠綠',ruby:'紅寶石',sapphire:'藍寶石',emerald:'翡翠',candy:'糖果彩',plasma:'電漿',cosmic:'星雲',
+    blink:'閃爍',flicker:'燈管閃動',pulse:'呼吸亮度',glitch:'科技故障',jitter:'微抖動',float:'上下浮動',shake:'震動',bounce:'彈跳',sway:'左右搖擺',swing:'鐘擺',tilt:'傾斜擺動',zoom:'縮放呼吸',heartbeat:'心跳',hue:'色相循環',blur:'失焦脈動',stretch:'水平伸縮',flip:'翻轉'
   };
   const BLOCK_EFFECTS={
     gradient:'漸層反光',stripes:'斜紋',inset:'內側微光',glass:'玻璃質感',
     grid:'科技網格',scanlines:'掃描線',dots:'點陣',carbon:'碳纖紋',
-    aurora:'極光流動',shimmer:'流光掃過',spotlight:'聚光',checker:'棋盤格'
+    aurora:'極光流動',shimmer:'流光掃過',spotlight:'聚光',checker:'棋盤格',
+    radial:'放射光',vignette:'暗角',diagonal:'斜向光帶',crosshatch:'交叉網紋',hex:'蜂巢',circuit:'電路板',rings:'同心波紋',
+    stars:'星點',sparkle:'閃爍星光',prism:'稜鏡彩光',rainbow:'彩虹漸層',holo:'全息薄膜',
+    chrome:'鉻金屬',brushed:'拉絲金屬',gold:'金屬金',silver:'金屬銀',bronze:'青銅金屬',
+    magma:'熔岩',frost:'冰霜',ocean:'水波',toxic:'毒霧',void:'虛空',plasma:'電漿',electric:'電流',
+    matrix:'資料雨',glitch:'數位故障',warning:'警示斜紋',pulse:'呼吸光',movingStripes:'流動斜紋',waves:'波紋流動',noise:'顆粒雜訊',
+    mesh:'漸層網格',sunset:'夕照',emerald:'翡翠流光',blood:'血色脈動',holy:'聖光',shadow:'暗影流動'
   };
   const BORDER_EFFECTS={
     glow:'外框光暈',dashed:'虛線',double:'雙線',dotted:'點線',groove:'凹槽',
