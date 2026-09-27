@@ -1,7 +1,8 @@
 /* Shared text rarity effects; mirrored in the balance editor. */
 .text-rarity-name{vertical-align:baseline}
 .text-rarity-name.tr-frame{position:relative;display:inline-block;padding:2px 6px;border:1px solid var(--tr-border,transparent);border-radius:6px}
-.tr-rarity-row{position:relative;background-color:var(--tr-row-bg,transparent)!important}
+.tr-rarity-row{position:relative}
+.tr-rarity-row[style*="--tr-row-bg"]{background-color:var(--tr-row-bg)!important}
 .tr-preview-row.tr-rarity-row:hover{filter:brightness(1.08)}
 .tr-preview-row.tr-rarity-row.selected{filter:brightness(1.12)}
 .tr-preview-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%}
