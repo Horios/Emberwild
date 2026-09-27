@@ -19,6 +19,7 @@
   };
   const fills=new Set(['rainbow','flow','aurora','gold','silver','bronze','copper','roseGold','chrome','holo','shimmer','obsidian','magma','frost','electric','toxic','void','sunset','ocean','forest','ruby','sapphire','emerald','candy','plasma','cosmic']);
   const motions=new Set(['blink','flicker','pulse','glitch','jitter','float','shake','bounce','sway','swing','tilt','zoom','heartbeat','hue','blur','stretch','flip']);
+  const specials=new Set(['alphaDemo','warmGradientDemo','movingRainbowDemo','multiGlowDemo','breatheGoldDemo','goldShineDemo','strokeShadowDemo','ultimateDemo','maxEnhanceDemo']);
   const blocks=new Set(['gradient','stripes','inset','glass','grid','scanlines','dots','carbon','aurora','shimmer','spotlight','checker','radial','vignette','diagonal','crosshatch','hex','circuit','rings','stars','sparkle','prism','rainbow','holo','chrome','brushed','gold','silver','bronze','magma','frost','ocean','toxic','void','plasma','electric','matrix','glitch','warning','pulse','movingStripes','waves','noise','mesh','sunset','emerald','blood','holy','shadow']);
   const borders=new Set(['glow','dashed','double','dotted','groove','inset','neon','rainbow','pulse','electric','march']);
   const blockAnimation={scanlines:'tr-block-scan 3s linear infinite',aurora:'tr-block-flow 6s ease-in-out infinite alternate',shimmer:'tr-block-flow 3s ease-in-out infinite',diagonal:'tr-block-drift 4s linear infinite',stars:'tr-block-stars 14s linear infinite',sparkle:'tr-block-sparkle 2.6s ease-in-out infinite',prism:'tr-block-flow 6s linear infinite',rainbow:'tr-block-flow 7s linear infinite',holo:'tr-block-flow 5s linear infinite',magma:'tr-block-lava 6s ease-in-out infinite',ocean:'tr-block-wave 6s linear infinite',toxic:'tr-block-drift 7s linear infinite',void:'tr-block-breathe 5s ease-in-out infinite',plasma:'tr-block-flow 5s ease-in-out infinite alternate',electric:'tr-block-electric 1.7s linear infinite',matrix:'tr-block-matrix 2.8s linear infinite',glitch:'tr-block-glitch 2.4s steps(1,end) infinite',pulse:'tr-block-breathe 2.8s ease-in-out infinite',movingStripes:'tr-block-drift 2.5s linear infinite',waves:'tr-block-wave 4.5s linear infinite',noise:'tr-block-drift 18s linear infinite',mesh:'tr-block-flow 8s ease-in-out infinite alternate',emerald:'tr-block-flow 6s linear infinite',blood:'tr-block-breathe 4s ease-in-out infinite',holy:'tr-block-breathe 3.5s ease-in-out infinite',shadow:'tr-block-flow 8s ease-in-out infinite alternate'};
@@ -35,10 +36,11 @@
     const shadows=effects.filter(x=>Object.hasOwn(textShadows,x)).map(x=>textShadows[x]);
     const fill=effects.find(x=>fills.has(x))||'';
     const motionClasses=effects.filter(x=>motions.has(x)).map(x=>'tr-motion-'+x);
+    const specialClasses=effects.filter(x=>specials.has(x)).map(x=>'tr-special-'+x);
     const block=blocks.has(style.blockEffect)?style.blockEffect:'';
     const edge=borders.has(style.borderEffect)?style.borderEffect:'';
     const classes=['text-rarity-name',border||edge?'tr-frame':'',edge?'tr-border-'+edge:''].filter(Boolean).join(' ');
-    const textClasses=['tr-text',tc?'tr-custom-color':'',fill?'tr-fill-'+fill:'',shadows.length?'tr-text-effect':''].filter(Boolean).join(' ');
+    const textClasses=['tr-text',tc?'tr-custom-color':'',fill?'tr-fill-'+fill:'',shadows.length?'tr-text-effect':'',...specialClasses].filter(Boolean).join(' ');
     const animations=[borderAnimation[edge]].filter(Boolean);
     const vars=[tc&&`--tr-color:${tc}`,border&&`--tr-border:${border}`,shadows.length&&`--tr-shadow:${shadows.join(',')}`,animations.length&&`animation:${animations.join(',')}`].filter(Boolean).join(';');
     return {classes,attrs:vars?` style="${vars}"`:'',textClasses,motionClasses};
