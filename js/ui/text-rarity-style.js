@@ -20,6 +20,12 @@
   const fills=new Set(['rainbow','flow','aurora','gold','silver','bronze','copper','roseGold','chrome','holo','shimmer','obsidian','magma','frost','electric','toxic','void','sunset','ocean','forest','ruby','sapphire','emerald','candy','plasma','cosmic']);
   const motions=new Set(['blink','flicker','pulse','glitch','jitter','float','shake','bounce','sway','swing','tilt','zoom','heartbeat','hue','blur','stretch','flip']);
   const specials=new Set(['alphaDemo','warmGradientDemo','movingRainbowDemo','multiGlowDemo','breatheGoldDemo','goldShineDemo','strokeShadowDemo','ultimateDemo','maxEnhanceDemo']);
+  const galleryEffects={
+    gallerySolid:'畫廊・純色',galleryAlpha:'畫廊・透明色',galleryGradient:'畫廊・靜態漸層',galleryRainbow:'畫廊・靜態彩虹',galleryMetal:'畫廊・金屬銀',galleryGold:'畫廊・金屬金',galleryHolo:'畫廊・全息／珠光',galleryFire:'畫廊・火焰色階',galleryIce:'畫廊・冰晶',galleryPoison:'畫廊・毒性',
+    galleryGlow:'畫廊・單色發光',galleryMultiglow:'畫廊・多層光暈',galleryNeon:'畫廊・霓虹',galleryStroke:'畫廊・描邊',galleryOutlineOnly:'畫廊・空心描邊',galleryDoubleStroke:'畫廊・厚外框',galleryEmboss:'畫廊・浮雕',galleryEngrave:'畫廊・刻印',galleryShadow:'畫廊・陰影偏移',galleryChromatic:'畫廊・RGB 色差',
+    galleryMove:'畫廊・流動彩虹',galleryShine:'畫廊・掃光',galleryBreathe:'畫廊・呼吸',galleryBlink:'畫廊・閃爍',galleryHue:'畫廊・色相循環',galleryFloat:'畫廊・上下浮動',galleryShake:'畫廊・震動',galleryScale:'畫廊・脈衝縮放',galleryLetter:'畫廊・字距呼吸',galleryBlur:'畫廊・模糊脈衝',galleryReveal:'畫廊・文字揭露',galleryUnderline:'畫廊・底線展開',galleryScan:'畫廊・掃描線',gallerySparkle:'畫廊・閃光點',galleryGlitch:'畫廊・故障抖動'
+  };
+  globalThis.__EMBERWILD_GALLERY_EFFECTS=galleryEffects;
   const blocks=new Set(['gradient','stripes','inset','glass','grid','scanlines','dots','carbon','aurora','shimmer','spotlight','checker','radial','vignette','diagonal','crosshatch','hex','circuit','rings','stars','sparkle','prism','rainbow','holo','chrome','brushed','gold','silver','bronze','magma','frost','ocean','toxic','void','plasma','electric','matrix','glitch','warning','pulse','movingStripes','waves','noise','mesh','sunset','emerald','blood','holy','shadow']);
   const borders=new Set(['glow','dashed','double','dotted','groove','inset','neon','rainbow','pulse','electric','march']);
   const blockAnimation={scanlines:'tr-block-scan 3s linear infinite',aurora:'tr-block-flow 6s ease-in-out infinite alternate',shimmer:'tr-block-flow 3s ease-in-out infinite',diagonal:'tr-block-drift 4s linear infinite',stars:'tr-block-stars 14s linear infinite',sparkle:'tr-block-sparkle 2.6s ease-in-out infinite',prism:'tr-block-flow 6s linear infinite',rainbow:'tr-block-flow 7s linear infinite',holo:'tr-block-flow 5s linear infinite',magma:'tr-block-lava 6s ease-in-out infinite',ocean:'tr-block-wave 6s linear infinite',toxic:'tr-block-drift 7s linear infinite',void:'tr-block-breathe 5s ease-in-out infinite',plasma:'tr-block-flow 5s ease-in-out infinite alternate',electric:'tr-block-electric 1.7s linear infinite',matrix:'tr-block-matrix 2.8s linear infinite',glitch:'tr-block-glitch 2.4s steps(1,end) infinite',pulse:'tr-block-breathe 2.8s ease-in-out infinite',movingStripes:'tr-block-drift 2.5s linear infinite',waves:'tr-block-wave 4.5s linear infinite',noise:'tr-block-drift 18s linear infinite',mesh:'tr-block-flow 8s ease-in-out infinite alternate',emerald:'tr-block-flow 6s linear infinite',blood:'tr-block-breathe 4s ease-in-out infinite',holy:'tr-block-breathe 3.5s ease-in-out infinite',shadow:'tr-block-flow 8s ease-in-out infinite alternate'};
@@ -36,7 +42,9 @@
     const shadows=effects.filter(x=>Object.hasOwn(textShadows,x)).map(x=>textShadows[x]);
     const fill=effects.find(x=>fills.has(x))||'';
     const motionClasses=effects.filter(x=>motions.has(x)).map(x=>'tr-motion-'+x);
+    const galleryEffect=effects.find(x=>Object.hasOwn(galleryEffects,x));
     const specialClasses=effects.filter(x=>specials.has(x)).map(x=>'tr-special-'+x);
+    if(galleryEffect)specialClasses.push('tr-special-'+galleryEffect);
     const block=blocks.has(style.blockEffect)?style.blockEffect:'';
     const edge=borders.has(style.borderEffect)?style.borderEffect:'';
     const classes=['text-rarity-name',border||edge?'tr-frame':'',edge?'tr-border-'+edge:''].filter(Boolean).join(' ');

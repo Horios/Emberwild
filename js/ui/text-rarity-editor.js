@@ -9,7 +9,8 @@
     alphaDemo:'展示・半透明',warmGradientDemo:'展示・暖色漸層',movingRainbowDemo:'展示・動態彩虹',
     multiGlowDemo:'展示・多層光暈',breatheGoldDemo:'展示・金色呼吸光',goldShineDemo:'展示・黃金掃光',
     strokeShadowDemo:'展示・描邊＋陰影',ultimateDemo:'展示・終極彩光',maxEnhanceDemo:'展示・滿強化彩字',
-    blink:'閃爍',flicker:'燈管閃動',pulse:'呼吸亮度',glitch:'科技故障',jitter:'微抖動',float:'上下浮動',shake:'震動',bounce:'彈跳',sway:'左右搖擺',swing:'鐘擺',tilt:'傾斜擺動',zoom:'縮放呼吸',heartbeat:'心跳',hue:'色相循環',blur:'失焦脈動',stretch:'水平伸縮',flip:'翻轉'
+    blink:'閃爍',flicker:'燈管閃動',pulse:'呼吸亮度',glitch:'科技故障',jitter:'微抖動',float:'上下浮動',shake:'震動',bounce:'彈跳',sway:'左右搖擺',swing:'鐘擺',tilt:'傾斜擺動',zoom:'縮放呼吸',heartbeat:'心跳',hue:'色相循環',blur:'失焦脈動',stretch:'水平伸縮',flip:'翻轉',
+    ...globalThis.__EMBERWILD_GALLERY_EFFECTS
   };
   const BLOCK_EFFECTS={
     gradient:'漸層反光',stripes:'斜紋',inset:'內側微光',glass:'玻璃質感',
@@ -129,7 +130,12 @@
   const textRarityRenderBase=render;
   render=function(){const out=textRarityRenderBase();applyEquipmentBlockStyles();return out;};
 
-  function opts(values,value){return `<option value="" ${!value?'selected':''}>無特效</option>`+Object.entries(values).map(([id,label])=>`<option value="${id}" ${value===id?'selected':''}>${label}</option>`).join('');}
+  function opts(values,value){
+    const entries=Object.entries(values),option=([id,label])=>`<option value="${id}" ${value===id?'selected':''}>${label}</option>`;
+    const usual=entries.filter(([id])=>!id.startsWith('gallery')).map(option).join('');
+    const gallery=entries.filter(([id])=>id.startsWith('gallery')).map(option).join('');
+    return `<option value="" ${!value?'selected':''}>無特效</option>`+usual+(gallery?`<optgroup label="文字特效圖鑑">${gallery}</optgroup>`:'');
+  }
   function colorField(key,label,defaultColor){const value=draft[key];return `<label>${label}<span class="text-rarity-color"><input type="checkbox" data-color-on="${key}" ${value?'checked':''}> 自訂 <input type="color" data-color="${key}" value="${value||defaultColor}" ${value?'':'disabled'}></span></label>`;}
   function blockPresetId(style){return Object.entries(BLOCK_PRESETS).find(([,p])=>style?.blockColor===p.color&&style?.blockEffect===p.effect)?.[0]||'';}
   function blockPresetField(){const currentPreset=blockPresetId(draft);return `<label>裝備區塊背景預設<select data-block-preset><option value="">自訂／不套用預設</option>${Object.entries(BLOCK_PRESETS).map(([id,p])=>`<option value="${id}" ${currentPreset===id?'selected':''}>${p.label}</option>`).join('')}</select></label>`;}
@@ -143,7 +149,7 @@
   function view(){
     const list=current();if(list!==seenStyles){seenStyles=list;draft=null;}
     if(!draft&&list.length){selectedId=list.some(x=>x.id===selectedId)?selectedId:list[0].id;draft=structuredClone(list.find(x=>x.id===selectedId));}
-    return heading('TEXT RARITY / 外觀設計','文字稀有度設計器')+`<section class="panel text-rarity-editor"><div class="text-rarity-head"><p class="small">建立樣式後，在平衡設計器的裝備、BOSS 裝備及各道具欄位套用；測試設定 JSON 可雙向匯入、匯出。未選顏色與特效的欄位沿用原有外觀。裝備區塊背景色與背景特效會套用到裝備列表的整個區塊，右側詳細頁不套用；文字外框只包住名稱。若選兩種彩色填色，以文字特效 1 優先。</p><button onclick="newTextRarity()">新增新文字特效</button></div><div class="text-rarity-layout"><div class="text-rarity-list">${list.map(x=>`<button class="${selectedId===x.id?'primary':''}" onclick="selectTextRarity('${x.id}')">${esc(x.name)}</button>`).join('')||'<span class="small">目前沒有自訂特效</span>'}</div>${draft?`<div class="text-rarity-form"><label>特效命名<input id="textRarityName" maxlength="60" value="${esc(draft.name)}"></label>${colorField('textColor','文字顏色','#e8edf0')}${field('textEffect1','文字特效 1',TEXT_EFFECTS)}${field('textEffect2','文字特效 2',TEXT_EFFECTS)}${blockPresetField()}${colorField('blockColor','裝備區塊背景色','#263f55')}${field('blockEffect','裝備區塊背景特效',BLOCK_EFFECTS)}${colorField('borderColor','文字外框顏色','#8ecaff')}${field('borderEffect','文字外框特效',BORDER_EFFECTS)}<div id="textRarityPreview">${preview()}</div><div class="actions"><button class="primary" id="saveTextRarity">儲存</button>${list.some(x=>x.id===draft.id)?'<button class="danger" id="deleteTextRarity">刪除</button>':''}</div></div>`:'<div class="small">點選「新增新文字特效」開始設計。</div>'}</div></section>`;
+    return heading('TEXT RARITY / 外觀設計','文字稀有度設計器')+`<section class="panel text-rarity-editor"><div class="text-rarity-head"><p class="small">建立樣式後，在平衡設計器的裝備、BOSS 裝備及各道具欄位套用；測試設定 JSON 可雙向匯入、匯出。未選顏色與特效的欄位沿用原有外觀。裝備區塊背景色與背景特效會套用到裝備列表的整個區塊，右側詳細頁不套用；文字外框只包住名稱。若選兩種彩色填色或兩種畫廊外觀，以文字特效 1 優先。</p><button onclick="newTextRarity()">新增新文字特效</button></div><div class="text-rarity-layout"><div class="text-rarity-list">${list.map(x=>`<button class="${selectedId===x.id?'primary':''}" onclick="selectTextRarity('${x.id}')">${esc(x.name)}</button>`).join('')||'<span class="small">目前沒有自訂特效</span>'}</div>${draft?`<div class="text-rarity-form"><label>特效命名<input id="textRarityName" maxlength="60" value="${esc(draft.name)}"></label>${colorField('textColor','文字顏色','#e8edf0')}${field('textEffect1','文字特效 1',TEXT_EFFECTS)}${field('textEffect2','文字特效 2',TEXT_EFFECTS)}${blockPresetField()}${colorField('blockColor','裝備區塊背景色','#263f55')}${field('blockEffect','裝備區塊背景特效',BLOCK_EFFECTS)}${colorField('borderColor','文字外框顏色','#8ecaff')}${field('borderEffect','文字外框特效',BORDER_EFFECTS)}<div id="textRarityPreview">${preview()}</div><div class="actions"><button class="primary" id="saveTextRarity">儲存</button>${list.some(x=>x.id===draft.id)?'<button class="danger" id="deleteTextRarity">刪除</button>':''}</div></div>`:'<div class="small">點選「新增新文字特效」開始設計。</div>'}</div></section>`;
   }
   function bind(){
     if(!draft)return;
