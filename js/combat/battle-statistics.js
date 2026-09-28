@@ -15,7 +15,7 @@ function normalizeBattleStatistics(raw){
       if(!r||typeof r!=='object')continue;
       const deaths=Array.isArray(r.deaths)?r.deaths.slice(0,8).flatMap(d=>{
         if(!d||!Number.isInteger(d.job)||d.job<0||d.job>=CLASSES.length)return [];
-        const memberId=COMPANION_JOBS[d.memberId]===d.job?d.memberId:d.job;
+        const memberId=Number.isInteger(d.memberId)&&d.memberId>=10&&d.memberId<=999?d.memberId:d.job;
         return [{job:d.job,memberId,name:String(d.name||CLASSES[d.job].name).slice(0,60),cause:String(d.cause||'未知').slice(0,160)}];
       }):[];
       const drops={};

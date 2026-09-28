@@ -494,13 +494,13 @@ save=function(show=false){
 };
 function validateParty(data){
  if(data?.version!==3){const h=initHero(solo.validateSave(data));return createParty(h);}
- if(!Array.isArray(data.members)||data.members.length<1||data.members.length>9||!Array.isArray(data.active)||data.active.length<1||data.active.length>3||new Set(data.active).size!==data.active.length||!['single','group'].includes(data.encounterMode)||!Number.isInteger(data.map)||!MAPS[data.map]||![0,1,2].includes(data.difficulty)||typeof data.cleared!=='boolean')throw Error('隊伍資料無效');
+ if(!Array.isArray(data.members)||data.members.length<1||data.members.length>65||!Array.isArray(data.active)||data.active.length<1||data.active.length>3||new Set(data.active).size!==data.active.length||!['single','group'].includes(data.encounterMode)||!Number.isInteger(data.map)||!MAPS[data.map]||![0,1,2].includes(data.difficulty)||typeof data.cleared!=='boolean')throw Error('隊伍資料無效');
  const playTimeMs=Number.isSafeInteger(data.playTimeMs)&&data.playTimeMs>=0?data.playTimeMs:0;
- const result={version:3,members:[],active:[...data.active],selected:data.selected,map:data.map,difficulty:data.difficulty,encounterMode:'group',cleared:data.cleared,playTimeMs};
+ const result={version:3,members:[],active:[...data.active],selected:data.selected,map:data.map,difficulty:data.difficulty,encounterMode:'group',cleared:data.cleared,playTimeMs,companionNames:data.companionNames,companionProfiles:data.companionProfiles};
  for(const raw of data.members){
   // Reserves may be below the expedition level; validate their personal data at home.
   const h=solo.validateSave({...raw,map:0});initHero(h);
-  if(h.companionId!==undefined&&(!Number.isInteger(h.companionId)||COMPANION_JOBS[h.companionId]!==h.job))throw Error('夥伴識別無效');
+  if(h.companionId!==undefined&&(!Number.isInteger(h.companionId)||h.companionId<10||h.companionId>999||COMPANION_JOBS[h.companionId]!==h.job&&data.companionProfiles?.[h.companionId]?.job!==h.job))throw Error('夥伴識別無效');
   if(!Array.isArray(h.supportLevels)||h.supportLevels.length!==3||h.supportLevels.some((n,i)=>!Number.isInteger(n)||n<0||n>Math.max(1,Math.floor(GS('skills.support.maxLevel',5)))||n>0&&(h.lv<SUPPORT[h.job][i].level||i===2&&!h.advanced))||!Array.isArray(h.supportSlots)||h.supportSlots.length!==2||h.supportSlots.some(i=>i!==null&&(!Number.isInteger(i)||i<0||i>2||h.supportLevels[i]<1))||h.supportSlots[0]!==null&&h.supportSlots[0]===h.supportSlots[1])throw Error('輔助技能資料無效');
   result.members.push(h);
  }
