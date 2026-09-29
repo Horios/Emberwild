@@ -9,3 +9,33 @@
 .roster-replace-list button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;white-space:normal}
 .roster-replace-list .tag{flex-shrink:0}
 .companion-fixed-note{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:5px;color:var(--gold)}
+.layout>main>.character-ability-scroll{flex:1 1 0;min-height:0;overflow:auto;scrollbar-gutter:stable}
+.character-ability-scroll.has-companions{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:10px;align-content:start;align-items:start}
+.player-character-section,.companion-character-section{margin-bottom:12px}
+.character-card-title{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:0 0 7px}
+.character-card-title h2,.character-card-title h3,.companion-character-section>h2{margin:0}
+.player-character-content>.heading,.player-character-content>.page-hero-tabs{display:none!important}
+.player-character-content>.page-owner-panel{height:auto!important;min-height:0!important;max-width:none;width:100%;overflow:visible}
+.player-character-content .page-owner-summary{display:none}
+.player-character-content .page-owner-content{flex:none;overflow:visible}
+.player-character-content .grid{grid-template-columns:minmax(0,1.2fr) minmax(220px,1fr);gap:10px}
+.has-companions .player-character-content .grid{grid-template-columns:1fr}
+.player-character-content .panel{padding:10px}
+.player-character-content .stat-grid{margin:10px 0}
+.companion-card-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px;align-items:start}
+.companion-character-card{padding:10px;min-width:0}
+.companion-character-card .character-card-title h3{font-size:15px}
+.companion-ability-intro{margin:0 0 8px!important;color:var(--gold)}
+.companion-ability-intro span{color:var(--muted)}
+.companion-key-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.companion-key-stats span{background:#24283f;padding:8px 10px;font-size:12px;white-space:nowrap}
+.companion-key-stats b{display:block;color:var(--gold);font-size:16px}
+.companion-growth-line,.companion-advance-line{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px}
+.companion-growth-line b,.companion-advance-line b{color:var(--gold)}
+.companion-ability-extra{margin:7px 0 0}
+.companion-ability-extra summary{font-size:12px}
+.companion-extra-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0}
+.companion-extra-stats span{background:#24283f;padding:6px 8px;font-size:12px}
+.companion-ability-extra p{margin:4px 0;overflow-wrap:anywhere}
+@media(max-width:1100px){.character-ability-scroll.has-companions{grid-template-columns:1fr}.has-companions .player-character-content .grid{grid-template-columns:minmax(0,1.2fr) minmax(220px,1fr)}}
+@media(max-width:780px){.player-character-content .grid{grid-template-columns:1fr}.companion-key-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.companion-extra-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}

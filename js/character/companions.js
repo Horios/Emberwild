@@ -187,8 +187,21 @@
     const original=globalThis[name];if(typeof original!=='function')continue;
     globalThis[name]=function(...args){if(companionPlan(state))return toast('夥伴的技能與配點依固定走向自動成長');return original(...args);};
   }
+  function companionCharacterView(){
+    const h=state,plan=companionPlan(h),v=stats(h),c=CLASSES[h.job],advanceLevel=Math.round(GS('progression.advance.level',15));
+    const percentage=n=>Math.round((n||0)*100);
+    const detail=(items,labels)=>Object.entries(items||{}).map(([key,value])=>`${esc(labels[key]||key)} +${percentage(value)}%`).join(' / ');
+    return `<p class="companion-ability-intro">${esc(plan?.description||'原有隊員')} ${plan?'<span>升級後自動配點與二轉。</span>':''}</p><div class="companion-key-stats"><span>生命 <b>${v.hp}</b></span><span>攻擊 <b>${v.atk}</b></span><span>防禦 <b>${v.def}</b></span><span>暴擊 <b>${percentage(v.crit)}%</b></span><span>速度 <b>${v.speed}</b></span></div><div class="companion-growth-line"><b>能力配點</b>${[c.main,'體質','韌性'].map((name,i)=>`<span>${esc(name)} ${h.stats[i]}</span>`).join('')}</div><div class="companion-advance-line"><b>職業進階</b><span>LV${advanceLevel} · ${esc(c.advanced)} · ${h.advanced?(plan?'已自動完成':'已完成'):(plan?'達到等級後自動完成':'尚未完成')}</span></div><details class="companion-ability-extra"><summary>查看進階詳細屬性</summary><div class="companion-extra-stats"><span>暴擊傷害 ${percentage(v.critDamage)}%</span><span>防禦穿透 ${Number((v.pierce||0).toFixed(1))}</span><span>防禦無視 ${percentage(v.defenseIgnore)}%</span><span>生命竊取 ${percentage(v.lifesteal)}%</span><span>閃避 ${percentage(v.evasion)}%</span><span>武器屬性 ${esc(ELEMENTS[weaponElement(h)])}</span><span>全屬性增傷 ${percentage(v.elementBonus)}%</span></div><p>${detail(v.elementDamage,ELEMENTS)}</p><p>${detail(v.raceDamage,RACES)}</p><p>${Object.entries(v.resist||{}).map(([key,value])=>`${esc(ELEMENTS[key]||key)}抗性 ${percentage(value)}%`).join(' / ')}</p></details>`;
+  }
   const baseSinglePagePanel=singlePagePanel;
-  singlePagePanel=function(page,title,view){const h=pageHero(page),html=baseSinglePagePanel(page,title,view);return companionPlan(h)&&['character','skills'].includes(page)?html.replace('<div class="page-owner-content">','<div class="page-owner-content"><p class="companion-fixed-note">固定培養：'+esc(companionPlan(h).description)+' 升級後自動配點、學習及配置技能。</p>'):html;};
+  singlePagePanel=function(page,title,view){const h=pageHero(page),plan=companionPlan(h),html=baseSinglePagePanel(page,title,view);return plan&&page==='skills'?html.replace('<div class="page-owner-content">','<div class="page-owner-content"><p class="companion-fixed-note">固定培養：'+esc(plan.description)+' 升級後自動配點、學習及配置技能。</p>'):html;};
+  const baseCharacterView=characterView;
+  characterView=function(){
+    const player=party.members[0];
+    pageHeroSelection.set('character',memberKey(player));
+    const playerView=withHero(player,baseCharacterView);
+    return heading('PARTY / 角色能力','角色能力')+`<div class="character-ability-scroll ${party.members.length>1?'has-companions':''}"><section class="player-character-section"><div class="character-card-title"><h2>${esc(characterName(player))} · 玩家角色</h2><span class="tag">剩餘能力點 ${player.ap}</span></div><div class="player-character-content">${playerView}</div></section>${party.members.length>1?`<section class="companion-character-section"><h2>夥伴能力</h2><div class="companion-card-grid">${party.members.slice(1).map(h=>`<article class="panel companion-character-card"><div class="character-card-title"><div><h3>${esc(characterName(h))} · LV${h.lv}</h3><span class="small">${esc(CLASSES[h.job].name)} · ${esc(companionPlan(h)?.role||'原有隊員')}</span></div>${companionPlan(h)?'<span class="tag">固定成長</span>':''}</div>${withHero(h,companionCharacterView)}</article>`).join('')}</div></section>`:''}</div>`;
+  };
   const baseRender=render;
   render=function(){baseRender();if(!state||!party||!['character','skills'].includes(tab))return;const h=pageHero(tab);if(!companionPlan(h))return;
     for(const input of document.querySelectorAll('.page-owner-content input[id^="stat-alloc-"]'))input.disabled=true;
