@@ -28,6 +28,7 @@
 .skill-icon-glyph{font-size:27px;line-height:1;font-family:inherit;display:grid;place-items:center;color:#d8ded5}.skill-icon-glyph svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round}
 .skill-icon-glyph.tone-steel{color:#cdd8df}
 .skill-icon-glyph.tone-ember{color:#f2a47f}
+.skill-icon-glyph.tone-blood{color:#e98184}
 .skill-icon-glyph.tone-frost{color:#a9dcf4}
 .skill-icon-glyph.tone-wind{color:#a9dfd6}
 .skill-icon-glyph.tone-light{color:#f0d893}
