@@ -448,15 +448,9 @@
 
   function showStarterGiftModal(hero,job,granted){
     if(!hero||!Array.isArray(granted)||!granted.length||!document?.body)return;
-    $('modal').innerHTML=`<h2>已取得 ${esc(CLASSES[job].name)} 新手禮包</h2><p>第一個職業會獲得一整套專屬新手裝，以下 5 件已自動穿戴。新手裝名稱以鮮綠色顯示，無法強化、洗鍊或重鑄 T 階。</p><div class="starter-gift-list">${granted.map(starterGiftItemHTML).join('')}</div><div class="actions"><button class="primary" onclick="openStarterEquipmentPage()">前往裝備頁面查看</button><button onclick="closeModal()">先從荒野探索開始</button></div>`;
+    $('modal').innerHTML=`<h2>已取得 ${esc(CLASSES[job].name)} 新手禮包</h2><p>第一個職業會獲得一整套專屬新手裝，以下 5 件已自動穿戴。新手裝名稱以鮮綠色顯示，無法強化、洗鍊或重鑄 T 階。</p><div class="starter-gift-list">${granted.map(starterGiftItemHTML).join('')}</div><p>接下來請到「隊伍編成」招募兩位夥伴，組成三人出戰隊伍，再開始荒野探索。</p><div class="actions"><button class="primary" onclick="closeModal();setTab('roster')">前往隊伍編成招募夥伴</button></div>`;
     $('modal').showModal();
   }
-
-  globalThis.openStarterEquipmentPage=function(){
-    closeModal();
-    if(typeof inventoryCategory!=='undefined')inventoryCategory='equipment';
-    setTab('equipment');
-  };
 
   if(typeof requestHeroName==='function'){
     const starterRequestHeroNameBase=requestHeroName;
