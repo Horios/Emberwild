@@ -461,7 +461,7 @@
         if(input){
           const notice=document.createElement('div');
           notice.className='starter-pack-choice-notice';
-          notice.innerHTML=`<b>初始職業獎勵</b><br>你選擇的第一個職業會立即獲得一整套專屬新手禮包；五位固定走向夥伴各自帶來普通白板裝備。`;
+          notice.innerHTML=`<b>初始職業獎勵</b><br>你選擇的第一個職業會立即獲得一整套專屬新手禮包。`;
           input.parentNode.insertBefore(notice,input);
         }
       }
