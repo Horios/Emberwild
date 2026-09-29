@@ -103,6 +103,7 @@
     const plan=rosterPlans().find(p=>p.id===id);if(!party||!plan||partyMember(id)||party.members.length>=65)return;
     ensureSharedGear();ensureAccountResources();ensureSharedItems();ensureAccountQuests();ensureRoster(party);
     if(state.bag.length+5>RULES.bagCapacity)return toast('背包需要 5 個空位才能招募夥伴');
+    const full=party.active.length>=3;
     resetEncounter();const h=initial(plan.job);h.companionId=id;
     h.name=party.companionNames[id];h.lv=Math.min(...heroes().map(x=>x.lv));
     h.won=party.cleared&&h.lv>=GS('progression.levelCaps.beforeClear',30);
@@ -111,7 +112,28 @@
     party.members.push(h);applyPlan(h,{fullHealth:true});
     ensureAccountResources();ensureSharedGear();ensureSharedItems();ensureAccountQuests();
     if(party.active.length<3)party.active.push(id);
-    syncParty();save();render();toast(h.name+'已加入隊伍');
+    syncParty();save();render();
+    if(full)requestMemberReplacement(id);
+    toast(h.name+'已加入隊伍');
+  };
+  function requestMemberReplacement(key){
+    const incoming=partyMember(key);
+    if(!party||!incoming||party.active.includes(key)||party.active.length!==3)return;
+    if(!solo.canVisit(party.map,incoming))return toast('此角色未達目前地圖門檻，請先切換較低級地圖');
+    $('modal').innerHTML=`<h2>替換出戰隊員</h2><p>讓 <b>${esc(characterName(incoming))}</b> <span class="tag">${esc(CLASSES[incoming.job].name)}</span> 出戰，請選擇要移至候補的隊員。</p><div class="roster-replace-list">${party.active.map(outKey=>{const h=partyMember(outKey);return `<button onclick="confirmMemberReplacement(${key},${outKey})"><span>替換 ${esc(characterName(h))}</span><span class="tag">${esc(CLASSES[h.job].name)}</span></button>`;}).join('')}</div><div class="actions"><button onclick="closeModal()">保留候補</button></div>`;
+    $('modal').showModal();
+  }
+  window.confirmMemberReplacement=function(inKey,outKey){
+    if(!party)return;
+    const incoming=partyMember(inKey),index=party.active.indexOf(outKey);
+    if(!incoming||!partyMember(outKey)||party.active.length!==3||party.active.includes(inKey)||index<0)return closeModal();
+    if(!solo.canVisit(party.map,incoming)){closeModal();return toast('此角色未達目前地圖門檻，請先切換較低級地圖');}
+    resetEncounter();party.active[index]=inKey;closeModal();save();render();
+  };
+  const originalToggleMember=toggleMember;
+  toggleMember=function(key){
+    if(party?.active.length===3&&partyMember(key)&&!party.active.includes(key))return requestMemberReplacement(key);
+    return originalToggleMember(key);
   };
   recruitHero=function(){toast('請在隊伍編成選擇夥伴');};
   const originalRequestHeroName=requestHeroName;
@@ -132,8 +154,10 @@
   };
   rosterView=function(){
     const legacy=party.members.filter(h=>!companionPlan(h));
+    const active=heroes();
+    const teamStatus=`<div class="roster-team-status" aria-label="目前出戰隊伍"><b>目前出戰隊伍 · ${active.length} / 3</b><div class="roster-team-slots">${Array.from({length:3},(_,i)=>{const h=active[i];return `<div class="roster-team-slot"><span class="small">出戰 ${i+1}</span><b>${h?esc(characterName(h)):'空位'}</b><span class="small">${h?`${esc(CLASSES[h.job].name)} · LV ${h.lv}`:'尚未編入'}</span></div>`;}).join('')}</div></div>`;
     const memberRow=h=>{const plan=companionPlan(h);return `<article class="roster-row"><div><b>${esc(characterName(h))}</b><span class="tag">${plan?`${CLASSES[h.job].name} · 已招募`:`${h===party.members[0]?'玩家角色':'原有隊員'} · ${CLASSES[h.job].name} · LV ${h.lv} · ${party.active.includes(memberKey(h))?'出戰':'候補'}`}</span>${plan?`<p class="small">${plan.role!==CLASSES[h.job].name?esc(plan.role)+'：':''}${esc(plan.description)}</p>`:''}</div><div class="roster-member-actions"><button onclick="toggleMember(${memberKey(h)})">${party.active.includes(memberKey(h))?'移至候補':'加入出戰'}</button><button onclick="requestRename(${memberKey(h)})">改名</button></div></article>`;};
-    return heading('PARTY / 編成與招募','隊伍編成',`<span class="tag">出戰 ${heroes().length} / 3 · 隊員 ${party.members.length}</span>`)+`<section class="panel roster-page">${uiHelp('夥伴說明','第一位玩家角色維持自由培養。夥伴名字在創角時隨機決定，之後可改名；招募後其配點、技能與技能槽隨等級自動配置，LV15 自動二轉。候補不獲經驗，出戰最多三人。')}<p class="small">招募等級依目前出戰最低等級；調整編成會放棄當前遭遇。</p><div class="roster-list">${legacy.map(memberRow).join('')}${rosterPlans().map(plan=>{const h=partyMember(plan.id);return h?memberRow(h):`<article class="roster-row"><div><b>${esc(party.companionNames[plan.id])}</b><span class="tag">${CLASSES[plan.job].name} · 尚未招募</span><p class="small">${plan.role!==CLASSES[plan.job].name?esc(plan.role)+'：':''}${esc(plan.description)}</p></div><div class="roster-member-actions"><button onclick="requestCompanionRename(${plan.id})">改名</button><button class="primary" onclick="recruitCompanion(${plan.id})" ${state.bag.length+5>RULES.bagCapacity||party.members.length>=65?'disabled':''}>招募夥伴</button></div></article>`;}).join('')}</div></section>`;
+    return heading('PARTY / 編成與招募','隊伍編成',`<span class="tag">出戰 ${active.length} / 3 · 隊員 ${party.members.length}</span>`)+`<section class="panel roster-page">${teamStatus}${uiHelp('夥伴說明','第一位玩家角色維持自由培養。夥伴名字在創角時隨機決定，之後可改名；招募後其配點、技能與技能槽隨等級自動配置，LV15 自動二轉。候補不獲經驗，出戰最多三人。')}<p class="small">招募等級依目前出戰最低等級；調整編成會放棄當前遭遇。</p><div class="roster-list">${legacy.map(memberRow).join('')}${rosterPlans().map(plan=>{const h=partyMember(plan.id);return h?memberRow(h):`<article class="roster-row"><div><b>${esc(party.companionNames[plan.id])}</b><span class="tag">${CLASSES[plan.job].name} · 尚未招募</span><p class="small">${plan.role!==CLASSES[plan.job].name?esc(plan.role)+'：':''}${esc(plan.description)}</p></div><div class="roster-member-actions"><button onclick="requestCompanionRename(${plan.id})">改名</button><button class="primary" onclick="recruitCompanion(${plan.id})" ${state.bag.length+5>RULES.bagCapacity||party.members.length>=65?'disabled':''}>招募夥伴</button></div></article>`;}).join('')}</div></section>`;
   };
   const originalValidateParty=validateParty;
   validateParty=function(data){const out=originalValidateParty(data);out.companionProfiles=storedPlans(data?.companionProfiles);out.companionNames=storedNames(data?.companionNames);for(const h of out.members)if(h.companionId!==undefined&&COMPANION_JOBS[h.companionId]!==h.job&&out.companionProfiles[h.companionId]?.job!==h.job)throw Error('存檔夥伴模板與職業不符');return out;};

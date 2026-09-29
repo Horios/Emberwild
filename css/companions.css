@@ -2,4 +2,10 @@
 .roster-page .roster-row{min-height:70px}
 .roster-page .roster-row>div:first-child{min-width:0}
 .roster-page .roster-row p{line-height:1.5}
+.roster-team-status{padding-bottom:10px;border-bottom:1px solid var(--line)}
+.roster-team-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px;margin-top:8px}
+.roster-team-slot{display:grid;gap:3px;padding:8px;border:1px solid var(--line);background:#202b23}
+.roster-replace-list{display:grid;gap:7px;margin:14px 0}
+.roster-replace-list button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;white-space:normal}
+.roster-replace-list .tag{flex-shrink:0}
 .companion-fixed-note{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:5px;color:var(--gold)}
