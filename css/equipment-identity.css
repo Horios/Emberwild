@@ -13,6 +13,11 @@
 .equipment-attribute-rule{display:block;margin-top:2px;color:var(--muted);font-size:11px;line-height:1.55;overflow-wrap:anywhere}
 .equipment-source-note{margin:10px 0 4px;color:var(--muted);font-size:11px;line-height:1.65}
 .equipment-source-value{font-variant-numeric:tabular-nums}
+.equipment-summary-values{display:flex;flex-wrap:wrap;gap:4px 14px;line-height:1.65}
+.equipment-summary-values>span{overflow-wrap:anywhere}
+.equipment-summary-affixes{display:grid;gap:3px;margin-top:7px;font-size:12px;line-height:1.65}
+.equipment-summary-affix{display:block;overflow-wrap:anywhere}
+.equipment-summary-affix>b{margin-right:6px;font-weight:400;color:var(--muted)}
 .inventory-detail-pane{min-width:0;overflow-wrap:anywhere}
 @media(max-width:620px){.inventory-detail-heading{flex-wrap:wrap;gap:6px}.inventory-detail-heading>div{min-width:0}}
 @media(max-width:780px){.equipment-identity-line{grid-template-columns:1fr}.forge-power-reroll{padding:10px}}

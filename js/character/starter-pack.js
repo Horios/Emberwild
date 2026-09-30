@@ -432,7 +432,7 @@
 
   function starterGiftItemHTML(g){
     const meta=normalizeExistingStarterMeta(g),label=POSITION_NAMES[meta?.position??0]||'裝備';
-    return `<div class="starter-gift-item"><div class="row"><b>${esc(label)}</b><span>${equipmentNameHTML(g)}</span></div><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryText(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g,{summary:'詳細數值來源'})}</div>`;
+    return `<div class="starter-gift-item"><div class="row"><b>${esc(label)}</b><span>${equipmentNameHTML(g)}</span></div><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryHTML(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g,{summary:'詳細數值來源'})}</div>`;
   }
 
   function showStarterGiftModal(hero,job,granted){

@@ -49,7 +49,7 @@ test('Equipment ratings, source contributions and existing equipment flows',asyn
         ITEM_FORMS[0][0][0].fixedEffects=[{key:'flatAttack',value:20},{key:'flatHp',value:12},{key:'flatDefense',value:3},{key:'speed',value:4},{key:'bossDamagePct',value:15}];
         const h=__equipmentTestHero(),g=__equipmentTestGear({prefixId:'keen',suffixId:'fury',affix:[{type:0,rank:3,value:5},{type:15,rank:3,value:10}]}),naked=stats(h);
         h.bag=[g];h.equipped[0]=g.id;
-        return {ledger:equipmentStatContributions(g),naked,equipped:stats(h),html:equipmentAttributeDetailsHTML(g)};
+        return {ledger:equipmentStatContributions(g),naked,equipped:stats(h),html:equipmentAttributeDetailsHTML(g),summary:equipmentTotalSummaryHTML(g)};
       });
       assert.deepEqual(out.ledger.total,{atk:55,hp:12,def:3,speed:4});
       assert.equal(out.equipped.atk,Math.round((out.naked.atk+55)*1.1));
@@ -57,7 +57,55 @@ test('Equipment ratings, source contributions and existing equipment flows',asyn
       assert.ok(out.equipped.crit>out.naked.crit);assert.ok(out.equipped.critDamage>out.naked.critDamage);
       assert.equal(out.equipped.bossDamage,.15);assert.ok(out.equipped.speed>=out.naked.speed+4);
       for(const label of ['前綴加成','後綴加成','詞綴 2 加成'])assert.deepEqual(out.ledger.rows.find(x=>x.label===label).stats,{atk:0,hp:0,def:0,speed:0});
-      assert.match(out.html,/角色總攻擊力 \+10%/);
+      assert.match(out.summary,/角色總攻擊力 \+10%/);assert.doesNotMatch(out.html,/角色總攻擊力 \+10%/);
+    });
+    await t.test('The summary adds equipment-owned bonuses across base, named effects and random affixes',async()=>{
+      const out=await r.page.evaluate(()=>{
+        applyBalanceConfig(structuredClone(__equipmentDefaults),{persist:false});
+        ITEM_FORMS[0][0][0].fixedEffects=[{key:'crit',value:5},{key:'critDamage',value:10},{key:'attackPct',value:10}];
+        const h=__equipmentTestHero(),g=__equipmentTestGear({prefixId:'keen',suffixId:'eagleeye',affix:[{type:3,rank:3,value:3},{type:6,rank:2,value:8}]}),before=stats(h);
+        h.bag=[g];h.equipped[0]=g.id;
+        return {summary:equipmentAbilitySummary(g),text:equipmentTotalSummaryText(g),html:equipmentAttributeDetailsHTML(g),before,after:stats(h)};
+      });
+      assert.equal(out.summary.total.atk,30);
+      assert.match(out.text,/暴擊率 \+17%/);assert.match(out.text,/暴擊傷害 \+18%/);
+      assert.doesNotMatch(out.text,/角色總攻擊力/);
+      assert.ok(Math.abs(out.after.crit-out.before.crit-.17)<1e-9);
+      assert.ok(Math.abs(out.after.critDamage-out.before.critDamage-.18)<1e-9);
+      assert.equal(out.after.atk,Math.round((out.before.atk+30)*1.1));
+      assert.match(out.html,/銳眼 · 暴擊率 \+5%/);assert.match(out.html,/鷹眼 · 暴擊率 \+4%/);
+      assert.doesNotMatch(out.html,/\[傳說\]|\[稀有\]/);
+    });
+    await t.test('Every supported non-panel affix uses the same ability and units in the upper total',async()=>{
+      const rows=await r.page.evaluate(()=>{
+        applyBalanceConfig(structuredClone(__equipmentDefaults),{persist:false});__equipmentTestHero();
+        const cases=[[{key:'pierce',value:6},{type:7,rank:3,value:9},'防禦穿透 +15'],[{key:'lifesteal',value:3},{type:8,rank:3,value:4},'生命竊取 +7%'],[{key:'evasion',value:5},{type:9,rank:3,value:6},'閃避率 +11%'],[{key:'defenseIgnore',value:10},{type:18,rank:3,value:15},'防禦無視 +25%'],[{key:'allCooldownReduction',value:1},{type:16,rank:3,value:2},'全主動／輔助技能冷卻 −3 回合'],[{key:'dropRateBonus',value:8},{type:17,rank:3,value:7},'掉寶率 +15%'],[{key:'elementDamagePct',value:10,element:'fire'},{type:12,rank:3,value:15,element:'fire'},'火 屬性傷害 +25%'],[{key:'elementResistPct',value:10,element:'ice'},{type:14,rank:3,value:15,element:'ice'},'冰 屬性抗性 +25%'],[{key:'raceDamagePct',value:10,race:'beast'},{type:13,rank:3,value:15,race:'beast'},'對野獸 種族增傷 +25%']];
+        return cases.map(([effect,affix,expected])=>{
+          ITEM_FORMS[0][0][0].fixedEffects=[effect];
+          const g=__equipmentTestGear({affix:[affix]});
+          return {expected,text:equipmentTotalSummaryText(g),row:equipmentStatContributions(g).rows.find(row=>row.affix).stats};
+        });
+      });
+      for(const row of rows){assert.ok(row.text.includes(row.expected),row.text);assert.deepEqual(row.row,{atk:0,hp:0,def:0,speed:0});}
+    });
+    await t.test('Skill totals preserve multiplicative bonus groups, proc units and first-element precedence',async()=>{
+      const out=await r.page.evaluate(()=>{
+        applyBalanceConfig(structuredClone(__equipmentDefaults),{persist:false});
+        ITEM_FORMS[0][0][0].fixedEffects=[{key:'skillEffectPct',value:20,skill:0},{key:'skillCooldownReduction',value:1,skill:0},{key:'basicElement',value:'fire'},{key:'bossDamagePct',value:15},{key:'elementBonus',value:8}];
+        const h=__equipmentTestHero(),g=__equipmentTestGear({prefixId:'frostcarved',affix:[{type:4,rank:3,value:30,skill:0},{type:5,rank:3,value:1,skill:0}]}),before=skillPower(0,h);
+        h.bag=[g];h.equipped[0]=g.id;
+        const text=equipmentTotalSummaryText(g),after=skillPower(0,h),element=weaponElement(h);
+        const i=CLASSES[0].skills.findIndex(sk=>sk[1]==='proc');
+        ITEM_FORMS[0][0][0].fixedEffects=[{key:'skillCooldownReduction',value:1,skill:i}];
+        g.affix=[{type:5,rank:3,value:2,skill:i}];g.prefixId='';
+        return {before,after,element,text,proc:equipmentTotalSummaryText(g),procExpected:'核心技能 '+(i+1)+' 觸發率 +'+3*GAME_BALANCE.affixes.procChancePerPointPercent+'%'};
+      });
+      assert.ok(Math.abs(out.after/out.before-1.56)<1e-9);
+      assert.match(out.text,/核心技能 1 核心技能效果 \+56%/);
+      assert.match(out.text,/核心技能 1 冷卻 −2 回合/);
+      assert.match(out.text,/對 BOSS 傷害 \+15%/);assert.match(out.text,/全屬性增傷 \+8%/);
+      assert.match(out.text,/普通攻擊改為火屬性/);assert.doesNotMatch(out.text,/普通攻擊改為冰屬性/);assert.equal(out.element,'fire');
+      assert.ok(out.proc.includes(out.procExpected),out.proc);
     });
     await t.test('Supported prefix/suffix equipment percentages feed the actual game calculation',async()=>{
       const out=await r.page.evaluate(()=>{
@@ -143,22 +191,31 @@ test('Equipment ratings, source contributions and existing equipment flows',asyn
       });
       assert.equal(out.checked,20);assert.deepEqual(out.issues,[]);
     });
-    await t.test('Summary hides rule text until expanded, keeps empty sources and footer, and fits narrow displays',async()=>{
+    await t.test('Affix rules stay above while details show only their increments, named effects and the footer',async()=>{
       await r.page.evaluate(()=>{
         applyBalanceConfig(structuredClone(__equipmentDefaults),{persist:false});__equipmentTestHero();
-        const g=__equipmentTestGear({powerTier:7,plus:10,affix:[{type:15,rank:3,value:10}]});state.bag.push(g);
+        ITEM_FORMS[0][0][0].fixedEffects=[{key:'flatAttack',value:0}];
+        const g=__equipmentTestGear({powerTier:7,plus:10,prefixId:'keen',suffixId:'fury',affix:[{type:0,rank:3,value:5},{type:15,rank:3,value:10}]});state.bag.push(g);
         document.getElementById('modal').innerHTML=inventoryGearDetail(g);document.getElementById('modal').showModal();
       });
       const detail=r.page.locator('#modal .equipment-attribute-details');
       assert.equal(await detail.getAttribute('open'),null);assert.equal(await r.page.locator('#modal .equipment-attribute-rule').first().isVisible(),false);
       assert.equal(await r.page.locator('#modal .equipment-base-rating').innerText(),'基底評級：A');
+      assert.equal(await r.page.locator('#modal .equipment-summary-affix').count(),2);
+      assert.equal(await r.page.locator('#modal .equipment-summary-affix').first().isVisible(),true);
+      assert.match(await r.page.locator('#modal .equipment-total-summary').innerText(),/暴擊率 \+5%[\s\S]*暴擊傷害 \+12%[\s\S]*\[傳說\] 攻擊 \+5[\s\S]*角色總攻擊力 \+10%/);
       await detail.locator('summary').click();
       assert.equal(await r.page.locator('#modal .equipment-attribute-rule').first().isVisible(),true);
       const rows=await r.page.locator('#modal .equipment-attribute-line').evaluateAll(rows=>rows.map(row=>({label:row.querySelector('b').textContent,value:row.querySelector('.equipment-source-value').textContent})));
-      for(const label of ['前綴加成','後綴加成','詞綴 1 加成','詞綴 2 加成'])assert.equal(rows.find(x=>x.label===label).value,'—');
-      assert.match(await r.page.locator('#modal .equipment-source-note').innerText(),/皆已計入上方數值.*「—」表示該效果不直接影響裝備能力值/);
+      assert.equal(rows.find(x=>x.label==='前綴加成').value,'銳眼 · 暴擊率 +5%');
+      assert.equal(rows.find(x=>x.label==='後綴加成').value,'狂擊 · 暴擊傷害 +12%');
+      assert.equal(rows.find(x=>x.label==='詞綴 1 加成').value,'攻擊 +5');
+      assert.equal(rows.find(x=>x.label==='詞綴 2 加成').value,'—');
+      assert.doesNotMatch(await detail.innerText(),/\[傳說\]|角色總攻擊力 \+10%/);
+      assert.match(await r.page.locator('#modal .equipment-source-note').innerText(),/詳細數值無須再次相加.*效果仍正常生效/);
       await r.page.setViewportSize({width:390,height:844});
       assert.ok(await detail.evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+      assert.ok(await r.page.locator('#modal .equipment-total-summary').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
       await r.page.setViewportSize({width:1280,height:800});await r.page.evaluate(()=>{closeModal();setTab('equipment');});
       const listName=r.page.locator('.inventory-list-name').first();
       assert.match(await listName.innerText(),/\+10[\s\S]*基底評級：A/);

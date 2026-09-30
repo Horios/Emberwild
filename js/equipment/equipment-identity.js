@@ -570,15 +570,75 @@
     const total=Object.fromEntries(PANEL_KEYS.map(k=>[k,Math.round(current[k])]));
     return {rating:globalThis.equipmentBaseRating(g),total,rows};
   };
-  globalThis.equipmentTotalSummaryText=function(g){return statText(globalThis.equipmentStatContributions(g).total);};
+  const CHARACTER_EFFECT_KEYS=new Set(['attackPct','hpPct','defensePct']);
+  const AFFIX_EFFECT_KEYS={3:'crit',6:'critDamage',7:'pierce',8:'lifesteal',9:'evasion',12:'elementDamagePct',13:'raceDamagePct',14:'elementResistPct',16:'allCooldownReduction',17:'dropRateBonus',18:'defenseIgnore'};
+  // Equipment-owned bonuses are totals in their own units, never an estimate of
+  // character attack or combat power. Keep random-affix rules available above.
+  globalThis.equipmentAbilitySummary=function(g){
+    const ledger=globalThis.equipmentStatContributions(g),effects=new Map();
+    const addEffect=(effect,random=false)=>{
+      if(!effect||CHARACTER_EFFECT_KEYS.has(effect.key)||PCT_PANEL_KEYS[effect.key]||FLAT_PANEL_KEYS[effect.key])return;
+      const e={...effect};
+      if(e.key==='skillCooldownReduction'&&CLASSES[g.job??0]?.skills?.[e.skill??0]?.[1]==='proc'){
+        e.key='skillProcChance';e.value=(Number(e.value)||0)*GAME_BALANCE.affixes.procChancePerPointPercent;
+      }
+      const id=[e.key,e.element||'',e.race||'',e.skill??''].join(':');
+      if(e.key==='basicElement'){
+        // weaponElement uses the first declared element; conflicting rules do not add.
+        if(!effects.has('basicElement'))effects.set('basicElement',e);
+        return;
+      }
+      if(!effects.has(id))effects.set(id,{...e,value:0,fixedValue:0,affixValue:0});
+      const total=effects.get(id),n=Number(e.value)||0;
+      total.value+=n;total[random?'affixValue':'fixedValue']+=n;
+    };
+    for(const row of ledger.rows)if(row.effect)addEffect(row.effect);
+    for(const row of ledger.rows){
+      const a=row.affix;if(!a)continue;
+      const key=AFFIX_EFFECT_KEYS[a.type]||(a.type===4?'skillEffectPct':a.type===5?'skillCooldownReduction':'');
+      if(key)addEffect({key,value:a.value,...(a.element?{element:a.element}:{}),...(a.race?{race:a.race}:{}),...([4,5].includes(a.type)?{skill:a.skill??0}:{})},true);
+    }
+    const values=statText(ledger.total)==='—'?[]:statText(ledger.total).split(' / ');
+    for(const e of effects.values()){
+      // The existing skill formula multiplies its fixed and random bonus groups.
+      if(e.key==='skillEffectPct')e.value=((1+e.fixedValue/100)*(1+e.affixValue/100)-1)*100;
+      if(['allCooldownReduction','skillCooldownReduction'].includes(e.key))e.value=Math.max(0,Math.round(e.fixedValue))+e.affixValue;
+      if(e.key==='basicAdvanceNextRound')e.value=Math.max(0,Math.min(5,Math.round(e.value)));
+      if(e.key!=='basicElement'){
+        e.value=Number(e.value.toFixed(2));
+        if(!e.value)continue;
+      }
+      values.push(e.key==='skillProcChance'?'核心技能 '+((e.skill??0)+1)+' 觸發率 '+(e.value>=0?'+':'')+e.value+'%':e.key==='skillCooldownReduction'?'核心技能 '+((e.skill??0)+1)+' 冷卻 −'+e.value+' 回合':effectText(e));
+    }
+    const affixes=ledger.rows.filter(row=>row.affix).map(row=>({label:row.label.replace(' 加成',''),rule:row.rule,rank:row.affix.rank??0}));
+    return {total:ledger.total,values,affixes};
+  };
+  globalThis.equipmentTotalSummaryText=function(g){return globalThis.equipmentAbilitySummary(g).values.join(' / ')||'—';};
+  globalThis.equipmentTotalSummaryHTML=function(g){
+    const summary=globalThis.equipmentAbilitySummary(g);
+    const values='<span class="equipment-summary-values">'+(summary.values.length?summary.values.map(value=>'<span>'+esc(value)+'</span>').join(''):'—')+'</span>';
+    const affixes=summary.affixes.length?'<span class="equipment-summary-affixes">'+summary.affixes.map(a=>'<span class="equipment-summary-affix effect-quality-'+a.rank+'"><b>'+esc(a.label)+'</b> '+esc(a.rule)+'</span>').join('')+'</span>':'';
+    return values+affixes;
+  };
   globalThis.equipmentAttributeDetailsHTML=function(g,options={}){
     if(!g)return '';
     const ledger=globalThis.equipmentStatContributions(g);
     const lines=ledger.rows.map(row=>{
-      const rule=row.rule?'<small class="equipment-attribute-rule'+(row.affix?' effect-quality-'+(row.affix.rank??0):'')+'">'+esc(row.rule)+'</small>':'';
-      return '<div class="equipment-attribute-line"><b>'+esc(row.label)+'</b><span><span class="equipment-source-value">'+esc(statText(row.stats))+'</span>'+rule+'</span></div>';
+      const stats=statText(row.stats);
+      let value=stats,extra='';
+      if(!row.affix&&row.rule){
+        if(row.effect){
+          value=row.rule;
+          const flat=FLAT_PANEL_KEYS[row.effect.key];
+          if(stats!=='—'&&(PCT_PANEL_KEYS[row.effect.key]||row.label.startsWith('成長加成')||flat&&Number(row.effect.value)!==row.stats[flat]))extra='裝備能力增加量：'+stats;
+        }else if(stats==='—')value=row.rule;
+        else extra=row.rule;
+      }
+      // Random-affix rules appear once in the summary. Their detailed rows only
+      // show an equipment-panel increment, or a dash when there is none.
+      return '<div class="equipment-attribute-line"><b>'+esc(row.label)+'</b><span><span class="equipment-source-value">'+esc(value)+'</span>'+(extra?'<small class="equipment-attribute-rule">'+esc(extra)+'</small>':'')+'</span></div>';
     });
-    const note='※ 可直接結算為裝備自身能力值的加成，皆已計入上方數值；「—」表示該效果不直接影響裝備能力值。';
+    const note='※ 可加總的裝備能力已列於上方，詳細數值無須再次相加；詞綴加成的「—」表示不直接增加裝備自身能力，效果仍正常生效。';
     return '<details class="equipment-attribute-details"><summary>'+esc(options.summary||'詳細數值來源')+'</summary><div class="equipment-attribute-list">'+lines.join('')+'<p class="equipment-source-note">'+esc(note)+'</p></div></details>';
   };
   exclusiveEquipmentText=function(g){
@@ -631,7 +691,7 @@
   if(typeof update12BossMemberView==='function'){
     update12BossMemberView=function(){
       const mode=state.difficulty||0,b=GAMEPLAY_SETTINGS.equipment.boss,needMat=Math.max(0,Math.round(b.craftMaterialCount));
-      return heading('BOSS WORKSHOP / 首領製作',MODES[mode].name+'模式專屬裝備')+modePicker()+'<section class="panel">'+resourceLine()+uiHelp('製作說明','BOSS 專屬裝備固定三條專屬詞綴，不抽前綴／後綴，也不能洗鍊隨機詞條；基底評級仍依難度抽選。')+'</section><div class="cards boss-recipes">'+MAPS.map((m,i)=>{if(i===6)return '';const family=regionFamily(i),tier=regionTier(i),g={job:state.job,slot:bossEquipmentSlot(family),tier,boss:family,region:i,difficulty:mode,rar:0,plus:0,affix:[],powerTier:strengthAnchor(mode)},mat=bossMaterial(i,mode),n=state.materials[mat]||0,cost=Math.round(tier*b.craftGoldPerTier*(mode+1)),ready=canVisit(i)&&state.lv>=m.min&&state.gold>=cost&&n>=needMat;return '<article class="card boss-recipe">'+equipmentArt(g)+'<span class="tag">'+esc(m.name)+'</span><h3>'+equipmentNameHTML(g)+'</h3><p class="small">'+esc(characterName(state))+' · LV'+m.min+'</p><p class="equipment-total-summary">'+globalThis.equipmentTotalSummaryText(g)+'</p>'+globalThis.equipmentAttributeDetailsHTML(g)+'<div class="recipe-cost"><span>'+esc(mat)+' '+n+'/'+needMat+'</span><span>◈ '+cost+'</span></div><button class="primary" onclick="craftBoss('+i+')" '+(ready?'':'disabled')+'>'+(!canVisit(i)?'尚未解鎖':ready?'製作裝備':'等級／材料不足')+'</button></article>';}).join('')+'</div>';
+      return heading('BOSS WORKSHOP / 首領製作',MODES[mode].name+'模式專屬裝備')+modePicker()+'<section class="panel">'+resourceLine()+uiHelp('製作說明','BOSS 專屬裝備固定三條專屬詞綴，不抽前綴／後綴，也不能洗鍊隨機詞條；基底評級仍依難度抽選。')+'</section><div class="cards boss-recipes">'+MAPS.map((m,i)=>{if(i===6)return '';const family=regionFamily(i),tier=regionTier(i),g={job:state.job,slot:bossEquipmentSlot(family),tier,boss:family,region:i,difficulty:mode,rar:0,plus:0,affix:[],powerTier:strengthAnchor(mode)},mat=bossMaterial(i,mode),n=state.materials[mat]||0,cost=Math.round(tier*b.craftGoldPerTier*(mode+1)),ready=canVisit(i)&&state.lv>=m.min&&state.gold>=cost&&n>=needMat;return '<article class="card boss-recipe">'+equipmentArt(g)+'<span class="tag">'+esc(m.name)+'</span><h3>'+equipmentNameHTML(g)+'</h3><p class="small">'+esc(characterName(state))+' · LV'+m.min+'</p><p class="equipment-total-summary">'+globalThis.equipmentTotalSummaryHTML(g)+'</p>'+globalThis.equipmentAttributeDetailsHTML(g)+'<div class="recipe-cost"><span>'+esc(mat)+' '+n+'/'+needMat+'</span><span>◈ '+cost+'</span></div><button class="primary" onclick="craftBoss('+i+')" '+(ready?'':'disabled')+'>'+(!canVisit(i)?'尚未解鎖':ready?'製作裝備':'等級／材料不足')+'</button></article>';}).join('')+'</div>';
     };
   }
 
