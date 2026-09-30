@@ -1,5 +1,8 @@
 
 (()=>{
+  const copy=value=>JSON.parse(JSON.stringify(value));
+  let savedClasses=null;try{const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(saved?.schema===BALANCE_SCHEMA)savedClasses=saved.classes;}catch{}
+  CLASSES.forEach((cls,job)=>{const d=EmberwildProgression.defaults.classes[job],legacy=!!savedClasses?.[job];cls.initialStats??=legacy?classInitial(cls,job):copy(d.initialStats);cls.growthPerLevel??=legacy?classGrowth(cls):copy(d.growthPerLevel);cls.growthSteps??=legacy?[]:copy(d.growthSteps);});
   function classInitial(cls,job){
     const own=cls?.initialStats||{};
     return {
@@ -27,15 +30,18 @@
       const values=cls[field];
       if(!values||typeof values!=='object'||Array.isArray(values)||['hp','atk','def','crit','critDamage'].some(key=>!Number.isFinite(values[key])||values[key]<0)||(field==='initialStats'&&(values.hp<=0||values.atk<=0)))throw Error('職業初始／成長資料無效：'+job);
     }
+    for(const [job,cls] of (input?.classes||[]).entries())if(cls.growthSteps!==undefined&&!EmberwildProgression.validSteps(cls.growthSteps))throw Error('整數階梯成長無效：'+job);
     const out=classStatsValidateBase(input);
+    out.classes.forEach((cls,job)=>{cls.growthSteps=copy(input.classes[job].growthSteps||[]);});
     for(const [job,cls] of (input?.classes||[]).entries())for(const field of ['initialStats','growthPerLevel'])if(cls?.[field]!==undefined)out.classes[job][field]={...cls[field]};
     return out;
   };
   const classStatsApplyBase=applyBalanceConfig;
   applyBalanceConfig=function(input,{persist=true}={}){
     const checked=validateBalanceConfig(input),out=classStatsApplyBase(checked,{persist:false});
-    for(const [job,cls] of checked.classes.entries())for(const field of ['initialStats','growthPerLevel']){
-      if(cls[field]===undefined)delete CLASSES[job][field];else CLASSES[job][field]={...cls[field]};
+    for(const [job,cls] of checked.classes.entries())for(const field of ['initialStats','growthPerLevel','growthSteps']){
+      if(cls[field]===undefined)delete CLASSES[job][field];else CLASSES[job][field]=copy(cls[field]);
+      if(field==='initialStats'&&cls[field])for(const key of ['hp','atk','def'])CLASSES[job][key]=cls[field][key];
     }
     if(state){for(const h of party?.members||[state])withHero(h,clampVitals);render();}
     if(persist)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));
@@ -44,7 +50,7 @@
   const classStatsExportBase=exportableBalance;
   exportableBalance=function(){
     const out=classStatsExportBase();
-    out.classes.forEach((cls,job)=>{cls.initialStats=classInitial(CLASSES[job],job);cls.growthPerLevel=classGrowth(CLASSES[job]);});
+    out.classes.forEach((cls,job)=>{cls.initialStats=classInitial(CLASSES[job],job);cls.growthPerLevel=classGrowth(CLASSES[job]);cls.growthSteps=copy(CLASSES[job].growthSteps||[]);for(const key of ['hp','atk','def'])cls[key]=cls.initialStats[key];});
     const skills=out.balanceSettings?.skills;
     if(skills){
       for(const key of ['maxLevel','initialCap','capLevelsPerStep','effectPerExtraLevel'])delete skills.core?.[key];
@@ -53,6 +59,8 @@
     }
     return out;
   };
+  const resetBase=resetBalanceJSON;
+  resetBalanceJSON=function(){const out=resetBase();CLASSES.forEach((cls,job)=>EmberwildProgression.applyClassDefaults(cls,job));if(state)for(const h of party?.members||[state])withHero(h,clampVitals);render();return out;};
   globalThis.classInitialStats=classInitial;
   globalThis.classGrowthPerLevel=classGrowth;
   // The early balance loader runs before this module installs its class fields.
@@ -60,7 +68,7 @@
     const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');
     if(saved?.schema===BALANCE_SCHEMA){
       const checked=validateBalanceConfig(saved);
-      checked.classes.forEach((cls,job)=>{for(const field of ['initialStats','growthPerLevel'])if(cls[field]!==undefined)CLASSES[job][field]={...cls[field]};});
+      checked.classes.forEach((cls,job)=>{for(const field of ['initialStats','growthPerLevel','growthSteps']){if(cls[field]!==undefined)CLASSES[job][field]=copy(cls[field]);else if(field==='growthSteps')CLASSES[job].growthSteps=[];}if(cls.initialStats)for(const key of ['hp','atk','def'])CLASSES[job][key]=cls.initialStats[key];});
       if(state){for(const h of party?.members||[state])withHero(h,clampVitals);render();}
     }
   }catch(e){console.warn('職業初始／成長資料還原失敗',e);}

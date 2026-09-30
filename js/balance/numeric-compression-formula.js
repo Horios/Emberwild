@@ -16,29 +16,16 @@
     s.meta??={};
     s.meta.numericCompressionVersion=COMPRESSION_VERSION;
     s.progression??={};s.progression.statsPerLevel??={};s.progression.statsPerPoint??={};s.progression.advance??={};
-    Object.assign(s.progression.statsPerLevel,{hp:.9,attack:.18,defense:.1});
-    Object.assign(s.progression.statsPerPoint,{hp:.55,attack:.1,defense:.06});
-    Object.assign(s.progression.advance,{hpMultiplier:1.12,attackMultiplier:1.15,defenseMultiplier:1.12});
+    Object.assign(s.progression.statsPerLevel,{hp:4,attack:1,defense:1});
     s.skills??={};s.skills.core??={};s.skills.gems??={};
     s.skills.core.effectPerExtraLevel=.18;
     Object.assign(s.skills.gems,{effectMultiplier:1.10,hybridMultiplier:1.05,hybridActiveHealAttack:.10});
     s.equipment??={};s.equipment.baseStats??={};s.equipment.enhance??={};s.equipment.boss??={};s.equipment.difficultyAffix??={};
-    Object.assign(s.equipment.baseStats,{weaponAttackPerTier:.7,armorHpPerTier:2.2,armorDefensePerTier:.45,offhandAttackPerTier:.3,offhandHpPerTier:.8,accessoryAttackPerTier:.3,accessoryHpPerTier:.8});
-    s.equipment.enhance.statPerLevel=.06;
     Object.assign(s.equipment.difficultyAffix,{baseAttackPerTier:.6,baseHpPerTier:2.2,defenseBasePerTier:.5,defensePerRankPerTier:.2,critBase:2,critPerRank:2});
-    s.monsters??={};s.monsters.normal??={};s.monsters.kindMultipliers??={};s.monsters.finalBoss??={};s.monsters.awakened??={};
-    Object.assign(s.monsters.normal,{hpBase:4,hpPerLevel:3,hpQuadratic:.08,attackBase:1.6,attackPerLevel:.55,defensePerLevel:.55});
-    Object.assign(s.monsters.kindMultipliers,{bossHp:2.4,eliteHp:1.45,bossAttack:1.3,eliteAttack:1.15,eliteDefense:1.1,bossDefense:1.2});
-    Object.assign(s.monsters.finalBoss,{level:40,hp:7800,attack:48,defense:30});
-    Object.assign(s.monsters.awakened,{threshold:30,hpBaseMultiplier:1.5,hpPerLevel:.04,attackBaseMultiplier:1.4,attackPerLevel:.03,defenseMultiplier:1.25});
-    if(Array.isArray(s.difficulty?.modes)&&s.difficulty.modes.length>=3){
-      Object.assign(s.difficulty.modes[0],{hp:1,attack:1,defense:1});
-      Object.assign(s.difficulty.modes[1],{hp:1.55,attack:1.25,defense:1.15});
-      Object.assign(s.difficulty.modes[2],{hp:2.25,attack:1.55,defense:1.3});
-    }
     s.combat??={};s.combat.damageFormula??={};
     Object.assign(s.combat.damageFormula,{attackCoefficient:1,defenseCoefficient:.55,minimumDamage:1});
     s.combat.defenseEffectiveness=s.combat.damageFormula.defenseCoefficient;
+    EmberwildProgression.applyDefaults(s);
     return s;
   }
   function ensureCompressionBalance(b){
@@ -79,7 +66,6 @@
     out.balanceSettings??={};out.balance??={};
     if(fresh){
       ensureCompressionSettings(out.balanceSettings);ensureCompressionBalance(out.balance);
-      const classBase=[[15,3,2],[10,4,1],[11,4,1],[12,3,2]];
       const powers=[
         [1.35,.9,.65,.4,2.05,.8],
         [1.55,.9,.8,.45,2.6,1.15],
@@ -87,10 +73,10 @@
         [1.4,1,.7,.65,2.0,.9]
       ];
       (out.classes||[]).forEach((cls,job)=>{
-        const base=classBase[job]||[12,3,1];cls.hp=base[0];cls.atk=base[1];cls.def=base[2];
+        EmberwildProgression.applyClassDefaults(cls,job);
         (cls.skills||[]).forEach((sk,i)=>{if(Number.isFinite(powers[job]?.[i]))sk.power=powers[job][i];});
       });
-      if(out.equipmentPowerSystem?.strength?.multipliers)out.equipmentPowerSystem.strength.multipliers=[1,1.04,1.08,1.12,1.16,1.20,1.24,1.28,1.32,1.36];
+      if(out.equipmentPowerSystem?.strength?.multipliers)out.equipmentPowerSystem.strength.multipliers=clone(EmberwildProgression.defaults.powerMultipliers);
       for(const list of [out.equipmentPowerSystem?.prefixes,out.equipmentPowerSystem?.suffixes])for(const x of list||[])if(x?.effect?.key==='pierce')x.effect.value=Math.max(1,Number((Number(x.effect.value||0)*.6).toFixed(2)));
       for(const x of out.equipmentPowerSystem?.bossAffixes||[])for(const e of x.effects||[])if(e?.key==='pierce')e.value=Math.max(1,Number((Number(e.value||0)*.6).toFixed(2)));
     }else{
@@ -98,6 +84,10 @@
       out.balanceSettings.combat??={};out.balanceSettings.combat.damageFormula??={attackCoefficient:1,defenseCoefficient:.55,minimumDamage:1};
       out.balance.combat??={};out.balance.combat.statCaps??={};out.balance.combat.statCaps.defenseIgnore??=.75;
       out.balance.affixes??={};out.balance.affixes.extendedValues??={};out.balance.affixes.extendedValues.defenseIgnore??={normal:0,fine:4,rare:8,legendary:12};
+      // Old v1 JSON used the same encounter/difficulty multipliers for gold and EXP.
+      const rewards=out.balanceSettings.rewards??={};rewards.xp??={};
+      rewards.xp.kindMultiplier??=clone(rewards.kindMultiplier||EmberwildProgression.defaults.settings.rewards.xp.kindMultiplier);
+      for(const [i,d] of (out.balanceSettings.difficulty?.modes||[]).entries())d.xpMultiplier??=d.reward??EmberwildProgression.defaults.settings.difficulty.modes[i].xpMultiplier;
     }
     (out.classes||[]).forEach((cls,job)=>(cls.skills||[]).forEach((sk,i)=>normalizeSkillExtras(sk,job,i)));
     for(const item of out.items||[])item.statEffects=normalizeStatEffects(item.statEffects);

@@ -212,13 +212,12 @@
       const lv=Math.round(gate?f.level:runtime.max),hp=Math.round(f.hp*row.hpMultiplier),atk=Math.round(f.attack*row.attackMultiplier),def=Math.round(f.defense*row.defenseMultiplier);
       return {name:row.name,icon:'',mat:row.material,lv,hp,maxhp:hp,atk,def,kind:'final',turn:0,monsterId:row.id,maxDrops:row.maxDrops,element:row.element,race:row.race};
     }
-    const normals=cat.filter(m=>m.mapIndex===map&&m.kind==='normal'&&m.enabled!==false),elites=normals.filter(m=>m.eliteEnabled!==false),boss=cat.find(m=>m.mapIndex===map&&m.kind==='boss'&&m.enabled!==false),ahead=GS('progression.mapAheadAllowance',5),bossAllowed=!!boss&&mc.bossEnabled&&runtime.max<=h.lv+ahead;
+    const normals=cat.filter(m=>m.mapIndex===map&&m.kind==='normal'&&m.enabled!==false),elites=normals.filter(m=>m.eliteEnabled!==false),boss=cat.find(m=>m.mapIndex===map&&m.kind==='boss'&&m.enabled!==false),ahead=EmberwildProgression.encounterLevelLead(GAMEPLAY_SETTINGS,h.lv),bossAllowed=!!boss&&mc.bossEnabled&&runtime.max<=h.lv+ahead;
     if(!normals.length)throw Error('地圖沒有啟用中的普通怪物：'+runtime.name);
     const bossChance=bossAllowed?Math.max(0,Math.min(1,Number(mc.bossChance)||0)):0,eliteChance=mc.eliteEnabled&&elites.length?Math.max(0,Math.min(1-bossChance,Number(mc.eliteChance)||0)):0,r=rng();
     let kind='normal',row;if(r<bossChance){kind='boss';row=boss;}else if(r<bossChance+eliteChance){kind='elite';row=weightedPick(elites,rng);}else row=weightedPick(normals,rng);
-    const maxLv=Math.min(runtime.max,h.lv+ahead),lv=kind==='boss'?runtime.max:runtime.min+Math.floor(rng()*Math.max(1,maxLv-runtime.min+1)),n=GAMEPLAY_SETTINGS.monsters.normal,k=GAMEPLAY_SETTINGS.monsters.kindMultipliers;
-    const kindHp=kind==='boss'?k.bossHp:kind==='elite'?k.eliteHp:1,kindAtk=kind==='boss'?k.bossAttack:kind==='elite'?k.eliteAttack:1,kindDef=kind==='boss'?k.bossDefense:kind==='elite'?k.eliteDefense:1;
-    const hp=Math.round((n.hpBase+lv*n.hpPerLevel+lv*lv*n.hpQuadratic)*kindHp*row.hpMultiplier),atk=Math.round((n.attackBase+lv*n.attackPerLevel)*kindAtk*row.attackMultiplier),def=Math.round(lv*n.defensePerLevel*kindDef*row.defenseMultiplier);
+    const maxLv=Math.min(runtime.max,h.lv+ahead),lv=kind==='boss'?runtime.max:runtime.min+Math.floor(rng()*Math.max(1,maxLv-runtime.min+1));
+    const {hp,atk,def}=EmberwildProgression.baseMonsterStats(GAMEPLAY_SETTINGS,lv,kind,row);
     return {name:(kind==='elite'?'菁英・':'')+row.name,icon:'',mat:row.material,lv,hp,maxhp:hp,atk,def,kind,turn:0,monsterId:row.id,maxDrops:row.maxDrops,element:row.element,race:row.race};
   };
 

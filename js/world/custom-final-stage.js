@@ -32,19 +32,14 @@
   };
 
   function stageEnemyFromRow(row,mi,h,kind){
-    const runtime=MAPS[mi],ahead=GS('progression.mapAheadAllowance',5),n=GAMEPLAY_SETTINGS.monsters.normal,k=GAMEPLAY_SETTINGS.monsters.kindMultipliers;
+    const runtime=MAPS[mi],ahead=EmberwildProgression.encounterLevelLead(GAMEPLAY_SETTINGS,h.lv);
     const maxLv=Math.max(runtime.min,Math.min(runtime.max,h.lv+ahead)),lv=runtime.min+Math.floor(Math.random()*Math.max(1,maxLv-runtime.min+1));
-    const kindHp=kind==='elite'?k.eliteHp:1,kindAtk=kind==='elite'?k.eliteAttack:1,kindDef=kind==='elite'?k.eliteDefense:1;
-    let hp=Math.round((n.hpBase+lv*n.hpPerLevel+lv*lv*n.hpQuadratic)*kindHp*row.hpMultiplier),atk=Math.round((n.attackBase+lv*n.attackPerLevel)*kindAtk*row.attackMultiplier),def=Math.round(lv*n.defensePerLevel*kindDef*row.defenseMultiplier);
-    const mode=h.difficulty||0,d=MODES[mode],a=GAMEPLAY_SETTINGS.monsters.awakened;
-    if(lv>a.threshold){const progress=lv-a.threshold;hp=Math.round(hp*(a.hpBaseMultiplier+progress*a.hpPerLevel));atk=Math.round(atk*(a.attackBaseMultiplier+progress*a.attackPerLevel));def=Math.round(def*a.defenseMultiplier);}
-    hp=Math.round(hp*d.hp);atk=Math.round(atk*d.atk);def=Math.round(def*d.def);
+    const mode=h.difficulty||0,{hp,atk,def}=EmberwildProgression.monsterStats(GAMEPLAY_SETTINGS,lv,kind,mode,row);
     return {name:(kind==='elite'?'菁英・':'')+row.name,icon:'',mat:row.material,lv,hp,maxhp:hp,atk,def,kind,turn:0,monsterId:row.id,maxDrops:row.maxDrops,element:row.element,race:row.race,difficulty:mode,region:mi,stageOrder:row.stageOrder};
   }
   function finalBossFromRow(row,mi,h){
-    const f=GAMEPLAY_SETTINGS.monsters.finalBoss,mc=worldMapConfig(mi),lv=mc?.progressionGate===true?Math.round(f.level):Math.round(MAPS[mi].max),mode=h.difficulty||0,d=MODES[mode];
-    let hp=Math.round(f.hp*row.hpMultiplier),atk=Math.round(f.attack*row.attackMultiplier),def=Math.round(f.defense*row.defenseMultiplier);
-    hp=Math.round(hp*d.hp);atk=Math.round(atk*d.atk);def=Math.round(def*d.def);
+    const f=GAMEPLAY_SETTINGS.monsters.finalBoss,mc=worldMapConfig(mi),lv=mc?.progressionGate===true?Math.round(f.level):Math.round(MAPS[mi].max),mode=h.difficulty||0;
+    const {hp,atk,def}=EmberwildProgression.monsterStats(GAMEPLAY_SETTINGS,lv,'final',mode,row);
     return {name:row.name,icon:'',mat:row.material,lv,hp,maxhp:hp,atk,def,kind:'final',turn:0,monsterId:row.id,maxDrops:row.maxDrops,element:row.element,race:row.race,difficulty:mode,region:mi,stageOrder:row.stageOrder};
   }
   function configuredStageRows(mi){

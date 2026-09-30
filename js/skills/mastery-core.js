@@ -86,7 +86,7 @@ const SUPPORT_PLAN=[
   [{level:1},{level:4},{level:15}],
   [{level:1,mastery:'light'},{level:4,mastery:'light'},{level:15,mastery:'light'}]
 ];
-const MASTERY_DEFAULTS={xpBase:8,xpLinear:5,xpQuadratic:1,skillUseXp:2,basicAttackXp:1,maxLevel:30,advanceRequiredLevel:4,characterXpMultiplier:1.35};
+const MASTERY_DEFAULTS={xpBase:8,xpLinear:5,xpQuadratic:1,skillUseXp:2,basicAttackXp:1,maxLevel:30,advanceRequiredLevel:4,characterXpMultiplier:1};
 
 function ensureMasterySettings(settings){
   if(!settings||typeof settings!=='object')return settings;
