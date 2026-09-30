@@ -65,6 +65,17 @@ function heroDropRateBonus(h){return equipment(h).flatMap(g=>g.affix||[]).filter
 function partyDropRateBonus(){const hs=party?heroes():(state?[state]:[]);return hs.reduce((n,h)=>n+heroDropRateBonus(h),0);}
 function effectiveDropChance(rule,e,bonus=partyDropRateBonus()){const mode=Math.max(0,Math.min(2,Number(e?.difficulty)||0)),base=Math.max(0,Math.min(1,Number(rule?.chanceByDifficulty?.[mode])||0));return Math.min(1,base*(1+Math.max(0,Number(bonus)||0)));}
 function configuredDropRules(e){const id=e.monsterId||resolveMonsterCatalogId(e);return (GAMEPLAY_SETTINGS.drops?.entries||[]).filter(r=>r.enabled!==false&&r.sources.includes(id)&&r.kinds.includes(e.kind));}
+function configuredDropDescription(row,kind,mapIndex){
+  const e={monsterId:row.id,kind,region:mapIndex,difficulty:party?.difficulty??state?.difficulty??0},bonus=partyDropRateBonus();
+  const rules=configuredDropRules(e).filter(rule=>effectiveDropChance(rule,e,bonus)>0);
+  if(!rules.length)return '掉落表：此難度無啟用中的物品掉落';
+  const items=rules.map(rule=>{
+    const name=rule.type==='sourceMaterial'?(kind==='boss'?bossMaterial(mapIndex,e.difficulty):row.material):rule.type==='material'?rule.key:rule.name;
+    const chance=Number((effectiveDropChance(rule,e,bonus)*100).toFixed(2)),qty=rule.quantityMin===rule.quantityMax?rule.quantityMin:rule.quantityMin+'～'+rule.quantityMax;
+    return esc(name)+' ×'+qty+'（'+chance+'%）';
+  });
+  return '掉落表：'+items.join('、')+'；最多 '+Math.max(0,Math.floor(row.maxDrops??99))+' 項';
+}
 function randomQuantity(rule,rng=Math.random){const lo=Math.max(1,Math.floor(rule.quantityMin||1)),hi=Math.max(lo,Math.floor(rule.quantityMax||lo));return lo+Math.floor(rng()*(hi-lo+1));}
 function ensureLegendaryDropAffix(g){
   // Equipment rarity is determined by affix quality. A "legendary gear" drop therefore

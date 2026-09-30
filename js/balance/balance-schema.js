@@ -45,3 +45,21 @@ validateGameplaySettings=function(cfg){
 };
 // Rebind the normalizer after wrapping the validator above.
 normalizeGameplaySettings=function(input){validateMonsterDropDynamicInput({balanceSettings:input});return validateGameplaySettings(mergeGameplayShape(GAMEPLAY_SETTINGS_DEFAULTS,input||{}));};
+
+// Compatibility fields stay importable, but exported documentation names their effective replacements.
+const balanceSourceReferenceBase=balanceReference;
+balanceReference=function(){
+  const out=balanceSourceReferenceBase(),legacy={};
+  const add=(paths,replacement,note='僅保留舊 JSON 相容，不參與最終遊戲計算。')=>{
+    for(const path of paths)legacy['balanceSettings.'+path]={status:'deprecated',replacement,note};
+  };
+  add(['difficulty.modes[].equipmentChance','difficulty.modes[].gemChance','difficulty.modes[].bossGearChance','difficulty.modes[].legendaryGearChance','difficulty.materialChance','rewards.potionDropChance','rewards.radiant.normalElite','rewards.radiant.bossFinal'],'balanceSettings.drops.entries');
+  add(['equipment.difficultyAffix.baseAttackPerTier','equipment.difficultyAffix.baseHpPerTier','equipment.difficultyAffix.defenseBasePerTier','equipment.difficultyAffix.defensePerRankPerTier','equipment.difficultyAffix.critBase','equipment.difficultyAffix.critPerRank','equipment.difficultyAffix.skillChance'],'balance.affixes.poolBySlotRank');
+  add(['equipment.boss.powerByDifficulty','equipment.boss.skillEffectByDifficulty'],'equipmentPowerSystem.bossAffixes / equipmentPowerSystem.strength');
+  add(['monsters.encounter.bossChance','maps.catalog[].bossChance'],'balanceSettings.monsters.bossMeter','一般地圖固定視為 0；BOSS 由進度與手動挑戰生成。終局地圖仍使用固定關卡規則。');
+  out.legacySettings=legacy;
+  out.balancePaths['balanceSettings.drops.entries']='所有可配置物品掉落的唯一機率來源；各規則依來源怪物、遭遇種類與難度獨立判定，並受 maxDrops 與掉寶率加成影響。';
+  out.balancePaths['balanceSettings.equipment.difficultyAffix']='hardChance / hellChance 與各品質累積門檻只決定難度品質處理；最終種類與數值由 balance.affixes.poolBySlotRank 抽取。';
+  out.balancePaths['balanceSettings.progression.statsPerLevel']='舊資料 fallback：新版優先使用 classes[].growthPerLevel，不會覆寫各職業獨立成長。';
+  return out;
+};

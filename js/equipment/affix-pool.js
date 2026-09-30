@@ -130,8 +130,9 @@
     if([0,1,2].includes(entry.type))value*=Math.max(1,Math.floor(Number(g?.tier)||1));
     return Math.max(1,Math.round(value));
   }
-  function rollAffixFromPool(g){
-    const rank=rankRoll(),slot=Math.max(0,Math.min(3,Math.floor(Number(g?.slot)||0)));
+  function rollAffixFromPool(g,forcedRank){
+    const rank=forcedRank===undefined?rankRoll():forcedRank,slot=Math.max(0,Math.min(3,Math.floor(Number(g?.slot)||0)));
+    if(!Number.isInteger(rank)||rank<0||rank>=AFFIX_POOL_RANK_COUNT)throw Error('詞條品質無效：'+rank);
     const pool=GAME_BALANCE.affixes.poolBySlotRank?.[slot]?.[rank];
     if(!Array.isArray(pool)||!pool.length)throw Error('詞條池未設定：'+slot+'-'+rank);
     const entry=chanceAffixEntry(pool),a={type:entry.type,rank,value:rollAffixPoolValue(entry,g)};
@@ -147,6 +148,7 @@
     }
     return a;
   }
+  globalThis.rollAffixFromPool=rollAffixFromPool;
   rollAffixes=function(g){return [rollAffixFromPool(g),rollAffixFromPool(g)];};
   const affixPoolReferenceBase=balanceReference;
   balanceReference=function(){

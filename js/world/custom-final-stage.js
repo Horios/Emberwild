@@ -119,7 +119,7 @@
     const customStageBestiaryBase=showRegionBestiary;
     showRegionBestiary=function(){
       if(!party||!isFinal(party.map))return customStageBestiaryBase();
-      const mi=party.map,m=MAPS[mi],rows=configuredStageRows(mi),parts=rows.map(x=>{const r=x.row,label=x.kind==='final'?'最終首領':x.kind==='elite'?'菁英隨從':'普通隨從';return `<p><b>${esc(r.name)}</b> <span class="tag">${label}${x.count>1?' ×'+x.count:''}</span> · ${ELEMENTS[r.element]}／${RACES[r.race]}<br>專屬掉落：${esc(r.material)} · 隊列 ${x.order}</p>`;}).join('');$('modal').innerHTML=`<h2>${esc(m.name)} · 終局關卡編成</h2>${parts}<button onclick="closeModal()">關閉</button>`;$('modal').showModal();
+      const mi=party.map,m=MAPS[mi],rows=configuredStageRows(mi),parts=rows.map(x=>{const r=x.row,label=x.kind==='final'?'最終首領':x.kind==='elite'?'菁英隨從':'普通隨從';return `<p><b>${esc(r.name)}</b> <span class="tag">${label}${x.count>1?' ×'+x.count:''}</span> · ${ELEMENTS[r.element]}／${RACES[r.race]}<br>${configuredDropDescription(r,x.kind,mi)} · 隊列 ${x.order}</p>`;}).join('');$('modal').innerHTML=`<h2>${esc(m.name)} · 終局關卡編成</h2>${parts}<button onclick="closeModal()">關閉</button>`;$('modal').showModal();
     };
   }
   if(typeof note==='function'){

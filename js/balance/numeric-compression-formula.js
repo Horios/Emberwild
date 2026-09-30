@@ -25,7 +25,6 @@
     s.equipment??={};s.equipment.baseStats??={};s.equipment.enhance??={};s.equipment.boss??={};s.equipment.difficultyAffix??={};
     Object.assign(s.equipment.baseStats,{weaponAttackPerTier:.7,armorHpPerTier:2.2,armorDefensePerTier:.45,offhandAttackPerTier:.3,offhandHpPerTier:.8,accessoryAttackPerTier:.3,accessoryHpPerTier:.8});
     s.equipment.enhance.statPerLevel=.06;
-    s.equipment.boss.powerByDifficulty=[1,1.15,1.3];
     Object.assign(s.equipment.difficultyAffix,{baseAttackPerTier:.6,baseHpPerTier:2.2,defenseBasePerTier:.5,defensePerRankPerTier:.2,critBase:2,critPerRank:2});
     s.monsters??={};s.monsters.normal??={};s.monsters.kindMultipliers??={};s.monsters.finalBoss??={};s.monsters.awakened??={};
     Object.assign(s.monsters.normal,{hpBase:4,hpPerLevel:3,hpQuadratic:.08,attackBase:1.6,attackPerLevel:.55,defensePerLevel:.55});

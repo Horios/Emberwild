@@ -8,6 +8,9 @@
 
   GAMEPLAY_SETTINGS_DEFAULTS.monsters.bossMeter ??={normalProgress:1,eliteMultiplier:1.5,progressPerCharge:100,maxCharges:100,maxStageEnemies:20};
   GAMEPLAY_SETTINGS.monsters.bossMeter ??=clone(GAMEPLAY_SETTINGS_DEFAULTS.monsters.bossMeter);
+  // Random BOSS chances are compatibility data only; manual challenges own spawning.
+  GAMEPLAY_SETTINGS_DEFAULTS.monsters.encounter.bossChance=0;
+  GAMEPLAY_SETTINGS.monsters.encounter.bossChance=0;
 
   function normalizeBossStageRow(m){
     if(!m||typeof m!=='object')return m;
@@ -27,6 +30,7 @@
     const base=normalizeGameplaySettings;
     normalizeGameplaySettings=function(input){
       const prepared=clone(input||{});prepared.monsters??={};
+      prepared.monsters.encounter={...(prepared.monsters.encounter||{}),bossChance:0};
       prepared.monsters.bossMeter={...clone(GAMEPLAY_SETTINGS_DEFAULTS.monsters.bossMeter),...(prepared.monsters.bossMeter||{})};
       if(Array.isArray(prepared.maps?.catalog))for(const m of prepared.maps.catalog)if(m?.mapType!=='final')m.bossChance=0;
       if(Array.isArray(prepared.monsters?.catalog))prepared.monsters.catalog=prepared.monsters.catalog.map(m=>normalizeBossStageRow({...m}));
@@ -163,8 +167,8 @@
     const base=showRegionBestiary;
     showRegionBestiary=function(){
       if(!party||isFinalMapIndex(party.map))return base();const mi=party.map,m=MAPS[mi],mc=mapConfig(mi),cat=monsterCatalog(),normals=cat.filter(x=>x.mapIndex===mi&&x.kind==='normal'),stage=configuredBossStageRows(mi);
-      const roaming=normals.filter(x=>x.enabled!==false).map(x=>`<p><b>${esc(x.name)}</b> · ${ELEMENTS[x.element]}／${RACES[x.race]}${x.eliteEnabled!==false?' · 可出現菁英':''}<br>專屬掉落：${esc(x.material)}</p>`).join('');
-      const stageHtml=stage.map(x=>`<p><b>${esc(x.row.name)}</b> <span class="tag">${x.kind==='boss'?'BOSS':x.kind==='elite'?'菁英隨從':'普通隨從'}${x.count>1?' ×'+x.count:''}</span> · 隊列 ${x.order}<br>專屬掉落：${esc(x.row.material)}</p>`).join('');
+      const roaming=normals.filter(x=>x.enabled!==false).map(x=>`<p><b>${esc(x.name)}</b> · ${ELEMENTS[x.element]}／${RACES[x.race]}${x.eliteEnabled!==false?' · 可出現菁英':''}<br>普通 ${configuredDropDescription(x,'normal',mi)}${x.eliteEnabled!==false?'<br>菁英 '+configuredDropDescription(x,'elite',mi):''}</p>`).join('');
+      const stageHtml=stage.map(x=>`<p><b>${esc(x.row.name)}</b> <span class="tag">${x.kind==='boss'?'BOSS':x.kind==='elite'?'菁英隨從':'普通隨從'}${x.count>1?' ×'+x.count:''}</span> · 隊列 ${x.order}<br>${configuredDropDescription(x.row,x.kind,mi)}</p>`).join('');
       $('modal').innerHTML=`<h2>${esc(m.name)} · 怪物與掉落</h2><h3>一般探索</h3>${roaming||'<p class="small">沒有啟用中的普通怪物。</p>'}<h3>BOSS 關卡 ${mc?.bossEnabled===false?'<span class="tag">已停用</span>':''}</h3>${stageHtml}<button onclick="closeModal()">關閉</button>`;$('modal').showModal();
     };
   }
