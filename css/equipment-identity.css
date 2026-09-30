@@ -5,4 +5,14 @@
 .forge-power-reroll{margin-top:12px;padding:12px;border:1px solid #514763;background:#1b1e31;border-radius:6px}
 .forge-power-reroll h3{margin:0 0 6px}.forge-power-reroll .actions{margin-top:9px}
 .boss-exclusive-note{border-color:#76543b;background:#261d18}
+.equipment-base-rating{display:block;margin-top:3px;font-size:12px;line-height:1.5;font-weight:400;color:var(--muted);white-space:normal;overflow-wrap:anywhere}
+.inventory-list-item,.forge-gear-item{grid-template-rows:40px 18px;height:66px}
+.inventory-list-name,.forge-gear-name{align-self:stretch;white-space:normal}
+.inventory-list-name>.enhanced-name,.forge-gear-name>.enhanced-name{display:block;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inventory-list-name .equipment-base-rating,.forge-gear-name .equipment-base-rating{margin-top:0;font-size:11px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.equipment-attribute-rule{display:block;margin-top:2px;color:var(--muted);font-size:11px;line-height:1.55;overflow-wrap:anywhere}
+.equipment-source-note{margin:10px 0 4px;color:var(--muted);font-size:11px;line-height:1.65}
+.equipment-source-value{font-variant-numeric:tabular-nums}
+.inventory-detail-pane{min-width:0;overflow-wrap:anywhere}
+@media(max-width:620px){.inventory-detail-heading{flex-wrap:wrap;gap:6px}.inventory-detail-heading>div{min-width:0}}
 @media(max-width:780px){.equipment-identity-line{grid-template-columns:1fr}.forge-power-reroll{padding:10px}}

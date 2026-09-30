@@ -63,17 +63,13 @@
   function tierSummary(list){
     var counts=new Map();
     for(const g of list){
-      var tier=Number.isInteger(g&&g.powerTier)?g.powerTier:null;
-      var key=tier===null?'T?':'T'+tier;
+      var key=globalThis.equipmentBaseRating(g);
       counts.set(key,(counts.get(key)||0)+1);
     }
     return Array.from(counts.entries()).sort(function(a,b){
-      var na=Number(a[0].slice(1)),nb=Number(b[0].slice(1));
-      if(Number.isNaN(na)&&Number.isNaN(nb))return 0;
-      if(Number.isNaN(na))return 1;
-      if(Number.isNaN(nb))return -1;
-      return na-nb;
-    }).map(function(x){return x[0]+' ×'+x[1];}).join(' · ');
+      var order=['D','C','B','A','S','SS','SSS','—'];
+      return order.indexOf(a[0])-order.indexOf(b[0]);
+    }).map(function(x){return '基底評級：'+x[0]+' ×'+x[1];}).join(' · ');
   }
 
   function clonePlain(v){return JSON.parse(JSON.stringify(v||{}));}

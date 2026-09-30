@@ -1,7 +1,7 @@
 
 /* Equipment identity v2.
-   Normal gear: prefix + suffix + base + hidden T grade.
-   - Raw ATK/HP/DEF comes from the base form and T grade; prefix/suffix never add raw base stats.
+   Normal gear: prefix + suffix + base + internal power tier.
+   - Player base ratings describe only powerTier; enhancement and effect quality are separate.
    - Prefix/suffix each carry one explicit gameplay effect.
    Boss gear: no prefix/suffix and no random reroll affixes; one boss-exclusive profile supplies exactly three fixed effects.
 */
@@ -14,8 +14,8 @@
   const BASE_EFFECT_KEYS=new Set([...EQUIPMENT_FIXED_EFFECT_KEYS]);
   const BOSS_EFFECT_KEYS=new Set([...REGULAR_EFFECT_KEYS,'gearAtkPct','gearHpPct','gearDefPct','bossDamagePct']);
   const EFFECT_LABELS={
-    flatAttack:'固定攻擊',flatHp:'固定最大生命',flatDefense:'固定防禦',basicElement:'普通攻擊屬性',basicAdvanceNextRound:'普攻後下回合前移',gearAtkPct:'此裝備基礎攻擊',gearHpPct:'此裝備生命',gearDefPct:'此裝備防禦',hpPct:'角色最大生命',defensePct:'角色防禦',
-    attackPct:'攻擊力',crit:'暴擊率',critDamage:'暴擊傷害',pierce:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避率',elementBonus:'全屬性增傷',bossDamagePct:'對 BOSS 傷害',speed:'速度',
+    flatAttack:'此裝備攻擊力',flatHp:'此裝備最大生命',flatDefense:'此裝備防禦',basicElement:'普通攻擊屬性',basicAdvanceNextRound:'普攻後下回合前移',gearAtkPct:'此裝備基底攻擊力',gearHpPct:'此裝備基底生命',gearDefPct:'此裝備基底防禦',hpPct:'角色最大生命',defensePct:'角色總防禦',
+    attackPct:'角色總攻擊力',crit:'暴擊率',critDamage:'暴擊傷害',pierce:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避率',elementBonus:'全屬性增傷',bossDamagePct:'對 BOSS 傷害',speed:'速度',
     allCooldownReduction:'全主動／輔助技能冷卻',dropRateBonus:'掉寶率',elementDamagePct:'屬性傷害',elementResistPct:'屬性抗性',raceDamagePct:'種族增傷',skillEffectPct:'核心技能效果',skillCooldownReduction:'核心技能冷卻／觸發'
   };
   const LEGACY_BOSS_SERIES=['古木誓約','礦脈共鳴','暮沼咒印','永凍之誓','熔核意志','隕星遺產'];
@@ -301,6 +301,24 @@
   function strengthAnchor(mode){return mode===2?10:mode===1?5:1;}
   function rollStrengthTier(mode){mode=Math.max(0,Math.min(2,Number(mode)||0));const w=EQUIPMENT_POWER.strength.weightsByDifficulty[mode]||[],rows=Array.from({length:10},(_,i)=>({tier:i+1,weight:Number(w[i])||0})),hit=rollWeighted(rows);return hit?.tier||strengthAnchor(mode);}
   function strengthMultiplier(g){const t=Math.max(1,Math.min(10,Number(g?.powerTier)||strengthAnchor(g?.difficulty)));return Number(EQUIPMENT_POWER.strength.multipliers[t-1])||1;}
+  const BASE_RATINGS=['D','D','C','C','B','B','A','S','SS','SSS'];
+  globalThis.equipmentBaseRating=function(g){
+    if(!g||g.slot===undefined||g.starterPack)return '—';
+    ensureGearIdentityMeta(g);
+    return BASE_RATINGS[g.powerTier-1];
+  };
+  globalThis.equipmentBaseRatingHTML=function(g){
+    if(!g||g.slot===undefined)return '';
+    const hint=g.starterPack?'此裝備不適用基底評級。':'僅代表裝備基底的能力層級；強化與詞綴效果另行計算。';
+    return '<span class="equipment-base-rating" title="'+esc(hint)+'">基底評級：'+globalThis.equipmentBaseRating(g)+'</span>';
+  };
+  // Balance JSON keeps numeric tiers. Translate legacy item descriptions only at the player UI boundary.
+  globalThis.equipmentPlayerItemDescription=function(item){
+    const text=String(item?.description||item?.desc||'');
+    if(item?.id!==POWER_ITEM_ID)return text;
+    return text.replace(/T1[～~]T10\s*(?:強度階級|強度)?/g,'基底評級（D～SSS）')
+      .replace(/強度階級/g,'基底評級').replace(/\bT(10|[1-9])\b/g,(_,tier)=>'基底評級：'+BASE_RATINGS[Number(tier)-1]);
+  };
 
   function ensureGearIdentityMeta(g,{freshNames=false,freshPower=false,mode=null}={}){
     if(!g||typeof g!=='object'||g.slot===undefined)return g;
@@ -351,6 +369,8 @@
     return label+' '+(Number(value)>=0?'+':'')+Number(value)+'%';
   }
   globalThis.equipmentIdentityEffectText=effectText;
+  const identityAffixLabelBase=affixLabel;
+  affixLabel=function(a,g){return a.type===15?'角色總攻擊力 +'+a.value+'%':identityAffixLabelBase(a,g);};
 
   const identityGearNameBase=gearName;
   const identityEquipmentDisplayBase=equipmentDisplayName;
@@ -362,6 +382,8 @@
     return (prefixById(g.prefixId)?.name||'')+(suffixById(g.suffixId)?.name||'')+body;
   };
   equipmentDisplayName=function(g){if(!g||g.slot===undefined)return identityEquipmentDisplayBase(g);ensureGearIdentityMeta(g);return '+'+(g.plus||0)+' '+gearName(g);};
+  const identityNameHTMLBase=equipmentNameHTML;
+  equipmentNameHTML=function(g){return identityNameHTMLBase(g)+globalThis.equipmentBaseRatingHTML(g);};
 
   const identityGearFactoryBase=gear;
   gear=function(tier=1,slot=rand(4),rar=0,job=null){const g=identityGearFactoryBase(tier,slot,rar,job);ensureGearIdentityMeta(g,{freshNames:true,freshPower:true,mode:0});g.name=gearName(g);return g;};
@@ -378,7 +400,7 @@
   function statAdd(a,b){return {atk:(a.atk||0)+(b.atk||0),hp:(a.hp||0)+(b.hp||0),def:(a.def||0)+(b.def||0)};}
   function statMul(a,m){return {atk:(a.atk||0)*m,hp:(a.hp||0)*m,def:(a.def||0)*m};}
   function baseStatPct(g,key){
-    const effects=g.boss!==undefined?(bossProfileForGear(g)?.effects||[]):baseEffectEntries(g);
+    const effects=identityEffectEntriesForGear(g);
     return effects.filter(e=>e.key===key).reduce((n,e)=>n+(Number(e.value)||0),0);
   }
   function gearStatBreakdown(g){
@@ -488,58 +510,77 @@
   };
 
   function sourceDifficulty(g){return MODES[Math.max(0,Math.min(2,Number(g?.difficulty)||0))]?.name||'普通';}
-  function statText(v){const labels={atk:'攻擊',hp:'生命',def:'防禦'},parts=[];for(const k of ['atk','hp','def'])if(Math.abs(Number(v?.[k])||0)>.00001)parts.push(labels[k]+' '+((Number(v[k])>=0)?'+':'')+Math.round(v[k]));return parts.join(' / ')||'無數值';}
-  globalThis.equipmentTotalSummaryText=function(g){return statText(gearStatBreakdown(g).total);};
+  const PANEL_KEYS=['atk','hp','def','speed'];
+  const FLAT_PANEL_KEYS={flatAttack:'atk',flatHp:'hp',flatDefense:'def',speed:'speed'};
+  const PCT_PANEL_KEYS={gearAtkPct:'atk',gearHpPct:'hp',gearDefPct:'def'};
+  const emptyPanel=()=>({atk:0,hp:0,def:0,speed:0});
+  function statText(v){
+    const labels={atk:'攻擊',hp:'生命',def:'防禦',speed:'速度'},parts=[];
+    for(const k of PANEL_KEYS){const n=Math.round(Number(v?.[k])||0);if(n)parts.push(labels[k]+' '+(n>=0?'+':'')+n);}
+    return parts.join(' / ')||'—';
+  }
+  // A display ledger, not a second character-stat calculator. Percentages are
+  // applied to the same raw base as gearStatBreakdown; flat effects retain their
+  // existing position after power/enhancement. Character/combat rules stay rules.
+  globalThis.equipmentStatContributions=function(g){
+    const b=gearStatBreakdown(g),rows=[],effectRows=[],growth=globalThis.equipmentStarterGrowthSources?.(g);
+    const add=(label,rule='',effect=null,affix=null)=>{
+      const row={label,rule,stats:emptyPanel(),effect,affix};rows.push(row);
+      if(effect)effectRows.push(row);
+      return row;
+    };
+    Object.assign(add('基底數值').stats,b.raw);
+    const effects=g.boss===undefined?baseEffectEntries(g):(b.bossProfile?.effects||[]);
+    const baseCount=growth?growth.baseCount:effects.length;
+    if(!baseCount)add('基底效果');
+    effects.slice(0,baseCount).forEach((e,i)=>add((g.boss===undefined?'基底效果 ':'BOSS 專屬加成 ')+(i+1),effectText(e),e));
+    if(growth){
+      if(!growth.effects.length)add('每級成長');
+      growth.effects.forEach((e,i)=>{
+        const active=effects[baseCount+i]||null;
+        add('成長加成 '+(i+1),effectText(e)+'／級 · '+growth.range+' · 已成長 '+growth.levels+' 級',active);
+      });
+    }
+    for(const [label,named] of [['前綴加成',b.prefix],['後綴加成',b.suffix]])add(label,named?named.name+' · '+effectText(named.effect):'',named?.effect);
+    const affixes=Array.isArray(g.affix)?g.affix:[];
+    for(let i=0;i<Math.max(2,affixes.length);i++){
+      const a=affixes[i]?convertLegacyManaAffix(affixes[i],g):null;
+      add('詞綴 '+(i+1)+' 加成',a?'['+(AFFIX_RANK[a.rank??0]||'普通')+'] '+affixLabel(a,g):'',null,a);
+    }
+    Object.assign(add(g.starterPack?'基底倍率加成':'基底評級加成',sourceDifficulty(g)+'來源 · 基底倍率 ×'+Number(b.mult.toFixed(3))).stats,b.grade);
+    Object.assign(add('強化加成（+'+(g.plus||0)+'）').stats,b.enhance);
+
+    // Allocate integer rounding in source order. The displayed contribution is
+    // the change at this step, so rows sum exactly even for small/negative rules.
+    const raw=rawTierStats(g),pct={atk:0,hp:0,def:0},body={...b.raw},current={...emptyPanel(),...b.total};
+    for(const row of effectRows){
+      const e=row.effect,n=Number(e.value)||0,k=PCT_PANEL_KEYS[e.key];
+      if(k){
+        pct[k]+=n;
+        const next=Math.max(0,Math.round(raw[k]*(1+pct[k]/100)));
+        row.stats[k]+=next-body[k];body[k]=next;
+      }
+      const flat=FLAT_PANEL_KEYS[e.key];
+      if(flat){const before=Math.round(current[flat]);current[flat]+=n;row.stats[flat]+=Math.round(current[flat])-before;}
+    }
+    for(const row of rows){
+      const a=row.affix,k=a&&['atk','hp','def'][a.type];
+      if(k){const before=Math.round(current[k]);current[k]+=Number(a.value)||0;row.stats[k]+=Math.round(current[k])-before;}
+    }
+    const total=Object.fromEntries(PANEL_KEYS.map(k=>[k,Math.round(current[k])]));
+    return {rating:globalThis.equipmentBaseRating(g),total,rows};
+  };
+  globalThis.equipmentTotalSummaryText=function(g){return statText(globalThis.equipmentStatContributions(g).total);};
   globalThis.equipmentAttributeDetailsHTML=function(g,options={}){
     if(!g)return '';
-    ensureGearIdentityMeta(g);
-    const b=gearStatBreakdown(g),lines=[],form=baseFormForGear(g),
-      push=(label,text,cls='')=>lines.push('<div class="equipment-attribute-line '+cls+'"><b>'+esc(label)+'</b><span>'+esc(text)+'</span></div>'),
-      pushRaw=(label,html,cls='')=>lines.push('<div class="equipment-attribute-line '+cls+'"><b>'+esc(label)+'</b><span>'+html+'</span></div>');
-
-    push('基底數值',statText(b.body));
-    const baseEffects=baseEffectEntries(g);
-    if(baseEffects.length)baseEffects.forEach((effect,i)=>push('基底效果'+(baseEffects.length>1?' '+(i+1):''),effectText(effect)));
-
-    if(g.boss===undefined){
-      const p=prefixById(g.prefixId),s=suffixById(g.suffixId);
-      push('前綴加成',p?(p.name+' · '+effectText(p.effect)):'無');
-      push('後綴加成',s?(s.name+' · '+effectText(s.effect)):'無');
-      const affixes=Array.isArray(g.affix)?g.affix:[];
-      for(let i=0;i<2;i++){
-        const a=affixes[i];
-        if(a)pushRaw('詞綴加成 '+(i+1),affixHTML(a,g));
-        else push('詞綴加成 '+(i+1),'無');
-      }
-    }else{
-      const profile=b.bossProfile;
-      (profile?.effects||[]).forEach((effect,i)=>push('BOSS 專屬 '+(i+1),effectText(effect)));
-    }
-
-    push('強度 T'+b.powerTier+'（'+sourceDifficulty(g)+'來源 · ×'+Number(b.mult.toFixed(3))+'）',statText(b.grade));
-    push('強化 +'+(g.plus||0),statText(b.enhance));
-
-    let summaryRows='';
-    if(g.boss===undefined){
-      const affixes=Array.isArray(g.affix)?g.affix:[];
-      summaryRows=[0,1].map(i=>'<div class="equipment-affix-summary-line">'+(affixes[i]?affixHTML(affixes[i],g):'<span class="affix effect-quality-0">[無] 無詞綴</span>')+'</div>').join('');
-    }else{
-      const profile=b.bossProfile;
-      summaryRows=(profile?.effects||[]).map(effect=>'<div class="equipment-affix-summary-line"><span class="affix">[專屬] '+esc(effectText(effect))+'</span></div>').join('');
-    }
-
-    const summaryBlock='<div class="equipment-affix-summary">'+summaryRows+'</div>';
-    const detailBlock='<details class="equipment-attribute-details"><summary>'+esc(options.summary||'裝備數值詳細')+'</summary><div class="equipment-attribute-list">'+lines.join('')+'</div></details>';
-    const wearable=typeof gearWearableJobsText==='function'?gearWearableJobsText(g):'無';
-    const wearabilityBlock='<div class="equipment-wearable-inline"><b>可穿戴職業：</b><span>'+esc(wearable)+'</span></div>';
-    return summaryBlock+detailBlock+wearabilityBlock;
+    const ledger=globalThis.equipmentStatContributions(g);
+    const lines=ledger.rows.map(row=>{
+      const rule=row.rule?'<small class="equipment-attribute-rule'+(row.affix?' effect-quality-'+(row.affix.rank??0):'')+'">'+esc(row.rule)+'</small>':'';
+      return '<div class="equipment-attribute-line"><b>'+esc(row.label)+'</b><span><span class="equipment-source-value">'+esc(statText(row.stats))+'</span>'+rule+'</span></div>';
+    });
+    const note='※ 可直接結算為裝備自身能力值的加成，皆已計入上方數值；「—」表示該效果不直接影響裝備能力值。';
+    return '<details class="equipment-attribute-details"><summary>'+esc(options.summary||'詳細數值來源')+'</summary><div class="equipment-attribute-list">'+lines.join('')+'<p class="equipment-source-note">'+esc(note)+'</p></div></details>';
   };
-  if(!document.getElementById('equipment-effect-summary-style')){
-    const style=document.createElement('style');
-    style.id='equipment-effect-summary-style';
-    style.textContent='.equipment-affix-summary{display:grid;gap:3px;margin:5px 0 7px}.equipment-affix-summary-line{min-height:20px}.equipment-affix-summary-line .affix{display:inline;font-size:12px;line-height:1.55}.equipment-wearable-inline{display:flex;gap:6px;align-items:baseline;margin-top:6px;font-size:12px}.equipment-wearable-inline b{color:var(--muted);font-weight:700}.equipment-wearable-inline span{color:var(--text)}';
-    document.head.appendChild(style);
-  }
   exclusiveEquipmentText=function(g){
     const out=[];if(!g)return out;
     if(g.boss!==undefined){for(const e of bossProfileForGear(g)?.effects||[])out.push(effectText(e));return out;}
@@ -547,7 +588,7 @@
     const p=prefixById(g.prefixId),s=suffixById(g.suffixId);if(p)out.push('前綴 '+p.name+'：'+effectText(p.effect));if(s)out.push('後綴 '+s.name+'：'+effectText(s.effect));
     return out;
   };
-  gearDesc=function(g){return globalThis.equipmentTotalSummaryText(g)+(exclusiveEquipmentText(g).length?' / '+exclusiveEquipmentText(g).join('、'):'');};
+  gearDesc=function(g){return globalThis.equipmentTotalSummaryText(g);};
 
   const identityRerollBase=reroll;
   reroll=function(id){const g=findGear(id);if(g?.boss!==undefined)return toast('BOSS 專屬裝備固定三條專屬詞綴，不能洗鍊隨機詞條');return identityRerollBase(id);};
@@ -565,7 +606,7 @@
       html=html.replace(/<section class="forge-action"><h3>洗鍊隨機詞條<\/h3>[\s\S]*?<\/section>/,body);
     }
     const n=state?.consumables?.[POWER_ITEM_ID]||0,b=gearStatBreakdown(g);
-    const card='<section class="forge-power-reroll"><h3>強度階級重鑄</h3><p>目前 <b>T'+g.powerTier+'</b>（'+esc(sourceDifficulty(g))+'來源，基礎能力 ×'+Number(b.mult.toFixed(3))+'）。T 級不顯示在裝備名稱。</p><p class="small">'+esc(EQUIPMENT_POWER.rerollItem.name)+' ×'+n+' · 重骰依原始掉落難度的 T1～T10 權重。</p><div class="actions"><button onclick="rerollEquipmentPowerTier(\''+g.id+'\')" '+(n<1?'disabled':'')+'>消耗 1 個重骰階級</button></div></section>';
+    const card='<section class="forge-power-reroll"><h3>基底重鑄</h3><p><b>基底評級：'+globalThis.equipmentBaseRating(g)+'</b>（'+esc(sourceDifficulty(g))+'來源，基底倍率 ×'+Number(b.mult.toFixed(3))+'）。</p><p class="small">'+esc(EQUIPMENT_POWER.rerollItem.name)+' ×'+n+' · 依原始掉落難度重抽基底；強化與詞綴不改變基底評級。</p><div class="actions"><button onclick="rerollEquipmentPowerTier(\''+g.id+'\')" '+(n<1?'disabled':'')+'>消耗 1 個重鑄基底</button></div></section>';
     const tail=html.lastIndexOf('</section>');return tail>=0?html.slice(0,tail)+card+html.slice(tail):html+card;
   };
 
@@ -574,10 +615,10 @@
     syncRerollItem();state.consumables??={};if((state.consumables[POWER_ITEM_ID]||0)<1)return toast(EQUIPMENT_POWER.rerollItem.name+'不足');
     const old=g.powerTier||strengthAnchor(g.difficulty),weights=EQUIPMENT_POWER.strength.weightsByDifficulty[Math.max(0,Math.min(2,g.difficulty||0))]||[],choices=weights.filter(x=>x>0).length;let next=rollStrengthTier(g.difficulty||0);
     if(choices>1)for(let n=0;n<8&&next===old;n++)next=rollStrengthTier(g.difficulty||0);
-    state.consumables[POWER_ITEM_ID]--;g.powerTier=next;g.name=gearName(g);for(const h of party?.members||[state])withHero(h,clampVitals);save();render();toast('強度階級 T'+old+' → T'+next);
+    state.consumables[POWER_ITEM_ID]--;g.powerTier=next;g.name=gearName(g);for(const h of party?.members||[state])withHero(h,clampVitals);save();render();toast('基底重鑄完成 · 基底評級：'+BASE_RATINGS[old-1]+' → 基底評級：'+BASE_RATINGS[next-1]+'（基底倍率 ×'+Number(EQUIPMENT_POWER.strength.multipliers[old-1].toFixed(3))+' → ×'+Number(strengthMultiplier(g).toFixed(3))+'）');
   };
 
-  if(typeof supplyDetail==='function'){const identitySupplyDetailBase=supplyDetail;supplyDetail=function(item){if(item?.id===POWER_ITEM_ID)return '裝備強度階級 T1～T10 重骰道具 · 在裝備強化頁使用 · 賣價 '+Math.round(item.sellPrice||0)+' 金幣';return identitySupplyDetailBase(item);};}
+  if(typeof supplyDetail==='function'){const identitySupplyDetailBase=supplyDetail;supplyDetail=function(item){if(item?.id===POWER_ITEM_ID)return '基底重鑄道具 · 基底評級：D～SSS · 在裝備強化頁使用 · 賣價 '+Math.round(item.sellPrice||0)+' 金幣';return identitySupplyDetailBase(item);};}
   if(typeof useSupply==='function'){const identityUseSupplyBase=useSupply;useSupply=function(id){if(id===POWER_ITEM_ID)return toast('請在「裝備強化」頁選擇裝備後使用'+EQUIPMENT_POWER.rerollItem.name);return identityUseSupplyBase(id);};}
   if(typeof globalThis.useInventoryItem==='function'){const identityInventoryUseBase=globalThis.useInventoryItem;globalThis.useInventoryItem=function(id,job){if(id===POWER_ITEM_ID){if(typeof setTab==='function')setTab('forge');toast('請選擇裝備後使用'+EQUIPMENT_POWER.rerollItem.name);return;}return identityInventoryUseBase(id,job);};}
 
@@ -590,7 +631,7 @@
   if(typeof update12BossMemberView==='function'){
     update12BossMemberView=function(){
       const mode=state.difficulty||0,b=GAMEPLAY_SETTINGS.equipment.boss,needMat=Math.max(0,Math.round(b.craftMaterialCount));
-      return heading('BOSS WORKSHOP / 首領製作',MODES[mode].name+'模式專屬裝備')+modePicker()+'<section class="panel">'+resourceLine()+uiHelp('製作說明','BOSS 專屬裝備固定三條專屬詞綴，不抽前綴／後綴，也不能洗鍊隨機詞條；T 級仍依難度抽選。')+'</section><div class="cards boss-recipes">'+MAPS.map((m,i)=>{if(i===6)return '';const family=regionFamily(i),tier=regionTier(i),g={job:state.job,slot:bossEquipmentSlot(family),tier,boss:family,region:i,difficulty:mode,rar:0,plus:0,affix:[],powerTier:strengthAnchor(mode)},mat=bossMaterial(i,mode),n=state.materials[mat]||0,cost=Math.round(tier*b.craftGoldPerTier*(mode+1)),ready=canVisit(i)&&state.lv>=m.min&&state.gold>=cost&&n>=needMat;return '<article class="card boss-recipe">'+equipmentArt(g)+'<span class="tag">'+esc(m.name)+'</span><h3>'+equipmentNameHTML(g)+'</h3><p class="small">'+esc(characterName(state))+' · LV'+m.min+'</p><p class="equipment-total-summary">'+globalThis.equipmentTotalSummaryText(g)+'</p>'+globalThis.equipmentAttributeDetailsHTML(g)+'<div class="recipe-cost"><span>'+esc(mat)+' '+n+'/'+needMat+'</span><span>◈ '+cost+'</span></div><button class="primary" onclick="craftBoss('+i+')" '+(ready?'':'disabled')+'>'+(!canVisit(i)?'尚未解鎖':ready?'製作裝備':'等級／材料不足')+'</button></article>';}).join('')+'</div>';
+      return heading('BOSS WORKSHOP / 首領製作',MODES[mode].name+'模式專屬裝備')+modePicker()+'<section class="panel">'+resourceLine()+uiHelp('製作說明','BOSS 專屬裝備固定三條專屬詞綴，不抽前綴／後綴，也不能洗鍊隨機詞條；基底評級仍依難度抽選。')+'</section><div class="cards boss-recipes">'+MAPS.map((m,i)=>{if(i===6)return '';const family=regionFamily(i),tier=regionTier(i),g={job:state.job,slot:bossEquipmentSlot(family),tier,boss:family,region:i,difficulty:mode,rar:0,plus:0,affix:[],powerTier:strengthAnchor(mode)},mat=bossMaterial(i,mode),n=state.materials[mat]||0,cost=Math.round(tier*b.craftGoldPerTier*(mode+1)),ready=canVisit(i)&&state.lv>=m.min&&state.gold>=cost&&n>=needMat;return '<article class="card boss-recipe">'+equipmentArt(g)+'<span class="tag">'+esc(m.name)+'</span><h3>'+equipmentNameHTML(g)+'</h3><p class="small">'+esc(characterName(state))+' · LV'+m.min+'</p><p class="equipment-total-summary">'+globalThis.equipmentTotalSummaryText(g)+'</p>'+globalThis.equipmentAttributeDetailsHTML(g)+'<div class="recipe-cost"><span>'+esc(mat)+' '+n+'/'+needMat+'</span><span>◈ '+cost+'</span></div><button class="primary" onclick="craftBoss('+i+')" '+(ready?'':'disabled')+'>'+(!canVisit(i)?'尚未解鎖':ready?'製作裝備':'等級／材料不足')+'</button></article>';}).join('')+'</div>';
     };
   }
 

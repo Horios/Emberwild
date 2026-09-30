@@ -280,29 +280,19 @@
     return out;
   };
 
-  function starterGrowthEffectText(effect){
-    const base=typeof globalThis.equipmentIdentityEffectText==='function'
-      ?globalThis.equipmentIdentityEffectText(effect)
-      :(effect?.key||'屬性')+' '+(Number(effect?.value)>=0?'+':'')+(Number(effect?.value)||0);
-    return base+'／級';
-  }
-
-  if(typeof globalThis.equipmentAttributeDetailsHTML==='function'){
-    const starterDetailsBase=globalThis.equipmentAttributeDetailsHTML;
-    globalThis.equipmentAttributeDetailsHTML=function(g,options={}){
-      const html=starterDetailsBase(g,options);
-      const meta=normalizeExistingStarterMeta(g);
-      if(!meta)return html;
-      const owner=starterGearOwner(g),growth=meta.growth,levels=growthLevels(meta,owner);
-      const rows=growth?.enabled&&growth.effects?.length
-        ?growth.effects.map((effect,i)=>`<div class="equipment-attribute-line"><b>成長屬性 ${i+1}</b><span>${esc(starterGrowthEffectText(effect))}</span></div>`).join('')
-        :'<div class="equipment-attribute-line"><b>每級成長</b><span>無</span></div>';
-      const range=growth?.enabled
-        ?`<div class="equipment-attribute-line"><b>成長區間</b><span>LV${growth.startLevel+1}～LV${growth.maxLevel} · 目前已成長 ${levels} 級</span></div>`
-        :'';
-      return html+`<details class="equipment-attribute-details starter-growth-details"><summary>新手裝專屬每級成長</summary><div class="equipment-attribute-list">${range}${rows}</div></details>`;
+  // Keep growth in the same source ledger as all other equipment effects.
+  // Read the original fixed-effect count so grown effects are not counted twice.
+  globalThis.equipmentStarterGrowthSources=function(g){
+    const meta=normalizeExistingStarterMeta(g);
+    if(!meta)return null;
+    const original=starterItemFormBase(g),owner=starterGearOwner(g),growth=meta.growth;
+    return {
+      baseCount:(Array.isArray(meta.fixedEffects)?meta.fixedEffects:original?.fixedEffects||[]).length,
+      effects:growth.effects||[],
+      levels:growthLevels(meta,owner),
+      range:`LV${growth.startLevel+1}～LV${growth.maxLevel}`
     };
-  }
+  };
 
   if(typeof equipmentNameHTML==='function'){
     const starterNameHTMLBase=equipmentNameHTML;
@@ -328,7 +318,7 @@
   }
 
   function starterLockedMessage(){
-    return '新手專屬裝備無法強化、洗鍊或重鑄 T 階；只會依設定的每級屬性成長。';
+    return '新手專屬裝備無法強化、洗鍊或重鑄基底；只會依設定的每級屬性成長。';
   }
 
   if(typeof canEnhance==='function'){
@@ -442,13 +432,12 @@
 
   function starterGiftItemHTML(g){
     const meta=normalizeExistingStarterMeta(g),label=POSITION_NAMES[meta?.position??0]||'裝備';
-    const affixes=(g.affix||[]).map(a=>affixHTML(a,g)).join('')||'<span class="small">無固定詞綴</span>';
-    return `<div class="starter-gift-item"><div class="row"><b>${esc(label)}</b>${equipmentNameHTML(g)}</div><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryText(g)}</p><div>${affixes}</div>${globalThis.equipmentAttributeDetailsHTML(g,{summary:'查看完整屬性'})}</div>`;
+    return `<div class="starter-gift-item"><div class="row"><b>${esc(label)}</b><span>${equipmentNameHTML(g)}</span></div><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryText(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g,{summary:'詳細數值來源'})}</div>`;
   }
 
   function showStarterGiftModal(hero,job,granted){
     if(!hero||!Array.isArray(granted)||!granted.length||!document?.body)return;
-    $('modal').innerHTML=`<h2>已取得 ${esc(CLASSES[job].name)} 新手禮包</h2><p>第一個職業會獲得一整套專屬新手裝，以下 5 件已自動穿戴。新手裝名稱以鮮綠色顯示，無法強化、洗鍊或重鑄 T 階。</p><div class="starter-gift-list">${granted.map(starterGiftItemHTML).join('')}</div><p>接下來請到「隊伍編成」招募兩位夥伴，組成三人出戰隊伍，再開始荒野探索。</p><div class="actions"><button class="primary" onclick="closeModal();setTab('roster')">前往隊伍編成招募夥伴</button></div>`;
+    $('modal').innerHTML=`<h2>已取得 ${esc(CLASSES[job].name)} 新手禮包</h2><p>第一個職業會獲得一整套專屬新手裝，以下 5 件已自動穿戴。新手裝名稱以鮮綠色顯示，無法強化、洗鍊或重鑄基底。</p><div class="starter-gift-list">${granted.map(starterGiftItemHTML).join('')}</div><p>接下來請到「隊伍編成」招募兩位夥伴，組成三人出戰隊伍，再開始荒野探索。</p><div class="actions"><button class="primary" onclick="closeModal();setTab('roster')">前往隊伍編成招募夥伴</button></div>`;
     $('modal').showModal();
   }
 

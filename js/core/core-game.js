@@ -96,7 +96,7 @@ function equipSkill(i,slot){if(!Number.isInteger(i)||!CLASSES[state.job].skills[
       pushStatLines(lines,bodyName+'本體',b.body);
       if(g.boss===undefined)pushStatLines(lines,b.prefix?.name||'無冠名',b.prefix);
       else pushStatLines(lines,b.seriesPrefix?.name||'BOSS 系列',b.series);
-      pushStatLines(lines,`強度 T${b.powerTier||g.powerTier||1}（${modeName}來源 · ×${Number((b.mult||1).toFixed(3))}）`,b.grade);
+      pushStatLines(lines,`基底評級：${globalThis.equipmentBaseRating?.(g)||'—'}（${modeName}來源 · ×${Number((b.mult||1).toFixed(3))}）`,b.grade);
       pushStatLines(lines,`+${g.plus||0} 強化`,b.enhance);
     }else{
       pushStatLines(lines,'能力值',fallbackBase(g));
