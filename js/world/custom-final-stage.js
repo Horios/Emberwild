@@ -60,14 +60,14 @@
   spawnGroup=function(){
     if(!party||!isFinal(party.map))return customStageSpawnBase();
     const weak=[...heroes()].sort((a,b)=>a.lv-b.lv)[0],rows=configuredStageRows(party.map);
-    foes=[];effects=[];actorCooldowns={};supportCooldowns={};if(typeof enemySkillCooldowns!=='undefined')enemySkillCooldowns={};for(const h of heroes())h.shield=0;
+    foes=[];effects=[];actorCooldowns={};supportCooldowns={};for(const h of heroes())h.shield=0;
     for(const spec of rows)for(let i=0;i<spec.count;i++){
       const e=spec.kind==='final'?finalBossFromRow(spec.row,party.map,weak):stageEnemyFromRow(spec.row,party.map,weak,spec.kind);
       e.id='foe-'+uid();e.rewarded=false;foes.push(e);
     }
     enemy=foes.find(e=>e.hp>0)||null;round=0;globalThis.__EMBERWILD_FINAL_STAGE_CLEARED=false;
     if(typeof beginBattleStatistics==='function')beginBattleStatistics();
-    if(typeof assignEnemySkill==='function')for(const e of foes)assignEnemySkill(e);
+    
     const adds=foes.length-1;note(adds?`遭遇終局關卡：1 名首領與 ${adds} 隻隨從。`:'遭遇終局首領。');
   };
 

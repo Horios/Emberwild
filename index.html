@@ -1,5 +1,7 @@
-<!doctype html><html lang="zh-Hant"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>餘燼荒野 · Emberwild</title><link rel="stylesheet" href="css/base.css"><body><header><a class="brand" href="#"> <span>餘燼荒野<small>EMBERWILD / IDLE RPG · 4.0</small></span></a><span class="chapter">遠征者手札 <b>純文字遠征手札</b></span><div id="wallet"></div><button onclick="save(true)">儲存</button><button onclick="exportSave()">匯出存檔 JSON</button><label class="button">匯入存檔<input type="file" accept=".json" onchange="importSave(event)" hidden></label></header><div id="app"><section class="panel" style="margin:32px"><h1>正在啟動餘燼荒野…</h1><p>若這段文字一直沒有消失，請將 HTML 下載到電腦，再使用 Chrome 或 Edge 開啟；部分檔案預覽不執行遊戲程式。</p></section></div><noscript><p style="padding:24px">目前環境未允許 JavaScript。請下載 HTML 後使用瀏覽器開啟。</p></noscript><div id="toast" role="status"></div><dialog id="modal"></dialog><script data-startup-guard src="js/core/startup-guard.js"></script>
+<!doctype html><html lang="zh-Hant"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>餘燼荒野 · Emberwild</title><link rel="stylesheet" href="css/base.css"><body><header><a class="brand" href="#"> <span>餘燼荒野<small>EMBERWILD / IDLE RPG · 4.0</small></span></a><span class="chapter">遠征者手札 <b>純文字遠征手札</b></span><div id="wallet"></div><button onclick="save(true)">儲存</button><button onclick="exportSave()">匯出存檔 JSON</button><label class="button">匯入存檔<input type="file" accept=".json" onchange="importSave(event)" hidden></label></header><div id="app" style="visibility:hidden"><section class="panel" style="margin:32px"><h1>正在啟動餘燼荒野…</h1><p>若這段文字一直沒有消失，請將 HTML 下載到電腦，再使用 Chrome 或 Edge 開啟；部分檔案預覽不執行遊戲程式。</p></section></div><noscript><p style="padding:24px">目前環境未允許 JavaScript。請下載 HTML 後使用瀏覽器開啟。</p></noscript><div id="toast" role="status"></div><dialog id="modal"></dialog><script data-startup-guard src="js/core/startup-guard.js"></script>
 <script src="js/core/core-game.js"></script>
+<link rel="stylesheet" href="css/text-rarity.css">
+<script src="js/ui/text-rarity-style.js"></script>
 <link id="ally-row-readability-fix" rel="stylesheet" href="css/ally-row.css">
 
 <link id="json-description-layout" rel="stylesheet" href="css/json-description.css">
@@ -99,6 +101,7 @@
 <link id="skill-rules-help-style" rel="stylesheet" href="css/skill-rules-help.css">
 
 
+<script id="skill-icon-library-v1" src="js/ui/skill-icon-library.js"></script>
 <script id="mastery-overhaul-core-v1" src="js/skills/mastery-core.js"></script>
 
 
@@ -114,7 +117,16 @@
 
 
 <script id="control-status-summon-system" src="js/combat/control-status-summon.js"></script>
+<script id="enemy-combat-stats-system" src="js/combat/enemy-combat-stats.js"></script>
 
 <link id="status-maker-runtime-style" rel="stylesheet" href="css/status-maker.css">
 <script id="status-maker-runtime-v1" src="js/skills/status-maker.js"></script>
+<script id="shared-core-skill-runtime-v1" src="js/combat/shared-skill-runtime.js"></script>
+<link rel="stylesheet" href="css/title-screen.css">
+<script src="js/ui/title-screen.js"></script>
+<script src="js/ui/interaction-guard.js"></script>
+<script id="initial-class-starter-pack-v1" src="js/character/starter-pack.js"></script>
+<script src="js/ui/text-rarity-editor.js"></script>
+<link rel="stylesheet" href="css/companions.css">
+<script src="js/character/companions.js"></script>
 </body></html>

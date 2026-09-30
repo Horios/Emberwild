@@ -77,8 +77,10 @@ try{
 // equipment actions, but show a dense selectable list at left and one detailed
 // equipment pane at right.
 let inventorySelectedGearId=null;
-let inventorySortKey='quality';
-let inventorySortDirection='desc';
+let inventorySortKey='job';
+let inventorySortDirection='asc';
+const inventoryVisibleSlots=new Set([0,1,2,3]);
+const inventoryVisibleJobs=new Set([0,1,2,3]);
 function selectInventoryGear(id){inventorySelectedGearId=id;render();}
 function inventorySortValue(g,key){
   if(key==='quality')return gearQualityRank(g);
@@ -87,7 +89,7 @@ function inventorySortValue(g,key){
   return 0;
 }
 function sortedFilteredGear(){
-  const items=[...filteredGear()];
+  const items=filteredGear().filter(g=>inventoryVisibleSlots.has(Number(g.slot))&&gearWearableJobs(g).some(job=>inventoryVisibleJobs.has(Number(job))));
   items.sort((a,b)=>{
     let diff=0;
     if(inventorySortKey==='job'){
@@ -108,9 +110,13 @@ function sortedFilteredGear(){
 }
 function inventorySortControls(){
   const options=[['quality','稀有度'],['plus','強化度'],['job','職業']];
-  return '<div class="inventory-sortbar"><label>排序 <select onchange="setInventorySort(this.value)">'+
+  const slotOptions=[[0,'武器'],[1,'護甲'],[2,'副手'],[3,'飾品']];
+  const jobOptions=CLASSES.map((c,i)=>[i,c.name]);
+  const checks=(kind,options,selected)=>'<div class="inventory-visibility-group"><span class="small">'+(kind==='slot'?'裝備種類':'職業裝備')+'</span>'+options.map(([value,label])=>'<label><input type="checkbox" '+(selected.has(value)?'checked':'')+' onchange="setInventoryVisibility(\''+kind+'\','+value+',this.checked)"> '+esc(label)+'</label>').join('')+'</div>';
+  return '<div class="inventory-sortbar"><div class="inventory-sort-row"><label>排序 <select onchange="setInventorySort(this.value)">'+
     options.map(([value,label])=>'<option value="'+value+'" '+(inventorySortKey===value?'selected':'')+'>'+label+'</option>').join('')+
-    '</select></label><button type="button" onclick="toggleInventorySortDirection()">'+(inventorySortDirection==='desc'?'高 → 低':'低 → 高')+'</button></div>';
+    '</select></label><button type="button" onclick="toggleInventorySortDirection()">'+(inventorySortDirection==='desc'?'高 → 低':'低 → 高')+'</button></div>'+
+    '<div class="inventory-visibility-filters">'+checks('slot',slotOptions,inventoryVisibleSlots)+checks('job',jobOptions,inventoryVisibleJobs)+'</div></div>';
 }
 globalThis.setInventorySort=function(key){
   if(!['quality','plus','job'].includes(key))return;
@@ -119,9 +125,18 @@ globalThis.setInventorySort=function(key){
 globalThis.toggleInventorySortDirection=function(){
   inventorySortDirection=inventorySortDirection==='desc'?'asc':'desc';render();
 };
+globalThis.setInventoryVisibility=function(kind,value,checked){
+  const target=kind==='slot'?inventoryVisibleSlots:kind==='job'?inventoryVisibleJobs:null;
+  if(!target)return;
+  value=Number(value);
+  if(checked)target.add(value);else target.delete(value);
+  render();
+};
 function inventoryGearListItem(g,selected){
   const wearer=gearWearer(g.id),worn=!!wearer,locked=!!g.locked;
-  return `<button type="button" class="inventory-list-item ${selected?'selected':''}" onclick="selectInventoryGear('${g.id}')" title="${esc(equipmentDisplayName(g))}">
+  const rarityRow=globalThis.textRarityEquipmentBlockPresentation?.(g);
+  const styledRow=rarityRow&&(rarityRow.bg||rarityRow.block);
+  return `<button type="button" class="inventory-list-item ${selected?'selected':''} ${styledRow?rarityRow.classes:''}"${styledRow?rarityRow.attrs:''} onclick="selectInventoryGear('${g.id}')" title="${esc(equipmentDisplayName(g))}">
     <span class="inventory-list-name">${equipmentNameHTML(g)}</span>
     <span class="inventory-list-meta">${gearWearableJobsText(g)} · ${CLASS_GEAR[g.job][g.slot]} · LV ${gearRequiredLevelByTier(g.tier)}${worn?' · '+esc(characterName(wearer))+'已穿戴':''}${locked?' · 已鎖定':''}</span>
     <span class="inventory-list-quality effect-quality-${gearQualityRank(g)}">${qualityTag(g)}</span>
@@ -130,7 +145,7 @@ function inventoryGearListItem(g,selected){
 function inventoryGearDetail(g){
   if(!g)return `<div class="inventory-detail-empty"><b>沒有可顯示的裝備</b><p class="small">調整左側篩選條件後選擇裝備。</p></div>`;
   const wearer=gearWearer(g.id),worn=!!wearer,draft=inlineAffixDrafts.has(affixDraftKey(g)),locked=!!g.locked;
-  const wearButtons=eligibleWearers(g).map(h=>`<button class="primary" onclick="previewEquip('${g.id}',${h.job})" ${h.equipped.includes(g.id)?'disabled':''}>${h.equipped.includes(g.id)?esc(characterName(h))+'已穿戴':'給 '+esc(characterName(h))+' 穿戴'}</button>`).join('');
+  const wearButtons=eligibleWearers(g).map(h=>`<button class="primary" onclick="previewEquip('${g.id}',${memberKey(h)})" ${h.equipped.includes(g.id)?'disabled':''}>${h.equipped.includes(g.id)?esc(characterName(h))+'已穿戴':'給 '+esc(characterName(h))+' 穿戴'}</button>`).join('');
   return `<div class="inventory-detail-pane">
     <div class="inventory-detail-heading">
       <div><div class="eyebrow">EQUIPMENT DETAIL / 裝備詳細</div><h2>${equipmentNameHTML(g)}</h2></div>
@@ -166,10 +181,16 @@ inlineInventoryView=function(){
   .inventory-master-pane,.inventory-detail-wrap{min-height:0;border:1px solid var(--line);background:#141c1f}
   .inventory-master-pane{display:grid;grid-template-rows:38px minmax(0,1fr);overflow:hidden}
   .inventory-master-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);background:#182124}
-  .inventory-sortbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .inventory-sortbar{display:grid;gap:7px;margin-top:7px}
+  .inventory-sort-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .inventory-sortbar label{display:flex;align-items:center;gap:5px;font-size:12px}
   .inventory-sortbar select{min-width:108px}
   .inventory-sortbar button{padding:4px 8px;font-size:11px}
+  .inventory-visibility-filters{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .inventory-visibility-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .inventory-visibility-group>.small{min-width:max-content}
+  .inventory-visibility-group label{color:#d9dfdc}
+  .inventory-visibility-group input{margin:0}
   .inventory-list-scroll{display:block;margin:0;overflow:auto;min-height:0;scrollbar-gutter:stable}
   .inventory-list-item{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:22px 18px;width:100%;height:48px;padding:4px 8px;text-align:left;border:0;border-bottom:1px solid #2e3b3f;border-radius:0;background:transparent;gap:0 8px;overflow:hidden}
   .inventory-list-item:hover{background:#202c30}.inventory-list-item.selected{background:#2a383c;box-shadow:inset 3px 0 var(--green)}
@@ -352,7 +373,7 @@ inlineInventoryView=function(){
     forgeView=function(){
       let html=auditedForgeViewBase();
       const h=typeof pageHero==='function'?pageHero('forge'):state;
-      const selectedId=typeof teamForgeSelection!=='undefined'?teamForgeSelection.get(h?.job):null;
+      const selectedId=typeof teamForgeSelection!=='undefined'?teamForgeSelection.get(memberKey(h)):null;
       const g=h?.bag?.find(x=>x.id===selectedId)||(h?equipment(h)[0]:null)||h?.bag?.[0];
       if(g){
         const boss=g.boss!==undefined?' · BOSS 專屬':'';
@@ -415,7 +436,7 @@ inlineInventoryView=function(){
   function validatePendingGearArray(raw,validatedParty=null){
     if(raw===undefined)return [];
     if(!Array.isArray(raw))throw Error('待結算裝備資料無效');
-    const members=validatedParty?.members||[state],hero=validatedParty?members.find(h=>h.job===validatedParty.selected):state;
+    const members=validatedParty?.members||[state],hero=validatedParty?members.find(h=>memberKey(h)===validatedParty.selected):state;
     const existing=new Set(members.flatMap(h=>(h?.bag||[]).map(g=>g.id))),seen=new Set(),out=[],template=clonePlain(hero);
     for(const item of raw){
       if(!item||typeof item.id!=='string'||existing.has(item.id)||seen.has(item.id))throw Error('待結算裝備 ID 無效');

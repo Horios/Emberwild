@@ -125,13 +125,13 @@
   }
   globalThis.configuredBossStageRows=configuredBossStageRows;
 
-  function clearEncounter(){foes=[];enemy=null;effects=[];actorCooldowns={};supportCooldowns={};if(typeof enemySkillCooldowns!=='undefined')enemySkillCooldowns={};round=0;for(const h of heroes())h.shield=0;}
+  function clearEncounter(){foes=[];enemy=null;effects=[];actorCooldowns={};supportCooldowns={};round=0;for(const h of heroes())h.shield=0;}
   function spawnBossStage(){
     const ch=party?.bossChallenge;if(!ch?.active)return false;const mi=ch.mapIndex,entry=bossProgressEntry(mi);
     if(!ch.stagePaid){if(entry.charges<1){party.bossChallenge=null;clearEncounter();return false;}entry.charges--;ch.stagePaid=true;note(`進入 ${MAPS[mi].name} BOSS 關卡，消耗 1 次挑戰（剩餘 ${entry.charges}）。`);}
     const weak=[...heroes()].sort((a,b)=>a.lv-b.lv)[0],rows=configuredBossStageRows(mi);refillParty();clearEncounter();
     for(const spec of rows)for(let i=0;i<spec.count;i++){const e=enemyFromStageRow(spec.row,mi,weak,spec.kind,spec.order);e.id='foe-'+uid();e.rewarded=false;foes.push(e);}
-    enemy=foes.find(e=>e.hp>0)||null;if(typeof beginBattleStatistics==='function')beginBattleStatistics();if(typeof assignEnemySkill==='function')for(const e of foes)assignEnemySkill(e);note(`BOSS 關卡開始：${foes.length} 隻敵人。`);return true;
+    enemy=foes.find(e=>e.hp>0)||null;if(typeof beginBattleStatistics==='function')beginBattleStatistics();note(`BOSS 關卡開始：${foes.length} 隻敵人。`);return true;
   }
   if(typeof spawnGroup==='function'){const base=spawnGroup;spawnGroup=function(){if(party?.bossChallenge?.active&&!isFinalMapIndex(party.map)&&spawnBossStage())return;return base();};}
 

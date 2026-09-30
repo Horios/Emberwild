@@ -32,8 +32,13 @@ function claimPendingGearLoot(){
   const free=Math.max(0,RULES.bagCapacity-state.bag.length);
   if(free<=0)return toast('背包已滿，請先整理裝備');
   const claimed=pendingGearLoot.splice(0,free);
+  const oldBagLength=state.bag.length;
   state.bag.push(...claimed);
-  save();render();
+  if(!save()){
+    state.bag.splice(oldBagLength,claimed.length);pendingGearLoot.unshift(...claimed);
+    return toast('領取失敗：儲存失敗');
+  }
+  render();
   toast(pendingGearLoot.length?`已領取 ${claimed.length} 件；背包已滿，尚有 ${pendingGearLoot.length} 件待結算`:`已領取 ${claimed.length} 件裝備`);
 }
 

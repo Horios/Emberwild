@@ -80,7 +80,7 @@
   function economySnapshot(){
     return {
       gold:state.gold,ore:state.ore,dust:state.dust,potions:state.potions,
-      materials:clonePlain(state.materials),consumables:clonePlain(state.consumables),
+      materials:clonePlain(state.materials),consumables:clonePlain(state.consumables),healingPotions:clonePlain(healingInventory()),
       gems:Array.isArray(state.gems)?state.gems.slice():[]
     };
   }
@@ -92,6 +92,7 @@
     state.gold=s.gold;state.ore=s.ore;state.dust=s.dust;state.potions=s.potions;
     restoreObject(state.materials,s.materials);
     restoreObject(state.consumables,s.consumables);
+    restoreObject(healingInventory(),s.healingPotions);
     if(Array.isArray(state.gems))state.gems.splice(0,state.gems.length,...s.gems);
   }
 

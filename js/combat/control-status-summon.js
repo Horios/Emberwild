@@ -64,10 +64,19 @@
       loadParty(migrateWorldSave(parsed));
       if(!parsed.battleStatistics&&fallbackStats&&typeof normalizeBattleStatistics==='function')party.battleStatistics=normalizeBattleStatistics(fallbackStats);
       save();delete globalThis.__EMBERWILD_PRE_CONTROL_SAVE_RAW;
+      delete globalThis.__EMBERWILD_DEFERRED_CUSTOM_FORM_SAVE;
+      globalThis.__EMBERWILD_BOOT_SAVE_ERROR=null;
     }
   }catch(e){
     console.warn('控制技能安裝後重新載入存檔失敗',e);
-    if(!state){state=null;party=null;toast('存檔未能載入：'+e.message+'；可匯入備份。');}
+    const message=String(e?.message||e);
+    globalThis.__EMBERWILD_BOOT_SAVE_ERROR=message;
+    if(!state){
+      state=null;party=null;
+      const previewBuild=/(?:^|\/)preview(?:\/|$)/.test(location.pathname)||!!document.getElementById('preview-build-banner');
+      if(previewBuild&&message.startsWith('裝備類型無效：'))globalThis.__EMBERWILD_DEFERRED_CUSTOM_FORM_SAVE=true;
+      else toast('存檔未能載入：'+message+'；可匯入備份。');
+    }
   }
 
   function applyPolymorph(e,shield,meta){
@@ -106,7 +115,7 @@
   function summonTrap(owner,kind,meta){
     meta=normalizeControlMeta(meta,kind);
     const hp=kind==='summonFreezeTrap'?Math.max(1,meta.trapHp):1;
-    const trap={id:'summon-'+uid(),name:kind==='summonFreezeTrap'?'冰凍陷阱':'變形陷阱',kind,ownerJob:owner.job,hp,maxhp:hp,power:Math.max(0,skillPower(CLASSES[owner.job].skills.findIndex(sk=>sk?.[6]?.controlId===meta.controlId),owner)||0),meta:{...meta},__controlSummon:true};
+    const trap={id:'summon-'+uid(),name:kind==='summonFreezeTrap'?'冰凍陷阱':'變形陷阱',kind,ownerJob:owner.job,ownerKey:memberKey(owner),hp,maxhp:hp,power:Math.max(0,skillPower(CLASSES[owner.job].skills.findIndex(sk=>sk?.[6]?.controlId===meta.controlId),owner)||0),meta:{...meta},__controlSummon:true};
     combatSummons.push(trap);note(characterName(owner)+' 召喚 '+trap.name+'（生命 '+hp+'）。');return true;
   }
   function onTrapHit(trap,attacker){
@@ -120,7 +129,7 @@
       }
     }
     if(trap.hp<=0&&trap.kind==='summonMorphTrap'){
-      const owner=party?.members?.find(h=>h.job===trap.ownerJob),shield=owner?battleStats(owner).atk*Math.max(0,Number(trap.meta.powerMultiplier??1)):1;
+      const owner=partyMember(trap.ownerKey??trap.ownerJob),shield=owner?battleStats(owner).atk*Math.max(0,Number(trap.meta.powerMultiplier??1)):1;
       applyPolymorph(attacker,shield,trap.meta);
     }
     if(trap.hp<=0)combatSummons=combatSummons.filter(x=>x.id!==trap.id);
@@ -130,7 +139,7 @@
   resolveHit=function(e,amount,h,element,crit,options={}){
     const polymorph=stateFor(e?.id,false)?.polymorph;
     if(!polymorph||polymorph.shield<=0)return controlResolveHitBase(e,amount,h,element,crit,options);
-    const proxy={...e,hp:polymorph.shield,maxhp:polymorph.maxShield};
+    const proxy={...e,hp:polymorph.shield,maxhp:polymorph.maxShield,shield:0};
     const dealt=controlResolveHitBase(proxy,amount,h,element,crit,options);
     polymorph.shield=Math.max(0,proxy.hp);
     if(polymorph.shield<=0){const s=stateFor(e.id,false);if(s)delete s.polymorph;cleanState(e.id);note(combatEnemyName(e)+' 的變形護盾被打破，變形解除。');}
@@ -143,38 +152,13 @@
     return frost?Math.max(1,Math.round(base*(1-clamp01(frost.slowPct,.30)))):base;
   };
 
-  const controlEnemySkillForBase=enemySkillFor;
-  enemySkillFor=function(e){
-    if(e?.__controlSkip)return null;
-    if(stateFor(e?.id,false)?.rage?.turns>0)return null;
-    return controlEnemySkillForBase(e);
-  };
-
-  const controlEnemySkillBase=performEnemySkill;
-  performEnemySkill=function(e,sk){
-    if(!e||e.__controlSkip)return;
-    const traps=combatSummons.filter(x=>x.hp>0);
-    if(traps.length&&sk?.target!=='weakest'){
-      const heroCount=living().length,total=heroCount+traps.length;
-      if(total>0&&rand(total)>=heroCount){
-        e.turn=(e.turn||0)+1;
-        const trap=traps[rand(traps.length)];
-        trap.hp=Math.max(0,trap.hp-1);
-        note(combatEnemyName(e)+'・'+sk.name+' → '+trap.name+'，陷阱生命 -1（剩餘 '+trap.hp+'）。');
-        onTrapHit(trap,e);
-        return;
-      }
-    }
-    return controlEnemySkillBase(e,sk);
-  };
-
   performEnemyBasic=function(e){
     if(!e||e.hp<=0)return;
     if(e.__controlSkip){note(combatEnemyName(e)+' 因'+e.__controlSkip+'無法行動。');return;}
     e.turn=(e.turn||0)+1;
     const s=stateFor(e.id,false),rage=s?.rage;
     let target=null;
-    if(rage&&Number.isInteger(rage.tauntHeroJob))target=living().find(h=>h.job===rage.tauntHeroJob)||null;
+    if(rage&&Number.isInteger(rage.tauntHeroJob))target=living().find(h=>memberKey(h)===rage.tauntHeroJob)||null;
     if(!target){
       const candidates=[...living(),...combatSummons.filter(x=>x.hp>0)];
       if(!candidates.length)return;
@@ -183,17 +167,23 @@
     if(target.__controlSummon){
       target.hp=Math.max(0,target.hp-1);note(combatEnemyName(e)+' 攻擊 '+target.name+'，陷阱生命 -1（剩餘 '+target.hp+'）。');onTrapHit(target,e);return;
     }
-    const h=target,beforeHp=h.hp,v=battleStats(h),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss,multi=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:e.turn%Math.max(1,Math.round(fb.specialEveryTurns))===0?fb.specialMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;
-    let hit=Math.max(1,Math.round(e.atk*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*multi-v.def*c.defenseEffectiveness));
-    hit=Math.max(1,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));
+    const h=target,beforeHp=h.hp,v=battleStats(h),ev=enemyBattleStats(e),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss,multi=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:e.turn%Math.max(1,Math.round(fb.specialEveryTurns))===0?fb.specialMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;
+    const formula=c.damageFormula||{},attackCoefficient=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defenseCoefficient=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:c.defenseEffectiveness,minimumDamage=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
+    const effectiveDefense=Math.max(0,v.def*(1-Math.min(.95,ev.defenseIgnore))-ev.pierce);
+    let hit=Math.max(minimumDamage,Math.round(ev.atk*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*multi*attackCoefficient-effectiveDefense*defenseCoefficient));
+    if(ev.crit>0&&Math.random()<ev.crit)hit=Math.round(hit*ev.critDamage);
+    const elementBonus=(ev.elementDamage[e.element]||0)+(e.element==='physical'?0:ev.elementBonus);
+    if(elementBonus)hit=Math.max(minimumDamage,Math.round(hit*(1+elementBonus)));
+    hit=Math.max(minimumDamage,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));
     if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+combatEnemyName(e)+'的攻擊');return;}
     const ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+(ward&&ward.element===e.element?c.supply.wardResistance:0));
-    hit=Math.max(1,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;
+    hit=Math.max(minimumDamage,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;
     if(absorb>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'mitigation',absorb);
     const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);
+    if(ev.lifesteal>0)e.hp=Math.min(e.maxhp,e.hp+Math.round((beforeHp-h.hp)*ev.lifesteal));
     if(absorb>0&&hpDamage===0)note(combatEnemyName(e)+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');
     else note(combatEnemyName(e)+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?'（護盾吸收 '+absorb+'，剩餘 '+Math.round(h.shield)+'）':''));
-    if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,'普通攻擊');
+    if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,battleDeathMoveName(e));
   };
 
   function tickEnemyControlTurns(e){
@@ -236,7 +226,7 @@
     else if(effect==='fear'){for(const e of targets)applyFear(e,meta);success=targets.length>0;}
     else if(effect==='tauntRage'){
       const e=singleTargetEnemyPool().sort((a,b)=>b.atk-a.atk)[0];
-      if(e){applyRage(e,meta,h.job);note(characterName(h)+' 嘲諷 '+combatEnemyName(e)+'，其普通攻擊將優先鎖定戰士。');success=true;}
+      if(e){applyRage(e,meta,memberKey(h));note(characterName(h)+' 嘲諷 '+combatEnemyName(e)+'，其普通攻擊將優先鎖定戰士。');success=true;}
     }else if(effect==='summonMorphTrap'||effect==='summonFreezeTrap'){
       const trapMeta={...meta,controlId:sk[6]?.controlId,powerMultiplier:Math.max(0,skillPower(i,h))};
       success=summonTrap(h,effect,trapMeta);
@@ -245,7 +235,8 @@
       const before=h.hp;h.hp=Math.min(profileV.hp,h.hp+Math.round(profileV.atk*GS('skills.gems.hybridActiveHealAttack',.10)));
       const recovered=Math.max(0,h.hp-before);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);
     }
-    if(success&&sk[6]?.mastery&&typeof gainMastery==='function')gainMastery(h,sk[6].mastery,masterySettings().skillUseXp);
+    const mastery=globalThis.__EMBERWILD_MASTERY;
+    if(success&&sk[6]?.mastery&&mastery?.gainMastery)mastery.gainMastery(h,sk[6].mastery,mastery.masterySettings().skillUseXp);
     return success;
   };
 
@@ -295,7 +286,7 @@
     const controlBattleViewBase=battleView;
     battleView=function(){
       let html=controlBattleViewBase();if(!combatSummons.length)return html;
-      const summonHtml='<section class="control-summons"><h3>召喚物 <small>'+combatSummons.filter(x=>x.hp>0).length+'</small></h3>'+combatSummons.filter(x=>x.hp>0).map(x=>'<article data-combat-id="'+x.id+'" class="unit"><div class="unit-title"><b>'+esc(x.name)+'</b><span>召喚物</span></div><div class="unit-numbers"><span>生命 <b>'+x.hp+' / '+x.maxhp+'</b></span><span>'+esc(characterName(party.members.find(h=>h.job===x.ownerJob)))+' 的陷阱</span></div></article>').join('')+'</section>';
+      const summonHtml='<section class="control-summons"><h3>召喚物 <small>'+combatSummons.filter(x=>x.hp>0).length+'</small></h3>'+combatSummons.filter(x=>x.hp>0).map(x=>'<article data-combat-id="'+x.id+'" class="unit"><div class="unit-title"><b>'+esc(x.name)+'</b><span>召喚物</span></div><div class="unit-numbers"><span>生命 <b>'+x.hp+' / '+x.maxhp+'</b></span><span>'+esc(characterName(partyMember(x.ownerKey??x.ownerJob)))+' 的陷阱</span></div></article>').join('')+'</section>';
       return html.replace('<section class="squad-enemies">',summonHtml+'<section class="squad-enemies">');
     };
   }
@@ -351,4 +342,3 @@
   };
   if(state){syncAllHeroSkillArrays();render();}
 })();
-

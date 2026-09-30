@@ -114,7 +114,7 @@ rollAffixes=function(g){return oldAffixRoll(g).map(a=>{const cfg=GAME_BALANCE.af
 const dropRateAffixLabelBase=affixLabel;
 affixLabel=function(a,g){if(a?.type===17)return `掉寶率 +${a.value}%`;return dropRateAffixLabelBase(a,g);};
 /* Keep the unified equipment filter model; affix type 17 needs no separate filter override. */
-filteredGear=function(){return state.bag.filter(g=>(filters.slot==='all'||g.slot===Number(filters.slot))&&(filters.job==='all'||gearWearableJobs(g).includes(Number(filters.job)))&&(filters.boss==='all'||(filters.boss==='boss')===(g.boss!==undefined))&&(filters.effectRank==='all'||gearQualityRank(g)===Number(filters.effectRank))).sort((a,b)=>Number(!!gearWearer(b.id))-Number(!!gearWearer(a.id))||b.tier-a.tier||gearQualityRank(b)-gearQualityRank(a));};
+filteredGear=function(){const members=party?.members?.length?party.members:[state],equippedIds=filters.hideEquipped?new Set(members.flatMap(h=>Array.isArray(h.equipped)?h.equipped.filter(Boolean):[])):null;return state.bag.filter(g=>(filters.slot==='all'||g.slot===Number(filters.slot))&&(filters.job==='all'||gearWearableJobs(g).includes(Number(filters.job)))&&(filters.boss==='all'||(filters.boss==='boss')===(g.boss!==undefined))&&(filters.effectRank==='all'||gearQualityRank(g)===Number(filters.effectRank))&&(!equippedIds||!equippedIds.has(g.id))).sort((a,b)=>Number(!!gearWearer(b.id))-Number(!!gearWearer(a.id))||b.tier-a.tier||gearQualityRank(b)-gearQualityRank(a));};
 
 // Save import compatibility for the newer affix types 16/17 while retaining the older validator for all other fields.
 const dropRateValidateSaveBase=validateSave;
