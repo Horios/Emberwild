@@ -596,7 +596,7 @@ function transferGear(id,job){const item=findGear(id),target=partyMember(job);if
 const stablePartyRender=render;
 let previousViewKey=null;
 const viewPositions=new Map();
-const SCROLL_REGIONS='.layout>main,.layout>aside,.current-events,.history-events,.unit-effects,.unit-skills,.inventory-table,.buff-table-scroll,.compact-map-list,.member-content,.member-skill-content,.member-equipment-content,.page-owner-content,.inline-equipment-list,.worn-overview,.guide-scroll,.forge-detail-pane,.forge-gear-list';
+const SCROLL_REGIONS='.layout>main,.layout>aside,.current-events,.history-events,.unit-effects,.unit-skills,.inventory-table,.buff-table-scroll,.compact-map-list,.member-content,.member-skill-content,.member-equipment-content,.page-owner-content,.inline-equipment-list,.worn-overview,.worn-character-list,.worn-detail-pane,.guide-scroll,.forge-detail-pane,.forge-gear-list';
 render=function(){
  if(document.querySelectorAll&&previousViewKey){
   viewPositions.set(previousViewKey,{
@@ -605,7 +605,7 @@ render=function(){
   });
  }
  stablePartyRender();
- const key=state?tab+':'+(party?pageHero(tab).job:state.job):'start',position=viewPositions.get(key);
+ const key=state?tab+':'+(party?memberKey(pageHero(tab)):state.job):'start',position=viewPositions.get(key);
  if(position&&document.querySelectorAll){
   [...document.querySelectorAll('.layout main details')].forEach((el,i)=>{el.open=!!position.details[i];});
   [...document.querySelectorAll(SCROLL_REGIONS)].forEach((el,i)=>{if(position.scroll[i]){el.scrollTop=position.scroll[i][0];el.scrollLeft=position.scroll[i][1];}});
@@ -1029,7 +1029,19 @@ function previewEquip(id,job,position=null){const h=partyMember(job),g=state.bag
 function confirmEquipComparison(id,job,position=null){closeModal();equipSharedGear(id,job,position);}
 
 function forgeEquipmentOptions(selectedId){const worn=[],spare=[];for(const g of state.bag)(gearWearer(g.id)?worn:spare).push(g);worn.sort((a,b)=>gearWearer(a.id).job-gearWearer(b.id).job||a.slot-b.slot);const option=g=>{const wearer=gearWearer(g.id);return `<option value="${g.id}" ${g.id===selectedId?'selected':''}>${wearer?'【'+esc(characterName(wearer))+'穿戴】':'【'+gearWearableJobsText(g)+'】'} ${esc(equipmentDisplayName(g))} · ${RARITY[g.rar]}</option>`;};return (worn.length?`<optgroup label="全隊已穿戴（${worn.length}）">${worn.map(option).join('')}</optgroup>`:'')+(spare.length?`<optgroup label="未穿戴（${spare.length}）">${spare.map(option).join('')}</optgroup>`:'');}
-function wornEquipmentView(){return heading('PARTY EQUIPMENT / 穿戴總覽','已穿戴裝備',`<span class="tag">${party.members.length} 位角色</span>`)+`<div class="worn-overview">${party.members.map(h=>`<section class="panel worn-member"><div class="row"><h2>${esc(characterName(h))}</h2><span class="small">${CLASSES[h.job].name} · LV ${h.lv} · ${party.active.includes(memberKey(h))?'出戰':'候補'}</span></div>${[0,1,2,3,4].map(position=>{const g=h.bag.find(x=>x.id===h.equipped[position]);return `<article class="worn-slot"><div class="worn-slot-head">${g?`<span><b>${equipmentNameHTML(g)}</b></span><button onclick="heroMenuAction(${memberKey(h)},()=>openForge('${g.id}'))">強化／洗鍊</button><button onclick="unequipSharedGear('${g.id}')">脫下裝備</button>`:`<b class="slot-label">${EQUIP_POSITION_NAMES[position]}</b><span class="small">未穿戴</span>`}</div>${g?`<p class="small equipment-total-summary">${globalThis.equipmentTotalSummaryText(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g)}`:''}</article>`;}).join('')}</section>`).join('')}</div>`;}
+function wornMemberStatus(h){
+ const active=party.active.includes(memberKey(h));
+ return `<span class="tag worn-status ${active?'is-active':'is-reserve'}">[${active?'已上陣':'後備'}]</span>`;
+}
+function wornEquipmentView(){
+ const selected=pageHero('worn');
+ const characters=party.members.map(h=>`<button type="button" class="worn-character-item ${h===selected?'selected':''}" data-member-key="${memberKey(h)}" aria-pressed="${h===selected}" aria-controls="worn-equipment-detail" onclick="selectPageHero('worn',${memberKey(h)})"><span class="worn-character-heading"><b>${esc(characterName(h))}</b>${wornMemberStatus(h)}</span><span class="worn-character-meta">${esc(CLASSES[h.job].name)} · LV ${h.lv}</span></button>`).join('');
+ const slots=EQUIP_POSITION_NAMES.map((name,position)=>{
+  const g=selected.bag.find(x=>x.id===selected.equipped[position]);
+  return `<article class="worn-slot"><div class="slot-label">${esc(name)}</div><div class="worn-slot-head">${g?`<span><b>${equipmentNameHTML(g)}</b></span><button onclick="heroMenuAction(${memberKey(selected)},()=>openForge('${g.id}'))">強化／洗鍊</button><button onclick="unequipSharedGear('${g.id}')">脫下裝備</button>`:'<span class="small">未穿戴</span>'}</div>${g?`<p class="small equipment-total-summary">${globalThis.equipmentTotalSummaryText(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g)}`:''}</article>`;
+ }).join('');
+ return heading('PARTY EQUIPMENT / 穿戴總覽','已穿戴裝備',`<span class="tag">${party.members.length} 位角色</span>`)+`<div class="worn-overview"><section class="panel worn-character-pane" aria-label="人物列表"><h2>人物列表</h2><div class="worn-character-list">${characters}</div></section><section id="worn-equipment-detail" class="panel worn-member worn-detail-pane" aria-label="所選人物的穿戴詳細"><div class="row"><h2>${esc(characterName(selected))}</h2>${wornMemberStatus(selected)}<span class="small">${esc(CLASSES[selected.job].name)} · LV ${selected.lv}</span></div>${slots}</section></div>`;
+}
 
 // Audit boundary: validate persistent shared data before replacing any live session.
 function validateAffixList(list){
