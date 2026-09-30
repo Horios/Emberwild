@@ -32,7 +32,7 @@
   globalThis.hydrateEnemyCombatStats=hydrateEnemyCombatStats;
   globalThis.enemyBattleStats=function(e){
     hydrateEnemyCombatStats(e);
-    return {hp:e.maxhp,atk:e.atk,def:e.def,crit:e.crit,critDamage:e.critDamage,pierce:e.pierce,defenseIgnore:e.defenseIgnore,lifesteal:e.lifesteal,evasion:e.evasion,elementBonus:e.elementBonus,bossDamage:e.bossDamage,speed:combatSpeed(e),elementDamage:{...e.elementDamage},raceDamage:{...e.raceDamage},resist:{...e.resist}};
+    return {hp:e.maxhp,atk:e.atk*(1+effectTotal(e.id,'attack')),def:e.def,crit:Math.min(1,Math.max(0,e.crit+effectTotal(e.id,'critical'))),critDamage:e.critDamage,pierce:e.pierce,defenseIgnore:e.defenseIgnore,lifesteal:e.lifesteal,evasion:e.evasion,elementBonus:e.elementBonus,bossDamage:e.bossDamage,speed:combatSpeed(e),elementDamage:{...e.elementDamage},raceDamage:{...e.raceDamage},resist:{...e.resist}};
   };
   if(typeof makeEnemy==='function'){const base=makeEnemy;makeEnemy=function(...args){return hydrateEnemyCombatStats(base(...args));};}
   if(typeof spawnGroup==='function'){const base=spawnGroup;spawnGroup=function(...args){const out=base(...args);for(const e of foes||[])hydrateEnemyCombatStats(e);return out;};}

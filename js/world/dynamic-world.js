@@ -132,7 +132,7 @@
 
   validateMonsterDropDynamicInput=function(input){
     const bs=input?.balanceSettings;if(!bs||typeof bs!=='object')return;
-    const maps=Array.isArray(bs.maps?.catalog)?bs.maps.catalog.map(normalizeMapRow):GAMEPLAY_SETTINGS_DEFAULTS.maps.catalog;syncRuntimeMapCatalog(maps);
+    const maps=Array.isArray(bs.maps?.catalog)?bs.maps.catalog.map(normalizeMapRow):GAMEPLAY_SETTINGS_DEFAULTS.maps.catalog;
     if(!maps.length)throw Error('地圖清單不可為空');
     const gates=maps.map((m,i)=>m.progressionGate?i:-1).filter(i=>i>=0);if(gates.length!==1||maps[gates[0]]?.mapType!=='final')throw Error('必須恰好有 1 張終局地圖設定為等級突破關卡');
     const mapIds=new Set();for(const [i,m] of maps.entries()){
@@ -182,8 +182,11 @@
     return cfg;
   };
   normalizeGameplaySettings=function(input){
-    const prepared=prepareWorldInput(input||{});syncRuntimeMapCatalog(prepared.maps.catalog);validateMonsterDropDynamicInput({balanceSettings:prepared});
-    return validateGameplaySettings(mergeGameplayShape(GAMEPLAY_SETTINGS_DEFAULTS,prepared));
+    const prepared=prepareWorldInput(input||{}),previousMaps=MAPS.slice();
+    try{
+      syncRuntimeMapCatalog(prepared.maps.catalog);validateMonsterDropDynamicInput({balanceSettings:prepared});
+      return validateGameplaySettings(mergeGameplayShape(GAMEPLAY_SETTINGS_DEFAULTS,prepared));
+    }finally{MAPS.splice(0,MAPS.length,...previousMaps);}
   };
 
   syncMonsterCatalogToMaps=function(){

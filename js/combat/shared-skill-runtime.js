@@ -70,7 +70,7 @@
   }
   function castEnemySharedSkill(e,sk){
     if(!e||e.hp<=0||!sk||!BASIC_EFFECTS.has(sk.effect))return false;
-    const v=enemyBattleStats(e),basePower=v.atk*sk.power,element=sk.element||e.element||'physical';
+    const v=enemyBattleStats(e),basePower=v.atk*sk.power*(1+effectTotal(e.id,'power'))*(1-Math.min(GAMEPLAY_SETTINGS.combat.caps.weaken,effectTotal(e.id,'weaken'))),element=sk.element||e.element||'physical';
     if(sk.effect==='heal'){
       const target=weakestFoe()||e,before=target.hp;target.hp=Math.min(target.maxhp,target.hp+Math.round(basePower));note(combatEnemyName(e)+'・'+sk.name+' → '+combatEnemyName(target)+' 恢復 '+Math.max(0,target.hp-before)+' 生命');return true;
     }
@@ -93,14 +93,14 @@
   globalThis.performSharedEnemyAction=function(e){
     const control=enemyControlState(e);
     if(e?.__controlSkip||control?.rage?.turns>0){performEnemyBasic(e);return 'controlled';}
-    tickCooldowns(e);const sk=activeReady(e);
+    const sk=activeReady(e);tickCooldowns(e);
     if(sk&&castEnemySharedSkill(e,sk)){e.turn=(e.turn||0)+1;cdBox(e)[sk.id]=sk.cooldown;return 'skill';}
     performEnemyBasic(e);
     for(const proc of assignments(e).filter(x=>x.activation==='proc'&&BASIC_EFFECTS.has(x.effect)))if(Math.random()<procChance(proc))castEnemySharedSkill(e,proc);
     return 'attack';
   };
   globalThis.performEnemyActionCore=globalThis.performSharedEnemyAction;
-  globalThis.sharedEnemyActionLabel=function(e){const control=enemyControlState(e);return e?.__controlSkip||control?.rage?.turns>0?'攻擊':activeReady(e,true)?'技能':'攻擊';};
+  globalThis.sharedEnemyActionLabel=function(e){const control=enemyControlState(e);return e?.__controlSkip||control?.rage?.turns>0?'攻擊':activeReady(e)?'技能':'攻擊';};
   globalThis.enemySharedSkillStatus=function(e){
     const rows=assignments(e);if(!rows.length||e.hp<=0)return '';
     const box=cdBox(e);return rows.map(sk=>'<span class="tag">'+esc(sk.name)+(sk.activation==='active'?' · '+((box[sk.id]||0)>0?'冷卻 '+box[sk.id]:'就緒'):' · 普攻觸發')+'</span>').join('');
@@ -110,12 +110,6 @@
     const order=initiativeBase();
     for(let i=1;i<order.length;i++){const u=order[i];if(u.side!=='enemy')continue;const e=u.actor,steps=e.sharedAdvanceRound===round?Math.min(5,Math.max(0,Number(e.sharedAdvanceSteps)||0)):0;if(steps){const to=Math.max(0,i-steps);order.splice(i,1);order.splice(to,0,u);delete e.sharedAdvanceRound;delete e.sharedAdvanceSteps;}}
     return order;
-  };
-  const hitBase=resolveHit;
-  resolveHit=function(e,...args){
-    const shield=Math.max(0,Number(e?.shield)||0);if(!shield)return hitBase(e,...args);
-    const hpBefore=e.hp,dealt=hitBase(e,...args),hpLoss=Math.max(0,hpBefore-e.hp);if(hpLoss<=0)return dealt;
-    const absorb=Math.min(shield,hpLoss);if(absorb>0){e.shield-=absorb;e.hp=Math.min(e.maxhp,e.hp+absorb);return Math.max(0,hpLoss-absorb);}return dealt;
   };
   const resetBase=resetEncounter;
   resetEncounter=function(){enemySharedCooldowns=Object.create(null);return resetBase();};
@@ -180,7 +174,7 @@
   if(typeof equipSkill==='function'){const base=equipSkill;equipSkill=function(i,slot){if(!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物使用');return base(i,slot);};}
   if(typeof slotProcSkill==='function'){const base=slotProcSkill;slotProcSkill=function(i,slot){if(i!==null&&!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物使用');return base(i,slot);};}
   if(typeof validProcIndex==='function'){const base=validProcIndex;validProcIndex=function(h,i){return coreSkillAvailableToHero(h.job,i)&&base(h,i);};}
-  if(typeof castPartySkill==='function'){const base=castPartySkill;castPartySkill=function(h,i,v){if(!coreSkillAvailableToHero(h.job,i))return false;return base(h,i,v);};}
+  if(typeof castPartySkill==='function'){const base=castPartySkill;castPartySkill=function(h,i,v){if(!h?.skills?.[i]||!coreSkillAvailableToHero(h.job,i)||globalThis.__EMBERWILD_MASTERY?.coreMissingRequirements(h,i,true).length)return false;return base(h,i,v);};}
 
   if(typeof exportableBalance==='function'){
     const base=exportableBalance;

@@ -155,8 +155,8 @@ gearDesc=function(g){
 equipmentComparison=function(h,g,position=null){
   const afterHero={...h,equipped:[...h.equipped]};while(afterHero.equipped.length<5)afterHero.equipped.push(null);const positions=gearEquipPositions(g);let target=Number.isInteger(position)&&positions.includes(position)?position:positions.find(p=>!afterHero.equipped[p]);if(target===undefined)target=positions[0];afterHero.equipped[target]=g.id;
   const before=stats(h),after=stats(afterHero),rows=[];
-  const labels={hp:'生命上限',atk:'攻擊力',def:'防禦力',crit:'暴擊率',critDamage:'暴擊傷害',pierce:'防禦穿透',lifesteal:'生命竊取',evasion:'閃避率',elementBonus:'全屬性增傷',speed:'速度'};
-  const percent=new Set(['crit','critDamage','pierce','lifesteal','evasion','elementBonus']);
+  const labels={hp:'生命上限',atk:'攻擊力',def:'防禦力',crit:'暴擊率',critDamage:'暴擊傷害',pierce:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避率',elementBonus:'全屬性增傷',bossDamage:'BOSS 增傷',speed:'速度'};
+  const percent=new Set(['crit','critDamage','defenseIgnore','lifesteal','evasion','elementBonus','bossDamage']);
   function add(label,a,b,isPercent=false,lowerBetter=false){const factor=isPercent?100:1;a=Number(((a||0)*factor).toFixed(2));b=Number(((b||0)*factor).toFixed(2));if(a===b)return;const d=Number((b-a).toFixed(2));rows.push({label,before:a,after:b,delta:d,percent:isPercent,good:lowerBetter?d<0:d>0});}
   for(const [key,label] of Object.entries(labels))add(label,before[key],after[key],percent.has(key));
   for(const key of ['elementDamage','raceDamage','resist'])for(const type of new Set([...Object.keys(before[key]||{}),...Object.keys(after[key]||{})]))add((key==='raceDamage'?RACES[type]:ELEMENTS[type])+' '+({elementDamage:'傷害',raceDamage:'種族增傷',resist:'抗性'}[key]),before[key]?.[type],after[key]?.[type],true);
@@ -345,4 +345,3 @@ characterView=function(){let html=update12CharacterViewConsistency(),a=GAMEPLAY_
 // The battle page was composed by earlier wrappers; replace only the stale balance-dependent supply text.
 const update12BattleViewConsistency=battleView;
 battleView=function(){let html=update12BattleViewConsistency(),pc=Math.round(GS('quests.potion.buyCost',75)),pq=Math.round(GS('quests.potion.buyQuantity',5)),th=Math.round(GS('combat.autoPotionThreshold',.35)*10000)/100;return html.replace(/\+\d+ 瓶／\d+ 金幣/g,`+${pq} 瓶／${pc} 金幣`).replace(/低於\d+(?:\.\d+)?%自動喝藥/g,`低於${th}%自動喝藥`);};
-

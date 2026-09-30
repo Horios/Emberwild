@@ -16,11 +16,26 @@ const normalizeSkillIconType=(value,definitions=customSkillIcons)=>SKILL_ICON_TY
 function validateSkillIconDefinitions(input){
   if(input===undefined)return [];
   if(!Array.isArray(input)||input.length>100)throw Error('自訂技能圖示數量無效');
-  const ids=new Set(),valid=new Set(globalThis.__EMBERWILD_SKILL_ICONS.keys),tones=new Set(Object.keys(globalThis.__EMBERWILD_SKILL_ICONS.colors));
+  const ids=new Set(),valid=new Set(globalThis.__EMBERWILD_SKILL_ICONS.keys),tones=new Set(Object.keys(globalThis.__EMBERWILD_SKILL_ICONS.colors)),kinds=new Set(globalThis.__EMBERWILD_SKILL_ICONS.shapeKinds);
   for(const icon of input){
     if(!icon||typeof icon!=='object'||typeof icon.id!=='string'||!/^[-_a-z0-9]{1,40}$/.test(icon.id)||ids.has(icon.id)||typeof icon.name!=='string'||!icon.name.trim()||icon.name.length>40||!Array.isArray(icon.layers)||!icon.layers.length||icon.layers.length>8)throw Error('自訂技能圖示資料無效');
     ids.add(icon.id);
-    for(const layer of icon.layers)if(!layer||!valid.has(layer.icon)||!Number.isFinite(layer.x)||layer.x<-24||layer.x>24||!Number.isFinite(layer.y)||layer.y<-24||layer.y>24||!Number.isFinite(layer.scale)||layer.scale<.25||layer.scale>2.5||layer.tone!==undefined&&!tones.has(layer.tone))throw Error('自訂技能圖示圖層無效：'+icon.id);
+    for(const layer of icon.layers){
+      const kind=layer?.kind||'icon',range=(key,min,max,required=true)=>layer[key]===undefined&&!required||Number.isFinite(layer[key])&&layer[key]>=min&&layer[key]<=max;
+      let ok=!!layer&&kinds.has(kind)&&range('x',-24,24)&&range('y',-24,24)&&range('rotation',-180,180,false);
+      if(ok&&kind==='icon')ok=valid.has(layer.icon)&&range('scale',.25,2.5);
+      else if(ok){
+        ok=range('strokeWidth',.4,10);
+        if(kind==='line')ok=ok&&range('length',2,64);
+        if(kind==='rect')ok=ok&&range('w',1,64)&&range('h',1,64)&&range('radius',0,24);
+        if(kind==='ellipse')ok=ok&&range('rx',.5,32)&&range('ry',.5,32);
+        if(kind==='arc')ok=ok&&range('r',.5,32)&&range('start',-360,360)&&range('end',-360,360);
+        if(kind==='polygon')ok=ok&&range('scale',.2,4)&&typeof layer.points==='string'&&/^\s*-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?){2,}\s*$/.test(layer.points);
+        if(['rect','ellipse','polygon'].includes(kind))ok=ok&&typeof layer.filled==='boolean';
+      }
+      for(const key of ['tone','strokeTone','fillTone'])if(layer?.[key]!==undefined&&layer[key]!==''&&!tones.has(layer[key]))ok=false;
+      if(!ok)throw Error('自訂技能圖示圖層無效：'+icon.id);
+    }
   }
   return clone(input);
 }

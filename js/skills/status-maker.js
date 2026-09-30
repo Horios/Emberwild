@@ -103,6 +103,7 @@ function statusApplyShieldAwareDamage(target,amount,bypassShield=false){
   }else if(!bypassShield&&!statusIsHero(target)){
     const api=globalThis.__EMBERWILD_CONTROL_TEST_API,p=api?.states?.[target.id]?.polymorph;
     if(p?.shield>0){const absorb=Math.min(p.shield,amount);p.shield=Math.max(0,p.shield-absorb);hpDamage=Math.max(0,amount-absorb);if(p.shield<=0){delete api.states[target.id].polymorph;note(combatEnemyName(target)+' 的變形護盾被持續效果打破，變形解除。');}}
+    const absorb=Math.min(Math.max(0,Number(target.shield)||0),hpDamage);target.shield=Math.max(0,(Number(target.shield)||0)-absorb);hpDamage-=absorb;
   }
   target.hp=Math.max(0,before-hpDamage);return Math.max(0,before-target.hp);
 }
@@ -127,7 +128,7 @@ function statusDamageAmount(raw,source,target,fx){
   return out;
 }
 function executeStatusPeriodic(inst,fx,immediate=false){
-  const source=partyMember(inst.sourceKey??inst.sourceJob)||null,target=statusTargetByKey(inst.targetKey);if(!target||target.hp<=0)return 0;
+  const source=partyMember(inst.sourceKey??inst.sourceJob)||foes.find(e=>e.id===inst.sourceKey)||null,target=statusTargetByKey(inst.targetKey);if(!target||target.hp<=0)return 0;
   const raw=Math.max(0,statusBasisValue(fx.basis,source,target)*fx.coefficient),prefix=immediate?'立即':'持續';
   if(fx.kind==='heal'){
     const max=statusMaxHp(target),before=target.hp;target.hp=Math.min(max,target.hp+Math.max(0,Math.round(raw)));let healed=Math.max(0,target.hp-before);
@@ -154,7 +155,7 @@ function applyStatusControl(def,target,source){
 }
 function applyCustomStatus(defOrId,source,target){
   const def=typeof defOrId==='string'?statusById(defOrId):normalizeStatusDefinition(defOrId);if(!def||!target||target.hp<=0)return false;
-  const targetKey=statusTargetKey(target),sourceJob=Number.isInteger(source?.job)?source.job:null,sourceKey=sourceJob===null?null:memberKey(source);if(!targetKey)return false;
+  const targetKey=statusTargetKey(target),sourceJob=Number.isInteger(source?.job)?source.job:null,sourceKey=sourceJob===null?(source?.id||null):memberKey(source);if(!targetKey)return false;
   activeStatuses=activeStatuses.filter(x=>!(x.statusId===def.id&&(x.sourceKey??x.sourceJob)===sourceKey&&x.targetKey===targetKey));
   const inst={id:def.id+'@'+String(sourceKey)+'@'+targetKey,statusId:def.id,name:def.name,sourceJob,sourceKey,sourceName:source?(statusIsHero(source)?characterName(source):combatEnemyName(source)):'未知來源',targetKey,appliedClock:partyClock,duration:def.duration,expiresClock:partyClock+def.duration,definition:deepClone(def)};
   activeStatuses.push(inst);applyStatusControl(def,target,source);
@@ -165,7 +166,7 @@ function applyCustomStatus(defOrId,source,target){
     if(healed>0)note(def.name+'・再生 → '+characterName(target)+' '+Math.round(healed)+' 生命');
   }
   if(def.tags.includes('instant'))for(const fx of def.periodic)executeStatusPeriodic(inst,fx,true);
-  note((source?characterName(source)+' → ':'')+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' 獲得狀態「'+def.name+'」· '+def.duration+' 回合');
+  note((source?(statusIsHero(source)?characterName(source):combatEnemyName(source))+' → ':'')+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' 獲得狀態「'+def.name+'」· '+def.duration+' 回合');
   return true;
 }
 function tickCustomStatuses(){

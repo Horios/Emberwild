@@ -185,6 +185,8 @@
   // Final player-hit formula. Defense ignore is applied before flat penetration.
   resolveHit=function(e,amount,h,element,crit,options={}){
     const v=battleStats(h),formula=GAMEPLAY_SETTINGS.combat.damageFormula||{},attackCoefficient=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defenseCoefficient=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:(GAMEPLAY_SETTINGS.combat.defenseEffectiveness??.55),minimumDamage=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
+    const enemyStats=typeof enemyBattleStats==='function'?enemyBattleStats(e):null;
+    if(enemyStats?.evasion>0&&Math.random()<enemyStats.evasion){note(combatEnemyName(e)+'閃避了'+characterName(h)+'的攻擊');return 0;}
     const bossBonus=(e?.kind==='boss'||e?.kind==='final')?(v.bossDamage||0):0;
     const rawAmount=amount*(1+bossBonus),fracture=Math.min(GAMEPLAY_SETTINGS.combat.caps.fracture,effectTotal(e.id,'fracture'));
     const ignore=Math.min(GAME_BALANCE.combat.statCaps.defenseIgnore??.75,Math.max(0,Number.isFinite(options.defenseIgnore)?options.defenseIgnore:(v.defenseIgnore||0)));
@@ -195,6 +197,11 @@
     const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic&&tonic.element===element?GS('combat.supply.elementTonicDamage',.2):0);
     const amp=effectTotal(e.id,'damageAmp')+effectTotal(e.id,'vulnerable');
     d=Math.max(minimumDamage,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)));
+    const guard=Math.min(GAMEPLAY_SETTINGS.combat.caps.guard,effectTotal(e.id,'guard'));
+    if(guard)d=Math.max(minimumDamage,Math.round(d*(1-guard)));
+    const resistance=Math.min(GAMEPLAY_SETTINGS.combat.caps.resistance,enemyStats?.resist?.[element]||0);
+    if(resistance)d=Math.max(minimumDamage,Math.round(d*(1-resistance)));
+    const absorb=Math.min(Math.max(0,Number(e.shield)||0),d);e.shield=Math.max(0,(Number(e.shield)||0)-absorb);d-=absorb;
     const actual=Math.min(e.hp,d);e.hp=Math.max(0,e.hp-d);
     if(actual>0)recordCombatContribution(h,'damage',actual);
     const beforeLifesteal=h.hp;h.hp=Math.min(v.hp,h.hp+actual*v.lifesteal);
