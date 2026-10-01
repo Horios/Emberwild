@@ -1,0 +1,28 @@
+# 選項與商店
+
+側欄「選項」集中兌換碼、返回標題與測試設定 JSON 的載入。JSON 載入入口只在 `/preview/` 或具有 Preview 部署標示的版本顯示；標題頁僅在存檔缺少自訂測試裝備定義、需要復原時保留測試設定匯入。
+
+商店商品以緊湊條列呈現。每項商品顯示名稱、每份數量、說明、實際效果、共用庫存與購買價格。說明使用商品規則的文字，留空時沿用道具資料；效果使用最終載入的技能寶石／消耗品能力，不重複列出單價或賣價。購買進入既有共用庫存，使用方式維持背包／自動喝水／裝備強化的原有流程。
+
+## 平衡設計器
+
+「商店」分頁可切換隨機、固定商品池，新增、編輯、複製、停用、移除商品。清空商品池不會重新加入預設商品，也不會刪除玩家既有道具。素材、鍛鐵、粉塵、技能寶石、所有既有消耗道具與自訂治療藥水都可上架。
+
+| 設定 | 有效來源 |
+| --- | --- |
+| 隨機商品 | `shopSettings.randomOffers.entries` |
+| 固定商品 | `shopSettings.fixedOffers.entries` |
+| 刷新價格 | `randomOffers.refreshBaseCost` ＋當日次數 × `refreshCostStep` |
+| 權重抽選 | `selection: "weighted"`、`weight` |
+| 每批額外判定 | `selection: "extra"`、`chance`（0～1） |
+| 道具引用 | `type: "item"`、`key: items[].id` |
+| 道具基本單價 | 商品 `unitPrice: null` 時使用 `items[].cost` |
+| 商店專用文字 | 商品規則的 `name`、`description`；空字串沿用道具資料 |
+
+固定商品 `quantity` 是每次購買的數量；隨機商品使用 `quantityMin`／`quantityMax`，可設定數量與單價隨地區階級倍增。固定寶石需指定種類，固定素材需指定名稱。
+
+`shopSettings.schemaVersion: 2` 的兩個商品池是唯一有效商店來源。舊 `items[].shopEnabled` 與重鑄石 `shopChance`／`shopPrice` 僅在舊設定第一次遷移時使用。重鑄石原有每批 6% 額外出現、650 金幣的預設行為會遷入商品池；新版可以在商店分頁調整或移除。
+
+遊戲與設計器使用同一份 `js/items/shop-catalog.js`（設計器內嵌相同內容）。商品 ID、道具引用、數量、價格與機率在載入前驗證；購買與刷新會在存檔失敗時退回金幣、庫存及售完狀態。
+
+執行 `npm run test:shop` 可驗證兩個實際頁面的設定一致性、選項顯示、各類商品購買、存檔回復、空池持久化、刷新價格、JSON 匯出與選項匯入。設計器路徑可用 `EMBERWILD_BALANCE_ROOT` 指定。

@@ -2,11 +2,12 @@
   "name": "emberwild-progression-checks",
   "private": true,
   "scripts": {
-    "test": "node --test tests/progression-model.test.cjs tests/progression-runtime.test.cjs tests/equipment-details.test.cjs",
+    "test": "node --test tests/progression-model.test.cjs tests/progression-runtime.test.cjs tests/equipment-details.test.cjs tests/shop-options.test.cjs",
     "test:unit": "node --test tests/progression-model.test.cjs",
-    "test:integration": "node --test tests/progression-runtime.test.cjs tests/equipment-details.test.cjs",
+    "test:integration": "node --test tests/progression-runtime.test.cjs tests/equipment-details.test.cjs tests/shop-options.test.cjs",
     "test:equipment": "node --test tests/equipment-details.test.cjs",
-    "test:simulation": "node tests/progression-simulation.cjs"
+    "test:simulation": "node tests/progression-simulation.cjs",
+    "test:shop": "node --test tests/shop-options.test.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

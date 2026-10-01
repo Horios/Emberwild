@@ -682,11 +682,7 @@
   if(typeof useSupply==='function'){const identityUseSupplyBase=useSupply;useSupply=function(id){if(id===POWER_ITEM_ID)return toast('請在「裝備強化」頁選擇裝備後使用'+EQUIPMENT_POWER.rerollItem.name);return identityUseSupplyBase(id);};}
   if(typeof globalThis.useInventoryItem==='function'){const identityInventoryUseBase=globalThis.useInventoryItem;globalThis.useInventoryItem=function(id,job){if(id===POWER_ITEM_ID){if(typeof setTab==='function')setTab('forge');toast('請選擇裝備後使用'+EQUIPMENT_POWER.rerollItem.name);return;}return identityInventoryUseBase(id,job);};}
 
-  const POWER_MARKET_RULE='__gear_tier_reroll__';
-  function proxyMaterialKey(){for(const m of MAPS||[])for(const mob of m.mobs||[])if(mob?.[2])return mob[2];return '素材';}
-  if(typeof generateMarket==='function'){const identityMarketBase=generateMarket;generateMarket=function(){const market=identityMarketBase(),r=EQUIPMENT_POWER.rerollItem;if(Math.random()<r.shopChance&&market?.offers&&market.offers.length<99)market.offers.push({id:market.serial+'-'+market.offers.length,kind:'material',key:proxyMaterialKey(),qty:1,price:r.shopPrice,sold:false,ruleId:POWER_MARKET_RULE});return market;};}
-  if(typeof marketOfferName==='function'){const identityMarketNameBase=marketOfferName;marketOfferName=function(o){return o?.ruleId===POWER_MARKET_RULE?EQUIPMENT_POWER.rerollItem.name:identityMarketNameBase(o);};}
-  if(typeof buyMarketOffer==='function'){const identityBuyMarketBase=buyMarketOffer;buyMarketOffer=function(id){const o=party?.market?.offers?.find(x=>x.id===id);if(o?.ruleId!==POWER_MARKET_RULE)return identityBuyMarketBase(id);if(o.sold)return;if(state.gold<o.price)return toast('金幣不足');const gold=state.gold,have=state.consumables?.[POWER_ITEM_ID]||0;state.gold-=o.price;state.consumables??={};state.consumables[POWER_ITEM_ID]=have+1;o.sold=true;if(!save()){state.gold=gold;state.consumables[POWER_ITEM_ID]=have;o.sold=false;return;}render();toast('已購買 '+EQUIPMENT_POWER.rerollItem.name+' ×1');};}
+  // Reroll stone offers are configured by shopSettings alongside all other products.
 
   if(typeof update12BossMemberView==='function'){
     update12BossMemberView=function(){
