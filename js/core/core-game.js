@@ -863,8 +863,21 @@ partyPicker=function(){return '';};
 const pageHeroSelection=new Map();
 function pageHero(page=tab){const h=partyMember(pageHeroSelection.get(page)),members=typeof enlistedHeroes==='function'?enlistedHeroes():party.members;return members.includes(h)?h:members[0];}
 function selectPageHero(page,job){if(!partyMember(job)||typeof isPartnerEnlisted==='function'&&!isPartnerEnlisted(partyMember(job)))return;pageHeroSelection.set(page,job);closeModal();render();}
-function pageSelector(page){return `<div class="page-hero-tabs" aria-label="本頁操作角色">${(typeof enlistedHeroes==='function'?enlistedHeroes():party.members).map(h=>`<button class="${pageHero(page)===h?'primary':''}" onclick="selectPageHero('${page}',${memberKey(h)})">${esc(characterName(h))} · ${esc(CLASSES[h.job].name)} · Lv.${h.lv}</button>`).join('')}</div>`;}
-function singlePagePanel(page,title,view){const h=pageHero(page);return heading('PARTY / 隊員操作',title)+pageSelector(page)+`<section class="panel page-owner-panel"><div class="page-owner-summary"><b>${memberMenuTitle(h)}</b><span>能力點 ${h.ap} · 技能點 ${h.sp} · 金幣 ${h.gold}</span></div><div class="page-owner-content">${withHero(h,()=>{const prior=forgeSelection;if(page==='forge')forgeSelection=teamForgeSelection.get(memberKey(h))||null;let html;try{html=view();if(page==='forge')teamForgeSelection.set(memberKey(h),forgeSelection);}finally{forgeSelection=prior;}return ownerControls(html,memberKey(h));})}</div></section>`;}
+function memberRatingTag(rating){
+ if(!rating)return '';
+ const grade=['D','C','B','A','S','SS','SSS'].includes(rating)?rating:'D';
+ return `<span class="member-tag member-rating member-rating-${grade.toLowerCase()}" aria-label="夥伴評級 ${grade}">評級 ${grade}</span>`;
+}
+function memberStatusTag(h){
+ const active=party.active.includes(memberKey(h)),enlisted=typeof isPartnerEnlisted==='function'?isPartnerEnlisted(h):true;
+ return `<span class="member-tag member-status worn-status ${active?'is-active':enlisted?'is-reserve':'is-archived'}">${active?'已上陣':enlisted?'後備':'名冊'}</span>`;
+}
+function memberIdentityTags(h,{includeLevel=true,includeStatus=true}={}){
+ const player=h===party?.members[0],rating=player?null:typeof partnerRating==='function'?partnerRating(h):'D';
+ return `<span class="member-tags"><span class="member-tag member-job" aria-label="職業">${esc(CLASSES[h.job].name)}</span>${includeLevel?`<span class="member-tag member-level" aria-label="等級">Lv.${h.lv}</span>`:''}${player?'<span class="member-tag member-player">玩家</span>':memberRatingTag(rating)}${includeStatus?memberStatusTag(h):''}</span>`;
+}
+function pageSelector(page){return `<div class="page-hero-tabs" aria-label="本頁操作角色">${(typeof sortedEnlistedHeroes==='function'?sortedEnlistedHeroes():party.members).map(h=>`<button class="member-selector ${pageHero(page)===h?'primary':''}" onclick="selectPageHero('${page}',${memberKey(h)})"><b>${esc(characterName(h))}</b>${memberIdentityTags(h)}</button>`).join('')}</div>`;}
+function singlePagePanel(page,title,view){const h=pageHero(page);return heading('PARTY / 隊員操作',title)+pageSelector(page)+`<section class="panel page-owner-panel"><div class="page-owner-summary"><div class="member-identity"><b>${esc(characterName(h))}</b>${memberIdentityTags(h)}</div><span>能力點 ${h.ap} · 技能點 ${h.sp} · 金幣 ${h.gold}</span></div><div class="page-owner-content">${withHero(h,()=>{const prior=forgeSelection;if(page==='forge')forgeSelection=teamForgeSelection.get(memberKey(h))||null;let html;try{html=view();if(page==='forge')teamForgeSelection.set(memberKey(h),forgeSelection);}finally{forgeSelection=prior;}return ownerControls(html,memberKey(h));})}</div></section>`;}
 characterView=function(){return singlePagePanel('character','角色能力',memberCharacterView);};
 skillsView=function(){return singlePagePanel('skills','主動技能、普攻觸發技能',individualSkillsView);};
 // The original inventory renderer already supplies filters, worn markers and detail actions.
@@ -1032,23 +1045,19 @@ function previewEquip(id,job,position=null){const h=partyMember(job),g=state.bag
 function confirmEquipComparison(id,job,position=null){closeModal();equipSharedGear(id,job,position);}
 
 function forgeEquipmentOptions(selectedId){const worn=[],spare=[];for(const g of state.bag)(gearWearer(g.id)?worn:spare).push(g);worn.sort((a,b)=>gearWearer(a.id).job-gearWearer(b.id).job||a.slot-b.slot);const option=g=>{const wearer=gearWearer(g.id);return `<option value="${g.id}" ${g.id===selectedId?'selected':''}>${wearer?'【'+esc(characterName(wearer))+'穿戴】':'【'+gearWearableJobsText(g)+'】'} ${esc(equipmentDisplayName(g))} · ${RARITY[g.rar]}</option>`;};return (worn.length?`<optgroup label="全隊已穿戴（${worn.length}）">${worn.map(option).join('')}</optgroup>`:'')+(spare.length?`<optgroup label="未穿戴（${spare.length}）">${spare.map(option).join('')}</optgroup>`:'');}
-function wornMemberStatus(h){
- const active=party.active.includes(memberKey(h));
- return `<span class="tag worn-status ${active?'is-active':'is-reserve'}">${active?'已上陣':'後備'}</span>`;
-}
 let wornSlotSelection=null;
 function selectWornSlot(key,position){const h=partyMember(key);if(!h||typeof isPartnerEnlisted==='function'&&!isPartnerEnlisted(h)||!EQUIP_POSITION_NAMES[position])return;pageHeroSelection.set('worn',key);wornSlotSelection={key,position};render();}
 function wornEquipmentView(){
  const selected=pageHero('worn'),key=memberKey(selected),members=typeof sortedEnlistedHeroes==='function'?sortedEnlistedHeroes():party.members;
  const selectedPosition=wornSlotSelection?.key===key?wornSlotSelection.position:null;
- const characters=members.map(h=>`<button type="button" class="worn-character-item ${h===selected?'selected':''}" data-member-key="${memberKey(h)}" aria-pressed="${h===selected}" aria-controls="worn-equipment-detail" onclick="selectPageHero('worn',${memberKey(h)})"><span class="worn-character-heading"><b>${esc(characterName(h))}</b>${wornMemberStatus(h)}</span><span class="worn-character-meta">${esc(CLASSES[h.job].name)} · Lv.${h.lv} · ${typeof partnerRating==='function'?partnerRating(h):'D'}</span></button>`).join('');
+ const characters=members.map(h=>`<button type="button" class="worn-character-item ${h===selected?'selected':''}" data-member-key="${memberKey(h)}" aria-pressed="${h===selected}" aria-controls="worn-equipment-detail" onclick="selectPageHero('worn',${memberKey(h)})"><span class="worn-character-heading"><b>${esc(characterName(h))}</b>${memberStatusTag(h)}</span><span class="worn-character-meta">${memberIdentityTags(h,{includeStatus:false})}</span></button>`).join('');
  const slots=EQUIP_POSITION_NAMES.map((name,position)=>{
   const g=selected.bag.find(x=>x.id===selected.equipped[position]);
   return `<article class="worn-slot ${position===selectedPosition?'selected-slot':''}"><button class="worn-slot-choice" onclick="selectWornSlot(${key},${position})" data-equip-position="${position}" aria-pressed="${position===selectedPosition}"><span class="slot-label">${esc(name)}</span><b>${g?equipmentNameHTML(g):'未穿戴'}</b><span class="small equipment-total-summary">${g?globalThis.equipmentTotalSummaryHTML(g):'選擇裝備'}</span></button>${g?`<div class="actions"><button onclick="heroMenuAction(${key},()=>openForge('${g.id}'))">強化／洗鍊</button><button onclick="unequipSharedGear('${g.id}')">卸下</button></div>${globalThis.equipmentAttributeDetailsHTML(g)}`:''}</article>`;
  }).join('');
  const candidates=selectedPosition===null?[]:selected.bag.filter(g=>!gearWearer(g.id)&&eligibleWearers(g).includes(selected)&&gearEquipPositions(g).includes(selectedPosition)&&!inlineAffixDrafts.has(affixDraftKey(g)));
  const candidatePane=`<section class="worn-candidate-pane" aria-label="背包候選裝備"><h3>${selectedPosition===null?'選擇裝備欄位':esc(EQUIP_POSITION_NAMES[selectedPosition])+' · 可用裝備 '+candidates.length+' 件'}</h3><p class="small">${selectedPosition===null?'點選左側部位，查看符合職業、等級與部位限制的背包裝備。':'選擇裝備查看換裝比較；已由其他夥伴穿戴的裝備須先卸下。'}</p><div class="worn-candidate-list">${candidates.map(g=>`<button class="worn-candidate" data-gear-id="${esc(g.id)}" onclick="previewEquip('${g.id}',${key},${selectedPosition})"><b>${equipmentNameHTML(g)}</b><span class="small">${globalThis.equipmentTotalSummaryHTML(g)}</span><span class="small">${gearWearableJobsText(g)} · Lv.${gearRequiredLevelByTier(g.tier)} · ${equipmentBaseRatingHTML(g)}</span><span class="small">${selected.equipped[selectedPosition]?'比較裝備':'穿戴'}</span></button>`).join('')|| (selectedPosition===null?'':'<p class="empty">背包沒有符合此欄位的可用裝備。</p>')}</div></section>`;
- return heading('PARTNER EQUIPMENT / 夥伴裝備','夥伴裝備',`<span class="tag">${members.length} 位現役夥伴</span>`)+`<div class="worn-overview"><section class="panel worn-character-pane" aria-label="人物列表"><h2>現役夥伴</h2><div class="worn-character-list">${characters}</div></section><section id="worn-equipment-detail" class="panel worn-member worn-detail-pane" aria-label="所選人物的穿戴詳細"><div class="row"><h2>${esc(characterName(selected))}</h2>${wornMemberStatus(selected)}<span class="small">${esc(CLASSES[selected.job].name)} · Lv.${selected.lv} · 評級 ${typeof partnerRating==='function'?partnerRating(selected):'D'}</span></div><div class="worn-loadout-grid"><div>${slots}</div>${candidatePane}</div></section></div>`;
+ return heading('PARTNER EQUIPMENT / 夥伴裝備','夥伴裝備',`<span class="tag">${members.length} 位現役夥伴</span>`)+`<div class="worn-overview"><section class="panel worn-character-pane" aria-label="人物列表"><h2>現役夥伴</h2><div class="worn-character-list">${characters}</div></section><section id="worn-equipment-detail" class="panel worn-member worn-detail-pane" aria-label="所選人物的穿戴詳細"><div class="row"><h2>${esc(characterName(selected))}</h2>${memberIdentityTags(selected)}</div><div class="worn-loadout-grid"><div>${slots}</div>${candidatePane}</div></section></div>`;
 }
 
 // Audit boundary: validate persistent shared data before replacing any live session.

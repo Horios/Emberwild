@@ -2,6 +2,31 @@
 .roster-page .roster-row{min-height:70px}
 .roster-page .roster-row>div:first-child{min-width:0}
 .roster-page .roster-row p{line-height:1.5}
+.member-identity{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.member-tags{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:3px 10px;font-size:.8125rem;line-height:1.5;vertical-align:baseline}
+.member-tags .member-tag,.member-status{border:0;padding:0;margin:0;white-space:nowrap}
+.member-tags .member-job{color:var(--green)}
+.member-tags .member-level{color:var(--muted)}
+.member-tags .member-player{color:var(--gold)}
+.member-status.is-active{color:var(--green)}
+.member-status.is-reserve,.member-status.is-archived{color:var(--muted)}
+.member-tags .member-rating{font-weight:700}
+.member-tags .member-rating-d{color:#aeb4b7}
+.member-tags .member-rating-c{color:#f4f5f5}
+.member-tags .member-rating-b{color:#79d997}
+.member-tags .member-rating-a{color:#cc9dff}
+.member-tags .member-rating-s{color:#f4cc62}
+.member-tags .member-rating-ss,.member-tags .member-rating-sss{color:#c5b7ff}
+@supports ((background-clip:text) or (-webkit-background-clip:text)){
+ .member-tags .member-rating-ss,.member-tags .member-rating-sss{background-image:linear-gradient(110deg,#ffada8,#f6dc80,#94e8c4,#95d9ff,#d3afff);background-clip:text;-webkit-background-clip:text;color:transparent}
+ .member-tags .member-rating-sss{background-image:linear-gradient(110deg,#ffd287,#ffc1db,#bcafff,#94e5ff,#adf4c4,#ffd287);background-size:250% 100%;animation:member-rating-shimmer 6s linear infinite!important}
+}
+@keyframes member-rating-shimmer{from{background-position:0% 50%}to{background-position:100% 50%}}
+@media(prefers-reduced-motion:reduce){.member-tags .member-rating-sss{animation:none!important}}
+.roster-player-row{border-left:2px solid var(--gold);padding-left:10px}
+.page-hero-tabs>button.member-selector{width:190px!important;height:auto!important;min-height:56px;text-align:left}
+.member-selector>b{display:block}
+.member-selector .member-tags{display:flex;font-size:.75rem;gap:2px 8px}
 .roster-team-status{padding-bottom:10px;border-bottom:1px solid var(--line)}
 .roster-team-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px;margin-top:8px}
 .roster-team-slot{display:grid;gap:3px;padding:8px;border:1px solid var(--line);background:#202b23}
