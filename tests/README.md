@@ -31,3 +31,5 @@ node tests/collect-progression.cjs /tmp/progression-rows.json
 `npm run test:boosts` 驗證限時道具與戰報。測試載入完整遊戲，使用瀏覽器可控制的現實時鐘推進既有 `tick()` 定時器，檢查 4× 鎖定／到期降回 2×、任意百分比與分鐘、同名刷新、多來源加算、真正獎勵／掉落判定、商店購買、設計器操作與 JSON 匯出、戰鬥／戰報暫停、五種事件篩選及存檔重載。1×／2×／4× 各推進十秒，確認掛機時間相同、實際行動數隨倍速增加。限時券按現實時間到期，離線不增加掛機時間。
 
 限時道具契約在 `js/items/timed-boosts.js`，設計器的 `timed-boost-schema-v1` 必須嵌入完全相同內容。`items[].bonusPercent`、`durationMinutes` 與既有 `shopSettings.randomOffers.entries` 是編輯、匯出、匯入及遊戲實際生效的共同來源。
+
+`npm run test:journal` 不需要私有平衡器，使用完整頁面與瀏覽器真正的捲動事件，驗證只顯示經驗／物品且沒有新獎勵時，完整重繪與戰報局部重繪都持續停在最新訊息。另檢查手動查看舊紀錄的垂直／水平位置、戰報暫停與恢復，以及實際 2× 戰鬥期間的捲動穩定性。這組回歸測試也包含在 `npm test` 與 `test:integration`。

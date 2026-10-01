@@ -1410,16 +1410,19 @@ function isBattleLogAtBottom(stream){
 function ensureBattleLogScrollState(stream){
  if(!stream||stream.dataset.scrollStateReady==='1')return;
  stream.dataset.scrollStateReady='1';
- stream.dataset.autoScroll='1';
+ stream.dataset.autoScroll=battleReportPaused?'0':'1';
  stream.addEventListener('scroll',()=>{
-  stream.dataset.autoScroll=isBattleLogAtBottom(stream)?'1':'0';
+  const follow=isBattleLogAtBottom(stream)?'1':'0';
+  if(battleReportPaused)stream.dataset.reportAutoScroll=follow;
+  else stream.dataset.autoScroll=follow;
  },{passive:true});
 }
 function forceBattleLogBottom(stream){
- if(!stream||battleReportPaused)return;
+ if(!stream)return;
  ensureBattleLogScrollState(stream);
+ if(battleReportPaused)return;
  stream.dataset.autoScroll='1';
- const pin=()=>{if(!battleReportPaused)stream.scrollTop=Math.max(0,stream.scrollHeight-stream.clientHeight);};
+ const pin=()=>{if(!battleReportPaused&&stream.isConnected&&stream.dataset.autoScroll==='1')stream.scrollTop=Math.max(0,stream.scrollHeight-stream.clientHeight);};
  pin();
  queueMicrotask(pin);
  requestAnimationFrame(()=>{pin();requestAnimationFrame(pin);});
@@ -1466,20 +1469,36 @@ const stableBattleLogResetSession=resetSession;
 resetSession=function(){battleLogGeneration++;stableBattleLogResetSession();};
 function syncBattleLogHeader(live){if(battleReportPaused)return;const tag=live?.querySelector?.('.battle-log-round');if(tag)tag.textContent='回合 '+round;}
 function markBattleLogGeneration(live){if(live)live.dataset.logGeneration=String(battleLogGeneration);}
+function captureBattleLogScroll(live){
+ const stream=live?.querySelector?.('.battle-log-stream');
+ return stream?{stream,top:stream.scrollTop,left:stream.scrollLeft,autoScroll:stream.dataset.autoScroll}:null;
+}
+function restoreBattleLogScroll(position){
+ if(!position?.stream.isConnected)return;
+ const {stream,top,left,autoScroll}=position;
+ ensureBattleLogScrollState(stream);
+ stream.scrollLeft=left;
+ if(!battleReportPaused&&autoScroll!=='0')forceBattleLogBottom(stream);
+ else{stream.scrollTop=Math.min(top,Math.max(0,stream.scrollHeight-stream.clientHeight));stream.dataset.autoScroll=autoScroll??'0';}
+}
 const stableBattleLogRender=render;
 render=function(){
  const oldLive=$('liveLog'),canKeep=oldLive&&oldLive.dataset.logGeneration===String(battleLogGeneration);
+ // Reattaching the same DOM preserves its rows, but the browser resets its
+ // scroll offset while it is detached. Capture before the page is replaced.
+ const position=canKeep?captureBattleLogScroll(oldLive):null;
  stableBattleLogRender();
  const fresh=$('liveLog');
- if(canKeep&&fresh&&fresh!==oldLive){fresh.replaceWith(oldLive);syncBattleLogHeader(oldLive);}
+ if(canKeep&&fresh){if(fresh!==oldLive)fresh.replaceWith(oldLive);syncBattleLogHeader(oldLive);restoreBattleLogScroll(position);}
  else if(fresh){markBattleLogGeneration(fresh);scrollBattleLogToBottom(fresh);}
 };
 const stableBattleLogRefreshGlobalJournal=refreshGlobalJournal;
 refreshGlobalJournal=function(){
  const oldLive=$('liveLog'),canKeep=oldLive&&oldLive.dataset.logGeneration===String(battleLogGeneration);
+ const position=canKeep?captureBattleLogScroll(oldLive):null;
  stableBattleLogRefreshGlobalJournal();
  const fresh=$('liveLog');
- if(canKeep&&fresh&&fresh!==oldLive){fresh.replaceWith(oldLive);syncBattleLogHeader(oldLive);}
+ if(canKeep&&fresh){if(fresh!==oldLive)fresh.replaceWith(oldLive);syncBattleLogHeader(oldLive);restoreBattleLogScroll(position);}
  else if(fresh){markBattleLogGeneration(fresh);scrollBattleLogToBottom(fresh);}
 };
 
