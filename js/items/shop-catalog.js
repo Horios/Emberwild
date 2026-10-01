@@ -9,7 +9,8 @@
     {id:'ore',enabled:true,type:'ore',key:'',name:'鍛鐵',description:'裝備強化常用的金屬素材。',quantityMin:8,quantityMax:20,unitPrice:12,weight:1,quantityScalesWithTier:true,priceScalesWithTier:false},
     {id:'dust',enabled:true,type:'dust',key:'',name:'粉塵',description:'由裝備分解取得的細碎素材。',quantityMin:3,quantityMax:8,unitPrice:25,weight:1,quantityScalesWithTier:false,priceScalesWithTier:false},
     {id:'gem',enabled:true,type:'gem',key:'random',name:'技能寶石',description:'可鑲嵌於技能插槽，強化技能的寶石。',quantityMin:1,quantityMax:2,unitPrice:180,weight:.7,quantityScalesWithTier:false,priceScalesWithTier:false},
-    {id:'region_material',enabled:true,type:'material',key:'region',name:'地區素材',description:'探索途中收集的製作素材。',quantityMin:3,quantityMax:6,unitPrice:60,weight:1.3,quantityScalesWithTier:false,priceScalesWithTier:true}
+    {id:'region_material',enabled:true,type:'material',key:'region',name:'地區素材',description:'探索途中收集的製作素材。',quantityMin:3,quantityMax:6,unitPrice:60,weight:1.3,quantityScalesWithTier:false,priceScalesWithTier:true},
+    ...EmberwildTimedBoosts.DEFAULT_RULES.map(copy)
   ]};
   const LEGACY_DESCRIPTIONS=new Set(['裝備強化常用素材。','裝備洗鍊與寶石相關用途的基礎素材。','隨機出現一種技能寶石。','從目前探索區域的怪物素材中隨機挑選。','從目前探索區域隨機挑選素材。','本批隨機商品。']);
   function normalizeRule(src,index,random){

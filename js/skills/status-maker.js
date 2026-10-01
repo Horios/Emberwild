@@ -140,7 +140,7 @@ function executeStatusPeriodic(inst,fx,immediate=false){
   const amount=statusDamageAmount(raw,source,target,fx),dealt=statusApplyShieldAwareDamage(target,amount,fx.resolution==='true');
   if(dealt>0&&statusIsHero(target)&&target.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(target,{name:inst.sourceName},inst.name+(immediate?'（立即傷害）':'（持續傷害）'));
   if(dealt>0&&source&&typeof recordCombatContribution==='function')recordCombatContribution(source,'damage',dealt);
-  if(dealt>0)note(inst.name+'・'+prefix+'傷害 → '+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' '+dealt+' 傷害');
+  if(dealt>0)note(inst.name+'・'+prefix+'傷害 → '+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' '+dealt+' 傷害',source?statusIsHero(source)?'playerDamage':'enemyDamage':statusIsHero(target)?'enemyDamage':'playerDamage');
   return dealt;
 }
 function applyStatusControl(def,target,source){
@@ -234,7 +234,7 @@ function triggerCustomStatusFollowups(target){
     const crit=Math.random()<Math.max(0,Math.min(GAME_BALANCE?.combat?.statCaps?.crit??1,Number(v.crit)||0));if(crit)amount=Math.round(amount*Math.max(1,Number(v.critDamage)||1));
     amount=Math.max(minimumDamage,Math.round(amount*elementFactor(m.element||'physical',target.element)*(1-Math.min(GAMEPLAY_SETTINGS?.combat?.caps?.guard??.75,effectTotal(target.id,'guard')))));
     const dealt=statusApplyShieldAwareDamage(target,amount,false);if(dealt>0&&typeof recordCombatContribution==='function')recordCombatContribution(caster,'damage',dealt);total+=dealt;
-    if(dealt>0)note(inst.name+'・受擊追打 ['+((typeof ELEMENTS==='object'&&ELEMENTS[m.element])||m.element||'physical')+'] → '+combatEnemyName(target)+' '+dealt+' 傷害'+(crit?'（暴擊）':''));
+    if(dealt>0)note(inst.name+'・受擊追打 ['+((typeof ELEMENTS==='object'&&ELEMENTS[m.element])||m.element||'physical')+'] → '+combatEnemyName(target)+' '+dealt+' 傷害'+(crit?'（暴擊）':''),'playerDamage');
   }
   return total;
 }

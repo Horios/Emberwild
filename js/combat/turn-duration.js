@@ -13,6 +13,7 @@
       if(Number.isFinite(sk.cooldown))sk.cooldown=Math.max(0,Math.round(sk.cooldown));
     }
     if(Array.isArray(out.items))for(const item of out.items){
+      if(EmberwildTimedBoosts.isItem(item))continue;
       if(Number.isFinite(item.duration))item.duration=legacyItems&&item.duration>0?turnsFromLegacySeconds(item.duration,out):Math.max(0,Math.round(item.duration));
     }
     out.timeUnits={...(out.timeUnits||{}),...TIME_UNITS};
@@ -101,7 +102,7 @@
     if(raw){try{legacyBalance=JSON.parse(raw);}catch{}}
     if(!raw || legacyBalance?.timeUnits?.itemDuration!=='battleRounds'){
       const ref=legacyBalance||{balanceSettings:GAMEPLAY_SETTINGS};
-      for(const item of SHOP)item.duration=turnsFromLegacySeconds(item.duration,ref);
+      for(const item of SHOP)if(!EmberwildTimedBoosts.isItem(item))item.duration=turnsFromLegacySeconds(item.duration,ref);
       if(raw)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));
     }
     migratePartySupplyTurns();

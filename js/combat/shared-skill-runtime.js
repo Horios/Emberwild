@@ -85,7 +85,7 @@
     for(const h of targets){const dealt=damageHero(e,h,power,element,sk);total+=dealt;parts.push(characterName(h)+' '+dealt);}
     if(sk.effect==='drain'||v.lifesteal>0){const rate=(sk.effect==='drain'?1:0)+Math.max(0,v.lifesteal||0),heal=Math.round(total*rate);e.hp=Math.min(e.maxhp,e.hp+heal);}
     if(sk.activation==='active'&&stored>0)delete e.nextActiveDamageBonus;
-    note(combatEnemyName(e)+'・'+sk.name+' → '+parts.join('、')+' 傷害');return true;
+    note(combatEnemyName(e)+'・'+sk.name+' → '+parts.join('、')+' 傷害','enemyDamage');return true;
   }
   globalThis.castEnemySharedSkill=castEnemySharedSkill;
   function procChance(sk){const m=sk.meta||{},base=Number(m.procBaseChance);return Math.max(0,Math.min(1,Number.isFinite(base)?base:Number(GS('skills.proc.baseChance',.22))||.22));}

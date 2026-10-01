@@ -7,8 +7,8 @@ singlePagePanel=function(page,title,view){
 const masteryAwardXpBase=awardXP;
 awardXP=function(amount){
   const originalNote=note;
-  note=function(message){
-    return originalNote(String(message).replace(/、技能點 \+0/g,'').replace(/技能點 \+0、?/g,''));
+  note=function(message,type){
+    return originalNote(String(message).replace(/、技能點 \+0/g,'').replace(/技能點 \+0、?/g,''),type);
   };
   try{return masteryAwardXpBase(amount);}finally{note=originalNote;}
 };

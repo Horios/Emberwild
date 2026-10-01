@@ -90,7 +90,7 @@
       target.hp=Math.max(0,target.hp-dealt);
       if(dealt>0)recordCombatContribution(caster,'damage',dealt);
       total+=dealt;
-      note(`${fx.name}追打 [${ELEMENTS[element]}] → ${combatEnemyName(target)} ${dealt} 傷害${crit?'（暴擊）':''}`);
+      note(`${fx.name}追打 [${ELEMENTS[element]}] → ${combatEnemyName(target)} ${dealt} 傷害${crit?'（暴擊）':''}`,'playerDamage');
     }
     return total;
   }
@@ -134,7 +134,7 @@
       e.hp=Math.max(0,e.hp-dealt);
       if(dealt>0&&caster)recordCombatContribution(caster,'damage',dealt);
       total+=dealt;
-      note(`${fx.name} → ${combatEnemyName(e)} ${dealt} 持續傷害`);
+      note(`${fx.name} → ${combatEnemyName(e)} ${dealt} 持續傷害`,'playerDamage');
     }
     return total;
   }

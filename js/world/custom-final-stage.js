@@ -119,7 +119,7 @@
   }
   if(typeof note==='function'){
     const customStageNoteBase=note;
-    note=function(text){if(party&&isFinal(party.map)&&/^噬日者已倒下！/.test(String(text)))return;return customStageNoteBase(text);};
+    note=function(text,type){if(party&&isFinal(party.map)&&/^噬日者已倒下！/.test(String(text)))return;return customStageNoteBase(text,type);};
   }
   if(typeof exportableBalance==='function'){
     const customStageExportBase=exportableBalance;

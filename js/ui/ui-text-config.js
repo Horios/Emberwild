@@ -410,12 +410,12 @@ inlineInventoryView=function(){
   // actual progression code does.
   if(typeof note==='function'){
     const auditedNoteBase=note;
-    note=function(text){
+    note=function(text,type){
       if(text==='噬日者已倒下！LV30 成員解鎖 LV60，其他成員達 LV30 時解鎖。'){
         const before=Math.floor(GS('progression.levelCaps.beforeClear',30)),after=Math.floor(GS('progression.levelCaps.afterClear',60));
         text=`噬日者已倒下！LV${before} 成員解鎖 LV${after}，其他成員達 LV${before} 時解鎖。`;
       }
-      return auditedNoteBase(text);
+      return auditedNoteBase(text,type);
     };
   }
 
