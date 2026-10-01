@@ -78,7 +78,7 @@
 
   function compactSupply(){
     const pc=Math.round(GS('quests.potion.buyCost',75)),pq=Math.round(GS('quests.potion.buyQuantity',5)),th=Math.round(GS('combat.autoPotionThreshold',.35)*10000)/100;
-    return `<details><summary>隊伍補給</summary><div class="supply-list">${party.members.map(h=>`<div class="supply-row"><div class="supply-row-head"><b>${safeEsc(characterName(h))}</b><span class="small">藥水 ${h.potions}</span></div><div class="supply-actions"><button onclick="heroMenuAction(${memberKey(h)},()=>potion())" ${h.potions<1?'disabled':''}>喝藥</button><button onclick="heroMenuAction(${memberKey(h)},()=>buyPotion())" ${h.gold<pc?'disabled':''}>+${pq}／${pc}金</button><label title="生命低於 ${th}% 時自動使用治療藥水"><input type="checkbox" ${h.autoPotion?'checked':''} onchange="heroMenuAction(${memberKey(h)},()=>{state.autoPotion=this.checked;save()})">自動</label></div></div>`).join('')}</div></details>`;
+    return `<details><summary>隊伍補給</summary><div class="supply-list">${(typeof enlistedHeroes==='function'?enlistedHeroes():party.members).map(h=>`<div class="supply-row"><div class="supply-row-head"><b>${safeEsc(characterName(h))}</b><span class="small">藥水 ${h.potions}</span></div><div class="supply-actions"><button onclick="heroMenuAction(${memberKey(h)},()=>potion())" ${h.potions<1?'disabled':''}>喝藥</button><button onclick="heroMenuAction(${memberKey(h)},()=>buyPotion())" ${h.gold<pc?'disabled':''}>+${pq}／${pc}金</button><label title="生命低於 ${th}% 時自動使用治療藥水"><input type="checkbox" ${h.autoPotion?'checked':''} onchange="heroMenuAction(${memberKey(h)},()=>{state.autoPotion=this.checked;save()})">自動</label></div></div>`).join('')}</div></details>`;
   }
 
   function bossBlock(mi){

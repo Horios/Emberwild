@@ -145,7 +145,6 @@ function inventoryGearListItem(g,selected){
 function inventoryGearDetail(g){
   if(!g)return `<div class="inventory-detail-empty"><b>沒有可顯示的裝備</b><p class="small">調整左側篩選條件後選擇裝備。</p></div>`;
   const wearer=gearWearer(g.id),worn=!!wearer,draft=inlineAffixDrafts.has(affixDraftKey(g)),locked=!!g.locked;
-  const wearButtons=eligibleWearers(g).map(h=>`<button class="primary" onclick="previewEquip('${g.id}',${memberKey(h)})" ${h.equipped.includes(g.id)?'disabled':''}>${h.equipped.includes(g.id)?esc(characterName(h))+'已穿戴':'給 '+esc(characterName(h))+' 穿戴'}</button>`).join('');
   return `<div class="inventory-detail-pane">
     <div class="inventory-detail-heading">
       <div><div class="eyebrow">EQUIPMENT DETAIL / 裝備詳細</div><h2>${equipmentNameHTML(g)}</h2></div>
@@ -153,7 +152,7 @@ function inventoryGearDetail(g){
     </div>
     <div class="inventory-detail-meta">${gearWearableJobsText(g)} · ${CLASS_GEAR[g.job][g.slot]} · LV ${gearRequiredLevelByTier(g.tier)}${worn?' · 目前由 '+esc(characterName(wearer))+' 穿戴':''}</div>
     <section class="inventory-detail-section"><h3>裝備能力</h3><p class="inventory-detail-stats equipment-total-summary">${globalThis.equipmentTotalSummaryHTML(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g)}</section>
-    <section class="inventory-detail-section"><h3>操作</h3><div class="actions inventory-detail-actions">${wearButtons||'<span class="small">尚無可穿戴角色</span>'}<button onclick="enhance('${g.id}')" ${g.plus>=RULES.enhanceMax||!canEnhance(g)?'disabled':''}>${g.plus>=RULES.enhanceMax?'已達 +'+RULES.enhanceMax:'強化 +'+(g.plus+1)+'／'+upgradeCostText(g)}</button><button onclick="reroll('${g.id}')" ${(()=>{const c=rerollCostFor(g);return draft||state.gold<c.gold||state.ore<c.ore;})()?'disabled':''}>洗鍊／${rerollCostFor(g).gold} 金幣＋${rerollCostFor(g).ore} 鍛鐵</button><button onclick="toggleGearLock('${g.id}')">${locked?'解除鎖定':'鎖定'}</button><button class="danger" onclick="salvage('${g.id}')" ${worn||draft||locked?'disabled':''}>分解</button></div></section>
+    <section class="inventory-detail-section"><h3>操作</h3><div class="actions inventory-detail-actions"><button onclick="enhance('${g.id}')" ${g.plus>=RULES.enhanceMax||!canEnhance(g)?'disabled':''}>${g.plus>=RULES.enhanceMax?'已達 +'+RULES.enhanceMax:'強化 +'+(g.plus+1)+'／'+upgradeCostText(g)}</button><button onclick="reroll('${g.id}')" ${(()=>{const c=rerollCostFor(g);return draft||state.gold<c.gold||state.ore<c.ore;})()?'disabled':''}>洗鍊／${rerollCostFor(g).gold} 金幣＋${rerollCostFor(g).ore} 鍛鐵</button><button onclick="toggleGearLock('${g.id}')">${locked?'解除鎖定':'鎖定'}</button><button class="danger" onclick="salvage('${g.id}')" ${worn||draft||locked?'disabled':''}>分解</button></div></section>
     ${inlineAffixComparison(g)}
   </div>`;
 }

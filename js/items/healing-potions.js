@@ -129,10 +129,10 @@
 
   function healingSettingsRows(){
     const items=healPotionItems();
-    return party.members.map(h=>{
+    return (typeof enlistedHeroes==='function'?enlistedHeroes():party.members).map(h=>{
       normalizeHeroHealingSettings(h);
       const item=selectedHealPotion(h);
-      return `<div class="heal-auto-row"><b>${esc(characterName(h))}</b><label><input type="checkbox" ${h.autoPotion?'checked':''} onchange="setHeroAutoPotion(${memberKey(h)},this.checked)">自動喝藥</label><label>HP ≤ <input type="number" min="1" max="99" step="1" value="${h.autoPotionThresholdPct}" onchange="setHeroAutoPotionThreshold(${memberKey(h)},this.value)">%</label><label>使用 <select onchange="setHeroAutoPotionItem(${memberKey(h)},this.value)">${items.map(x=>`<option value="${esc(x.id)}" ${x.id===h.autoPotionId?'selected':''}>${esc(x.name)} ×${healPotionCount(x.id)}</option>`).join('')}</select></label><span class="heal-auto-detail">${item?`${esc(item.name)}：恢復最大生命 ${pct(item.healFraction)}% · 冷卻 ${item.cooldown} 回合 · <span class="heal-stock">共用庫存 ${healPotionCount(item.id)}</span>`:'沒有可用治療藥水'}${h.healPotionCooldownRemaining>0?`<br><span class="heal-auto-cd">目前冷卻剩餘 ${h.healPotionCooldownRemaining} 回合</span>`:''}</span></div>`;
+      return `<div class="heal-auto-row"><b>${esc(characterName(h))} · ${esc(CLASSES[h.job].name)}</b><label><input type="checkbox" ${h.autoPotion?'checked':''} onchange="setHeroAutoPotion(${memberKey(h)},this.checked)">自動喝藥</label><label>HP ≤ <input type="number" min="1" max="99" step="1" value="${h.autoPotionThresholdPct}" onchange="setHeroAutoPotionThreshold(${memberKey(h)},this.value)">%</label><label>使用 <select onchange="setHeroAutoPotionItem(${memberKey(h)},this.value)">${items.map(x=>`<option value="${esc(x.id)}" ${x.id===h.autoPotionId?'selected':''}>${esc(x.name)} ×${healPotionCount(x.id)}</option>`).join('')}</select></label><span class="heal-auto-detail">${item?`${esc(item.name)}：恢復最大生命 ${pct(item.healFraction)}% · 冷卻 ${item.cooldown} 回合 · <span class="heal-stock">共用庫存 ${healPotionCount(item.id)}</span>`:'沒有可用治療藥水'}${h.healPotionCooldownRemaining>0?`<br><span class="heal-auto-cd">目前冷卻剩餘 ${h.healPotionCooldownRemaining} 回合</span>`:''}</span></div>`;
     }).join('');
   }
 
@@ -154,14 +154,14 @@
     if(!party)return '';
     ensureHealingPotionState();
     let enabled=0;
-    const chips=party.members.map(h=>{
+    const chips=(typeof enlistedHeroes==='function'?enlistedHeroes():party.members).map(h=>{
       normalizeHeroHealingSettings(h);
       const item=selectedHealPotion(h);
       if(h.autoPotion)enabled++;
       const text=h.autoPotion?`${esc(characterName(h))} ≤${h.autoPotionThresholdPct}% · ${item?esc(item.name):'無藥水'}`:`${esc(characterName(h))} 關閉`;
       return `<span class="heal-auto-chip ${h.autoPotion?'':'off'}" title="${text}">${text}</span>`;
     }).join('');
-    return `<section class="panel heal-auto-panel" aria-label="自動喝水設定摘要"><div class="heal-auto-title"><h2>自動喝水</h2><span class="heal-auto-state">${enabled}/${party.members.length} 啟用</span><div class="heal-auto-summary">${chips}</div><button class="heal-auto-settings-button" onclick="openHealingSettings()">設定</button></div></section>`;
+    return `<section class="panel heal-auto-panel" aria-label="自動喝水設定摘要"><div class="heal-auto-title"><h2>自動喝水</h2><span class="heal-auto-state">${enabled}/${(typeof enlistedHeroes==='function'?enlistedHeroes():party.members).length} 啟用</span><div class="heal-auto-summary">${chips}</div><button class="heal-auto-settings-button" onclick="openHealingSettings()">設定</button></div></section>`;
   }
 
   if(typeof battleView==='function'){

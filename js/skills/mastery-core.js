@@ -226,7 +226,7 @@ function skillWeaponAllowed(h,meta){
 }
 function coreMissingRequirements(h,i,forUse=false){
   const sk=CLASSES[h.job]?.skills?.[i];if(!sk)return ['技能不存在'];
-  const meta=runtimeCoreMeta(h.job,i),reasons=[];
+  const meta=runtimeCoreMeta(h.job,i),reasons=[];if(typeof skillAllowedForPartner==='function'&&!skillAllowedForPartner(h,meta))reasons.push('指定夥伴專屬');
   if(!forUse&&h.lv<sk[2])reasons.push(`角色 LV${sk[2]}`);
   if(!forUse&&skillRequiresAdvanced(sk,i)&&!h.advanced)reasons.push('完成二轉');
   const req=meta.requiredMastery,reqLv=Math.max(0,Math.floor(Number(meta.requiredMasteryLevel)||0));
@@ -235,7 +235,7 @@ function coreMissingRequirements(h,i,forUse=false){
   return reasons;
 }
 function supportMissingRequirements(h,i,forUse=false){
-  const sk=SUPPORT[h.job]?.[i];if(!sk)return ['技能不存在'];const reasons=[];
+  const sk=SUPPORT[h.job]?.[i];if(!sk)return ['技能不存在'];const reasons=[];if(typeof skillAllowedForPartner==='function'&&!skillAllowedForPartner(h,sk))reasons.push('指定夥伴專屬');
   if(!forUse&&h.lv<sk.level)reasons.push(`角色 LV${sk.level}`);
   if(!forUse&&i===2&&!h.advanced)reasons.push('完成二轉');
   const req=sk.requiredMastery,reqLv=Math.max(0,Math.floor(Number(sk.requiredMasteryLevel)||0));

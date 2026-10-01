@@ -10,7 +10,7 @@
       atk:Number.isFinite(Number(own.atk))?Number(own.atk):Number(cls?.atk||0),
       def:Number.isFinite(Number(own.def))?Number(own.def):Number(cls?.def||0),
       crit:Number.isFinite(Number(own.crit))?Number(own.crit):Number(job===2?GS('progression.baseCrit.archer',.17):GS('progression.baseCrit.default',.07)),
-      critDamage:Number.isFinite(Number(own.critDamage))?Number(own.critDamage):Number(GS('combat.baseCritDamage',1.5))
+      critDamage:Number.isFinite(Number(own.critDamage))?Number(own.critDamage):Number(GS('combat.baseCritDamage',1.5)),...(Number.isFinite(own.speed)?{speed:own.speed}:{})
     };
   }
   function classGrowth(cls){
@@ -20,7 +20,7 @@
       atk:Number.isFinite(Number(own.atk))?Number(own.atk):Number(GS('progression.statsPerLevel.attack',.18)),
       def:Number.isFinite(Number(own.def))?Number(own.def):Number(GS('progression.statsPerLevel.defense',.1)),
       crit:Number.isFinite(Number(own.crit))?Number(own.crit):0,
-      critDamage:Number.isFinite(Number(own.critDamage))?Number(own.critDamage):0
+      critDamage:Number.isFinite(Number(own.critDamage))?Number(own.critDamage):0,...(Number.isFinite(own.speed)?{speed:own.speed}:{})
     };
   }
   const classStatsValidateBase=validateBalanceConfig;

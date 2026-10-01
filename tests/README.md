@@ -33,3 +33,5 @@ node tests/collect-progression.cjs /tmp/progression-rows.json
 限時道具契約在 `js/items/timed-boosts.js`，設計器的 `timed-boost-schema-v1` 必須嵌入完全相同內容。`items[].bonusPercent`、`durationMinutes` 與既有 `shopSettings.randomOffers.entries` 是編輯、匯出、匯入及遊戲實際生效的共同來源。
 
 `npm run test:journal` 不需要私有平衡器，使用完整頁面與瀏覽器真正的捲動事件，驗證只顯示經驗／物品且沒有新獎勵時，完整重繪與戰報局部重繪都持續停在最新訊息。另檢查手動查看舊紀錄的垂直／水平位置、戰報暫停與恢復，以及實際 2× 戰鬥期間的捲動穩定性。這組回歸測試也包含在 `npm test` 與 `test:integration`。
+
+`npm run test:companions` 驗證夥伴名冊、現役上限、上陣限制、養成／裝備 UID 保存、實際角色導向換裝、七種評級、可調軟警告、動態夥伴與專屬技能，包含真正重新整理讀檔和平衡器 JSON 下載。來源、相容性與 14% 成長差距依據見 `../docs/COMPANION_ROSTER.md`。設計器 `companion-model-v1` 必須與遊戲 `js/character/companion-model.js` 完全相同。

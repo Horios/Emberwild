@@ -16,11 +16,11 @@ function masteryRequirementText(meta){
 function coreRequirementParts(sk,i){
   const meta=M.coreMeta(state.job,i),parts=[`角色 LV${sk[2]}`];
   if(skillRequiresAdvanced(sk,i))parts.push('完成二轉');
-  return parts.concat(masteryRequirementText(meta));
+  if(meta?.partnerId!=null)parts.push('此夥伴專屬');return parts.concat(masteryRequirementText(meta));
 }
 function supportRequirementParts(sk,i){
   const parts=[`角色 LV${sk.level}`];if(i===2)parts.push('完成二轉');
-  return parts.concat(masteryRequirementText(sk));
+  if(sk?.partnerId!=null)parts.push('此夥伴專屬');return parts.concat(masteryRequirementText(sk));
 }
 function requirementHTML(parts,missing){
   const misses=new Set(missing||[]);
@@ -117,7 +117,7 @@ function skillMasteryTooltip(meta){
 function skillCatalogEntries(){
   M.ensureHero(state);syncHeroSkillArrays(state);ensureProcSlots(state);
   const core=CLASSES[state.job].skills.map((sk,i)=>({type:'core',i,sk,name:sk[0],level:Math.max(1,Math.floor(Number(sk[2])||1)),turn:skillTurnOfCore(sk,i),icon:inferredCoreIcon(sk,i),meta:M.coreMeta(state.job,i)})).filter(x=>typeof coreSkillAvailableToHero!=='function'||coreSkillAvailableToHero(state.job,x.i));
-  const support=SUPPORT[state.job].map((sk,i)=>({type:'support',i,sk,name:sk.name,level:Math.max(1,Math.floor(Number(sk.level)||1)),turn:skillTurnOfSupport(sk,i),icon:inferredSupportIcon(sk),meta:sk}));
+  const support=SUPPORT[state.job].map((sk,i)=>({type:'support',i,sk,name:sk.name,level:Math.max(1,Math.floor(Number(sk.level)||1)),turn:skillTurnOfSupport(sk,i),icon:inferredSupportIcon(sk),meta:sk})).filter(x=>typeof skillAllowedForPartner!=='function'||skillAllowedForPartner(state,x.sk));
   return [...core,...support].sort((a,b)=>a.level-b.level||a.type.localeCompare(b.type)||a.i-b.i);
 }
 function skillTileHTML(entry){

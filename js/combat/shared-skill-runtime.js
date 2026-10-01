@@ -21,7 +21,7 @@
   function scopeAllowsHero(scope){return scope==='character'||scope==='shared';}
   globalThis.sharedSkillScopeAllowsEnemy=scopeAllowsEnemy;
   globalThis.sharedSkillScopeAllowsHero=scopeAllowsHero;
-  function assignments(e){return (monsterRow(e)?.skillAssignments||[]).map(a=>sharedSkillById(a?.skillId)).filter(Boolean).filter(sk=>e.lv>=sk.requiredLevel&&scopeAllowsEnemy(sk.usageScope,e.kind));}
+  function assignments(e){return (monsterRow(e)?.skillAssignments||[]).map(a=>sharedSkillById(a?.skillId)).filter(Boolean).filter(sk=>sk.meta?.partnerId==null&&e.lv>=sk.requiredLevel&&scopeAllowsEnemy(sk.usageScope,e.kind));}
   function cdBox(e){return enemySharedCooldowns[e.id]??=(Object.create(null));}
   function tickCooldowns(e){const box=cdBox(e);for(const k of Object.keys(box))box[k]=Math.max(0,Math.floor(Number(box[k])||0)-1);}
   function activeReady(e,previewTick=false){const box=cdBox(e);return assignments(e).find(sk=>sk.activation==='active'&&BASIC_EFFECTS.has(sk.effect)&&Math.max(0,(box[sk.id]||0)-(previewTick?1:0))<=0)||null;}
@@ -69,7 +69,7 @@
     let ok=false;for(const t of targets)ok=api.apply(meta.statusId,e,t)||ok;return ok;
   }
   function castEnemySharedSkill(e,sk){
-    if(!e||e.hp<=0||!sk||!BASIC_EFFECTS.has(sk.effect))return false;
+    if(!e||e.hp<=0||!sk||sk.meta?.partnerId!=null||!BASIC_EFFECTS.has(sk.effect))return false;
     const v=enemyBattleStats(e),basePower=v.atk*sk.power*(1+effectTotal(e.id,'power'))*(1-Math.min(GAMEPLAY_SETTINGS.combat.caps.weaken,effectTotal(e.id,'weaken'))),element=sk.element||e.element||'physical';
     if(sk.effect==='heal'){
       const target=weakestFoe()||e,before=target.hp;target.hp=Math.min(target.maxhp,target.hp+Math.round(basePower));note(combatEnemyName(e)+'・'+sk.name+' → '+combatEnemyName(target)+' 恢復 '+Math.max(0,target.hp-before)+' 生命');return true;
@@ -164,17 +164,17 @@
   for(let job=0;job<CLASSES.length;job++)for(let i=0;i<CLASSES[job].skills.length;i++){CLASSES[job].skills[i][6]??={};CLASSES[job].skills[i][6].sharedId??=`job${job}-core${i}`;CLASSES[job].skills[i][6].usageScope??='character';}
 
   globalThis.coreSkillUsageScope=function(job,index){return sharedCoreSkillPool().find(x=>x.job===job&&x.index===index)?.usageScope||'character';};
-  globalThis.coreSkillAvailableToHero=function(job,index){return scopeAllowsHero(coreSkillUsageScope(job,index));};
+  globalThis.coreSkillAvailableToHero=function(job,index,h=state){return scopeAllowsHero(coreSkillUsageScope(job,index))&&(typeof skillAllowedForPartner!=='function'||skillAllowedForPartner(h,CLASSES[job]?.skills?.[index]?.[6]));};
   function cleanHeroSkillSlots(h){
     if(!h)return;
-    if(Array.isArray(h.active))h.active=h.active.map(i=>i===null||coreSkillAvailableToHero(h.job,i)?i:null);
-    if(Array.isArray(h.procSlots))h.procSlots=h.procSlots.map(i=>i===null||coreSkillAvailableToHero(h.job,i)?i:null);
+    if(Array.isArray(h.active))h.active=h.active.map(i=>i===null||coreSkillAvailableToHero(h.job,i,h)?i:null);
+    if(Array.isArray(h.procSlots))h.procSlots=h.procSlots.map(i=>i===null||coreSkillAvailableToHero(h.job,i,h)?i:null);
   }
   if(typeof learn==='function'){const base=learn;learn=function(i){if(!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物學習');return base(i);};}
   if(typeof equipSkill==='function'){const base=equipSkill;equipSkill=function(i,slot){if(!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物使用');return base(i,slot);};}
   if(typeof slotProcSkill==='function'){const base=slotProcSkill;slotProcSkill=function(i,slot){if(i!==null&&!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物使用');return base(i,slot);};}
-  if(typeof validProcIndex==='function'){const base=validProcIndex;validProcIndex=function(h,i){return coreSkillAvailableToHero(h.job,i)&&base(h,i);};}
-  if(typeof castPartySkill==='function'){const base=castPartySkill;castPartySkill=function(h,i,v){if(!h?.skills?.[i]||!coreSkillAvailableToHero(h.job,i)||globalThis.__EMBERWILD_MASTERY?.coreMissingRequirements(h,i,true).length)return false;return base(h,i,v);};}
+  if(typeof validProcIndex==='function'){const base=validProcIndex;validProcIndex=function(h,i){return coreSkillAvailableToHero(h.job,i,h)&&base(h,i);};}
+  if(typeof castPartySkill==='function'){const base=castPartySkill;castPartySkill=function(h,i,v){if(!h?.skills?.[i]||!coreSkillAvailableToHero(h.job,i,h)||globalThis.__EMBERWILD_MASTERY?.coreMissingRequirements(h,i,true).length)return false;return base(h,i,v);};}
 
   if(typeof exportableBalance==='function'){
     const base=exportableBalance;
