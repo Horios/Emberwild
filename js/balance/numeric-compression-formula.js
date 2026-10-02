@@ -183,7 +183,7 @@
     const afterIgnore=Math.max(0,e.def*(1-fracture)*(1-ignore)),effectiveDefense=Math.max(0,afterIgnore-penetration);
     let d=Math.max(minimumDamage,Math.round(rawAmount*attackCoefficient-effectiveDefense*defenseCoefficient));
     if(crit)d=Math.round(d*Math.max(1,Number.isFinite(options.critDamage)?options.critDamage:v.critDamage));
-    const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic&&tonic.element===element?GS('combat.supply.elementTonicDamage',.2):0);
+    const bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+supplyEffect(h,'elementTonic',element);
     const amp=effectTotal(e.id,'damageAmp')+effectTotal(e.id,'vulnerable');
     d=Math.max(minimumDamage,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)));
     const guard=Math.min(GAMEPLAY_SETTINGS.combat.caps.guard,effectTotal(e.id,'guard'));
@@ -219,9 +219,13 @@
   const compressionUseSupplyBase=useSupply;
   useSupply=function(id){
     const item=SHOP.find(x=>x.id===id);if(!item||(state.consumables[id]||0)<1)return;
-    state.consumables[id]--;const turns=Math.max(1,Math.round(Number(item.duration)||1));
-    state[item.type]={element:item.element,remainingTurns:turns,totalTurns:turns,until:0,statEffects:normalizeStatEffects(item.statEffects)};
-    save();render();toast('已使用'+item.name);
+    const previous=state[item.type],count=state.consumables[id],previousHp=state.hp;let buff;
+    if(EmberwildTimedBoosts.isElementalItem(item)){
+      buff=EmberwildTimedBoosts.createElementalBuff({...item,statEffects:normalizeStatEffects(item.statEffects)});
+    }else{const turns=Math.max(1,Math.round(Number(item.duration)||1));buff={element:item.element,remainingTurns:turns,totalTurns:turns,until:0,statEffects:normalizeStatEffects(item.statEffects)};}
+    state.consumables[id]--;state[item.type]=buff;withHero(state,clampVitals);
+    if(save()===false){state.consumables[id]=count;state[item.type]=previous;state.hp=previousHp;return false;}
+    render();toast('已使用'+item.name);return true;
   };
   function itemStatText(item){
     const s=normalizeStatEffects(item?.statEffects),labels={hp:'生命',attack:'攻擊',defense:'防禦',attackPct:'總攻擊',critRate:'暴擊率',critDamage:'暴擊傷害',defensePenetration:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避',elementBonus:'全屬性增傷',bossDamage:'BOSS 傷害',speed:'速度'},percent=new Set(['attackPct','critRate','critDamage','defenseIgnore','lifesteal','evasion','elementBonus','bossDamage']);

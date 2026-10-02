@@ -51,7 +51,7 @@
     const crit=Math.random()<profile.critChance;if(crit)hit*=profile.critDamage;
     hit*=1+(ev.elementDamage?.[element]||0)+(element==='physical'?0:(ev.elementBonus||0));
     hit*=1-Math.min(c.caps?.guard??.75,effectTotal(heroKey(h),'guard'));
-    const ward=activeSupply(h,'ward'),resist=Math.min(c.caps?.resistance??.75,(hv.resist?.[element]||0)+(ward&&ward.element===element?(c.supply?.wardResistance??.25):0));
+    const resist=Math.min(c.caps?.resistance??.75,(hv.resist?.[element]||0)+supplyEffect(h,'ward',element));
     hit=Math.max(min,Math.round(hit*(1-resist)));
     const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'mitigation',absorb);
     const hpDamage=Math.max(0,hit-absorb),before=h.hp;h.hp=Math.max(0,h.hp-hpDamage);

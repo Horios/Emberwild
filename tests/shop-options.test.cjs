@@ -33,6 +33,8 @@ test('Options, shop pools, transactions and editor JSON use the real loaded modu
       assert.deepEqual(expected.issues,[]);assert.deepEqual(actual,expected.shop);
       assert.equal(actual.randomOffers.entries.find(x=>x.key==='power_tier_reroll').chance,.06);
       assert.equal(actual.fixedOffers.entries.length,19);
+      assert.equal(actual.schemaVersion,3);
+      assert.equal(actual.fixedOffers.entries.filter(x=>x.enabled&&/^(ward|elementTonic)_/.test(x.key)).length,0);
     });
     await t.test('Options contains account actions; the JSON import is visible only in Preview',async()=>{
       for(const [runtime,hasJSON] of [[game,false],[preview,true]]){
@@ -52,7 +54,7 @@ test('Options, shop pools, transactions and editor JSON use the real loaded modu
         const cfg=exportableBalance();cfg.shopSettings.randomOffers.entries.push(stone);applyBalanceConfig(cfg,{persist:false});setTab('shop');
       });
       const rows=await game.page.locator('.shop-product-row').evaluateAll(rows=>rows.map(row=>({description:row.querySelector('.shop-card-description').textContent,effect:row.querySelector('.shop-card-detail').textContent,height:row.getBoundingClientRect().height,width:row.clientWidth,scrollWidth:row.scrollWidth,name:row.querySelector('.shop-product-name').textContent})));
-      assert(rows.length>=26);
+      assert(rows.length>=16);
       for(const row of rows){assert(row.description.startsWith('說明：')&&row.description.length>4);assert(row.effect.startsWith('效果：')&&row.effect.length>4);assert(!/隨機出現|隨機挑選|本批隨機商品/.test(row.description));assert(!/單價|賣價/.test(row.effect));assert(row.height<140,JSON.stringify(row));assert(row.scrollWidth<=row.width+1,JSON.stringify(row));}
       const stone=rows.find(x=>x.name.includes('重鑄'));assert(stone);assert(stone.effect.includes('基底'));assert(stone.description.includes('基底評級'));assert(!/T1|T10/.test(stone.description));
       assert.equal(await game.page.locator('main button[onclick="showTestCodes()"] ').count(),0);

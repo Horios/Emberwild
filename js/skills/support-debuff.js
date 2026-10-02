@@ -105,7 +105,7 @@
     const attackCoefficient=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defenseCoefficient=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:(GAMEPLAY_SETTINGS.combat.defenseEffectiveness??.55),minimumDamage=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
     let d=Math.max(minimumDamage,Math.round(amount*attackCoefficient-effectiveDefense*defenseCoefficient));
     if(crit)d=Math.round(d*v.critDamage);
-    const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic&&tonic.element===element?GS('combat.supply.elementTonicDamage',.2):0);
+    const bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+supplyEffect(h,'elementTonic',element);
     const amp=effectTotal(e.id,'damageAmp')+effectTotal(e.id,'vulnerable');
     d=Math.max(minimumDamage,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)));
     const actual=Math.min(e.hp,d);
@@ -167,7 +167,7 @@
     }
     for(const h of party.members){
       const who=characterName(h)+(party.active.includes(memberKey(h))?'':'（候補）');
-      for(const key of ['imbue','ward','elementTonic']){const b=activeSupply(h,key);if(!b)continue;const labels={imbue:['附魔藥水','普攻改為'+ELEMENTS[b.element]+'屬性'],ward:['抗性藥水',ELEMENTS[b.element]+'傷害減免 '+Math.round(GS('combat.supply.wardResistance',.25)*10000)/100+'%'],elementTonic:['增幅藥水',ELEMENTS[b.element]+'傷害增加 '+Math.round(GS('combat.supply.elementTonicDamage',.2)*10000)/100+'%']};rows.push(row(who,ELEMENTS[b.element]+labels[key][0],labels[key][1],Math.ceil(b.remainingTurns)+' / '+Math.ceil(b.totalTurns||b.remainingTurns)+' 回合','出戰回合'));}
+      for(const key of ['imbue','ward','elementTonic']){const b=activeSupply(h,key);if(!b)continue;const d=supplyBuffDetails(b,key);rows.push(row(who,d.name,d.detail,d.time,d.clock));}
       if(h.shield>0)rows.push(row(who,'護盾','可抵擋所有來源傷害 · 剩餘 '+Math.round(h.shield),'無回合期限','耗盡或戰鬥結束'));
     }
     return rows.join('')||'<tr><td colspan="5" class="no-buffs">目前沒有生效中的 BUFF、DEBUFF 或消耗品效果。</td></tr>';

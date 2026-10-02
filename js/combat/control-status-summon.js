@@ -176,7 +176,7 @@
     if(elementBonus)hit=Math.max(minimumDamage,Math.round(hit*(1+elementBonus)));
     hit=Math.max(minimumDamage,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));
     if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+combatEnemyName(e)+'的攻擊');return;}
-    const ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+(ward&&ward.element===e.element?c.supply.wardResistance:0));
+    const resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+supplyEffect(h,'ward',e.element));
     hit=Math.max(minimumDamage,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;
     if(absorb>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'mitigation',absorb);
     const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);

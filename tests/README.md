@@ -32,6 +32,8 @@ node tests/collect-progression.cjs /tmp/progression-rows.json
 
 限時道具契約在 `js/items/timed-boosts.js`，設計器的 `timed-boost-schema-v1` 必須嵌入完全相同內容。`items[].bonusPercent`、`durationMinutes` 與既有 `shopSettings.randomOffers.entries` 是編輯、匯出、匯入及遊戲實際生效的共同來源。
 
+`npm run test:potions` 不需要 Chromium：契約測試驗證抗性／屬性增幅藥水的個別百分比、小數分鐘、一次性遷移、效果快照及商店下架；執行測試依 `index.html` 的實際順序在 Node VM 載入完整遊戲與平衡器，驗證 JSON 匯出／匯入、玩家／敵方普攻／敵方技能傷害、同類刷新、存檔失敗回復、戰鬥回合獨立、暫停／候補到期、生命上限回復、舊存檔重載與離線到期。此測試使用最小 DOM 替身與可控制現實時鐘，不能代替瀏覽器版面或互動驗證。完整執行測試需要上述私有平衡器檔案，缺少時會標記跳過；契約測試永遠執行，且納入 `test:unit`。
+
 `npm run test:journal` 不需要私有平衡器，使用完整頁面與瀏覽器真正的捲動事件，驗證只顯示經驗／物品且沒有新獎勵時，完整重繪與戰報局部重繪都持續停在最新訊息。另檢查手動查看舊紀錄的垂直／水平位置、戰報暫停與恢復，以及實際 2× 戰鬥期間的捲動穩定性。這組回歸測試也包含在 `npm test` 與 `test:integration`。
 
 `npm run test:companions` 驗證夥伴名冊、現役上限、上陣限制、養成／裝備 UID 保存、實際角色導向換裝、七種評級、可調軟警告、動態夥伴與專屬技能，包含真正重新整理讀檔和平衡器 JSON 下載。來源、相容性與 14% 成長差距依據見 `../docs/COMPANION_ROSTER.md`。設計器 `companion-model-v1` 必須與遊戲 `js/character/companion-model.js` 完全相同。

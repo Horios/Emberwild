@@ -29,7 +29,7 @@
     const fixedIds=catalog.fixedItemIds(SHOP_SETTINGS);
     if(Array.isArray(out.items))for(const item of out.items)item.shopEnabled=fixedIds.has(item.id);
     out.notes=(out.notes||[]).filter(x=>!String(x).startsWith('shopSettings.')&&!String(x).startsWith('items[].shopEnabled'));
-    out.notes.push('shopSettings.schemaVersion=2；randomOffers.entries 與 fixedOffers.entries 是隨機／固定商店的有效商品池。空陣列表示不上架任何商品，移除池中商品不刪除玩家庫存。',
+    out.notes.push('shopSettings.schemaVersion=3；randomOffers.entries 與 fixedOffers.entries 是隨機／固定商店的有效商品池。空陣列表示不上架任何商品，移除池中商品不刪除玩家庫存。舊版抗性與屬性增幅商品會遷移為停用。',
       'randomOffers.entries 的 selection=weighted 依 weight 抽選；selection=extra 依 chance 每批額外判定一次。重鑄石也由這個商品池控制。',
       '商品 type=item 的 key 引用 items[].id；unitPrice=null 沿用 items[].cost。名稱與說明留空時沿用道具本身；實際效果由結構化能力自動產生。',
       'items[].shopEnabled 與 equipmentPowerSystem.rerollItem.shopChance/shopPrice 僅用於舊 JSON 遷移；新版商店由 shopSettings 控制。');
@@ -75,6 +75,11 @@
   };
   function resolvedOffer(offer){return offer?.ruleId==='__gear_tier_reroll__'?{...offer,kind:'item',key:'power_tier_reroll'}:offer;}
   function marketRule(offer){return SHOP_SETTINGS.randomOffers.entries.find(x=>x.id===offer?.ruleId)||null;}
+  function marketOfferIsListed(input){
+    const offer=resolvedOffer(input),matches=rule=>rule?.enabled&&rule.type===offer.kind&&(rule.type==='item'?rule.key===offer.key:rule.type==='gem'?rule.key==='random'||rule.key===offer.key:rule.type==='material'?rule.key==='region'||rule.key===offer.key:true);
+    if(offer.ruleId&&offer.ruleId!=='__gear_tier_reroll__')return !!matches(marketRule(offer));
+    return SHOP_SETTINGS.randomOffers.entries.some(matches);
+  }
   function offerItem(offer){return offer.kind==='item'?SHOP.find(x=>x.id===offer.key):null;}
   function rawOfferName(offer){return offer.kind==='ore'?'鍛鐵':offer.kind==='dust'?'粉塵':offer.kind==='gem'?(GEMS[Number(offer.key)]?.name||'技能寶石'):offerItem(offer)?.name||offer.key;}
   function offerName(offer,rule){
@@ -117,15 +122,17 @@
     if(!save()){if(had)slot.object[slot.key]=old;else delete slot.object[slot.key];state.gold=gold;if(onSold)onSold(false);return;}
     render();toast('已購買 '+name+' ×'+offer.qty);
   }
-  buyMarketOffer=function(id){const raw=party?.market?.offers?.find(x=>x.id===id);if(!raw||raw.sold)return;const offer=resolvedOffer(raw);purchase(offer,marketOfferName(raw),value=>{raw.sold=value;});};
+  buyMarketOffer=function(id){const raw=party?.market?.offers?.find(x=>x.id===id);if(!raw||raw.sold||!marketOfferIsListed(raw))return;const offer=resolvedOffer(raw);purchase(offer,marketOfferName(raw),value=>{raw.sold=value;});};
   function fixedOffer(rule){return {kind:rule.type,key:rule.key,qty:rule.quantity,price:Math.min(1e9,Math.round(rule.quantity*unitPrice(rule)))};}
   globalThis.buyFixedShopOffer=function(id){const rule=SHOP_SETTINGS.fixedOffers.entries.find(x=>x.id===id&&x.enabled);if(!rule)return;const offer=fixedOffer(rule);purchase(offer,offerName(offer,rule));};
+  buySupply=function(id){const rule=SHOP_SETTINGS.fixedOffers.entries.find(x=>x.enabled&&x.type==='item'&&x.key===id);if(!rule)return toast('此商品目前未上架');return buyFixedShopOffer(rule.id);};
+  globalThis.buyHealingPotion=function(id){if(!isHealPotion(SHOP.find(x=>x.id===id)))return;return buySupply(id);};
   function productRow(input,rule,random){
     const offer=resolvedOffer(input),item=offerItem(offer),name=offerName(offer,rule),description=offerDescription(offer,rule),effect=offerEffect(offer),slot=stockSlot(offer),count=Number(slot?.object?.[slot.key])||0;
     const title=item&&!rule?.name?textRarityItemHTML(item):esc(name),disabled=input.sold||state.gold<offer.price;
     return `<article class="shop-product-row ${random?'random-shop-row':'fixed-shop-row'}"><div class="shop-product-name"><b title="${esc(name)}">${title}</b><span class="small">${random?'數量':'每份'} ${offer.qty}${random&&input.sold?' · 已售完':''}</span></div><div class="shop-product-copy"><p class="shop-card-description"><b>說明：</b><span>${esc(description)}</span></p><p class="shop-card-detail"><b>效果：</b><span>${esc(effect)}</span></p></div><div class="shop-product-meta"><b>${offer.price} 金幣</b><span class="small">共用 ${count.toLocaleString()}</span></div><button onclick="${random?`buyMarketOffer('${input.id}')`:`buyFixedShopOffer('${rule.id}')`}" ${disabled?'disabled':''}>${input.sold?'已售完':'購買'}</button></article>`;
   }
-  marketCards=function(){return party.market?.offers?.length?party.market.offers.map(o=>productRow(o,marketRule(resolvedOffer(o)),true)).join(''):'<div class="shop-empty">本批沒有隨機商品。</div>';};
+  marketCards=function(){const offers=party.market?.offers?.filter(marketOfferIsListed)||[];return offers.length?offers.map(o=>productRow(o,marketRule(resolvedOffer(o)),true)).join(''):'<div class="shop-empty">本批沒有隨機商品。</div>';};
   const baseValidateParty=validateParty;
   validateParty=function(input){
     const p=baseValidateParty(input);if(p.market){const raw=input.market||{};p.market.dayKey=typeof raw.dayKey==='string'?raw.dayKey:localDayKey();p.market.refreshCount=Number.isInteger(raw.refreshCount)&&raw.refreshCount>=0?raw.refreshCount:0;
@@ -144,7 +151,7 @@
   globalThis.sellInventoryItemFromButton=function(btn,id,all=false){const item=SHOP.find(x=>x.id===id);if(!item)return;const row=btn.closest('[data-inventory-item]'),input=row?.querySelector('input[data-sell-qty]'),qty=all?inventoryItemCount(item):input?.value;sellInventoryItem(id,qty);};
   accountItemsView=function(){
     ensureHealingPotionState();const target=pageHero('equipment')||party.members[0],rows=SHOP;
-    return heading('ITEMS / 帳號共用','道具庫存')+`<section class="panel"><div class="inventory-item-controls"><label>使用角色 <select onchange="selectPageHero('equipment',Number(this.value))">${(typeof enlistedHeroes==='function'?enlistedHeroes():party.members).map(h=>`<option value="${memberKey(h)}" ${h===target?'selected':''}>${esc(characterName(h))} · ${esc(CLASSES[h.job].name)} · Lv.${h.lv}</option>`).join('')}</select></label><span class="small">治療藥水仍只由自動喝水使用；其他消耗道具的手動使用統一在此操作。</span></div><div class="inventory-supply-status">${esc(characterName(target))}目前效果：${esc(supplyStatus(target)||'無')}</div><div class="account-item-list">${rows.map(item=>{const n=inventoryItemCount(item),heal=typeof isHealPotion==='function'&&isHealPotion(item),detail=heal?`恢復最大生命 ${pctText(item.healFraction)}% · 冷卻 ${item.cooldown} 回合`:supplyDetail(item);return `<div class="account-item-row" data-inventory-item="${esc(item.id)}"><div class="account-item-main"><b>${textRarityItemHTML(item)}</b><span class="small">${heal?'自動治療藥水':'可手動使用消耗品'}</span></div><div class="account-item-desc">${esc(globalThis.equipmentPlayerItemDescription?.(item)??(item.description||item.desc||''))}<span class="detail">${esc(detail)}</span></div><div class="account-item-count">× ${n.toLocaleString()}<br><span class="small">賣 ${itemSellPrice(item.id)}</span></div><div class="account-item-actions">${heal?`<button onclick="openHealingSettings()">自動設定</button>`:`<button onclick="useInventoryItem('${item.id}',${memberKey(target)})" ${n<1?'disabled':''}>${EmberwildTimedBoosts.isItem(item)?'使用（全隊）':'對'+esc(characterName(target))+'使用'}</button>`}<input data-sell-qty type="number" min="1" max="${n}" value="1" ${n<1?'disabled':''}><button onclick="sellInventoryItemFromButton(this,'${item.id}',false)" ${n<1?'disabled':''}>賣出</button><button onclick="sellInventoryItemFromButton(this,'${item.id}',true)" ${n<1?'disabled':''}>全部</button></div></div>`;}).join('')}</div></section>`;
+    return heading('ITEMS / 帳號共用','道具庫存')+`<section class="panel"><div class="inventory-item-controls"><label>使用角色 <select onchange="selectPageHero('equipment',Number(this.value))">${(typeof enlistedHeroes==='function'?enlistedHeroes():party.members).map(h=>`<option value="${memberKey(h)}" ${h===target?'selected':''}>${esc(characterName(h))} · ${esc(CLASSES[h.job].name)} · Lv.${h.lv}</option>`).join('')}</select></label><span class="small">治療藥水仍只由自動喝水使用；其他消耗道具的手動使用統一在此操作。</span></div><div class="inventory-supply-status">${esc(characterName(target))}目前效果：<span class="supply-countdown" data-job="${memberKey(target)}">${esc(supplyStatus(target)||'無')}</span></div><div class="account-item-list">${rows.map(item=>{const n=inventoryItemCount(item),heal=typeof isHealPotion==='function'&&isHealPotion(item),detail=heal?`恢復最大生命 ${pctText(item.healFraction)}% · 冷卻 ${item.cooldown} 回合`:supplyDetail(item);return `<div class="account-item-row" data-inventory-item="${esc(item.id)}"><div class="account-item-main"><b>${textRarityItemHTML(item)}</b><span class="small">${heal?'自動治療藥水':'可手動使用消耗品'}</span></div><div class="account-item-desc">${esc(globalThis.equipmentPlayerItemDescription?.(item)??(item.description||item.desc||''))}<span class="detail">${esc(detail)}</span></div><div class="account-item-count">× ${n.toLocaleString()}<br><span class="small">賣 ${itemSellPrice(item.id)}</span></div><div class="account-item-actions">${heal?`<button onclick="openHealingSettings()">自動設定</button>`:`<button onclick="useInventoryItem('${item.id}',${memberKey(target)})" ${n<1?'disabled':''}>${EmberwildTimedBoosts.isItem(item)?'使用（全隊）':'對'+esc(characterName(target))+'使用'}</button>`}<input data-sell-qty type="number" min="1" max="${n}" value="1" ${n<1?'disabled':''}><button onclick="sellInventoryItemFromButton(this,'${item.id}',false)" ${n<1?'disabled':''}>賣出</button><button onclick="sellInventoryItemFromButton(this,'${item.id}',true)" ${n<1?'disabled':''}>全部</button></div></div>`;}).join('')}</div></section>`;
   };
   globalThis.accountItemsView=accountItemsView;
   const shopInventoryEquipmentBase=equipmentView;

@@ -25,7 +25,9 @@
     const prior=party.timedBoosts?.length||0;party.timedBoosts=api.active(party,now);
     const invalid=battleRate===4&&!api.unlocked(party,now)||![1,2,4].includes(battleRate);
     if(invalid)changeRate(2,now);
-    return prior!==party.timedBoosts.length||invalid;
+    let elementalExpired=false;
+    for(const h of party.members){let changed=false;for(const key of api.ELEMENTAL_TYPES)if(h[key]&&api.remainingMs(h[key],now)<=0){h[key]=null;changed=true;}if(changed){withHero(h,clampVitals);elementalExpired=true;}}
+    return prior!==party.timedBoosts.length||invalid||elementalExpired;
   }
   function restoreSession(){
     if(party){const s=session();party.timedBoosts??=[];battleRate=s.speed;battleReportPaused=s.reportPaused;battleLogFilter=s.filter;expireBoosts();}
@@ -47,7 +49,7 @@
     api.validateItem(item);expireBoosts();const before=copy(party.timedBoosts||[]),count=state.consumables[id];
     party.timedBoosts=(party.timedBoosts||[]).filter(b=>b.name!==item.name);
     if(party.timedBoosts.length>=200)return toast('有效增益來源已達上限');
-    party.timedBoosts.push({itemId:item.id,name:item.name,boostType:item.boostType,bonusPercent:item.bonusPercent,durationMinutes:item.durationMinutes,expiresAt:Date.now()+item.durationMinutes*60000});
+    party.timedBoosts.push({itemId:item.id,name:item.name,boostType:item.boostType,bonusPercent:item.bonusPercent,durationMinutes:item.durationMinutes,expiresAt:api.expiryTime(item.durationMinutes)});
     state.consumables[id]--;
     if(save()===false){party.timedBoosts=before;state.consumables[id]=count;return;}
     render();toast('已使用'+item.name+'；同名效果刷新持續時間');
@@ -76,7 +78,7 @@
   tick=function(){syncCombatClock();const changed=expireBoosts();if(changed&&state)render();try{return tickBase();}finally{syncCombatClock();refreshJournalRealtime();}};
   new MutationObserver(()=>{syncCombatClock();refreshJournalRealtime(true);}).observe($('modal'),{attributes:true,attributeFilter:['open']});
 
-  function timeText(ms,hours=false){const sec=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(sec/3600),m=Math.floor(sec/60)%60,s=sec%60;return (hours||h?String(h).padStart(2,'0')+':':'')+(hours||h?String(m).padStart(2,'0'):String(Math.floor(sec/60)).padStart(2,'0'))+':'+String(s).padStart(2,'0');}
+  const timeText=api.timeText;
   function boostRow(kind,now){
     const rows=api.active(party,now).filter(b=>b.boostType===kind);if(!rows.length)return '';
     const nearest=Math.min(...rows.map(b=>b.expiresAt)),summary=kind==='speed4'?timeText(Math.max(...rows.map(b=>b.expiresAt))-now):'＋'+api.bonus(party,kind,now)+'%｜'+timeText(nearest-now);
@@ -93,7 +95,7 @@
     const node=$('journalRealtimeStatus');if(node){const fresh=document.createElement('template');fresh.innerHTML=battleJournalStatus();const next=fresh.content.firstElementChild;if(node.innerHTML!==next.innerHTML){const opened=[...node.querySelectorAll('details')].map(x=>x.open);node.innerHTML=next.innerHTML;node.querySelectorAll('details').forEach((d,i)=>{d.open=opened[i]||false;});}}
   }
   const referenceBase=balanceReference;
-  balanceReference=function(){const out=referenceBase();out.itemTypes={...(out.itemTypes||{}),timedBoost:'全隊現實時間增益；boostType=speed4/exp/drop，bonusPercent 為加算百分比，durationMinutes 為正整數分鐘；同名刷新。'};out.units={...(out.units||{}),timedBoostDuration:'現實分鐘；暫停與關閉頁面仍會到期'};out.balancePaths={...(out.balancePaths||{}),'items[].bonusPercent':'各限時來源的加算百分比，經驗與掉寶各自先相加。','items[].durationMinutes':'限時增益現實分鐘，不使用 duration 的戰鬥回合。','combat.pacing.rates':'固定 1/2/4；4× 需要有效解鎖效果。'};out.dropAlgorithm='掉落率 = 基礎機率 × (1 + 全隊裝備加成 + 各有效限時來源加成)，封頂 100%；首殺保底不變。';return out;};
+  balanceReference=function(){const out=referenceBase();out.itemTypes={...(out.itemTypes||{}),timedBoost:'全隊現實時間增益；boostType=speed4/exp/drop，bonusPercent 為加算百分比，durationMinutes 為正整數分鐘；同名刷新。'};out.units={...(out.units||{}),timedBoostDuration:'現實分鐘；暫停與關閉頁面仍會到期'};out.balancePaths={...(out.balancePaths||{}),'items[].bonusPercent':'各限時來源的加算百分比，經驗與掉寶各自先相加。','items[].durationMinutes':'抗性／屬性增幅與限時增益的現實分鐘；元素藥水可輸入小數，不使用 duration 的戰鬥回合。','combat.pacing.rates':'固定 1/2/4；4× 需要有效解鎖效果。'};out.dropAlgorithm='掉落率 = 基礎機率 × (1 + 全隊裝備加成 + 各有效限時來源加成)，封頂 100%；首殺保底不變。';return out;};
   const exportBase=exportableBalance;
   exportableBalance=function(){const out=exportBase();out.timeUnits={...(out.timeUnits||{}),timedBoostDuration:'realMinutes'};out.notes=[...(out.notes||[]),'type=timedBoost 使用 boostType / bonusPercent / durationMinutes；各類來源加算，同名效果刷新，不累積倍率或時間。'];return out;};
   const guideBase=guideView;

@@ -750,15 +750,16 @@ function elementFactor(attack,defend){
  if(strengths[defend]===attack)return m.weak;
  return m.neutral;
 }
-function activeSupply(h,key){const buff=h[key];return buff&&Number.isFinite(buff.remainingTurns)&&buff.remainingTurns>0?buff:null;}
+function activeSupply(h,key){const buff=h[key];return buff&&(EmberwildTimedBoosts.ELEMENTAL_TYPES.includes(key)?EmberwildTimedBoosts.remainingMs(buff)>0:Number.isFinite(buff.remainingTurns)&&buff.remainingTurns>0)?buff:null;}
+function supplyEffect(h,key,element){const buff=activeSupply(h,key);if(!buff||buff.element!==element)return 0;return Number.isFinite(buff.effectPercent)?buff.effectPercent/100:GS(key==='ward'?'combat.supply.wardResistance':'combat.supply.elementTonicDamage',key==='ward'?.25:.2);}
 function weaponElement(h){return activeSupply(h,'imbue')?.element||itemForm(equipment(h).find(g=>g.slot===0)||{})?.element||'physical';}
 function skillManaCost(){return 0;}
 function refillParty(){for(const h of party.members){const v=stats(h);h.hp=v.hp;h.shield=0;}effects=[];}
 function resolveHit(e,amount,h,element,crit){const v=battleStats(h),def=e.def*(1-Math.min(.75,effectTotal(e.id,'fracture')))*(1-v.pierce);let d=Math.max(1,Math.round(amount-def*.65));if(crit)d=Math.round(d*v.critDamage);const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic && tonic.element===element ? .2 : 0);d=Math.max(1,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+effectTotal(e.id,'vulnerable'))));const actual=Math.min(e.hp,d);e.hp=Math.max(0,e.hp-d);h.hp=Math.min(v.hp,h.hp+Math.round(actual*v.lifesteal));return actual;}
 castPartySkill=function(h,i,v){const sk=CLASSES[h.job].skills[i],power=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),element=SKILL_ELEMENTS[h.job][i];if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];ally.hp=Math.min(stats(ally).hp,ally.hp+Math.round(power));note(sk[0]+' → '+CLASSES[ally.job].name);}else if(sk[5]==='shield'){const shieldResult=applyPureShield(h,power);note(pureShieldCastLog(h,sk[0],shieldResult));}else{const e=foes.find(e=>e.hp>0);if(!e)return false;const d=resolveHit(e,power,h,element,Math.random()<v.crit);if(sk[5]==='drain')h.hp=Math.min(v.hp,h.hp+d);note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+e.name+' '+d+' 傷害');}if(h.sockets[i]===2&&sk[1]==='active')h.hp=Math.min(v.hp,h.hp+Math.round(v.atk*GS('skills.gems.hybridActiveHealAttack',.15)));return true;};
-// Shops use per-hero gold and inventory. Supply effects use battle turns and survive saves.
+// Supply definitions remain available independently of shop pools; buffs retain their own clock across saves.
 const SHOP=[];
-for(const element of ['fire','ice','wind','light','shadow'])for(const type of ['imbue','ward','elementTonic'])SHOP.push({id:type+'_'+element,element,type,cost:type==='imbue'?180:type==='ward'?140:200,duration:300,name:ELEMENTS[element]+{imbue:'屬性附魔藥水',ward:'屬性抗性藥水',elementTonic:'屬性增幅藥水'}[type],desc:{imbue:'普攻改為此屬性；不改變職業技能屬性',ward:'承受此屬性傷害減少 25%',elementTonic:'此屬性傷害增加 20%'}[type]});
+for(const element of ['fire','ice','wind','light','shadow'])for(const type of ['imbue','ward','elementTonic'])SHOP.push({id:type+'_'+element,element,type,cost:type==='imbue'?180:type==='ward'?140:200,duration:type==='imbue'?300:0,...(type==='imbue'?{}:{durationMinutes:5,effectPercent:type==='ward'?25:20}),name:ELEMENTS[element]+{imbue:'屬性附魔藥水',ward:'屬性抗性藥水',elementTonic:'屬性增幅藥水'}[type],desc:{imbue:'普攻改為此屬性；不改變職業技能屬性',ward:'承受此屬性傷害減少 25%',elementTonic:'此屬性傷害增加 20%'}[type]});
 SHOP.push(...EmberwildTimedBoosts.DEFAULT_ITEMS.map(item=>JSON.parse(JSON.stringify(item))));
 function buySupply(id){const item=SHOP.find(x=>x.id===id);if(!item||state.gold<item.cost)return toast('金幣不足');state.gold-=item.cost;state.consumables[id]=(state.consumables[id]||0)+1;save();render();}
 function useSupply(id){const item=SHOP.find(x=>x.id===id);if(!item||(state.consumables[id]||0)<1)return;state.consumables[id]--;const turns=Math.max(1,Math.round(Number(item.duration)||1));state[item.type]={element:item.element,remainingTurns:turns,totalTurns:turns,until:0};save();render();toast('已使用'+item.name);}
@@ -770,7 +771,7 @@ skillDescription=function(i){return '['+ELEMENTS[SKILL_ELEMENTS[state.job][i]]+'
 gearDesc=function(g){const form=itemForm(g);return expansionGearDesc(g)+(form?' / '+[form.element?ELEMENTS[form.element]+'屬性':'',...['critDamage','pierce','lifesteal','evasion','elementBonus'].filter(k=>form[k]).map(k=>({critDamage:'暴傷',pierce:'穿透',lifesteal:'吸血',evasion:'閃避',elementBonus:'屬傷'}[k])+' +'+form[k]+'%')].filter(Boolean).join('、'):'');};
 guideView=function(){return `<section class="panel"><h2>元素遠征</h2><p>每次遭遇結束（勝利或全隊戰敗）後，全隊含候補回滿生命。暫停、換圖、換人、切換模式不視為戰鬥結束，不會回復。戰敗仍扣 5% 金幣並停止探索，恢復後可重新開始。</p><p>主動技能只受冷卻時間限制；冷卻完成後即可施放。觸發技能依普攻觸發率判定，輔助技能使用各自冷卻。</p><p>火剋風、風剋冰、冰剋火：傷害 ×1.3；逆向 ×0.85；同屬性 ×0.8。光暗互剋 ×1.3；無屬性不參與剋制。附魔只改普攻，技能使用標示屬性。種族增傷與屬性增傷相乘。抗性最高 75%、穿透最高 65%、閃避最高 45%、裝備吸血最高 25%。</p><p>新增 12 個同級區域，各有四種一般怪物及專屬首領；每 5 級有兩個地區可選。怪物有各自素材、種族和屬性。裝備以文字顯示職業、部位與變體。</p></section>`+expansionGuide();};
 const expansionValidateParty=validateParty;
-validateParty=function(data){const p=expansionValidateParty(data);for(const h of p.members){if(!h.consumables||Array.isArray(h.consumables)||typeof h.consumables!=='object'||Object.entries(h.consumables).some(([id,n])=>id!=='mana'&&id!=='power_tier_reroll'&&!SHOP.some(x=>x.id===id)||!Number.isInteger(n)||n<0||n>1e6))throw Error('道具資料無效');delete h.consumables.mana;delete h.mp;for(const key of ['imbue','ward','elementTonic']){const b=h[key];if(b!==null&&(!b||!Object.keys(ELEMENTS).includes(b.element)||b.element==='physical'||!Number.isFinite(b.until)||b.until<0||b.until>8.64e15))throw Error('附魔資料無效');}for(const g of h.bag){if(g.boss===undefined&&g.formJob!==undefined&&(!Number.isInteger(g.formJob)||g.formJob<0||g.formJob>=ITEM_FORMS.length))throw Error('裝備來源類別無效');if(g.boss===undefined&&g.form!==undefined&&(!Number.isInteger(g.form)||!itemForm(g)))throw Error(`裝備類型無效：${g.name||g.id||'未知裝備'}（來源 ${g.formJob??g.job}／部位 ${g.slot}／類型 ${g.form}）`);}}return p;};
+validateParty=function(data){const p=expansionValidateParty(data);for(const h of p.members){if(!h.consumables||Array.isArray(h.consumables)||typeof h.consumables!=='object'||Object.entries(h.consumables).some(([id,n])=>id!=='mana'&&id!=='power_tier_reroll'&&!SHOP.some(x=>x.id===id)||!Number.isInteger(n)||n<0||n>1e6))throw Error('道具資料無效');delete h.consumables.mana;delete h.mp;for(const key of ['imbue','ward','elementTonic']){const b=h[key];if(b!==null&&(!b||!Object.keys(ELEMENTS).includes(b.element)||b.element==='physical'||!Number.isFinite(b.until)||b.until<0||b.until>8.64e15))throw Error('附魔資料無效');if(b&&EmberwildTimedBoosts.ELEMENTAL_TYPES.includes(key))h[key]=EmberwildTimedBoosts.migrateElementalBuff(b,key,{item:SHOP.find(x=>x.type===key&&x.element===b.element),settings:GAMEPLAY_SETTINGS});}for(const g of h.bag){if(g.boss===undefined&&g.formJob!==undefined&&(!Number.isInteger(g.formJob)||g.formJob<0||g.formJob>=ITEM_FORMS.length))throw Error('裝備來源類別無效');if(g.boss===undefined&&g.form!==undefined&&(!Number.isInteger(g.form)||!itemForm(g)))throw Error(`裝備類型無效：${g.name||g.id||'未知裝備'}（來源 ${g.formJob??g.job}／部位 ${g.slot}／類型 ${g.form}）`);}}return p;};
 
 
 const expansionClampVitals=clampVitals;
@@ -1570,6 +1571,7 @@ function validateDescriptionItems(items){
   const base=expected.get(item?.id);
   if(!base||seen.has(item.id)||typeof item.name!=='string'||typeof item.description!=='string'||item.type!==base.type||(item.element??null)!==base.element||!Number.isFinite(item.cost)||item.cost<0||!Number.isFinite(item.duration??0)||(item.duration??0)<0)throw Error('道具資料無效：'+(item?.id||'未知'));
   seen.add(item.id);
+  if(EmberwildTimedBoosts.isElementalItem(item))EmberwildTimedBoosts.validateElementalItem(item);
  }
  for(const item of boosts){EmberwildTimedBoosts.validateItem(item);if(seen.has(item.id))throw Error('道具 ID 重複：'+item.id);seen.add(item.id);}
  for(const item of heals){
@@ -1634,7 +1636,7 @@ function applyGameplaySettingsSideEffects(){
   GEMS[0].desc='技能效果 +'+Math.round((g.skills.gems.effectMultiplier-1)*10000)/100+'%';
   GEMS[1].desc='主動冷卻 −'+g.skills.gems.cooldownReduction+' 回合／觸發率 +'+Math.round(g.skills.gems.cooldownProcBonus*10000)/100+'%';
   GEMS[2].desc='技能效果 +'+Math.round((g.skills.gems.hybridMultiplier-1)*10000)/100+'%，觸發率 +'+Math.round(g.skills.gems.hybridProcBonus*10000)/100+'%／施放時回復攻擊力 '+Math.round(g.skills.gems.hybridActiveHealAttack*10000)/100+'% 生命';
-  for(const item of SHOP){if(item.type==='ward')item.desc='承受此屬性傷害減少 '+Math.round(g.combat.supply.wardResistance*10000)/100+'%';if(item.type==='elementTonic')item.desc='此屬性傷害增加 '+Math.round(g.combat.supply.elementTonicDamage*10000)/100+'%';}
+  for(const item of SHOP){if(item.type==='ward')item.desc='承受此屬性傷害減少 '+item.effectPercent+'%';if(item.type==='elementTonic')item.desc='此屬性傷害增加 '+item.effectPercent+'%';}
 }
 applyGameplaySettingsSideEffects();
 

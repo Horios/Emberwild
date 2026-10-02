@@ -2,6 +2,7 @@
 (function(root){
   'use strict';
   const TYPES=['ore','dust','gem','material','item'];
+  const DEFAULT_UNLISTED_TYPES=new Set(['ward','elementTonic']);
   const copy=value=>JSON.parse(JSON.stringify(value));
   const own=(value,key)=>Object.prototype.hasOwnProperty.call(value||{},key);
   const field=(value,key,fallback)=>own(value,key)?value[key]:fallback;
@@ -35,22 +36,28 @@
   function normalize(input,{items=[],rerollItem=null}={}){
     if(input!==undefined&&(!input||typeof input!=='object'||Array.isArray(input)))throw Error('商店設定格式無效');
     const src=input||{},random=field(src,'randomOffers',{}),fixed=field(src,'fixedOffers',{});
-    if(own(src,'schemaVersion')&&![1,2].includes(src.schemaVersion))throw Error('商店設定版本不支援');
+    if(own(src,'schemaVersion')&&![1,2,3].includes(src.schemaVersion))throw Error('商店設定版本不支援');
     if(!random||typeof random!=='object'||Array.isArray(random)||!fixed||typeof fixed!=='object'||Array.isArray(fixed))throw Error('商店商品池格式無效');
     const rawRandom=own(random,'entries')?random.entries:copy(DEFAULT_RANDOM.entries);
-    const rawFixed=own(fixed,'entries')?fixed.entries:items.filter(x=>x.shopEnabled!==false).map(x=>({id:x.id,type:'item',key:x.id,enabled:true,quantity:1,unitPrice:null}));
+    const rawFixed=own(fixed,'entries')?fixed.entries:items.filter(x=>x.shopEnabled!==false).map(x=>({id:x.id,type:'item',key:x.id,enabled:!DEFAULT_UNLISTED_TYPES.has(x.type),quantity:1,unitPrice:null}));
     if(!Array.isArray(rawRandom)||!Array.isArray(rawFixed))throw Error('商店商品池必須是陣列');
     const entries=rawRandom.map((x,i)=>normalizeRule(x,i,true));
     // Old reroll stones were appended outside the shop pool. Preserve their chance once during migration.
-    if(src.schemaVersion!==2&&rerollItem&&items.some(x=>x.id===rerollItem.id)&&Number(rerollItem.shopChance)>0&&!entries.some(x=>x.type==='item'&&x.key===rerollItem.id)){
+    if((src.schemaVersion??1)<2&&rerollItem&&items.some(x=>x.id===rerollItem.id)&&Number(rerollItem.shopChance)>0&&!entries.some(x=>x.type==='item'&&x.key===rerollItem.id)){
       const used=new Set(entries.map(x=>x.id));let id='power_tier_reroll',suffix=1;while(used.has(id))id='power_tier_reroll_'+suffix++;
       entries.push(normalizeRule({id,type:'item',key:rerollItem.id,quantityMin:1,quantityMax:1,unitPrice:rerollItem.shopPrice??650,selection:'extra',chance:rerollItem.shopChance},entries.length,true));
     }
-    return {schemaVersion:2,randomOffers:{
+    const fixedEntries=rawFixed.map((x,i)=>normalizeRule(x,i,false));
+    // Delist existing resistance/amplification offers once. Later explicit editor changes stay editable.
+    if((src.schemaVersion??1)<3){
+      const unlistedIds=new Set(items.filter(x=>DEFAULT_UNLISTED_TYPES.has(x.type)).map(x=>x.id));
+      for(const rule of [...entries,...fixedEntries])if(rule.enabled===true&&rule.type==='item'&&unlistedIds.has(rule.key))rule.enabled=false;
+    }
+    return {schemaVersion:3,randomOffers:{
       offerCount:field(random,'offerCount',DEFAULT_RANDOM.offerCount),
       refreshBaseCost:field(random,'refreshBaseCost',DEFAULT_RANDOM.refreshBaseCost),
       refreshCostStep:field(random,'refreshCostStep',DEFAULT_RANDOM.refreshCostStep),entries
-    },fixedOffers:{entries:rawFixed.map((x,i)=>normalizeRule(x,i,false))}};
+    },fixedOffers:{entries:fixedEntries}};
   }
   const integer=(n,min,max)=>Number.isSafeInteger(n)&&n>=min&&n<=max;
   const number=(n,min,max)=>Number.isFinite(n)&&n>=min&&n<=max;
