@@ -42,7 +42,7 @@ test('Timed consumables, independent reward sources, real clocks and classified 
     await t.test('Speed alone preserves actual per-kill EXP and effective base drop chance at 1×/2×/4×',async()=>{
       const outcomes=[];
       for(const rate of [1,2,4]){await reset();outcomes.push(await game.page.evaluate(rate=>{if(rate===4){state.consumables.speed4_30m=1;useSupply('speed4_30m');}setBattleSpeed(rate);const e=makeEnemy(0,state,()=>.9);e.lv=20;e.kind='normal';e.hp=0;e.rewarded=false;foes=[e];enemy=e;const rng=Math.random;Math.random=()=>.9999;try{rewardGroupKill(e);}finally{Math.random=rng;}return {xp:party.members.map(h=>h.xp),chance:effectiveDropChance({chanceByDifficulty:[.05,.05,.05]},e),staleKillXp:logs.some(x=>x.type==='system'&&x.text.startsWith('擊敗 ')&&x.text.includes('EXP'))};},rate));}
-      assert.deepEqual(outcomes[0],outcomes[1]);assert.deepEqual(outcomes[1],outcomes[2]);assert.deepEqual(outcomes[0].xp,[66,66,66]);assert.equal(outcomes[0].chance,.05);assert.equal(outcomes[0].staleKillXp,false);
+      assert.deepEqual(outcomes[0],outcomes[1]);assert.deepEqual(outcomes[1],outcomes[2]);assert.deepEqual(outcomes[0].xp,[66,0,0]);assert.equal(outcomes[0].chance,.05);assert.equal(outcomes[0].staleKillXp,false);
     });
     await t.test('Arbitrary positive percentages and minutes drive real EXP, drop probabilities and durations',async()=>{
       await reset();const outcomes=await game.page.evaluate(()=>{

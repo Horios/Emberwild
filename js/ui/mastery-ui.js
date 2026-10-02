@@ -169,9 +169,10 @@ function masteryGainHTML(source){
   return entries.length?`<div class="mastery-gain-list">${entries.map(([key,xp])=>`<span class="tag">${esc(masteryLabel(key.split(':')[1]))} +${xp} XP</span>`).join('')}</div>`:'<span class="small">尚無紀錄</span>';
 }
 function devToolHTML(){
+  const player=playerHero();
   const weaponTypes=DEV_WEAPONS_BY_JOB[state.job]||[];
   return `<details class="panel mastery-dev-tools"><summary>測試版開發工具</summary><p class="small">只存在 chatgpt-dev。直接改測試角色資料；長時間模擬會實際推進戰鬥、EXP、掉落與精通。</p><div class="mastery-dev-grid">
-    <div class="mastery-dev-box"><b>角色進度</b><div class="actions"><label>LV <input id="dev-mastery-level" type="number" min="1" max="${RULES.maxLevel}" value="${state.lv}"></label><button onclick="devMasterySetLevel()">設定</button></div><div class="actions"><label>EXP <input id="dev-mastery-exp" type="number" min="0" value="${state.xp}"></label><button onclick="devMasterySetExp()">設定</button></div></div>
+    <div class="mastery-dev-box"><b>主角進度（夥伴等級同步）</b><div class="actions"><label>LV <input id="dev-mastery-level" type="number" min="1" max="${RULES.maxLevel}" value="${player.lv}"></label><button onclick="devMasterySetLevel()">設定</button></div><div class="actions"><label>EXP <input id="dev-mastery-exp" type="number" min="0" value="${player.xp}"></label><button onclick="devMasterySetExp()">設定</button></div></div>
     <div class="mastery-dev-box"><b>精通 XP</b>${masteryKeys().map(key=>`<div class="actions"><span style="min-width:54px">${esc(masteryLabel(key))}</span><button onclick="devMasteryAdjust('${key}',-10)">−10</button><input id="dev-mastery-${key}" type="number" min="0" value="${state.mastery[key]}"><button onclick="devMasterySet('${key}')">設定</button><button onclick="devMasteryAdjust('${key}',10)">+10</button></div>`).join('')}<button onclick="devMasteryReset()">重置此角色精通</button></div>
     <div class="mastery-dev-box"><b>武器切換</b><div class="actions">${weaponTypes.map(type=>`<button onclick="devMasteryWeapon('${type}')">${esc(weaponLabel(type))}</button>`).join('')||'<span class="small">目前資料沒有可切換武器。</span>'}</div><p class="small">沒有對應武器時會建立一件基底評級：D 的測試武器並直接穿戴。</p></div>
     <div class="mastery-dev-box"><b>戰鬥模擬</b><div class="actions"><label>回合 <input id="dev-mastery-rounds" type="number" min="1" max="2000" value="100"></label><button onclick="devMasterySimulate()">模擬</button></div><p class="small">上次完整遭遇精通：${masteryGainHTML(M.lastBattleGain())}</p><p class="small">目前遭遇精通：${masteryGainHTML(M.currentBattleGain())}</p></div>
@@ -184,10 +185,10 @@ skillsView=function(){
 
 function stopForDev(){running=false;partyBusy=false;}
 globalThis.devMasterySetLevel=function(){
-  stopForDev();const el=$('dev-mastery-level'),lv=Math.max(1,Math.min(RULES.maxLevel,Math.floor(Number(el?.value)||1)));state.lv=lv;state.xp=Math.min(state.xp,Math.max(0,need(lv)-1));state.hp=stats().hp;save();render();
+  stopForDev();const el=$('dev-mastery-level'),lv=Math.max(1,Math.min(RULES.maxLevel,Math.floor(Number(el?.value)||1)));const h=playerHero();h.lv=lv;h.xp=Math.min(h.xp,Math.max(0,need(lv)-1));h.hp=stats(h).hp;save();render();
 };
 globalThis.devMasterySetExp=function(){
-  stopForDev();const el=$('dev-mastery-exp'),xp=Math.max(0,Math.floor(Number(el?.value)||0));state.xp=state.lv>=levelCap(state)?0:Math.min(xp,Math.max(0,need(state.lv)-1));save();render();
+  stopForDev();const el=$('dev-mastery-exp'),xp=Math.max(0,Math.floor(Number(el?.value)||0));const h=playerHero();h.xp=h.lv>=levelCap(h)?0:Math.min(xp,Math.max(0,need(h.lv)-1));save();render();
 };
 globalThis.devMasterySet=function(key){
   if(!masteryKeys().includes(key))return;stopForDev();const el=$('dev-mastery-'+key);state.mastery[key]=Math.max(0,Math.floor(Number(el?.value)||0));save();render();

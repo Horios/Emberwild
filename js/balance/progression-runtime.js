@@ -43,7 +43,7 @@
       'balanceSettings.rewards.kindMultiplier':'金幣等既有獎勵的遭遇倍率；EXP 使用 rewards.xp.kindMultiplier。',
       'balanceSettings.difficulty.modes[].xpMultiplier':'EXP 專用難度倍率；reward 仍控制金幣等既有獎勵。',
       'balanceSettings.monsters.encounter.levelLeadInterval':'怪物每此間隔可領先 1 級，最多 progression.mapAheadAllowance 級；0 沿用固定上限。只限制隨機怪物等級，BOSS 固定為地圖上限。',
-      'balanceSettings.progression.xpCurve':'升級需求多項式，最後乘 skills.mastery.characterXpMultiplier；每名角色仍取得 round(怪物總 EXP / 出戰人數)。'
+      'balanceSettings.progression.xpCurve':'升級需求多項式，最後乘 skills.mastery.characterXpMultiplier；主角每隻怪取得 round(怪物總 EXP / 出戰人數) 一次，夥伴等級同步主角，不獨立累積 EXP。'
     });
     out.legacySettings['balanceSettings.progression.statsPerLevel']={status:'fallback',replacement:'classes[].growthPerLevel',note:'只有缺少該職業獨立成長的舊 JSON 使用。'};
     return out;

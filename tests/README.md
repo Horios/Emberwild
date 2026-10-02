@@ -35,3 +35,5 @@ node tests/collect-progression.cjs /tmp/progression-rows.json
 `npm run test:journal` 不需要私有平衡器，使用完整頁面與瀏覽器真正的捲動事件，驗證只顯示經驗／物品且沒有新獎勵時，完整重繪與戰報局部重繪都持續停在最新訊息。另檢查手動查看舊紀錄的垂直／水平位置、戰報暫停與恢復，以及實際 2× 戰鬥期間的捲動穩定性。這組回歸測試也包含在 `npm test` 與 `test:integration`。
 
 `npm run test:companions` 驗證夥伴名冊、現役上限、上陣限制、養成／裝備 UID 保存、實際角色導向換裝、七種評級、可調軟警告、動態夥伴與專屬技能，包含真正重新整理讀檔和平衡器 JSON 下載。來源、相容性與 14% 成長差距依據見 `../docs/COMPANION_ROSTER.md`。設計器 `companion-model-v1` 必須與遊戲 `js/character/companion-model.js` 完全相同。
+
+`tests/shared-levels.test.cjs` 同時納入完整測試與夥伴測試：驗證只有主角累積 EXP、主角未上陣、1～3 人原有經驗量與限時增益、全名冊的固定配點／技能／自動二轉、晚招募與動態夥伴成長、LV30／60 上限、不同等級舊存檔與裝備／寶石保存、主角名稱及探索經驗條、升級卷軸與寫入失敗回復，以及實際開發工具操作。

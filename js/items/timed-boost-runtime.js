@@ -56,7 +56,7 @@
   supplyDetail=function(item){if(!api.isItem(item))return detailBase(item);return (item.boostType==='speed4'?'解鎖 4× 戰鬥倍速':api.LABELS[item.boostType]+'＋'+item.bonusPercent+'%')+' · 持續 '+item.durationMinutes+' 分鐘（現實時間） · 同名刷新';};
   const awardBase=awardXP;
   awardXP=function(amount){
-    const h=state,capped=h.lv>=levelCap(),earned=Math.max(0,Math.round(amount*(1+api.bonus(party,'exp')/100)));
+    const h=playerHero(),capped=h.lv>=levelCap(h),earned=Math.max(0,Math.round(amount*(1+api.bonus(party,'exp')/100)));
     const result=awardBase(earned);if(!capped&&earned>0)note(characterName(h)+' 獲得 '+earned+' EXP','exp');return result;
   };
   const dropBase=partyDropRateBonus;

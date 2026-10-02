@@ -78,7 +78,7 @@ test('Real game, editor, EXP rewards, stages and old-save round trips',async t=>
         }return issues;
       });assert.deepEqual(issues,[]);
     });
-    await t.test('One/two/three active members receive actual EXP, reserves do not, and XP reaches LV60 correctly',async()=>{
+    await t.test('One/two/three active members award EXP once to the player and all companions reach LV60',async()=>{
       const issues=await game.page.evaluate(()=>{
         const issues=[],oldSave=save,oldRender=render;save=()=>true;render=()=>{};
         try{for(const count of [1,2,3])for(const kind of ['normal','elite','boss'])for(const mode of [0,1,2]){
@@ -86,10 +86,10 @@ test('Real game, editor, EXP rewards, stages and old-save round trips',async t=>
           for(const h of party.members){h.lv=59;h.won=true;h.xp=0;h.hp=stats(h).hp;}
           const e=makeEnemy(0,state,()=>.9);e.kind=kind;e.lv=59;e.hp=0;e.rewarded=false;foes=[e];enemy=e;
           const want=EmberwildProgression.xpShare(EmberwildProgression.enemyXp(GAMEPLAY_SETTINGS,59,kind,mode),count);rewardGroupKill(e);
-          for(const h of party.members)if(h.xp!==(party.active.includes(memberKey(h))?want:0))issues.push('xp '+count+'/'+kind+'/'+mode+'/'+memberKey(h));
+          for(const h of party.members)if(h.xp!==(h===party.members[0]?want:0))issues.push('xp '+count+'/'+kind+'/'+mode+'/'+memberKey(h));
           const before=party.members.map(h=>h.xp);rewardGroupKill(e);if(party.members.some((h,i)=>h.xp!==before[i]))issues.push('duplicate reward');
         }
-        for(const h of heroes()){h.lv=59;h.xp=need(59)-1;const totalPoints=h.stats.reduce((a,b)=>a+b,0)+h.ap;withHero(h,()=>awardXP(1));if(h.lv!==60||h.xp!==0||h.stats.reduce((a,b)=>a+b,0)+h.ap!==totalPoints+3)issues.push('level 60 '+memberKey(h));}
+        const h=party.members[0];h.lv=59;h.xp=need(59)-1;const totalPoints=h.stats.reduce((a,b)=>a+b,0)+h.ap;withHero(h,()=>awardXP(1));if(party.members.some(member=>member.lv!==60||member.xp!==0)||h.stats.reduce((a,b)=>a+b,0)+h.ap!==totalPoints+3)issues.push('level 60');
         }finally{save=oldSave;render=oldRender;running=false;resetEncounter();}return issues;
       });assert.deepEqual(issues,[]);
     });
@@ -147,7 +147,7 @@ test('Real game, editor, EXP rewards, stages and old-save round trips',async t=>
       const issues=await game.page.evaluate(fixtures=>{
         localStorage.removeItem(BALANCE_KEY);const issues=[];
         for(const raw of fixtures){loadParty(raw);if(party.members.length!==6||party.active.length!==3)issues.push('roster '+raw.members[0].lv);
-          for(let i=0;i<party.members.length;i++){const h=party.members[i],old=raw.members[i],oldNeed=Math.round(Math.round((45+old.lv*18+old.lv*old.lv*2)*(2.2+old.lv*.16))*1.35),want=Math.floor(old.xp/oldNeed*need(old.lv));if(Math.abs(h.xp-want)>1||h.lv!==old.lv)issues.push('legacy xp '+old.lv+'/'+i);if(['hp','atk','def'].some(k=>!Number.isSafeInteger(stats(h)[k])))issues.push('legacy stats');}
+          for(let i=0;i<party.members.length;i++){const h=party.members[i],old=raw.members[i],oldNeed=Math.round(Math.round((45+old.lv*18+old.lv*old.lv*2)*(2.2+old.lv*.16))*1.35),want=i===0?Math.floor(old.xp/oldNeed*need(old.lv)):0;if(Math.abs(h.xp-want)>1||h.lv!==raw.members[0].lv)issues.push('legacy xp '+old.lv+'/'+i);if(['hp','atk','def'].some(k=>!Number.isSafeInteger(stats(h)[k])))issues.push('legacy stats');}
           if(party.members.some(h=>h.hp!==stats(h).hp))issues.push('legacy health scale');
           party.members[0].hp=Math.floor(stats(party.members[0]).hp/2);
           const once=structuredClone(packParty());loadParty(once);if(party.members.some((h,i)=>h.xp!==once.members[i].xp||h.hp!==once.members[i].hp))issues.push('double migration');

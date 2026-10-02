@@ -24,6 +24,18 @@
 @keyframes member-rating-shimmer{from{background-position:0% 50%}to{background-position:100% 50%}}
 @media(prefers-reduced-motion:reduce){.member-tags .member-rating-sss{animation:none!important}}
 .roster-player-row{border-left:2px solid var(--gold);padding-left:10px}
+.adventurer-summary{display:block;min-width:0;margin:0 3px 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.adventurer-summary h2{display:block;font-size:15px;line-height:1.4;margin:0 0 3px;overflow-wrap:anywhere}
+.adventurer-summary p{margin:0 0 7px;font-size:11px}
+.player-progress{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;max-width:380px;min-width:0;font-size:12px}
+.player-progress-level{white-space:nowrap;color:var(--gold);font-weight:700}
+.player-exp-bar{position:relative;display:grid;align-items:center;min-height:24px;min-width:0;overflow:hidden;background:#182124;border:1px solid #53694f;border-radius:3px}
+.player-exp-fill{position:absolute;inset:0 auto 0 0;background:#4f6740}
+.player-exp-text{position:relative;display:block;z-index:1;text-align:center;font-size:11px;line-height:1.3;padding:3px 5px;overflow-wrap:anywhere;color:#f4f5e9;font-variant-numeric:tabular-nums}
+.player-progress-sidebar{grid-template-columns:minmax(0,1fr);gap:5px}
+.player-progress-sidebar .player-exp-text{font-size:10px}
+.layout>main>.expedition-progress{flex:0 0 auto;margin:0 0 3px}
+.player-progress-character{margin:0 0 10px}
 .page-hero-tabs>button.member-selector{width:190px!important;height:auto!important;min-height:56px;text-align:left}
 .member-selector>b{display:block}
 .member-selector .member-tags{display:flex;font-size:.75rem;gap:2px 8px}
