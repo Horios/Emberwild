@@ -131,6 +131,7 @@
     if(resettingBalance){balanceBase(d,{persist:false});applyRules(d);return d;}
     capture();
     const next=stageBalanceBuild(d),before=exportableBalance(),previousBuild=build()?copy(build()):null,previousCache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
+    const previousMarket=party?.market===undefined?undefined:copy(party.market);
     const battle=party?{heroes:party.members.map(h=>({hp:h.hp,shield:h.shield,potion:h.healPotionCooldownRemaining||0})),actors:copy(actorCooldowns),supports:copy(supportCooldowns),clock:partyClock}:null;
     try{
       suppressSave=true;balanceBase(d,{persist:false});applyRules(d);
@@ -147,6 +148,7 @@
       try{
         balanceBase(before,{persist:false});applyRules(before);
         if(previousBuild){party.buildSystem=previousBuild;apply(plan());}
+        if(party){if(previousMarket===undefined)delete party.market;else party.market=previousMarket;}
         if(battle){party.members.forEach((h,i)=>{h.hp=battle.heroes[i].hp;h.shield=battle.heroes[i].shield;h.healPotionCooldownRemaining=battle.heroes[i].potion;});actorCooldowns=battle.actors;supportCooldowns=battle.supports;partyClock=battle.clock;}
         if(persist){if(previousCache===null)localStorage.removeItem(BALANCE_KEY);else localStorage.setItem(BALANCE_KEY,previousCache);}
       }
@@ -158,6 +160,7 @@
   resetBalanceJSON=function(){
     if(party&&!safe())return false;capture();
     const before=exportableBalance(),oldBuild=build()?copy(build()):null,cache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
+    const previousMarket=party?.market===undefined?undefined:copy(party.market);
     const vitals=party?.members.map(h=>({hp:h.hp,shield:h.shield,potion:h.healPotionCooldownRemaining||0})),actors=copy(actorCooldowns),supports=copy(supportCooldowns),clock=partyClock;
     try{
       suppressSave=true;resettingBalance=true;const out=resetBalanceBase(),d=M.normalizeDocument(exportableBalance());
@@ -167,10 +170,11 @@
       resettingBalance=false;suppressSave=true;
       try{
         balanceBase(before,{persist:false});applyRules(before);if(oldBuild){party.buildSystem=oldBuild;apply(plan());}
+        if(party){if(previousMarket===undefined)delete party.market;else party.market=previousMarket;}
         if(vitals){party.members.forEach((h,i)=>{h.hp=vitals[i].hp;h.shield=vitals[i].shield;h.healPotionCooldownRemaining=vitals[i].potion;});actorCooldowns=actors;supportCooldowns=supports;partyClock=clock;}
         if(cache===null)localStorage.removeItem(BALANCE_KEY);else localStorage.setItem(BALANCE_KEY,cache);
       }finally{suppressSave=previousSuppress;}
-      throw e;
+      toast('無法還原預設：'+e.message);if(party)render();return false;
     }finally{resettingBalance=false;suppressSave=previousSuppress;}
   };
   // Configuration-changing legacy entry points all use the same exploration gate.

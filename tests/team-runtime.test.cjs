@@ -77,10 +77,12 @@ test('balance edits check every plan before mutation, expand new skill arrays, a
   const kept=JSON.stringify(exportableBalance())===JSON.stringify(settings),afterRejected=structuredClone(packParty());
   const added=structuredClone(settings),sk=structuredClone(added.classes[0].skills[0]);sk.id='job0-skill6';sk.name='測試新增技能';added.classes[0].skills.push(sk);applyBalanceConfig(added);
   const lengths=party.buildSystem.plans.map(p=>p.skills.length);loadParty(packParty());
+  const customRules=exportableBalance(),customBuild=structuredClone(packParty()),customCache=localStorage.getItem(BALANCE_KEY),resetDenied=resetBalanceJSON()===false;
+  const resetRules=exportableBalance(),resetBuild=structuredClone(packParty()),resetCache=localStorage.getItem(BALANCE_KEY);
   playerHero().hp=4;playerHero().shield=3;actorCooldowns={'0-0':8};save();
   const stable=structuredClone(packParty()),rules=exportableBalance(),cache=localStorage.getItem(BALANCE_KEY);save=()=>false;
   const d=structuredClone(rules);d.teamSettings.maxPlans=4;let failed=false;try{applyBalanceConfig(d)}catch{failed=true}
-  return {rejected,kept,before,afterRejected,lengths,originalLength:settings.classes[0].skills.length,failed,stable,after:packParty(),rules,afterRules:exportableBalance(),cache,saved:localStorage.getItem(BALANCE_KEY),cd:actorCooldowns['0-0']};
+  return {rejected,kept,before,afterRejected,lengths,originalLength:settings.classes[0].skills.length,resetDenied,customRules,customBuild,customCache,resetRules,resetBuild,resetCache,failed,stable,after:packParty(),rules,afterRules:exportableBalance(),cache,saved:localStorage.getItem(BALANCE_KEY),cd:actorCooldowns['0-0']};
  })()`);
- assert.equal(out.rejected,2);assert(out.kept);assert.deepEqual(out.afterRejected,out.before);assert.deepEqual(out.lengths,[out.originalLength+1,out.originalLength+1]);assert(out.failed);assert.deepEqual(out.after,out.stable);assert.deepEqual(out.afterRules,out.rules);assert.equal(out.saved,out.cache);assert.equal(out.cd,8);
+ assert.equal(out.rejected,2);assert(out.kept);assert.deepEqual(out.afterRejected,out.before);assert.deepEqual(out.lengths,[out.originalLength+1,out.originalLength+1]);assert(out.resetDenied);assert.deepEqual(out.resetRules,out.customRules);assert.deepEqual(out.resetBuild,out.customBuild);assert.equal(out.resetCache,out.customCache);assert(out.failed);assert.deepEqual(out.after,out.stable);assert.deepEqual(out.afterRules,out.rules);assert.equal(out.saved,out.cache);assert.equal(out.cd,8);
 });
