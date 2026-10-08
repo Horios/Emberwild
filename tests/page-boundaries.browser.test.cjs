@@ -30,6 +30,35 @@ test('Chromium: team plans and worn companion tokens have one management page',a
  }finally{await g.browser.close();}
 });
 
+test('Chromium: companion roster excludes the protagonist and counts recruited companions only',async()=>{
+ const g=await openRuntime(root),p=g.page;
+ try{
+  await p.evaluate(()=>{selectSaveSlot(1);start(0);clearInterval(timer);playerHero().name='名冊排除主角';setTab('partnerRoster');});
+  await p.waitForTimeout(50);await p.evaluate(()=>closeModal());
+  assert.equal(await p.locator('.partner-owned-list .roster-row').count(),0);
+  assert.match(await p.locator('main .heading .tag').innerText(),/持有 0 · 現役 0 \/ 5/);
+  assert.match(await p.locator('.partner-roster-empty').innerText(),/尚未招募任何夥伴/);
+  assert.doesNotMatch(await p.locator('main').innerText(),/名冊排除主角/);
+  await p.getByRole('button',{name:'招募夥伴',exact:true}).click();
+  await p.locator('#modal .roster-row').first().getByRole('button',{name:'招募',exact:true}).click();
+  await p.waitForFunction(()=>party.members.length===2);
+  assert.equal(await p.locator('.partner-owned-list .roster-row').count(),1);
+  assert.equal(await p.locator('.partner-owned-list [data-member-key="0"]').count(),0);
+  assert.equal(await p.locator('.partner-roster-empty').count(),0);
+  assert.match(await p.locator('main .heading .tag').innerText(),/持有 1 · 現役 1 \/ 5/);
+  assert.equal(await p.locator('[data-member-key="10"] .companion-roster-ability').count(),1);
+  assert.equal(await p.locator('[data-member-key="10"] .companion-roster-skills').count(),1);
+  await p.evaluate(()=>{toggleMember(10);setPartnerEnlisted(10,false);});
+  assert.equal(await p.locator('.partner-owned-list .roster-row').count(),1);
+  assert.match(await p.locator('main .heading .tag').innerText(),/持有 1 · 現役 0 \/ 5/);
+  await p.evaluate(()=>{setPartnerEnlisted(10,true);party.active=[10];setPartnerEnlisted(0,false);});
+  assert.equal(await p.locator('.partner-owned-list [data-member-key="0"]').count(),0);
+  assert.match(await p.locator('main .heading .tag').innerText(),/持有 1 · 現役 1 \/ 6/);
+  assert.doesNotMatch(await p.locator('main').innerText(),/名冊排除主角/);
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
+
 test('Chromium: protagonist pages stay independent of companion selection and class browsing preserves builds',async()=>{
  const g=await openRuntime(root),p=g.page;
  try{

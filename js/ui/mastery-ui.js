@@ -42,7 +42,7 @@ function renderCoreRows(kind){
   return `<div class="actions active-slot-summary">${slots.map((id,slot)=>`<span>槽 ${slot+1}：${id===null?'未配置':esc(CLASSES[state.job].skills[id]?.[0]||'未知技能')} <button onclick="${clearFn}(${slot})">清空</button></span>`).join('')}</div><div class="skill-list">${rows.map(({sk,i})=>{
     const learned=learnedCore(i),missing=learned?M.coreMissingRequirements(state,i,true):M.coreMissingRequirements(state,i,false),meta=M.coreMeta(state.job,i),gem=state.sockets[i]??null,parts=coreRequirementParts(sk,i);
     const usable=learned&&!M.coreMissingRequirements(state,i,true).length;
-    return `<article class="skill-list-row"><div><div class="skill-list-title"><b>${esc(sk[0])}</b><span class="skill-state ${learned?'learned':'locked'}">${learned?'已學':'未學'}</span><span>${kind==='proc'?'普攻觸發':'主動'}</span></div>${skillTypeBadges(state.job,i)}${skillMechanicsDetails(state.job,i)}<p class="skill-flavor"><b>說明：</b>${esc(typeof coreSkillFlavor==='function'?coreSkillFlavor(state.job,i):'')}</p><p class="skill-detail"><b>詳細：</b>${esc(coreDetailText(i))}</p>${requirementHTML(parts,missing)}${learned&&!usable?`<p class="small">目前無法使用：${esc(M.coreMissingRequirements(state,i,true).join('、'))}</p>`:''}</div><div class="skill-list-controls"><button onclick="learn(${i})" ${learned||missing.length?'disabled':''}>${learned?'已學會':missing.length?'尚未達成':'學習'}</button>${[0,1].map(slot=>`<button onclick="${slotFn}(${i},${slot})" ${learned?'':'disabled'}>${slots[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join('')}<label>寶石 <select aria-label="${esc(sk[0])}寶石" onchange="socket(${i},this.value)" ${learned?'':'disabled'}><option value="-1" ${gem===null?'selected':''}>不鑲嵌</option>${GEMS.map((g,j)=>`<option value="${j}" ${gem===j?'selected':''} ${state.gems[j]<1&&gem!==j?'disabled':''}>${esc(g.name)} ×${state.gems[j]} · ${esc(g.desc)}</option>`).join('')}</select></label></div></article>`;
+    return `<article class="skill-list-row"><div><div class="skill-list-title"><b>${skillIconFor(state.job,'core',i)}${esc(sk[0])}</b><span class="skill-state ${learned?'learned':'locked'}">${learned?'已學':'未學'}</span><span>${kind==='proc'?'普攻觸發':'主動'}</span></div>${skillTypeBadges(state.job,i)}${skillMechanicsDetails(state.job,i)}<p class="skill-flavor"><b>說明：</b>${esc(typeof coreSkillFlavor==='function'?coreSkillFlavor(state.job,i):'')}</p><p class="skill-detail"><b>詳細：</b>${esc(coreDetailText(i))}</p>${requirementHTML(parts,missing)}${learned&&!usable?`<p class="small">目前無法使用：${esc(M.coreMissingRequirements(state,i,true).join('、'))}</p>`:''}</div><div class="skill-list-controls"><button onclick="learn(${i})" ${learned||missing.length?'disabled':''}>${learned?'已學會':missing.length?'尚未達成':'學習'}</button>${[0,1].map(slot=>`<button onclick="${slotFn}(${i},${slot})" ${learned?'':'disabled'}>${slots[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join('')}<label>寶石 <select aria-label="${esc(sk[0])}寶石" onchange="socket(${i},this.value)" ${learned?'':'disabled'}><option value="-1" ${gem===null?'selected':''}>不鑲嵌</option>${GEMS.map((g,j)=>`<option value="${j}" ${gem===j?'selected':''} ${state.gems[j]<1&&gem!==j?'disabled':''}>${esc(g.name)} ×${state.gems[j]} · ${esc(g.desc)}</option>`).join('')}</select></label></div></article>`;
   }).join('')}</div>`;
 }
 coreSkillRows=function(){return renderCoreRows('active');};
@@ -54,7 +54,7 @@ supportSkillRows=function(){
     const learned=learnedSupport(i),missing=learned?M.supportMissingRequirements(state,i,true):M.supportMissingRequirements(state,i,false),parts=supportRequirementParts(sk,i),usable=learned&&!M.supportMissingRequirements(state,i,true).length;
     let detail='';try{detail=supportSkillDetail(state.job,i,state);}catch{detail=`${TARGET_NAMES[sk.target]||sk.target} · ${EFFECT_NAMES[sk.kind]||sk.kind} ${Number((supportAmount(state.job,i)*100).toFixed(1))}% · 冷卻 ${sk.cooldown} 回合`;}
     if(sk.mastery)detail+=` · 使用時培養 ${masteryLabel(sk.mastery)}精通`;
-    return `<article class="skill-list-row"><div><div class="skill-list-title"><b>${esc(sk.name)}</b><span class="skill-state ${learned?'learned':'locked'}">${learned?'已學':'未學'}</span><span>${esc(ELEMENTS[sk.element]||sk.element)}</span></div>${skillTypeBadges(state.job,i,'support')}${skillMechanicsDetails(state.job,i,'support')}<p class="skill-flavor"><b>說明：</b>${esc(sk.description||'')}</p><p class="skill-detail"><b>詳細：</b>${esc(detail)}</p>${requirementHTML(parts,missing)}${learned&&!usable?`<p class="small">目前無法使用：${esc(M.supportMissingRequirements(state,i,true).join('、'))}</p>`:''}</div><div class="skill-list-controls"><button onclick="learnSupport(${i})" ${learned||missing.length?'disabled':''}>${learned?'已學會':missing.length?'尚未達成':'學習'}</button>${[0,1].map(slot=>`<button onclick="slotSupport(${i},${slot})" ${learned?'':'disabled'}>${state.supportSlots[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join('')}</div></article>`;
+    return `<article class="skill-list-row"><div><div class="skill-list-title"><b>${skillIconFor(state.job,'support',i)}${esc(sk.name)}</b><span class="skill-state ${learned?'learned':'locked'}">${learned?'已學':'未學'}</span><span>${esc(ELEMENTS[sk.element]||sk.element)}</span></div>${skillTypeBadges(state.job,i,'support')}${skillMechanicsDetails(state.job,i,'support')}<p class="skill-flavor"><b>說明：</b>${esc(sk.description||'')}</p><p class="skill-detail"><b>詳細：</b>${esc(detail)}</p>${requirementHTML(parts,missing)}${learned&&!usable?`<p class="small">目前無法使用：${esc(M.supportMissingRequirements(state,i,true).join('、'))}</p>`:''}</div><div class="skill-list-controls"><button onclick="learnSupport(${i})" ${learned||missing.length?'disabled':''}>${learned?'已學會':missing.length?'尚未達成':'學習'}</button>${[0,1].map(slot=>`<button onclick="slotSupport(${i},${slot})" ${learned?'':'disabled'}>${state.supportSlots[slot]===i?'已配置槽':'設為槽'} ${slot+1}</button>`).join('')}</div></article>`;
   }).join('')}</div>`;
 };
 
@@ -77,37 +77,48 @@ const DEFAULT_SUPPORT_ICONS={
 };
 function skillTurnOfCore(sk,i){return skillRequiresAdvanced(sk,i)?2:1;}
 function skillTurnOfSupport(sk,i){return i===2?2:1;}
-function inferredCoreIcon(sk,i){
-  const meta=M.coreMeta(state.job,i),explicit=meta?.iconType;
+function inferredCoreIcon(sk,i,job=state.job){
+  const meta=M.coreMeta(job,i),explicit=meta?.iconType;
   if(explicit&&explicit!=='auto')return explicit;
   if(Object.hasOwn(DEFAULT_CORE_ICONS,sk[0]))return DEFAULT_CORE_ICONS[sk[0]];
-  if(state.job===0){
-    if(['shield','shieldLowest'].includes(sk[5]))return 'shield';
+  if(sk[5]==='heal')return 'heal';
+  if(['shield','shieldLowest'].includes(sk[5]))return 'shield';
+  if(job===0){
     const weapon=['sword','axe','hammer'].includes(meta?.mastery)?meta.mastery:'sword';
     if(sk[5]==='drain')return weapon==='axe'?'axeBlood':'swordBlood';
     return weapon;
   }
-  if(state.job===2)return sk[1]==='proc'?'volley':'pierce';
-  if(sk[5]==='heal')return 'heal';
-  const element=typeof coreSkillElement==='function'?coreSkillElement(state.job,i):(SKILL_ELEMENTS[state.job]?.[i]||'physical');
+  if(job===2)return sk[1]==='proc'?'volley':'pierce';
+  const element=typeof coreSkillElement==='function'?coreSkillElement(job,i):(SKILL_ELEMENTS[job]?.[i]||'physical');
   if(['fire','ice','wind','light','shadow'].includes(element))return element;
   if(sk[5]==='drain')return 'blood';
   return 'magic';
 }
-function inferredSupportIcon(sk){
+function inferredSupportIcon(sk,job=state.job){
   const explicit=sk?.iconType;if(explicit&&explicit!=='auto')return explicit;
   if(Object.hasOwn(DEFAULT_SUPPORT_ICONS,sk?.name))return DEFAULT_SUPPORT_ICONS[sk.name];
-  if(state.job===2)return ['fracture','vulnerable','weaken'].includes(sk?.kind)?'trap':'eagleEye';
-  if(state.job===0)return sk?.kind==='guard'?'shield':'sword';
+  if(job===2)return ['fracture','vulnerable','weaken'].includes(sk?.kind)?'trap':'eagleEye';
+  if(job===0)return sk?.kind==='guard'?'shield':'sword';
   if(['fire','ice','wind','light','shadow'].includes(sk?.element))return sk.element;
   if(sk?.kind==='regen')return 'heal';
   if(sk?.kind==='guard')return 'shield';
   return 'magic';
 }
-function skillIconHTML(type){
+function skillIconHTML(type,options={},inline=false){
   const definitions=M.iconDefinitions(),custom=typeof type==='string'&&type.startsWith('custom:')&&definitions.some(icon=>icon.id===type.slice(7));
   const key=ICONS.hasIcon(type)||ICONS.isLucideReference(type)||custom?type:'magic',tone=ICONS.toneByKey[key]||'neutral';
-  return `<span class="skill-icon-glyph ${custom?'icon-custom':ICONS.isLucideReference(key)?'icon-lucide':'icon-'+key} tone-${tone}" aria-hidden="true">${ICONS.svgFor(key,definitions)}</span>`;
+  return `<span class="skill-icon-glyph ${custom?'icon-custom':ICONS.isLucideReference(key)?'icon-lucide':'icon-'+key} tone-${tone}" aria-hidden="true"${inline?' style="display:inline-grid;vertical-align:middle;margin-right:6px"':''}>${ICONS.svgFor(key,definitions,options)}</span>`;
+}
+// Rows and loadouts share the tile icon vocabulary, independent of the actor
+// currently selected elsewhere. Auto icons stay compact; configured appearance
+// keeps its own size unless a small loadout preview explicitly requests one.
+function skillIconFor(job,kind,index,options={}){
+  const sk=kind==='core'?CLASSES[job]?.skills?.[index]:kind==='support'?SUPPORT[job]?.[index]:null;
+  if(!sk)return '';
+  const meta=kind==='core'?M.coreMeta(job,index):sk;
+  const type=kind==='core'?inferredCoreIcon(sk,index,job):inferredSupportIcon(sk,job);
+  const size=meta?.iconType&&meta.iconType!=='auto'?{}:{size:24};
+  return skillIconHTML(type,{...size,...options},true);
 }
 function skillMasteryTooltip(meta){
   if(!meta?.requiredMastery)return '精通要求：無';
@@ -160,8 +171,8 @@ function skillLoadoutSummaryHTML(){
   syncHeroSkillArrays(state);ensureProcSlots(state);
   const active=Array.from({length:2},(_,slot)=>state.active?.[slot]??null),proc=Array.from({length:2},(_,slot)=>state.procSlots?.[slot]??null),support=Array.from({length:2},(_,slot)=>state.supportSlots?.[slot]??null);
   const coreName=id=>id===null?'未配置':CLASSES[state.job].skills[id]?.[0]||'未知技能',supportName=id=>id===null?'未配置':SUPPORT[state.job]?.[id]?.name||'未知技能';
-  const group=(kind,label,slots,nameOf,clearFn)=>`<div class="skill-loadout-group ${kind}"><b>${label}</b><div class="skill-loadout-slots">${slots.map((id,slot)=>`<span class="skill-loadout-slot"><span>槽 ${slot+1}</span><strong>${esc(nameOf(id))}</strong><button onclick="${clearFn}(${slot})" ${id===null?'disabled':''}>清空</button></span>`).join('')}</div></div>`;
-  return `<section class="skill-loadout-panel">${group('skill-kind-active','主動技能',active,coreName,'clearActiveSkill')}${group('skill-kind-proc','觸發技能',proc,coreName,'clearProcSkill')}${group('skill-kind-support','輔助技能',support,supportName,'slotSupport.bind(null,null)')}</section>`.replace(/slotSupport\.bind\(null,null\)\((\d+)\)/g,'slotSupport(null,$1)');
+  const group=(kind,label,slots,nameOf,clearFn,type)=>`<div class="skill-loadout-group ${kind}"><b>${label}</b><div class="skill-loadout-slots">${slots.map((id,slot)=>`<span class="skill-loadout-slot"><span>槽 ${slot+1}</span><strong>${id===null?'':skillIconFor(state.job,type,id,{size:16})}${esc(nameOf(id))}</strong><button onclick="${clearFn}(${slot})" ${id===null?'disabled':''}>清空</button></span>`).join('')}</div></div>`;
+  return `<section class="skill-loadout-panel">${group('skill-kind-active','主動技能',active,coreName,'clearActiveSkill','core')}${group('skill-kind-proc','觸發技能',proc,coreName,'clearProcSkill','core')}${group('skill-kind-support','輔助技能',support,supportName,'slotSupport.bind(null,null)','support')}</section>`.replace(/slotSupport\.bind\(null,null\)\((\d+)\)/g,'slotSupport(null,$1)');
 }
 
 function masteryGainHTML(source){
@@ -182,7 +193,7 @@ skillsView=function(){
   M.ensureHero(state);
   return singlePagePanel('skills','技能',()=>{const entries=skillCatalogEntries();if(skillSelectionJob!==memberKey(state)){skillSelectionJob=memberKey(state);skillSelection=null;skillTurn=1;}const visible=entries.filter(x=>x.turn===skillTurn),detail=selectedSkillDetailHTML(entries);return `${skillLoadoutSummaryHTML()}<div class="actions skill-turn-tabs"><button class="${skillTurn===1?'primary':''}" onclick="setSkillTurn(1)">一轉</button><button class="${skillTurn===2?'primary':''}" onclick="setSkillTurn(2)">二轉</button></div>${masterySummaryHTML()}<p class="small skill-board-help">技能依學習角色等級分列；移到圖示上可查看精通與其他學習條件，點擊圖示可查看詳細資料與配置。</p><div class="skill-layout-split"><div class="skill-tree-pane">${skillLevelBoardHTML(visible)}</div><div class="skill-detail-pane">${detail}</div></div>${devToolHTML()}`;});
 };
-globalThis.__EMBERWILD_MASTERY_UI={icon:skillIconHTML,loadout:skillLoadoutSummaryHTML,devTools:devToolHTML,individual:()=>skillLoadoutSummaryHTML()+masterySummaryHTML()+coreSkillRows()+procSkillRows()+supportSkillRows()+devToolHTML()};
+globalThis.__EMBERWILD_MASTERY_UI={icon:skillIconHTML,skillIcon:skillIconFor,loadout:skillLoadoutSummaryHTML,devTools:devToolHTML,individual:()=>skillLoadoutSummaryHTML()+masterySummaryHTML()+coreSkillRows()+procSkillRows()+supportSkillRows()+devToolHTML()};
 
 function stopForDev(){running=false;partyBusy=false;}
 globalThis.devMasterySetLevel=function(){

@@ -391,6 +391,7 @@ function validateSave(input) {
   if(!object(input)||![1,2].includes(input.version))fail('存檔版本不符');
   const s=migrateLegacyEquipmentSlotsInSave(JSON.parse(JSON.stringify(input))),legacy=s.version===1;
   if(!int(s.job,0,3)||!int(s.lv,1,RULES.maxLevel)||!int(s.map,0,MAPS.length-1))fail('角色或地圖無效');
+  if(s.avatarId!==undefined&&s.avatarId!==null&&s.avatarId!==''&&!['guardian','mage','ranger','healer','wanderer','phoenix'].includes(s.avatarId))fail('角色圖示無效');
   for(const k of ['gold','ore','dust','sp','ap','totalKills','repeat','potions','xp'])if(!int(s[k]))fail('資源數值無效');
   for(const k of ['hp','shield'])if(!num(s[k]))fail('生命資料無效');
   const skillCount=CLASSES[s.job].skills.length,MAX_SAVE_SKILLS=64;

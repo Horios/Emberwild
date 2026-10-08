@@ -47,3 +47,5 @@ node tests/collect-progression.cjs /tmp/progression-rows.json
 Lucide 圖示製作器與遊戲渲染的專項驗證：`npm run test:icons`。請設定 `EMBERWILD_BALANCE_ROOT` 及 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`；專項包含實際搜尋／分類／分頁／動畫、JSON 下載往返、遊戲 UI 與保存重載，完整 `npm test` 也包含此項。共用資源更新後使用 `tools/sync-icon-resources.cjs` 同步私人單檔 HTML；模型及授權見 `docs/ICON_DESIGNER.md`。
 
 `npm run test:pages` 驗證頁面歸屬與職業分類：隊伍方案只出現在隊伍編成，夥伴信物管理只出現在裝備與信物；主角能力／技能不受夥伴選取影響，其他職業技能預覽不修改方案；強化頁完整列出穿戴裝備並保留新手裝備與信物的操作限制；BOSS 製作依職業建立裝備並使用共用資源。文字樣式仍可由平衡設計器 JSON 匯入，遊戲只載入顯示與驗證功能。
+
+`npm run test:interface` 驗證主角裝備精簡版面、BOSS 說明與指南在桌面及窄螢幕可完整閱讀、主角及夥伴技能 SVG，以及隊伍與探索角色圖示的選擇、存檔重載與匯入匯出。
