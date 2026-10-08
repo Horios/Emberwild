@@ -45,3 +45,5 @@ node tests/collect-progression.cjs /tmp/progression-rows.json
 `npm run test:teams` 驗證自由轉職、獨立空白／複製／改名方案、永久與配置分離、等級推導 AP／SP、實際技能取得職業精通、二轉與元素精通門檻、一次性材料、免費確認洗點、共享 UID／信物／寶石與強制處置、所有核心入口的探索鎖定、停止與切換重置所有戰鬥狀態、v1／v2／v3 遷移、缺失引用修復及保存失敗回復。Chromium 另外操作真實按鈕／原生確認、下載／檔案匯入、重新整理、設計器欄位及 Preview 存檔隔離。測試 fixture 才新增技能或設定解鎖門檻，不改出貨技能。資料結構與限制見 `../docs/TEAM_BUILDS.md`；同樣納入完整 `npm test`。
 
 Lucide 圖示製作器與遊戲渲染的專項驗證：`npm run test:icons`。請設定 `EMBERWILD_BALANCE_ROOT` 及 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`；專項包含實際搜尋／分類／分頁／動畫、JSON 下載往返、遊戲 UI 與保存重載，完整 `npm test` 也包含此項。共用資源更新後使用 `tools/sync-icon-resources.cjs` 同步私人單檔 HTML；模型及授權見 `docs/ICON_DESIGNER.md`。
+
+`npm run test:pages` 驗證頁面歸屬與職業分類：隊伍方案只出現在隊伍編成，夥伴信物管理只出現在裝備與信物；主角能力／技能不受夥伴選取影響，其他職業技能預覽不修改方案；強化頁完整列出穿戴裝備並保留新手裝備與信物的操作限制；BOSS 製作依職業建立裝備並使用共用資源。文字樣式仍可由平衡設計器 JSON 匯入，遊戲只載入顯示與驗證功能。

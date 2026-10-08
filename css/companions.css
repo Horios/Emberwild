@@ -78,6 +78,22 @@
 @media(max-width:780px){.player-character-content .grid{grid-template-columns:1fr}.companion-key-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.companion-extra-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .partner-roster-page{min-height:0;display:flex;flex-direction:column;overflow:hidden}
 .partner-owned-list{min-height:0;overflow:auto;flex:1;scrollbar-gutter:stable}
+.roster-page .roster-owned-row{display:block}
+.roster-member-header{display:flex;justify-content:space-between;align-items:center;gap:8px 16px;flex-wrap:wrap}
+.roster-member-header>div:first-child{flex:1 1 220px;min-width:0}
+.companion-roster-details{display:grid;gap:6px;margin-top:9px}
+.companion-roster-details>details{min-width:0;border:1px solid var(--line);border-radius:4px;background:#182124}
+.companion-roster-details>details>summary{padding:7px 10px;cursor:pointer;color:var(--green);font-size:13px;font-weight:700}
+.companion-roster-detail-content{padding:4px 10px 10px}
+.companion-skill-loadout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0}
+.companion-skill-slot-group{display:grid;align-content:start;gap:4px;padding:8px;background:#24283f;font-size:12px;overflow-wrap:anywhere}
+.companion-skill-slot-group>b{color:var(--gold)}
+.companion-skill-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.companion-skill-card{min-width:0;padding:8px;border:1px solid var(--line);border-radius:4px;overflow-wrap:anywhere}
+.companion-skill-card p{font-size:12px}
+.companion-skill-card .skill-list-title{display:flex;flex-wrap:wrap;gap:5px 10px;font-size:12px}
+.companion-skill-equipped{color:var(--green)}
+@media(max-width:780px){.companion-skill-list{grid-template-columns:1fr}.companion-skill-loadout{grid-template-columns:1fr}.roster-page .roster-member-header .roster-member-actions{justify-content:flex-start}}
 .worn-loadout-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
 .worn-slot-choice{display:grid;gap:6px;width:100%;text-align:left;white-space:normal;background:transparent}
 .worn-slot-choice .slot-label{color:var(--gold)}

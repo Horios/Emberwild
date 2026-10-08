@@ -179,9 +179,16 @@
     party.companionNames[id]=name;const h=partyMember(id);if(h)h.name=name;
     closeModal();save();render();toast('名字已更新');
   };
-  function memberRow(h,manage=false){const key=memberKey(h),plan=companionPlan(h);return `<article class="roster-row ${h===party.members[0]?'roster-player-row':''}" data-member-key="${key}"><div><div class="member-identity"><b>${esc(characterName(h))}</b>${memberIdentityTags(h)}</div>${plan?`<p class="small">${esc(plan.description)}</p>`:''}</div><div class="roster-member-actions">${manage?`<button onclick="setPartnerEnlisted(${key},${!isEnlisted(h)})" ${party.active.includes(key)?'disabled':''}>${isEnlisted(h)?'移出現役':'編入現役'}</button>`:`<button onclick="toggleMember(${key})">${party.active.includes(key)?'移至後備':'加入上陣'}</button>`}<button onclick="requestRename(${key})">改名</button></div></article>`;}
+  const rosterDetails=new Map();
+  globalThis.rememberCompanionRosterDetail=function(key,kind,open){if(partyMember(key)&&['ability','skills'].includes(kind))rosterDetails.set(key+':'+kind,!!open);};
+  function memberRow(h,manage=false){
+    const key=memberKey(h),plan=companionPlan(h),player=h===party.members[0];
+    const header=`<div><div class="member-identity"><b>${esc(characterName(h))}</b>${memberIdentityTags(h)}</div>${plan?`<p class="small">${esc(plan.description)}</p>`:''}</div><div class="roster-member-actions">${manage?`<button onclick="setPartnerEnlisted(${key},${!isEnlisted(h)})" ${party.active.includes(key)?'disabled':''}>${isEnlisted(h)?'移出現役':'編入現役'}</button>`:`<button onclick="toggleMember(${key})">${party.active.includes(key)?'移至後備':'加入上陣'}</button>`}<button onclick="requestRename(${key})">改名</button></div>`;
+    const detail=(kind,title,view)=>`<details class="companion-roster-${kind}" ${rosterDetails.get(key+':'+kind)?'open':''} ontoggle="rememberCompanionRosterDetail(${key},'${kind}',this.open)"><summary>${title}</summary><div class="companion-roster-detail-content">${withHero(h,view)}</div></details>`;
+    return `<article class="roster-row ${player?'roster-player-row':''} ${manage?'roster-owned-row':''}" data-member-key="${key}">${manage?`<div class="roster-member-header">${header}</div>`:header}${manage&&!player?`<div class="companion-roster-details">${detail('ability','夥伴能力',companionCharacterView)}${detail('skills','夥伴技能',companionSkillsView)}</div>`:''}</article>`;
+  }
   rosterView=function(){return heading('PARTY / 隊伍編成','隊伍編成',`<span class="tag">上陣 ${heroes().length} / 3 · 現役 ${enlistedHeroes().length} / ${config.activeLimit}</span>`)+`<section class="panel roster-page"><p class="small">所有夥伴等級與主角相同，不獨立獲得經驗；後備、名冊內與未取得夥伴也會同步主角等級。調整上陣會放棄目前遭遇。</p><div class="actions"><button onclick="setTab('partnerRoster')">管理夥伴名冊</button><button onclick="showCompanionRecruitment()">招募夥伴</button></div><div class="roster-list">${sortedEnlistedHeroes().map(h=>memberRow(h)).join('')}</div></section>`;};
-  globalThis.partnerRosterView=function(){return heading('PARTNER ROSTER / 已取得夥伴','夥伴名冊',`<span class="tag">持有 ${party.members.length} · 現役 ${enlistedHeroes().length} / ${config.activeLimit}</span>`)+`<section class="panel roster-page partner-roster-page"><p class="small">移出現役仍會同步主角等級，並保留所有養成與信物。上陣夥伴須先移至後備，才能移出現役。評級代表夥伴本身的設計。</p><div class="actions"><button onclick="setTab('roster')">隊伍編成</button><button onclick="showCompanionRecruitment()">招募夥伴</button></div><div class="roster-list partner-owned-list">${[...party.members].sort(compareMembers).map(h=>memberRow(h,true)).join('')}</div></section>`;};
+  globalThis.partnerRosterView=function(){return heading('PARTNER ROSTER / 已取得夥伴','夥伴名冊',`<span class="tag">持有 ${party.members.length} · 現役 ${enlistedHeroes().length} / ${config.activeLimit}</span>`)+`<section class="panel roster-page partner-roster-page"><p class="small">在名冊查看每位夥伴的能力、技能與配置；夥伴依固定走向自動成長。移出現役仍會同步主角等級，並保留所有養成與信物。上陣夥伴須先移至後備，才能移出現役。評級代表夥伴本身的設計。</p><div class="actions"><button onclick="setTab('roster')">隊伍編成</button><button onclick="showCompanionRecruitment()">招募夥伴</button></div><div class="roster-list partner-owned-list">${[...party.members].sort(compareMembers).map(h=>memberRow(h,true)).join('')}</div></section>`;};
   globalThis.showCompanionRecruitment=function(){const available=rosterPlans().filter(p=>!partyMember(p.id));$('modal').innerHTML=`<h2>招募夥伴</h2><p class="small">夥伴等級與主角相同（目前 LV${playerHero().lv}），不獨立獲得經驗；現役額滿時，新夥伴會留在名冊。</p><div class="roster-list">${available.map(p=>`<article class="roster-row"><div><div class="member-identity"><b>${esc(party.companionNames[p.id])}</b>${memberIdentityTags({job:p.job,companionId:p.id,lv:playerHero().lv},{includeStatus:false})}</div><p class="small">${esc(p.description)}</p></div><button onclick="closeModal();recruitCompanion(${p.id})">招募</button></article>`).join('')||'<p>目前沒有可招募的夥伴。</p>'}</div><button onclick="closeModal()">關閉</button>`;$('modal').showModal();};
   const originalValidateParty=validateParty;
   validateParty=function(data){const out=originalValidateParty(data);out.companionProfiles=storedPlans(data?.companionProfiles);out.companionNames=storedNames(data?.companionNames);const keys=out.members.map(memberKey);out.enlisted=data?.enlisted===undefined?[...keys]:data.enlisted;if(!Array.isArray(out.enlisted)||out.enlisted.length<1||new Set(out.enlisted).size!==out.enlisted.length||out.enlisted.some(k=>!keys.includes(k))||out.active.some(k=>!out.enlisted.includes(k)))throw Error('現役夥伴資料無效');out.enlisted=[...out.enlisted];if(!out.enlisted.includes(out.selected))out.selected=out.enlisted[0];return out;};
@@ -229,22 +236,37 @@
     const detail=(items,labels)=>Object.entries(items||{}).map(([key,value])=>`${esc(labels[key]||key)} +${percentage(value)}%`).join(' / ');
     return `<p class="companion-ability-intro">${esc(plan?.description||'原有隊員')} ${plan?'<span>升級後自動配點與二轉。</span>':''}</p><div class="companion-key-stats"><span>生命 <b>${v.hp}</b></span><span>攻擊 <b>${v.atk}</b></span><span>防禦 <b>${v.def}</b></span><span>暴擊 <b>${percentage(v.crit)}%</b></span><span>速度 <b>${v.speed}</b></span></div><div class="companion-growth-line"><b>能力配點</b>${[c.main,'體質','韌性'].map((name,i)=>`<span>${esc(name)} ${h.stats[i]}</span>`).join('')}</div><div class="companion-advance-line"><b>職業進階</b><span>LV${advanceLevel} · ${esc(c.advanced)} · ${h.advanced?(plan?'已自動完成':'已完成'):(plan?'達到等級後自動完成':'尚未完成')}</span></div><details class="companion-ability-extra"><summary>查看進階詳細屬性</summary><div class="companion-extra-stats"><span>暴擊傷害 ${percentage(v.critDamage)}%</span><span>防禦穿透 ${Number((v.pierce||0).toFixed(1))}</span><span>防禦無視 ${percentage(v.defenseIgnore)}%</span><span>生命竊取 ${percentage(v.lifesteal)}%</span><span>閃避 ${percentage(v.evasion)}%</span><span>武器屬性 ${esc(ELEMENTS[weaponElement(h)])}</span><span>全屬性增傷 ${percentage(v.elementBonus)}%</span></div><p>${detail(v.elementDamage,ELEMENTS)}</p><p>${detail(v.raceDamage,RACES)}</p><p>${Object.entries(v.resist||{}).map(([key,value])=>`${esc(ELEMENTS[key]||key)}抗性 ${percentage(value)}%`).join(' / ')}</p></details>`;
   }
-  const baseSinglePagePanel=singlePagePanel;
-  singlePagePanel=function(page,title,view){const h=pageHero(page),plan=companionPlan(h),html=baseSinglePagePanel(page,title,view);return plan&&page==='skills'?html.replace('<div class="page-owner-content">','<div class="page-owner-content"><p class="companion-fixed-note">固定培養：'+esc(plan.description)+' 升級後自動配點、學習及配置技能。</p>'):html;};
+  function companionSkillsView(){
+    const h=state,plan=companionPlan(h),mastery=globalThis.__EMBERWILD_MASTERY;
+    const core=CLASSES[h.job].skills,support=SUPPORT[h.job]||[];
+    const includes=(kind,i)=>!plan||(plan[kind]||[]).includes(i)||(kind==='core'?h.skills?.[i]||h.active?.includes(i)||h.procSlots?.includes(i):h.supportLevels?.[i]||h.supportSlots?.includes(i));
+    const slotGroup=(label,slots,nameOf)=>`<div class="companion-skill-slot-group"><b>${label}</b>${Array.from({length:2},(_,slot)=>{const id=slots?.[slot]??null;return `<span>槽 ${slot+1}：${esc(id===null?'未配置':nameOf(id)||'未知技能')}</span>`;}).join('')}</div>`;
+    const slots=`<div class="companion-skill-loadout">${slotGroup('主動技能',h.active,i=>core[i]?.[0])}${slotGroup('普攻觸發技能',h.procSlots,i=>core[i]?.[0])}${slotGroup('輔助技能',h.supportSlots,i=>support[i]?.name)}</div>`;
+    const skillRows=(kind,list)=>list.map((sk,i)=>{
+      const isCore=kind==='core',meta=isCore?sk[6]:sk;
+      if(!includes(kind,i)||!skillAllowedForPartner(h,meta))return '';
+      const learned=Number((isCore?h.skills:h.supportLevels)?.[i])||0,level=isCore?sk[2]:sk.level,advanced=isCore?skillRequiresAdvanced(sk,i):i===2;
+      const positions=(isCore?(sk[1]==='proc'?h.procSlots:h.active):h.supportSlots)||[],slotLabel=isCore?(sk[1]==='proc'?'觸發':'主動'):'輔助';
+      const equipped=learned?positions.map((id,slot)=>id===i?`${slotLabel}槽 ${slot+1}`:'').filter(Boolean):[];
+      const locked=h.lv<level||advanced&&!h.advanced;
+      const missing=mastery?(isCore?mastery.coreMissingRequirements(h,i,!!learned):mastery.supportMissingRequirements(h,i,!!learned)):[];
+      const growthMissing=plan&&!learned?[...(h.lv<level?[`角色 LV${level}`]:[]),...(advanced&&!h.advanced?['完成二轉']:[])]:missing;
+      const name=isCore?sk[0]:sk.name,flavor=isCore?coreSkillFlavor(h.job,i):sk.description;
+      const detail=isCore?coreSkillDetail(h.job,i,h):supportSkillDetail(h.job,i,h),status=equipped.length?'已配置':learned?'已學習':locked?'尚未解鎖':'未學習';
+      const gem=isCore?h.sockets?.[i]:null;
+      return `<article class="companion-skill-card" data-companion-skill="${kind}:${i}"><div class="skill-list-title"><b>${esc(name)}</b><span class="skill-state ${learned?'learned':'locked'}">${status}${learned?` LV.${learned}`:''}</span><span>${isCore?(sk[1]==='proc'?'普攻觸發':'主動'):'輔助'}</span></div>${skillTypeBadges(h.job,i,isCore?'core':'support')}${skillMechanicsDetails(h.job,i,isCore?'core':'support')}${flavor?`<p class="small">${esc(flavor)}</p>`:''}<p>${esc(detail)}</p>${equipped.length?`<p class="small companion-skill-equipped">已配置：${esc(equipped.join('、'))}</p>`:''}${growthMissing.length?`<p class="small">${learned?'目前使用限制':'尚缺條件'}：${esc(growthMissing.join('、'))}</p>`:''}${gem!=null&&GEMS[gem]?`<p class="small">鑲嵌寶石：${esc(GEMS[gem].name)}</p>`:''}</article>`;
+    }).filter(Boolean).join('');
+    const rows=skillRows('core',core)+skillRows('support',support);
+    return `<p class="small companion-skill-note">${plan?'技能依固定培養自動學習及配置。':'保留原有隊員的技能與配置。'}</p>${slots}<div class="companion-skill-list">${rows||'<p class="small">此夥伴尚無技能。</p>'}</div>`;
+  }
   const baseCharacterView=characterView;
   characterView=function(){
     const player=party.members[0];
-    pageHeroSelection.set('character',memberKey(isEnlisted(player)?player:enlistedHeroes()[0]));
-    const playerView=isEnlisted(player)?withHero(player,baseCharacterView):'';
-    const others=sortedEnlistedHeroes().filter(h=>h!==player);
-    return heading('PARTY / 角色能力','角色能力')+`<div class="character-ability-scroll ${others.length?'has-companions':''}">${isEnlisted(player)?`<section class="player-character-section"><div class="character-card-title"><div class="member-identity"><h2>${esc(characterName(player))}</h2>${memberIdentityTags(player,{includeLevel:false})}</div><span class="tag">剩餘能力點 ${player.ap}</span></div>${playerProgressView('character')}<div class="player-character-content">${playerView}</div></section>`:''}${others.length?`<section class="companion-character-section"><h2>夥伴能力</h2><div class="companion-card-grid">${others.map(h=>`<article class="panel companion-character-card"><div class="character-card-title"><div class="member-identity"><h3>${esc(characterName(h))}</h3>${memberIdentityTags(h)}</div></div>${withHero(h,companionCharacterView)}</article>`).join('')}</div></section>`:''}</div>`;
+    pageHeroSelection.set('character',memberKey(player));
+    return withHero(player,baseCharacterView).replace(pageSelector('character'),'').replace('<div class="page-owner-content">','<div class="page-owner-content">'+playerProgressView('character'));
   };
   const baseRender=render;
-  render=function(){syncCompanionLevels();baseRender();if(!state||!party||!['character','skills'].includes(tab))return;const h=pageHero(tab);if(!companionPlan(h))return;
-    for(const input of document.querySelectorAll('.page-owner-content input[id^="stat-alloc-"]'))input.disabled=true;
-    const locked=/\b(?:allocate|resetStats|advance|learn|learnSupport|equipSkill|clearActiveSkill|slotProcSkill|clearProcSkill|slotSupport|socket)\s*\(/;
-    for(const control of document.querySelectorAll('.page-owner-content button,.page-owner-content select'))if(locked.test(control.getAttribute('onclick')||control.getAttribute('onchange')||'')){control.disabled=true;control.title='夥伴依固定走向自動成長';}
-  };
+  render=function(){syncCompanionLevels();return baseRender();};
   globalThis.__EMBERWILD_COMPANION_TEST_API={get plans(){return copy(plans);},get config(){return copy(config);},parsePlans,ensureRoster,companionPlan,applyPlan};
   try{const raw=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(raw){installPartnerSkills(raw);if(party)for(const h of party.members)cleanPartnerSkillSlots(h);}}catch(e){console.warn('專屬技能載入失敗',e);}
   if(state&&party)render();

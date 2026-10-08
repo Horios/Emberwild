@@ -666,7 +666,7 @@
   forgeView=function(){
     let html=identityForgeViewBase();
     const g=typeof findGear==='function'?findGear(forgeSelection):null;
-    if(!g)return html;
+    if(!g||g.starterPack||globalThis.EmberwildTokens?.isToken(g))return html;
     ensureGearIdentityMeta(g);
     if(g.boss!==undefined){
       const profile=bossProfileForGear(g),body='<section class="forge-action boss-exclusive-note"><h3>BOSS 專屬詞綴</h3><p class="small">固定三條，沒有前綴／後綴，也不能洗鍊隨機詞條。</p>'+(profile?.effects||[]).map((e,i)=>'<p><b>'+(i+1)+'.</b> '+esc(effectText(e))+'</p>').join('')+'</section>';
@@ -692,9 +692,9 @@
   // Reroll stone offers are configured by shopSettings alongside all other products.
 
   if(typeof update12BossMemberView==='function'){
-    update12BossMemberView=function(){
+    update12BossMemberView=function(job=state.job){
       const mode=state.difficulty||0,b=GAMEPLAY_SETTINGS.equipment.boss,needMat=Math.max(0,Math.round(b.craftMaterialCount));
-      return heading('BOSS WORKSHOP / 首領製作',MODES[mode].name+'模式專屬裝備')+modePicker()+'<section class="panel">'+resourceLine()+uiHelp('製作說明','BOSS 專屬裝備固定三條專屬詞綴，不抽前綴／後綴，也不能洗鍊隨機詞條；基底評級仍依難度抽選。')+'</section><div class="cards boss-recipes">'+MAPS.map((m,i)=>{if(i===6)return '';const family=regionFamily(i),tier=regionTier(i),g={job:state.job,slot:bossEquipmentSlot(family),tier,boss:family,region:i,difficulty:mode,rar:0,plus:0,affix:[],powerTier:strengthAnchor(mode)},mat=bossMaterial(i,mode),n=state.materials[mat]||0,cost=Math.round(tier*b.craftGoldPerTier*(mode+1)),ready=canVisit(i)&&state.lv>=m.min&&state.gold>=cost&&n>=needMat;return '<article class="card boss-recipe">'+equipmentArt(g)+'<span class="tag">'+esc(m.name)+'</span><h3>'+equipmentNameHTML(g)+'</h3><p class="small">'+esc(characterName(state))+' · LV'+m.min+'</p><p class="equipment-total-summary">'+globalThis.equipmentTotalSummaryHTML(g)+'</p>'+globalThis.equipmentAttributeDetailsHTML(g)+'<div class="recipe-cost"><span>'+esc(mat)+' '+n+'/'+needMat+'</span><span>◈ '+cost+'</span></div><button class="primary" onclick="craftBoss('+i+')" '+(ready?'':'disabled')+'>'+(!canVisit(i)?'尚未解鎖':ready?'製作裝備':'等級／材料不足')+'</button></article>';}).join('')+'</div>';
+      return heading('BOSS WORKSHOP / 首領製作',MODES[mode].name+'模式專屬裝備')+modePicker()+'<section class="panel">'+resourceLine()+uiHelp('製作說明','BOSS 專屬裝備固定三條專屬詞綴，不抽前綴／後綴，也不能洗鍊隨機詞條；基底評級仍依難度抽選。')+'</section><div class="cards boss-recipes">'+MAPS.map((m,i)=>{if(typeof worldIsFinalMap==='function'?worldIsFinalMap(i):i===6)return '';const family=regionFamily(i),tier=regionTier(i),g={job,slot:bossEquipmentSlot(family),tier,boss:family,region:i,difficulty:mode,rar:0,plus:0,affix:[],powerTier:strengthAnchor(mode)},mat=bossMaterial(i,mode),n=state.materials[mat]||0,cost=Math.round(tier*b.craftGoldPerTier*(mode+1)),ready=canVisit(i)&&state.lv>=m.min&&state.gold>=cost&&n>=needMat;return '<article class="card boss-recipe">'+equipmentArt(g)+'<span class="tag">'+esc(m.name)+'</span><h3>'+equipmentNameHTML(g)+'</h3><p class="small">'+esc(CLASSES[job].name)+' · LV'+m.min+'</p><p class="equipment-total-summary">'+globalThis.equipmentTotalSummaryHTML(g)+'</p>'+globalThis.equipmentAttributeDetailsHTML(g)+'<div class="recipe-cost"><span>'+esc(mat)+' '+n+'/'+needMat+'</span><span>◈ '+cost+'</span></div><button class="primary" onclick="craftBoss('+i+','+job+')" '+(ready?'':'disabled')+'>'+(!canVisit(i)?'尚未解鎖':ready?'製作裝備':'等級／材料不足')+'</button></article>';}).join('')+'</div>';
     };
   }
 

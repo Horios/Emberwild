@@ -1,0 +1,87 @@
+const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path');
+const {openRuntime}=require('./runtime.cjs');
+const root=path.resolve(__dirname,'..');
+function buildSnapshot(){
+ const d=packParty();
+ return {build:d.buildSystem,active:d.active,enlisted:d.enlisted,selected:d.selected,members:d.members.map(h=>({job:h.job,lv:h.lv,ap:h.ap,sp:h.sp,stats:h.stats,skills:h.skills,supportLevels:h.supportLevels,active:h.active,procSlots:h.procSlots,supportSlots:h.supportSlots,sockets:h.sockets,equipped:h.equipped,tokenId:h.tokenId,bag:h.bag,gold:h.gold,ore:h.ore,dust:h.dust,gems:h.gems,materials:h.materials}))};
+}
+
+async function startParty(page){
+ await page.evaluate(()=>{selectSaveSlot(1);start(0);clearInterval(timer);closeModal();recruitCompanion(10);closeModal();recruitCompanion(12);closeModal();playerHero().lv=5;syncParty();save();});
+ await page.waitForTimeout(50);await page.evaluate(()=>closeModal());
+}
+
+test('Chromium: team plans and worn companion tokens have one management page',async()=>{
+ const g=await openRuntime(root),p=g.page;
+ try{
+  await startParty(p);
+  for(const tab of ['battle','roster','partnerRoster','character','skills','equipment','worn','forge','bossCraft']){
+   await p.evaluate(t=>setTab(t),tab);
+   assert.equal(await p.locator('.team-plan-panel').count(),tab==='roster'?1:0,tab+' team plans');
+   assert.equal(await p.locator('.companion-token-panel').count(),tab==='worn'?1:0,tab+' token management');
+  }
+  await p.evaluate(()=>{setTab('roster');addTeamPlan();switchTeamPlan('team-2');});
+  for(const tab of ['battle','character','skills']){
+   await p.evaluate(t=>setTab(t),tab);
+   assert.equal(await p.locator('.team-plan-panel').count(),0);
+   assert.equal(await p.getByRole('button',{name:'前往隊伍編成',exact:true}).count(),1);
+  }
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
+
+test('Chromium: protagonist pages stay independent of companion selection and class browsing preserves builds',async()=>{
+ const g=await openRuntime(root),p=g.page;
+ try{
+  await startParty(p);
+  await p.evaluate(()=>{__EMBERWILD_TEAMS.build().permanent.masteries.sword=__EMBERWILD_MASTERY.masteryStepCost(0);playerHero().name='主角測試';partyMember(10).name='夥伴測試';party.selected=10;state=partyMember(10);pageHeroSelection.set('character',10);pageHeroSelection.set('skills',10);save();setTab('character');});
+  assert.equal(await p.locator('.page-hero-tabs').count(),0);
+  assert.equal(await p.locator('.companion-character-section').count(),0);
+  assert.match(await p.locator('main').innerText(),/主角測試/);
+  assert.doesNotMatch(await p.locator('main').innerText(),/夥伴測試/);
+  const companionStats=await p.evaluate(()=>partyMember(10).stats.slice());
+  await p.locator('#stat-alloc-0').fill('2');
+  await p.locator('#stat-alloc-0').locator('..').getByRole('button',{name:'分配',exact:true}).click();
+  assert.deepEqual(await p.evaluate(()=>playerHero().stats),[2,0,0]);
+  assert.deepEqual(await p.evaluate(()=>partyMember(10).stats),companionStats);
+  await p.evaluate(()=>{pageHeroSelection.set('skills',10);state=partyMember(10);setTab('skills');});
+  assert.equal(await p.locator('.page-hero-tabs').count(),0);
+  assert.equal(await p.locator('[data-skill-class]').count(),4);
+  const before=await p.evaluate(()=>{save();return {job:playerHero().job,selected:party.selected,state:memberKey(state),player:playerHero().skills.slice(),companion:partyMember(10).skills.slice()};});
+  const builds=await p.evaluate(buildSnapshot);
+  for(const job of [1,2,3]){
+   await p.locator('[data-skill-class="'+job+'"]').click();
+   await p.waitForFunction(j=>document.querySelector('.player-class-skills')?.dataset.playerSkillClass===String(j),job);
+   assert.equal(await p.locator('.player-class-skills').getAttribute('data-player-skill-class'),String(job));
+   assert.equal(await p.locator('.team-skill-row button,.team-skill-row select').count(),0);
+   assert.equal(await p.locator('.skill-loadout-summary').count(),0);
+   assert.equal(await p.evaluate(()=>playerHero().job),before.job);
+   assert.deepEqual(await p.evaluate(buildSnapshot),builds);
+   assert.equal(await p.evaluate(()=>memberKey(state)),before.state);
+  }
+  await p.locator('[data-skill-class="0"]').click();
+  await p.waitForFunction(()=>document.querySelector('.player-class-skills')?.dataset.playerSkillClass==='0');
+  assert.equal(await p.getByRole('button',{name:'免費重置本隊技能',exact:true}).count(),1);
+  assert.deepEqual(await p.evaluate(()=>({player:playerHero().skills,companion:partyMember(10).skills})),{player:before.player,companion:before.companion});
+  await p.locator('[data-team-skill="0:core:1"]').getByRole('button',{name:'學習',exact:true}).click();
+  await p.waitForFunction(()=>playerHero().skills[1]===1);
+  assert.deepEqual(await p.evaluate(()=>partyMember(10).skills),before.companion);
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
+
+test('Chromium: protagonist class catalog excludes companion-exclusive and monster skills',async()=>{
+ const g=await openRuntime(root),p=g.page;
+ try{
+  await startParty(p);
+  await p.evaluate(()=>{const d=exportableBalance();d.classes[0].skills[1].partnerId=10;d.supportSkills[0][1].partnerId=10;d.classes[0].skills[2].usageScope='monster';applyBalanceConfig(d);setTab('skills');});
+  assert.equal(await p.locator('[data-team-skill="0:core:0"]').count(),1);
+  for(const key of ['0:core:1','0:core:2','0:support:1'])assert.equal(await p.locator('[data-team-skill="'+key+'"]').count(),0,key);
+  await p.locator('[data-skill-class="1"]').click();
+  await p.waitForFunction(()=>document.querySelector('.player-class-skills')?.dataset.playerSkillClass==='1');
+  await p.locator('[data-skill-class="0"]').click();
+  await p.waitForFunction(()=>document.querySelector('.player-class-skills')?.dataset.playerSkillClass==='0');
+  for(const key of ['0:core:1','0:core:2','0:support:1'])assert.equal(await p.locator('[data-team-skill="'+key+'"]').count(),0,key);
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});

@@ -120,9 +120,7 @@
   equipmentView=function(){return inventoryCategory==='tokens'?inventoryTabs()+`<div class="companion-management-page">${pendingGearLootView()+tokenInventory()}</div>`:baseInventory();};
   const baseWorn=wornEquipmentView;
   wornEquipmentView=function(){pageHeroSelection.set('worn',memberKey(party.members[0]));return `<div class="companion-management-page worn-token-page">${baseWorn()+companionCards()}</div>`;};
-  for(const name of ['rosterView','partnerRosterView']){const base=globalThis[name];globalThis[name]=function(){return `<div class="companion-management-page">${base()+companionCards()}</div>`;};}
-  const baseCharacter=characterView;
-  characterView=function(){return `<div class="companion-management-page">${baseCharacter()+companionCards()}</div>`;};
+  for(const name of ['rosterView','partnerRosterView']){const base=globalThis[name];globalThis[name]=function(){return `<div class="companion-management-page">${base()}</div>`;};}
   const baseForge=openForge;
   openForge=function(id){const g=findGear(id);if(!M.isToken(g))return baseForge(id);$('modal').innerHTML=`<h2>信物強化</h2>${detail(g)}<p>每級屬性 +${GS('equipment.enhance.statPerLevel',.05)*100}%；特殊能力保持原參數。</p><p>${esc(upgradeCostText(g))}</p><div class="actions"><button onclick="enhance('${g.id}');closeModal();openForge('${g.id}')" ${g.plus>=RULES.enhanceMax||!canEnhance(g)?'disabled':''}>強化</button><button onclick="closeModal()">關閉</button></div>`;$('modal').showModal();};
   globalThis.__EMBERWILD_TOKEN_READY=true;
