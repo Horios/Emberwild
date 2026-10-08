@@ -321,6 +321,7 @@
   };
 
   function ensureGearIdentityMeta(g,{freshNames=false,freshPower=false,mode=null}={}){
+    if(EmberwildTokens.isToken(g))return g;
     if(!g||typeof g!=='object'||g.slot===undefined)return g;
     const sourceMode=mode===null?Math.max(0,Math.min(2,Number(g.difficulty)||0)):Math.max(0,Math.min(2,Number(mode)||0));
     if(freshPower||!Number.isInteger(g.powerTier)||g.powerTier<1||g.powerTier>10)g.powerTier=freshPower?rollStrengthTier(sourceMode):strengthAnchor(sourceMode);
@@ -345,6 +346,7 @@
     return (form.fixedEffects||[]).map(e=>({...e,source:'base'}));
   }
   function identityEffectEntriesForGear(g){
+    if(EmberwildTokens.isToken(g))return EmberwildTokens.effectsFor(g,GS('equipment.enhance.statPerLevel',.05));
     ensureGearIdentityMeta(g);
     if(g.boss!==undefined)return (bossProfileForGear(g)?.effects||[]).map(e=>({...e,source:'boss'}));
     const out=baseEffectEntries(g),p=prefixById(g.prefixId),s=suffixById(g.suffixId);
@@ -375,6 +377,7 @@
   const identityGearNameBase=gearName;
   const identityEquipmentDisplayBase=equipmentDisplayName;
   gearName=function(g){
+    if(EmberwildTokens.isToken(g))return g.snapshot.name;
     if(!g||g.slot===undefined)return identityGearNameBase(g);
     ensureGearIdentityMeta(g);
     const body=g.boss===undefined?(baseFormForGear(g)?.name||CLASS_GEAR[g.job??state?.job??0]?.[g.slot]||'裝備'):(CLASS_GEAR[g.job??state?.job??0]?.[g.slot]||'裝備');
@@ -394,6 +397,8 @@
 
   const identityQualityBase=gearQualityRank;
   gearQualityRank=function(g){if(g?.boss!==undefined)return Math.max(0,Math.min(3,Number(g.bossQualityRank??GS('equipment.boss.affixRankByDifficulty',[2,2,3])[g.difficulty||0])||2));return identityQualityBase(g);};
+  const tokenQualityBase=gearQualityRank;
+  gearQualityRank=function(g){return EmberwildTokens.isToken(g)?g.rar:tokenQualityBase(g);};
 
   bossPower=function(){return 1;};
   function rawTierStats(g){const tier=Math.max(1,Number(g?.tier)||1),atkPer=g.slot===2?GS('equipment.baseStats.offhandAttackPerTier',GS('equipment.baseStats.accessoryAttackPerTier',4)):GS('equipment.baseStats.accessoryAttackPerTier',4),hpPer=g.slot===2?GS('equipment.baseStats.offhandHpPerTier',GS('equipment.baseStats.accessoryHpPerTier',20)):GS('equipment.baseStats.accessoryHpPerTier',20);return {atk:g.slot===0?tier*GS('equipment.baseStats.weaponAttackPerTier',11):[2,3].includes(g.slot)?tier*atkPer:0,hp:g.slot===1?tier*GS('equipment.baseStats.armorHpPerTier',45):[2,3].includes(g.slot)?tier*hpPer:0,def:g.slot===1?tier*GS('equipment.baseStats.armorDefensePerTier',4):0};}
@@ -404,6 +409,7 @@
     return effects.filter(e=>e.key===key).reduce((n,e)=>n+(Number(e.value)||0),0);
   }
   function gearStatBreakdown(g){
+    if(EmberwildTokens.isToken(g)){const zero={atk:0,hp:0,def:0};return {raw:{...zero},body:{...zero},grade:{...zero},enhance:{...zero},total:{...zero},mult:g.qualityMultipliers[g.rar],powerTier:1,prefix:null,suffix:null,bossProfile:null};}
     ensureGearIdentityMeta(g);
     const raw=rawTierStats(g);
     const mult=strengthMultiplier(g),integers=EmberwildProgression.gearStats(raw,{atk:baseStatPct(g,'gearAtkPct'),hp:baseStatPct(g,'gearHpPct'),def:baseStatPct(g,'gearDefPct')},mult,g.plus||0,GS('equipment.enhance.statPerLevel',.05));
@@ -429,6 +435,7 @@
   stats=function(h=state){
     const cls=typeof heroGrowthDefinition==='function'?heroGrowthDefinition(h):CLASSES[h.job],initial=typeof globalThis.classInitialStats==='function'?classInitialStats(cls,h.job):{hp:cls.hp,atk:cls.atk,def:cls.def,crit:h.job===2?GS('progression.baseCrit.archer',.17):GS('progression.baseCrit.default',.07),critDamage:GS('combat.baseCritDamage',1.5)},growth=typeof globalThis.classGrowthPerLevel==='function'?classGrowthPerLevel(cls):{hp:GS('progression.statsPerLevel.hp',20),atk:GS('progression.statsPerLevel.attack',4),def:GS('progression.statsPerLevel.defense',2),crit:0,critDamage:0},natural=EmberwildProgression.naturalStats({initialStats:initial,growthPerLevel:growth,growthSteps:cls.growthSteps},h.lv),v={hp:natural.hp+h.stats[1]*GS('progression.statsPerPoint.hp',12),atk:natural.atk+h.stats[0]*GS('progression.statsPerPoint.attack',2),def:natural.def+h.stats[2]*GS('progression.statsPerPoint.defense',1.3),crit:initial.crit+(h.lv-1)*growth.crit,critDamage:initial.critDamage+(h.lv-1)*growth.critDamage,pierce:0,defenseIgnore:0,lifesteal:0,evasion:0,elementBonus:0,bossDamage:0,elementDamage:{},raceDamage:{},resist:{}};
     if(h.advanced){v.hp*=GS('progression.advance.hpMultiplier',1.18);v.atk*=GS('progression.advance.attackMultiplier',1.22);v.def*=GS('progression.advance.defenseMultiplier',1.15);}
+    if(h.companionId!==undefined)for(const key of ['pierce','defenseIgnore','lifesteal','evasion','elementBonus','bossDamage'])v[key]=(cls.initialStats?.[key]||0)+(h.lv-1)*(cls.growthPerLevel?.[key]||0);
     const attackBox={value:0,hp:0,defense:0};let fixedSpeed=0;
     for(const g of equipment(h)){
       const base=gearBaseStats(g);v.atk+=base.atk;v.hp+=base.hp;v.def+=base.def;

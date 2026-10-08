@@ -105,6 +105,8 @@
     const out=applyBase(clean,{persist:false});
     for(let job=0;job<CLASSES.length;job++)for(let i=0;i<CLASSES[job].skills.length;i++){
       const src=full.classes[job].skills[i],sk=CLASSES[job].skills[i];
+      // Reset/apply can reinstall a built-in late skill absent from old JSON.
+      if(!src){if(sk[6]){delete sk[6].tags;delete sk[6].induction;}continue;}
       sk[6]??={};sk[6].tags=copy(src.tags||[]);
       if(src.induction)sk[6].induction=copy(src.induction);else delete sk[6].induction;
       if(src.effect===api.EFFECT){sk[5]=api.EFFECT;sk[6].effects=[{kind:api.EFFECT}];}

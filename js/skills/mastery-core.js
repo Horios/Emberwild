@@ -219,7 +219,7 @@ function currentWeapon(h){
   const list=typeof equipment==='function'?equipment(h):[];
   return list.find(g=>Number(g?.slot)===0)||null;
 }
-function currentWeaponType(h){return ensureGearWeaponType(currentWeapon(h))?.weaponType||null;}
+function currentWeaponType(h){if(h?.companionId!==undefined)return globalThis.__EMBERWILD_COMPANION_TEST_API?.companionPlan(h)?.weapon||EmberwildCompanions.defaultPlans.find(p=>p.id===h.companionId)?.weapon||null;return ensureGearWeaponType(currentWeapon(h))?.weaponType||null;}
 function skillWeaponAllowed(h,meta){
   const types=Array.isArray(meta?.weaponTypes)?meta.weaponTypes.filter(x=>WEAPON_TYPES.has(x)):[];
   return !types.length||types.includes(currentWeaponType(h));

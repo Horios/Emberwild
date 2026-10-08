@@ -55,8 +55,9 @@
     hit=Math.max(min,Math.round(hit*(1-resist)));
     const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'mitigation',absorb);
     const hpDamage=Math.max(0,hit-absorb),before=h.hp;h.hp=Math.max(0,h.hp-hpDamage);
+    const dealt=Math.max(0,before-h.hp);globalThis.EmberwildTokenRuntime?.afterDamage(h,e,before,h.hp);
     if(before>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);
-    return Math.max(0,before-h.hp);
+    return dealt;
   }
   function applyEnemyStatusSkill(e,sk){
     const api=globalThis.__EMBERWILD_STATUS_TEST_API,meta=sk.meta||{};if(!api?.apply||!meta.statusId)return false;

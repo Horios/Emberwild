@@ -1,6 +1,6 @@
 /* Shared game/editor contract. Ratings classify design; budgets only emit warnings. */
 (function(root,factory){const node=typeof module==='object'&&module.exports,api=factory(node?require('../balance/progression-model.js'):root.EmberwildProgression);if(node)module.exports=api;else root.EmberwildCompanions=api;})(globalThis,function(Progression){
-  const ratings=['D','C','B','A','S','SS','SSS'],statKeys=['hp','atk','def','crit','critDamage','speed'];
+  const ratings=['D','C','B','A','S','SS','SSS'],statKeys=['hp','atk','def','crit','critDamage','speed','pierce','defenseIgnore','lifesteal','evasion','elementBonus','bossDamage'];
   const copy=x=>JSON.parse(JSON.stringify(x));
   const defaultPlans=[
     {id:10,job:0,role:'攻擊戰士',description:'劍術輸出、戰吼與破甲；優先提升攻擊。',names:['洛恩','雷昂','凱斯','艾伯'],points:[0,0,1],core:[0,2,4],active:[4,0],proc:[2],support:[0,2],weapon:'sword'},
@@ -11,10 +11,15 @@
   ].map(p=>({...p,rating:'D'}));
   function definition(plan,classes,settings){
     const cls=classes[plan.job],speed=settings?.combat?.speed||{},per=settings?.progression?.statsPerLevel||{};
-    return {initialStats:{hp:cls.hp,atk:cls.atk,def:cls.def,crit:plan.job===2?(settings?.progression?.baseCrit?.archer??.17):(settings?.progression?.baseCrit?.default??.07),critDamage:settings?.combat?.baseCritDamage??1.5,...cls.initialStats,speed:cls.initialStats?.speed??(speed.heroBase||[102,108,116,96])[plan.job]+(speed.heroPerLevel??.5),...plan.initialStats},growthPerLevel:{hp:per.hp??4,atk:per.attack??1,def:per.defense??1,crit:0,critDamage:0,...cls.growthPerLevel,speed:cls.growthPerLevel?.speed??speed.heroPerLevel??.5,...plan.growthPerLevel},growthSteps:copy(plan.growthSteps??cls.growthSteps??[])};
+    const out={initialStats:{...Object.fromEntries(statKeys.map(k=>[k,0])),hp:cls.hp,atk:cls.atk,def:cls.def,crit:plan.job===2?(settings?.progression?.baseCrit?.archer??.17):(settings?.progression?.baseCrit?.default??.07),critDamage:settings?.combat?.baseCritDamage??1.5,...cls.initialStats,speed:cls.initialStats?.speed??(speed.heroBase||[102,108,116,96])[plan.job]+(speed.heroPerLevel??.5),...plan.initialStats},growthPerLevel:{...Object.fromEntries(statKeys.map(k=>[k,0])),hp:per.hp??4,atk:per.attack??1,def:per.defense??1,...cls.growthPerLevel,speed:cls.growthPerLevel?.speed??speed.heroPerLevel??.5,...plan.growthPerLevel},growthSteps:copy(plan.growthSteps??cls.growthSteps??[])};
+    // Old definitions keep their custom growth and gain a conservative equipment
+    // budget once. Explicit v1 definitions contain that budget in their own fields.
+    if(plan.id!==undefined&&plan.equipmentInternalized!==1){const b=({10:[17,6,2,1.1,.65,.2],11:[21,5,3,1.5,.4,.35],12:[14,6,2,.85,.7,.18],13:[20,5,2,1.25,.5,.25],14:[15,6,2,.95,.65,.2]})[plan.id]||[17,6,2,1,.6,.2];['hp','atk','def'].forEach((k,i)=>{out.initialStats[k]+=b[i];out.growthPerLevel[k]+=b[i+3];});}
+    return out;
   }
   function validatePlanStats(p){
     if(p.rating!==undefined&&!ratings.includes(p.rating))throw Error('夥伴評級無效：'+p.id);
+    if(p.equipmentInternalized!==undefined&&p.equipmentInternalized!==1)throw Error('夥伴裝備內化版本無效：'+p.id);
     for(const field of ['initialStats','growthPerLevel'])if(p[field]!==undefined){
       const values=p[field];if(!values||typeof values!=='object'||Array.isArray(values)||Object.entries(values).some(([k,v])=>!statKeys.includes(k)||!Number.isFinite(v)||v<0)||field==='initialStats'&&['hp','atk'].some(k=>values[k]!==undefined&&values[k]<=0))throw Error('夥伴初始／成長資料無效：'+p.id);
     }
@@ -32,7 +37,7 @@
     return {base:sum(base),growth:sum(growth),baseStats:base,effectiveGrowth:growth,rawBase:base.hp+base.atk+base.def,rawGrowth:growth.hp+growth.atk+growth.def};
   }
   function defaults(classes,settings){
-    const per=settings?.progression?.statsPerPoint||{},weights={hp:1/(per.hp||3),atk:1/(per.attack||1),def:1/(per.defense||1),crit:100,critDamage:10,speed:.1};
+    const per=settings?.progression?.statsPerPoint||{},weights={...Object.fromEntries(statKeys.map(k=>[k,0])),hp:1/(per.hp||3),atk:1/(per.attack||1),def:1/(per.defense||1),crit:100,critDamage:10,speed:.1};
     const rows=defaultPlans.map(p=>totals(p,classes,settings,weights)),range=key=>({min:Math.floor(Math.min(...rows.map(r=>r[key]))*100)/100,max:Math.ceil(Math.max(...rows.map(r=>r[key]))*100)/100}),base=range('base'),growth=range('growth');
     const gap=key=>Math.ceil((Math.max(...rows.map(r=>r[key]))/Math.min(...rows.map(r=>r[key]))-1)*100);
     return {activeLimit:6,ratings:{weights,maxBaseGapPercent:gap('base'),maxGrowthGapPercent:gap('growth'),ranges:Object.fromEntries(ratings.map(r=>[r,{base:copy(base),growth:copy(growth)}]))}};

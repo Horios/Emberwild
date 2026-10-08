@@ -39,3 +39,5 @@ node tests/collect-progression.cjs /tmp/progression-rows.json
 `npm run test:companions` 驗證夥伴名冊、現役上限、上陣限制、養成／裝備 UID 保存、實際角色導向換裝、七種評級、可調軟警告、動態夥伴與專屬技能，包含真正重新整理讀檔和平衡器 JSON 下載。來源、相容性與 14% 成長差距依據見 `../docs/COMPANION_ROSTER.md`。設計器 `companion-model-v1` 必須與遊戲 `js/character/companion-model.js` 完全相同。
 
 `tests/shared-levels.test.cjs` 同時納入完整測試與夥伴測試：驗證只有主角累積 EXP、主角未上陣、1～3 人原有經驗量與限時增益、全名冊的固定配點／技能／自動二轉、晚招募與動態夥伴成長、LV30／60 上限、不同等級舊存檔與裝備／寶石保存、主角名稱及探索經驗條、升級卷軸與寫入失敗回復，以及實際開發工具操作。
+
+`npm run test:tokens` 驗證夥伴裝備內化與單一信物。包括實際成長、十件信物戰鬥、正式擊殺掉落、機率／冷卻／持續、待結算與冪等遷移、寫入失敗回復、主角修改前 16 組快照、UID 所有權、真正 Chromium 換裝／手機寬度／重新整理，以及設計器操作、實際 JSON 下載與檔案匯入。詳細欄位、數值與限制見 `../docs/COMPANION_TOKENS.md`。新夥伴不再生成五件普通裝備，舊夥伴普通裝備完整保留於共用背包／待結算。

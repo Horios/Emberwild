@@ -424,6 +424,7 @@ inlineInventoryView=function(){
   if(typeof validateParty==='function'){
     const auditedValidatePartyBase=validateParty;
     validateParty=function(data){
+      data=EmberwildTokens.prepareSave(data,RULES.bagCapacity);
       const out=auditedValidatePartyBase(data);
       if(data?.pendingGearLoot!==undefined){
         if(!Array.isArray(data.pendingGearLoot))throw Error('待結算裝備資料無效');
