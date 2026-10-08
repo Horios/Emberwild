@@ -8,7 +8,7 @@
     const refs=new Map();for(const g of items)for(const p of M.references(T.build(),g.id))refs.set(p.id,p.name);
     const verb=mode==='sell'?'販售':'分解';
     if(refs.size&&!confirm(`此${items.length>1?'批裝備':'裝備'}被以下隊伍使用：${[...refs.values()].join('、')}。\n確認${verb}後將失去物品實體，所有相關裝備／信物欄位會空置，不自動補裝。確定強制${verb}？`))return false;
-    if(!refs.size&&items.length>1&&!confirm(`確定${verb} ${items.length} 件裝備？物品實體將失去，無法復原。`))return false;
+    if(!refs.size&&(items.length>1||items.some(g=>g.boss!==undefined))&&!confirm(`確定${verb} ${items.length} 件裝備？物品實體將失去，無法復原。`))return false;
     const b=copy(T.build()),bag=state.bag,selected=party.selected,hp=party.members.map(h=>h.hp),h=T.player(),resource={};
     for(const k of ['gold','ore','dust','gems','materials','potions','consumables'])resource[k]=copy(h[k]);
     const removed=new Set(items.map(g=>g.id));
@@ -30,7 +30,16 @@
   confirmMassSalvage=()=>{if(!massSalvageIds)return false;const ok=dispose(massSalvageIds,'salvage');if(ok){massSalvageIds=null;closeModal();}return ok;};
   // Existing detail UI disabled worn gear. References now have a force-confirm
   // path, while locks and uncommitted affixes keep their existing protection.
-  const detailBase=inventoryGearDetail;inventoryGearDetail=function(g){let html=detailBase(g);if(disposable(g))html=html.replace(/(<button\b[^>]*onclick="(?:sellGear|salvage)\([^\"]*"[^>]*)\sdisabled/g,'$1');const refs=T.build()?M.references(T.build(),g.id):[];if(refs.length)html+=`<p class="small">隊伍引用：${refs.map(p=>esc(p.name)).join('、')} · 出售或分解會先確認並清空所有引用。</p>`;return html;};
+  const detailBase=inventoryGearDetail;
+  inventoryGearDetail=function(g){
+    let html=detailBase(g);if(!g)return html;
+    // The final forge-navigation renderer replaced the earlier sale UI.
+    if(!html.includes('onclick="sellGear('))html=html.replace('<div class="actions inventory-detail-actions">',`<div class="actions inventory-detail-actions"><button class="sell-gear-button" onclick="sellGear('${g.id}')" ${disposable(g)?'':'disabled'}>販售 ${equipmentSellPrice(g)} 金幣</button>`);
+    if(disposable(g))html=html.replace(/(<button\b[^>]*onclick="(?:sellGear|salvage)\([^\"]*"[^>]*)\sdisabled/g,'$1');
+    const refs=T.build()?M.references(T.build(),g.id):[];if(refs.length)html+=`<p class="small">隊伍引用：${refs.map(p=>esc(p.name)).join('、')} · 出售或分解會先確認並清空所有引用。</p>`;return html;
+  };
+  const bulkBase=bulkSalvageControls;
+  bulkSalvageControls=function(){return bulkBase().replace('已鎖定、已穿戴、待確認洗鍊的裝備不會分解。BOSS 專屬裝備會再次確認。','已鎖定與待確認洗鍊的裝備保留。被隊伍引用的裝備會先列出隊伍，確認後清空相關欄位。');};
   const equipmentBase=equipmentView;equipmentView=function(){let html=equipmentBase();html=html.replace(/(<button\b[^>]*onclick="salvage\('([^']+)'\)"[^>]*)\sdisabled/g,(full,prefix,id)=>disposable(findGear(id))?prefix:full);return html;};
   globalThis.__EMBERWILD_TEAM_EQUIPMENT={dispose,references:id=>M.references(T.build(),id)};
 })();

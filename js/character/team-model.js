@@ -28,7 +28,7 @@
   }
   function budget(level,progression,permanent){return {ap:Math.round((progression.starting.abilityPoints||0)+(level-1)*(progression.levelRewards.abilityPoints||0))+(permanent.abilityCredit||0),sp:Math.round((progression.starting.skillPoints||0)+(level-1)*(progression.levelRewards.skillPoints||0))+(permanent.skillCredit||0)};}
   const key=(job,kind,i)=>`${job}:${kind}:${i}`;
-  function blank(id,name,job=null,coreCount=0,supportCount=0){return {id,name,job,stats:[0,0,0],skills:Array(coreCount).fill(0),supportLevels:Array(supportCount).fill(0),active:[null,null],procSlots:[null,null],supportSlots:[null,null],equipped:Array(5).fill(null),sockets:Array(coreCount).fill(null),companions:[],enlisted:[],tokens:{}};}
+  function blank(id,name,job=null,coreCount=0,supportCount=0){return {id,name,job,playerActive:true,stats:[0,0,0],skills:Array(coreCount).fill(0),supportLevels:Array(supportCount).fill(0),active:[null,null],procSlots:[null,null],supportSlots:[null,null],equipped:Array(5).fill(null),sockets:Array(coreCount).fill(null),companions:[],enlisted:[],tokens:{}};}
   function spent(plan,classes,supports,cost=1){return plan.skills.reduce((n,v,i)=>n+(v?rules(classes[plan.job]?.skills[i],cost).learnCost:0),0)+plan.supportLevels.reduce((n,v,i)=>n+(v?rules(supports[plan.job]?.[i],cost).learnCost:0),0);}
   function references(build,id){return build.plans.filter(p=>p.equipped.includes(id)||Object.values(p.tokens).includes(id)).map(p=>({id:p.id,name:p.name}));}
   function clearReferences(build,ids){const set=new Set(ids);for(const p of build.plans){p.equipped=p.equipped.map(id=>set.has(id)?null:id);for(const k of Object.keys(p.tokens))if(set.has(p.tokens[k]))p.tokens[k]=null;}}
@@ -47,6 +47,7 @@
     for(const [k,v] of Object.entries(perm.classes))if(!/^\d+$/.test(k)||!classes[Number(k)]||!object(v)||typeof v.activated!=='boolean'||typeof v.advanced!=='boolean'||!int(v.xp)||!v.activated&&(v.xp||v.advanced))fail('職業永久成長無效');
     for(const [k,v] of Object.entries(perm.masteries))if(!/^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/.test(k)||!int(v))fail('武器／元素精通無效');
     for(const [k,v] of Object.entries(perm.gemInstances))if(!/^gem-\d+$/.test(k)||!int(v,0,2))fail('技能寶石實體無效');
+    if(Object.keys(perm.gemInstances).some(k=>Number(k.slice(4))>=perm.gemSerial))fail('技能寶石序號無效');
     if(perm.playerKey!==(members[0].playerId??members[0].job))fail('主角永久識別不符');
     const owned=new Map(items.map(g=>[g.id,g])),people=new Set(members.slice(1).map(h=>h.companionId??h.job)),ids=new Set(),totals=budget(level,progression,perm);
     for(const p of b.plans){
@@ -55,7 +56,9 @@
       if(!Array.isArray(p.stats)||p.stats.length!==3||p.stats.some(n=>!int(n,0,100000))||p.stats.reduce((a,v)=>a+v,0)>totals.ap||!Array.isArray(p.skills)||p.skills.length!==c||p.skills.some(n=>!int(n,0,1))||!Array.isArray(p.supportLevels)||p.supportLevels.length!==s||p.supportLevels.some(n=>!int(n,0,1))||spent(p,classes,supports,cfg.defaultLearnCost)>totals.sp)fail('隊伍配點超出額度');
       for(const [kind,list] of [['core',p.skills],['support',p.supportLevels]])if(list.some((v,i)=>v&&!perm.unlocks[key(p.job,kind,i)]))fail('隊伍學習了尚未永久解鎖的技能');
       for(const [field,list,type] of [['active',p.skills,'active'],['procSlots',p.skills,'proc'],['supportSlots',p.supportLevels,null]]){const slots=p[field];if(!Array.isArray(slots)||slots.length!==2||new Set(slots.filter(v=>v!==null)).size!==slots.filter(v=>v!==null).length||slots.some(i=>i!==null&&(!int(i,0,list.length-1)||!list[i]||type&&classes[p.job].skills[i].activation!==type)))fail('隊伍技能槽無效');}
-      if(!Array.isArray(p.equipped)||p.equipped.length!==5||!object(p.tokens)||!Array.isArray(p.companions)||p.companions.length>2||!Array.isArray(p.enlisted)||p.enlisted.length>512||new Set(p.enlisted).size!==p.enlisted.length||new Set(p.companions).size!==p.companions.length||p.enlisted.some(k=>!people.has(k))||p.companions.some(k=>!p.enlisted.includes(k)))fail('隊伍編成無效');
+      p.playerActive??=true;
+      const activeCount=Number(p.playerActive)+(p.companions?.length||0);
+      if(typeof p.playerActive!=='boolean'||activeCount<1||activeCount>3||!Array.isArray(p.equipped)||p.equipped.length!==5||!object(p.tokens)||!Array.isArray(p.companions)||p.companions.length>3||!Array.isArray(p.enlisted)||p.enlisted.length>512||new Set(p.enlisted).size!==p.enlisted.length||new Set(p.companions).size!==p.companions.length||p.enlisted.some(k=>!people.has(k))||p.companions.some(k=>!p.enlisted.includes(k)))fail('隊伍編成無效');
       p.equipped=p.equipped.map((id,i)=>{if(id===null)return null;if(typeof id!=='string')fail('装備 UID 無效');const g=owned.get(id);if(!g)return null;if(p.job===null||!wearable(g,p.job,i))fail('隊伍裝備不符職業或位置');return id;});
       for(const [k,id] of Object.entries(p.tokens)){if(!people.has(Number(k))||id!==null&&typeof id!=='string')fail('隊伍信物引用無效');if(id!==null&&!owned.has(id))p.tokens[k]=null;else if(id!==null&&owned.get(id).type!=='companionToken')fail('隊伍信物類型無效');}
       const used=[...p.equipped.filter(Boolean),...Object.values(p.tokens).filter(Boolean)];if(new Set(used).size!==used.length)fail('同一隊伍重複使用物品實體');
@@ -63,6 +66,8 @@
       if(p.job===null&&(p.stats.some(Boolean)||p.skills.some(Boolean)||p.equipped.some(Boolean)||p.companions.length||p.enlisted.length||Object.values(p.tokens).some(Boolean)))fail('空白隊伍含有配置');
     }
     if(!ids.has(b.activeId)||Number(b.plans.reduce((n,p)=>Math.max(n,Number(p.id.slice(5))),0))>=b.serial)fail('目前隊伍或序號無效');
+    const fields=Object.keys(blank('team-1','隊伍'));
+    b.plans=b.plans.map(p=>Object.fromEntries(fields.map(k=>[k,p[k]])));
     return b;
   }
   return {VERSION,defaults,copy,settings,rules,normalizeDocument,budget,key,blank,spent,references,clearReferences,prepareSave,validate};

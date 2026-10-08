@@ -4,7 +4,7 @@
   let lastPlayTick=Date.now(),wasVisible=document.visibilityState!=='hidden',allowTitleSave=false;
   const gameRender=render,gameStart=start,gameSave=save,gameNewGame=newGame,gameAcceptImport=acceptImport;
 
-  const playTimeKey=slot=>'emberwild-play-time-v1-slot-'+slot;
+  const playTimeKey=slot=>environmentStorageKey('emberwild-play-time-v1-slot-'+slot);
   function cachedPlayTime(slot){
     try{const value=Number(localStorage.getItem(playTimeKey(slot)));return Number.isSafeInteger(value)&&value>=0?value:0;}
     catch{return 0;}
@@ -67,7 +67,7 @@
     const missingTestForm=previewBuild&&!state&&String(globalThis.__EMBERWILD_BOOT_SAVE_ERROR||'').startsWith('裝備類型無效：');
     const testImport=missingTestForm?`<div class="title-actions"><button type="button" onclick="document.getElementById('title-test-json-import')?.click()">匯入測試 JSON</button><input id="title-test-json-import" type="file" accept=".json,application/json" onchange="importTestJSONFromTitle(event)" hidden></div><p class="small">只套用測試設定，不會匯入角色存檔。</p>${missingTestForm?'<p class="small">目前存檔使用測試 JSON 中的自訂裝備類型。請先匯入建立該存檔時使用的測試 JSON；原存檔仍保留，不會被覆寫。</p>':''}`:'';
     $('wallet').textContent='';
-    $('app').innerHTML=`<section class="title-screen"><div class="title-screen-card"><span class="eyebrow">${esc(resolveUIText(UI_TEXT.gameSubtitle))}</span><h1>${esc(resolveUIText(UI_TEXT.gameTitle))}</h1><p>${esc(resolveUIText(UI_TEXT.homeTitle))}</p><div class="save-slots">${[1,2,3].map(slotRow).join('')}</div><p class="small">舊存檔保留在欄位 1。遊玩時間從本次更新後開始累計。</p>${testImport}</div></section>`;
+    $('app').innerHTML=`<section class="title-screen"><div class="title-screen-card"><span class="eyebrow">${esc(resolveUIText(UI_TEXT.gameSubtitle))}</span><h1>${esc(resolveUIText(UI_TEXT.gameTitle))}</h1><p>${esc(resolveUIText(UI_TEXT.homeTitle))}</p><div class="save-slots">${[1,2,3].map(slotRow).join('')}</div><p class="small">${IS_PREVIEW?'預覽版首次複製既有存檔，之後獨立保存；正式版進度保留。':'舊存檔保留在欄位 1。遊玩時間從本次更新後開始累計。'}</p>${testImport}</div></section>`;
     applyUITextDOM();
   }
   render=function(){

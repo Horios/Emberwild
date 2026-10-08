@@ -14,11 +14,32 @@ const CLASSES=[{name:'戰士',advanced:'破曉騎士',icon:'',desc:'堅守前線
 const MAPS=[{name:'苔光林地',min:1,max:5,icon:'',color:'#34483a',mobs:[['苔原史萊姆','','黏稠凝膠'],['林間野狼','','完整狼牙'],['迷路樹精','','活性樹芯']],boss:['古木守望者','','古木年輪']},{name:'風蝕礦坑',min:6,max:10,icon:'',color:'#494333',mobs:[['洞穴蝙蝠','','薄翼膜'],['岩背蜥蜴','','堅硬石鱗'],['礦坑魔偶','','魔偶齒輪']],boss:['礦脈巨人','','礦脈之心']},{name:'暮色沼澤',min:11,max:15,icon:'≋',color:'#3d394b',mobs:[['劇毒蛙','','劇毒腺體'],['幽光飛蛾','','微光鱗粉'],['沼地亡魂','','怨念碎片']],boss:['泥沼女巫','‍','女巫符印']},{name:'霜眠山脊',min:16,max:20,icon:'△',color:'#364956',mobs:[['霜牙雪狼','','霜牙'],['冰晶妖精','','冰晶翅片'],['雪原巨熊','‍','厚暖熊皮']],boss:['凜冬巨獸','','永凍結晶']},{name:'熔火遺跡',min:21,max:25,icon:'',color:'#57392e',mobs:[['熔岩蟲','','灼熱甲殼'],['火羽渡鴉','‍','不熄火羽'],['失控鎧甲','','焦黑鋼片']],boss:['熔爐暴君','','熔核']},{name:'星隕荒原',min:26,max:30,icon:'',color:'#3c3c53',mobs:[['虛空獵犬','','虛空尖牙'],['星塵水母','','星塵觸鬚'],['墜星魔像','','隕鐵核心']],boss:['星隕監視者','','星隕稜鏡']},{name:'終焉王座',min:40,max:40,icon:'',color:'#4a2c3b',mobs:[],boss:['噬日者・厄爾','','日蝕王冠']}];
 const GEMS=[{name:'赤焰石',desc:'技能效果 +18%',icon:''},{name:'疾風石',desc:'主動冷卻 −1 回合（最低 1）／觸發率 +10%',icon:''},{name:'共鳴石',desc:'技能效果 +10%，觸發率 +5%／施放時回復攻擊力 15% 生命',icon:''}];
 const SLOTS=['武器','護甲','副手','飾品'];const RARITY=['普通','精良','稀有','傳說'];const AFFIX=['攻擊','生命','防禦','暴擊'];
-const SAVE_SLOT_SESSION_KEY='emberwild-selected-slot-v1',SAVE_SLOT_INTENT_KEY='emberwild-slot-intent-v1';
+// Preview has a separate copy so the older production client cannot discard
+// the new permanent/build extension when it saves its single-team projection.
+const IS_PREVIEW=/(?:^|\/)preview(?:\/|$)/.test(location.pathname);
+const environmentStorageKey=key=>IS_PREVIEW?key.replace(/^emberwild-/,'emberwild-preview-'):key;
+if(IS_PREVIEW){
+ try{
+  const marker=environmentStorageKey('emberwild-storage-initialized-v1');
+  if(!localStorage.getItem(marker)){
+   const keys=['emberwild-balance-test-v1'];
+   for(const slot of [1,2,3]){
+    const suffix=slot===1?'':'-slot-'+slot;
+    keys.push('emberwild-save-v1'+suffix,'emberwild-save-v1'+suffix+'-backup','emberwild-battle-statistics-v1'+suffix,'emberwild-play-time-v1-slot-'+slot);
+   }
+   const written=[];
+   try{
+    for(const key of keys){const value=localStorage.getItem(key),target=environmentStorageKey(key);if(value!==null&&localStorage.getItem(target)===null){localStorage.setItem(target,value);written.push(target);}}
+    localStorage.setItem(marker,'1');
+   }catch(e){for(const key of written)localStorage.removeItem(key);throw e;}
+  }
+ }catch(e){console.warn('無法建立獨立的預覽版存檔；正式版原始存檔保留',e);}
+}
+const SAVE_SLOT_SESSION_KEY=environmentStorageKey('emberwild-selected-slot-v1'),SAVE_SLOT_INTENT_KEY=environmentStorageKey('emberwild-slot-intent-v1');
 const ACTIVE_SAVE_SLOT=(()=>{try{const slot=Number(sessionStorage.getItem(SAVE_SLOT_SESSION_KEY));return [1,2,3].includes(slot)?slot:1;}catch{return 1;}})();
-const saveKeyForSlot=slot=>'emberwild-save-v1'+(slot===1?'':'-slot-'+slot);
+const saveKeyForSlot=slot=>environmentStorageKey('emberwild-save-v1'+(slot===1?'':'-slot-'+slot));
 const backupKeyForSlot=slot=>saveKeyForSlot(slot)+'-backup';
-const battleStatsKeyForSlot=slot=>'emberwild-battle-statistics-v1'+(slot===1?'':'-slot-'+slot);
+const battleStatsKeyForSlot=slot=>environmentStorageKey('emberwild-battle-statistics-v1'+(slot===1?'':'-slot-'+slot));
 const KEY=saveKeyForSlot(ACTIVE_SAVE_SLOT),BACKUP_KEY=backupKeyForSlot(ACTIVE_SAVE_SLOT);let state=null,tab='battle',running=false,enemy=null,round=0,cd={},logs=[],timer=null;let toastTimer;
 // Do not persist a partially hydrated save while later modules are still loading.
 let saveReady=false;
@@ -1242,7 +1263,7 @@ function refreshGlobalJournal(){
 
 // Update 09: data-driven test balance JSON and real multi-target core attacks.
 // Test settings are stored separately from player saves and can add entries that reuse existing mechanics.
-const BALANCE_KEY='emberwild-balance-test-v1',BALANCE_SCHEMA='emberwild-balance-v1';
+const BALANCE_KEY=environmentStorageKey('emberwild-balance-test-v1'),BALANCE_SCHEMA='emberwild-balance-v1';
 const GAME_BALANCE_DEFAULTS={
   combat:{
     elementMultipliers:{neutral:1,same:.8,strong:1.3,weak:.85},

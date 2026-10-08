@@ -8,7 +8,7 @@
     if(pointers.size||activeSelect)return;
     clearTimeout(releaseTimer);releaseTimer=null;
     interacting=false;
-    if(pendingRender){pendingRender=false;pendingJournal=false;gameRender();}
+    if(pendingRender){pendingRender=false;pendingJournal=false;gameRender();globalThis.__EMBERWILD_AFTER_RENDER?.();}
     else if(pendingJournal){pendingJournal=false;gameRefreshJournal();}
   }
   function scheduleRelease(delay){

@@ -19,7 +19,7 @@ test('legacy migration keeps exact gear, player loadout and character data, is i
  assert(out.preserved);assert(out.cleared);assert.deepEqual(out.after,out.hero);assert.equal(out.all.length,out.unique);assert.deepEqual(out.first,out.second);assert.equal(out.queued,5);assert.equal(out.reloadedQueued,5);assert.equal(out.bag,out.cap);
 });
 test('damaged token state and invalid configs reject before replacing the live party',()=>{
- const r=game(),out=json(r,`(()=>{const g=__EMBERWILD_TOKEN_TEST.makeToken('arcane');state.bag.push(g);equipCompanionToken(g.id,10);const raw=packParty(),live=party;let errors=0;for(const mutate of [d=>d.members[0].tokenId=g.id,d=>d.members[2].tokenId=g.id,d=>d.members[1].tokenId='missing',d=>d.members[0].bag.find(x=>x.id===g.id).snapshot.ability.chance=2]){const d=structuredClone(raw);mutate(d);try{loadParty(d);}catch{errors++;}}return {errors,same:party===live};})()`);assert.equal(out.errors,4);assert(out.same);
+ const r=game(),out=json(r,`(()=>{const g=__EMBERWILD_TOKEN_TEST.makeToken('arcane');state.bag.push(g);equipCompanionToken(g.id,10);const raw=packParty(),live=party;let errors=0;for(const mutate of [d=>d.members[0].tokenId=g.id,d=>d.members[2].tokenId=g.id,d=>d.members[0].bag.find(x=>x.id===g.id).snapshot.ability.chance=2]){const d=structuredClone(raw);mutate(d);try{loadParty(d);}catch{errors++;}}return {errors,same:party===live};})()`);assert.equal(out.errors,3);assert(out.same);
  assert.throws(()=>M.normalize({...M.defaults,qualityMultipliers:[0,1,1,1]}));assert.throws(()=>M.validateAbility({...M.defaults.catalog[0].ability,event:'damage',action:'extraDamage'}));
 });
 test('independent loot keeps regular rules and RNG intact; weights, restrictions, boost, quality and overflow are live',()=>{

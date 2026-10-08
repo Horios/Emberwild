@@ -491,4 +491,5 @@ globalThis.__EMBERWILD_MASTERY={
   coreMeta:runtimeCoreMeta,coreMissingRequirements,supportMissingRequirements,gainMastery,ensureHero:ensureHeroMastery,
   currentBattleGain:()=>clone(currentBattleMastery),lastBattleGain:()=>clone(lastBattleMastery),normalizeDocument:normalizeOverhaulDocument
 };
+globalThis.__EMBERWILD_MASTERY.resetBattleGain=()=>{if(Object.keys(currentBattleMastery).length)lastBattleMastery=currentBattleMastery;currentBattleMastery={};};
 })();
