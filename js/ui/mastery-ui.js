@@ -106,8 +106,8 @@ function inferredSupportIcon(sk){
 }
 function skillIconHTML(type){
   const definitions=M.iconDefinitions(),custom=typeof type==='string'&&type.startsWith('custom:')&&definitions.some(icon=>icon.id===type.slice(7));
-  const key=Object.hasOwn(ICONS.paths,type)||custom?type:'magic',tone=ICONS.toneByKey[key]||'neutral';
-  return `<span class="skill-icon-glyph ${custom?'icon-custom':'icon-'+key} tone-${tone}" aria-hidden="true">${ICONS.svgFor(key,definitions)}</span>`;
+  const key=ICONS.hasIcon(type)||ICONS.isLucideReference(type)||custom?type:'magic',tone=ICONS.toneByKey[key]||'neutral';
+  return `<span class="skill-icon-glyph ${custom?'icon-custom':ICONS.isLucideReference(key)?'icon-lucide':'icon-'+key} tone-${tone}" aria-hidden="true">${ICONS.svgFor(key,definitions)}</span>`;
 }
 function skillMasteryTooltip(meta){
   if(!meta?.requiredMastery)return '精通要求：無';
@@ -182,7 +182,7 @@ skillsView=function(){
   M.ensureHero(state);
   return singlePagePanel('skills','技能',()=>{const entries=skillCatalogEntries();if(skillSelectionJob!==memberKey(state)){skillSelectionJob=memberKey(state);skillSelection=null;skillTurn=1;}const visible=entries.filter(x=>x.turn===skillTurn),detail=selectedSkillDetailHTML(entries);return `${skillLoadoutSummaryHTML()}<div class="actions skill-turn-tabs"><button class="${skillTurn===1?'primary':''}" onclick="setSkillTurn(1)">一轉</button><button class="${skillTurn===2?'primary':''}" onclick="setSkillTurn(2)">二轉</button></div>${masterySummaryHTML()}<p class="small skill-board-help">技能依學習角色等級分列；移到圖示上可查看精通與其他學習條件，點擊圖示可查看詳細資料與配置。</p><div class="skill-layout-split"><div class="skill-tree-pane">${skillLevelBoardHTML(visible)}</div><div class="skill-detail-pane">${detail}</div></div>${devToolHTML()}`;});
 };
-globalThis.__EMBERWILD_MASTERY_UI={loadout:skillLoadoutSummaryHTML,devTools:devToolHTML,individual:()=>skillLoadoutSummaryHTML()+masterySummaryHTML()+coreSkillRows()+procSkillRows()+supportSkillRows()+devToolHTML()};
+globalThis.__EMBERWILD_MASTERY_UI={icon:skillIconHTML,loadout:skillLoadoutSummaryHTML,devTools:devToolHTML,individual:()=>skillLoadoutSummaryHTML()+masterySummaryHTML()+coreSkillRows()+procSkillRows()+supportSkillRows()+devToolHTML()};
 
 function stopForDev(){running=false;partyBusy=false;}
 globalThis.devMasterySetLevel=function(){

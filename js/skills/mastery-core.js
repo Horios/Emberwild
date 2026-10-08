@@ -12,18 +12,19 @@ const MASTERIES_BY_JOB=[
 const MASTERY_LABELS={sword:'劍',axe:'斧',hammer:'槌',bow:'弓',crossbow:'弩',fire:'火',ice:'冰',wind:'風',light:'光',shadow:'暗'};
 const SKILL_ICON_TYPES=new Set(['auto',...globalThis.__EMBERWILD_SKILL_ICONS.keys]);
 let customSkillIcons=[];
-const normalizeSkillIconType=(value,definitions=customSkillIcons)=>SKILL_ICON_TYPES.has(value)||typeof value==='string'&&value.startsWith('custom:')&&definitions.some(x=>x.id===value.slice(7))?value:'auto';
+const normalizeSkillIconType=(value,definitions=customSkillIcons)=>SKILL_ICON_TYPES.has(value)||globalThis.__EMBERWILD_SKILL_ICONS.isLucideReference(value)||typeof value==='string'&&value.startsWith('custom:')&&definitions.some(x=>x.id===value.slice(7))?value:'auto';
 function validateSkillIconDefinitions(input){
   if(input===undefined)return [];
   if(!Array.isArray(input)||input.length>100)throw Error('自訂技能圖示數量無效');
-  const ids=new Set(),valid=new Set(globalThis.__EMBERWILD_SKILL_ICONS.keys),tones=new Set(Object.keys(globalThis.__EMBERWILD_SKILL_ICONS.colors)),kinds=new Set(globalThis.__EMBERWILD_SKILL_ICONS.shapeKinds);
+  const ids=new Set(),tones=new Set(Object.keys(globalThis.__EMBERWILD_SKILL_ICONS.colors)),kinds=new Set(globalThis.__EMBERWILD_SKILL_ICONS.shapeKinds);
   for(const icon of input){
     if(!icon||typeof icon!=='object'||typeof icon.id!=='string'||!/^[-_a-z0-9]{1,40}$/.test(icon.id)||ids.has(icon.id)||typeof icon.name!=='string'||!icon.name.trim()||icon.name.length>40||!Array.isArray(icon.layers)||!icon.layers.length||icon.layers.length>8)throw Error('自訂技能圖示資料無效');
     ids.add(icon.id);
+    if(icon.appearance!==undefined&&!globalThis.__EMBERWILD_SKILL_ICONS.validAppearance(icon.appearance))throw Error('自訂技能圖示外觀無效：'+icon.id);
     for(const layer of icon.layers){
       const kind=layer?.kind||'icon',range=(key,min,max,required=true)=>layer[key]===undefined&&!required||Number.isFinite(layer[key])&&layer[key]>=min&&layer[key]<=max;
       let ok=!!layer&&kinds.has(kind)&&range('x',-24,24)&&range('y',-24,24)&&range('rotation',-180,180,false);
-      if(ok&&kind==='icon')ok=valid.has(layer.icon)&&range('scale',.25,2.5);
+      if(ok&&kind==='icon')ok=globalThis.__EMBERWILD_SKILL_ICONS.validReference(layer.icon)&&range('scale',.25,2.5);
       else if(ok){
         ok=range('strokeWidth',.4,10);
         if(kind==='line')ok=ok&&range('length',2,64);

@@ -43,12 +43,58 @@
   const num=(v,fallback=0)=>Number.isFinite(Number(v))?Number(v):fallback;
   const toneColor=(tone,fallbackKey='magic')=>colors[tone]||colors[toneByKey[fallbackKey]]||colors.neutral;
   const escAttr=v=>String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const lucide=globalThis.__EMBERWILD_LUCIDE,svgCache=new Map();
+  const isLucideReference=type=>typeof type==='string'&&/^lucide:[a-z0-9]+(?:-[a-z0-9]+)*$/.test(type)&&type.length<=107;
+  const hasIcon=type=>Object.hasOwn(paths,type)||isLucideReference(type)&&!!lucide&&Object.hasOwn(lucide.nodes,type.slice(7));
+  const validReference=type=>type==='none'||Object.hasOwn(paths,type)||isLucideReference(type);
+  const color=v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v)?v:'';
+  // Reuse text-rarity.css keyframes. Text fill/letter spacing effects are omitted.
+  const effects=Object.freeze({
+    '':{label:'無動畫',keyframe:'',duration:2,timing:'ease-in-out'},
+    breathe:{label:'呼吸',keyframe:'tr-gallery-breathe',duration:1.7,timing:'ease-in-out',direction:'alternate'},
+    blink:{label:'閃爍',keyframe:'tr-blink',duration:1.8,timing:'steps(1,end)'},
+    flicker:{label:'不規則閃爍',keyframe:'tr-flicker',duration:3,timing:'steps(1,end)'},
+    pulse:{label:'亮度脈衝',keyframe:'tr-pulse',duration:2,timing:'ease-in-out'},
+    float:{label:'浮動',keyframe:'tr-float',duration:2.7,timing:'ease-in-out'},
+    shake:{label:'震動',keyframe:'tr-shake',duration:.55,timing:'ease-in-out'},
+    glitch:{label:'科技故障',keyframe:'tr-glitch',duration:2.8,timing:'steps(1,end)'},
+    hue:{label:'彩色變化',keyframe:'tr-hue',duration:5,timing:'linear'},
+    heartbeat:{label:'心跳縮放',keyframe:'tr-heartbeat',duration:1.8,timing:'ease-in-out'},
+    spin:{label:'旋轉',keyframe:'ew-icon-spin',duration:3,timing:'linear'}
+  });
+  function normalizeAppearance(raw={}){
+    const a=raw&&typeof raw==='object'?raw:{},effect=Object.hasOwn(effects,a.effect)?a.effect:'',defaults=effects[effect];
+    const timing=['linear','ease','ease-in-out','steps(1,end)'].includes(a.effectTiming)&&!(a.effectTiming==='steps(1,end)'&&['spin','hue'].includes(effect))?a.effectTiming:defaults.timing;
+    return {color:color(a.color),size:bound(num(a.size,34),8,128,34),strokeWidth:bound(num(a.strokeWidth,2),.4,10,2),rotation:bound(num(a.rotation),-180,180,0),opacity:bound(num(a.opacity,1),0,1,1),glowColor:color(a.glowColor)||'#ffd86f',glowStrength:bound(num(a.glowStrength),0,24,0),effect,effectDuration:bound(num(a.effectDuration,defaults.duration),.15,30,defaults.duration),effectTiming:timing};
+  }
+  function validAppearance(a){
+    if(!a||typeof a!=='object'||Array.isArray(a))return false;
+    const ranges={size:[8,128],strokeWidth:[.4,10],rotation:[-180,180],opacity:[0,1],glowStrength:[0,24],effectDuration:[.15,30]};
+    return Object.entries(a).every(([key,value])=>{
+      if(ranges[key])return Number.isFinite(value)&&value>=ranges[key][0]&&value<=ranges[key][1];
+      if(key==='color'||key==='glowColor')return value===''||!!color(value);
+      if(key==='effect')return typeof value==='string'&&Object.hasOwn(effects,value);
+      if(key==='effectTiming')return ['linear','ease','ease-in-out','steps(1,end)'].includes(value)&&!(value==='steps(1,end)'&&['spin','hue'].includes(a.effect));
+      return false;
+    });
+  }
+  function lucideMarkup(name){
+    if(!lucide||!Object.hasOwn(lucide.nodes,name))return paths.magic;
+    if(!svgCache.has(name))svgCache.set(name,lucide.nodes[name].map(([tag,attrs])=>`<${tag} ${Object.entries(attrs).map(([key,value])=>`${key}="${escAttr(value)}"`).join(' ')}/>`).join(''));
+    return svgCache.get(name);
+  }
+  function iconMarkup(type,strokeWidth){
+    if(type==='none')return '';
+    if(Object.hasOwn(paths,type))return paths[type];
+    if(isLucideReference(type)&&hasIcon(type))return `<g transform="scale(2)" stroke-width="${strokeWidth??2}">${lucideMarkup(type.slice(7))}</g>`;
+    return paths.magic;
+  }
   function normalizeLayer(layer){
     if(!layer||typeof layer!=='object')return null;
     if(!layer.kind&&layer.icon)layer.kind='icon';
     if(!shapeKinds.includes(layer.kind||''))layer.kind='icon';
     if(layer.kind==='icon'){
-      return {kind:'icon',icon:Object.hasOwn(paths,layer.icon)?layer.icon:'magic',x:bound(num(layer.x),-24,24,0),y:bound(num(layer.y),-24,24,0),scale:bound(num(layer.scale,1),.25,2.5,1),rotation:bound(num(layer.rotation),-180,180,0),tone:layer.tone&&Object.hasOwn(colors,layer.tone)?layer.tone:undefined};
+      return {kind:'icon',icon:validReference(layer.icon)?layer.icon:'magic',x:bound(num(layer.x),-24,24,0),y:bound(num(layer.y),-24,24,0),scale:bound(num(layer.scale,1),.25,2.5,1),rotation:bound(num(layer.rotation),-180,180,0),tone:layer.tone&&Object.hasOwn(colors,layer.tone)?layer.tone:undefined};
     }
     if(layer.kind==='line'){
       return {kind:'line',x:bound(num(layer.x),-24,24,0),y:bound(num(layer.y),-24,24,0),length:bound(num(layer.length,18),2,64,18),rotation:bound(num(layer.rotation),-180,180,0),strokeWidth:bound(num(layer.strokeWidth,2.7),.4,10,2.7),tone:layer.tone&&Object.hasOwn(colors,layer.tone)?layer.tone:'neutral'};
@@ -87,25 +133,35 @@
     if(L.kind==='arc')return {x:24+L.x-L.r,y:24+L.y-L.r,w:L.r*2,h:L.r*2};
     const b=polygonBounds(L.points);return {x:24+L.x+b.x*L.scale,y:24+L.y+b.y*L.scale,w:b.w*L.scale,h:b.h*L.scale};
   }
-  function layerMarkup(rawLayer){
+  function layerMarkup(rawLayer,appearance){
     const layer=normalizeLayer(rawLayer);if(!layer)return '';
+    const paint=(tone,key)=>appearance?.color||toneColor(tone,key),stroke=appearance?.strokeWidth;
     if(layer.kind==='icon'){
-      const color=toneColor(layer.tone,layer.icon);
-      return `<g transform="translate(${layer.x} ${layer.y}) translate(24 24) rotate(${layer.rotation}) scale(${layer.scale}) translate(-24 -24)" color="${color}" stroke="currentColor">${paths[layer.icon]}</g>`;
+      const color=paint(layer.tone,layer.icon);
+      return `<g transform="translate(${layer.x} ${layer.y}) translate(24 24) rotate(${layer.rotation}) scale(${layer.scale}) translate(-24 -24)" color="${color}" stroke="currentColor">${iconMarkup(layer.icon,stroke)}</g>`;
     }
-    if(layer.kind==='line')return `<g transform="translate(${24+layer.x} ${24+layer.y}) rotate(${layer.rotation})" color="${toneColor(layer.tone)}"><line x1="${-layer.length/2}" y1="0" x2="${layer.length/2}" y2="0" stroke="currentColor" stroke-width="${layer.strokeWidth}" stroke-linecap="round"/></g>`;
-    if(layer.kind==='rect')return `<g transform="translate(${24+layer.x} ${24+layer.y}) rotate(${layer.rotation})"><rect x="${-layer.w/2}" y="${-layer.h/2}" width="${layer.w}" height="${layer.h}" rx="${layer.radius}" fill="${layer.filled?toneColor(layer.fillTone||layer.strokeTone):'none'}" stroke="${toneColor(layer.strokeTone)}" stroke-width="${layer.strokeWidth}"/></g>`;
-    if(layer.kind==='ellipse')return `<g transform="translate(${24+layer.x} ${24+layer.y}) rotate(${layer.rotation})"><ellipse cx="0" cy="0" rx="${layer.rx}" ry="${layer.ry}" fill="${layer.filled?toneColor(layer.fillTone||layer.strokeTone):'none'}" stroke="${toneColor(layer.strokeTone)}" stroke-width="${layer.strokeWidth}"/></g>`;
-    if(layer.kind==='arc')return `<g transform="translate(${24+layer.x} ${24+layer.y}) rotate(${layer.rotation})" color="${toneColor(layer.tone)}"><path d="${arcPath(layer.r,layer.start,layer.end)}" fill="none" stroke="currentColor" stroke-width="${layer.strokeWidth}"/></g>`;
-    return `<g transform="translate(${24+layer.x} ${24+layer.y}) rotate(${layer.rotation}) scale(${layer.scale})"><polygon points="${escAttr(layer.points)}" fill="${layer.filled?toneColor(layer.fillTone||layer.strokeTone):'none'}" stroke="${toneColor(layer.strokeTone)}" stroke-width="${layer.strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/></g>`;
+    if(layer.kind==='line')return `<g transform="translate(${24+layer.x} ${24+layer.y}) rotate(${layer.rotation})" color="${paint(layer.tone)}"><line x1="${-layer.length/2}" y1="0" x2="${layer.length/2}" y2="0" stroke="currentColor" stroke-width="${stroke??layer.strokeWidth}" stroke-linecap="round"/></g>`;
+    if(layer.kind==='rect')return `<g transform="translate(${24+layer.x} ${24+layer.y}) rotate(${layer.rotation})"><rect x="${-layer.w/2}" y="${-layer.h/2}" width="${layer.w}" height="${layer.h}" rx="${layer.radius}" fill="${layer.filled?paint(layer.fillTone||layer.strokeTone):'none'}" stroke="${paint(layer.strokeTone)}" stroke-width="${stroke??layer.strokeWidth}"/></g>`;
+    if(layer.kind==='ellipse')return `<g transform="translate(${24+layer.x} ${24+layer.y}) rotate(${layer.rotation})"><ellipse cx="0" cy="0" rx="${layer.rx}" ry="${layer.ry}" fill="${layer.filled?paint(layer.fillTone||layer.strokeTone):'none'}" stroke="${paint(layer.strokeTone)}" stroke-width="${stroke??layer.strokeWidth}"/></g>`;
+    if(layer.kind==='arc')return `<g transform="translate(${24+layer.x} ${24+layer.y}) rotate(${layer.rotation})" color="${paint(layer.tone)}"><path d="${arcPath(layer.r,layer.start,layer.end)}" fill="none" stroke="currentColor" stroke-width="${stroke??layer.strokeWidth}"/></g>`;
+    return `<g transform="translate(${24+layer.x} ${24+layer.y}) rotate(${layer.rotation}) scale(${layer.scale})"><polygon points="${escAttr(layer.points)}" fill="${layer.filled?paint(layer.fillTone||layer.strokeTone):'none'}" stroke="${paint(layer.strokeTone)}" stroke-width="${stroke??layer.strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/></g>`;
   }
-  function markupFor(type,definitions=[]){
+  function markupFor(type,definitions=[],appearance){
     if(Object.hasOwn(paths,type))return paths[type];
+    if(isLucideReference(type))return iconMarkup(type,appearance?.strokeWidth);
     if(typeof type!=='string'||!type.startsWith('custom:'))return paths.magic;
-    const icon=definitions.find(item=>item?.id===type.slice(7));
+    const icon=(Array.isArray(definitions)?definitions:[]).find(item=>item?.id===type.slice(7));
     if(!icon||!Array.isArray(icon.layers))return paths.magic;
-    return icon.layers.slice(0,8).map(layerMarkup).join('')||paths.magic;
+    return icon.layers.length?icon.layers.slice(0,8).map(layer=>layerMarkup(layer,appearance)).join(''):paths.magic;
   }
-  function svgFor(type,definitions=[]){return `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">${markupFor(type,definitions)}</svg>`;}
-  globalThis.__EMBERWILD_SKILL_ICONS=Object.freeze({paths:Object.freeze(paths),labels:Object.freeze(labels),keys:Object.freeze(keys),tones:Object.freeze(tones),colors:Object.freeze(colors),toneByKey:Object.freeze(toneByKey),shapeKinds:Object.freeze(shapeKinds),normalizeLayer,layerBounds,layerMarkup,markupFor,svgFor});
+  function svgFor(type,definitions=[],options={}){
+    const icon=typeof type==='string'&&type.startsWith('custom:')&&(Array.isArray(definitions)?definitions:[]).find(item=>item?.id===type.slice(7));
+    if(!icon?.appearance&&!isLucideReference(type)&&options.size===undefined)return `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">${markupFor(type,definitions)}</svg>`;
+    const a=normalizeAppearance(icon?.appearance??{strokeWidth:isLucideReference(type)||icon?.layers?.some(layer=>isLucideReference(layer.icon))?2:2.7}),effect=effects[a.effect],size=options.size===undefined?a.size:bound(num(options.size,34),8,128,34);
+    const style=`width:${size}px;height:${size}px;stroke-width:${a.strokeWidth};opacity:${a.opacity}${a.color?';color:'+a.color:''}`;
+    const animation=options.animate!==false&&effect.keyframe?` style="--ew-icon-animation:${effect.keyframe} ${a.effectDuration}s ${a.effectTiming} infinite ${effect.direction||'normal'}"`:'';
+    const glow=a.glowStrength?` style="filter:drop-shadow(0 0 ${a.glowStrength}px ${a.glowColor})"`:'';
+    return `<svg class="emberwild-icon" viewBox="0 0 48 48" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="${a.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true" style="${style}"><g class="ew-icon-glow"${glow}><g transform="rotate(${a.rotation} 24 24)"><g class="ew-icon-motion"${animation}>${markupFor(type,definitions,icon?.appearance?a:undefined)}</g></g></g></svg>`;
+  }
+  globalThis.__EMBERWILD_SKILL_ICONS=Object.freeze({paths:Object.freeze(paths),labels:Object.freeze(labels),keys:Object.freeze(keys),tones:Object.freeze(tones),colors:Object.freeze(colors),toneByKey:Object.freeze(toneByKey),shapeKinds:Object.freeze(shapeKinds),normalizeLayer,layerBounds,layerMarkup,markupFor,svgFor,hasIcon,validReference,isLucideReference,normalizeAppearance,validAppearance,effects});
 })();
