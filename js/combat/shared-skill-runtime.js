@@ -2,7 +2,7 @@
    Monsters keep only skillId references; definitions remain in CLASSES / SKILL_ELEMENTS. */
 (()=>{
   let enemySharedCooldowns=Object.create(null);
-  const BASIC_EFFECTS=new Set(['damage','heal','shield','drain','nextActiveDamage','advanceNextRound','shieldLowest','applyStatus']);
+  const BASIC_EFFECTS=new Set(['damage','heal','shield','drain','nextActiveDamage','advanceNextRound','shieldLowest','applyStatus','induceSkill']);
   const idFor=(job,index)=>CLASSES[job]?.skills?.[index]?.[6]?.sharedId||`job${job}-core${index}`;
   function sharedCoreSkillPool(){
     const out=[];
@@ -68,7 +68,7 @@
     else{const hs=heroTargets({...sk,maxTargets:1,meta:{...meta,target:'enemy'}});targets=hs.slice(0,1);}
     let ok=false;for(const t of targets)ok=api.apply(meta.statusId,e,t)||ok;return ok;
   }
-  function castEnemySharedSkill(e,sk){
+  function castEnemySharedSkillEffect(e,sk){
     if(!e||e.hp<=0||!sk||sk.meta?.partnerId!=null||!BASIC_EFFECTS.has(sk.effect))return false;
     const v=enemyBattleStats(e),basePower=v.atk*sk.power*(1+effectTotal(e.id,'power'))*(1-Math.min(GAMEPLAY_SETTINGS.combat.caps.weaken,effectTotal(e.id,'weaken'))),element=sk.element||e.element||'physical';
     if(sk.effect==='heal'){
@@ -86,6 +86,10 @@
     if(sk.effect==='drain'||v.lifesteal>0){const rate=(sk.effect==='drain'?1:0)+Math.max(0,v.lifesteal||0),heal=Math.round(total*rate);e.hp=Math.min(e.maxhp,e.hp+heal);}
     if(sk.activation==='active'&&stored>0)delete e.nextActiveDamageBonus;
     note(combatEnemyName(e)+'・'+sk.name+' → '+parts.join('、')+' 傷害','enemyDamage');return true;
+  }
+  function castEnemySharedSkill(e,sk){
+    if(globalThis.EmberwildInductionRuntime)return EmberwildInductionRuntime.castEnemy(e,sk,castEnemySharedSkillEffect);
+    return castEnemySharedSkillEffect(e,sk);
   }
   globalThis.castEnemySharedSkill=castEnemySharedSkill;
   function procChance(sk){const m=sk.meta||{},base=Number(m.procBaseChance);return Math.max(0,Math.min(1,Number.isFinite(base)?base:Number(GS('skills.proc.baseChance',.22))||.22));}
