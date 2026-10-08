@@ -461,7 +461,7 @@ function playerProgressView(context){
  return `<div class="player-progress player-progress-${context}" data-player-level="${h.lv}"><span class="player-progress-level">LV. ${String(h.lv).padStart(2,'0')}</span><div class="player-exp-bar" role="progressbar" aria-label="主角經驗值" aria-valuemin="0" aria-valuemax="${maximum}" aria-valuenow="${value}" aria-valuetext="${label}"><div class="player-exp-fill" style="width:${value/maximum*100}%"></div><span class="player-exp-text">${label}</span></div></div>`;
 }
 // Party keys identify people; job remains the class used by skills and equipment.
-function memberKey(h){return h?.companionId??h?.job;}
+function memberKey(h){return h?.companionId??h?.playerId??h?.job;}
 function partyMember(key){return party?.members.find(h=>memberKey(h)===key);}
 const solo={render,initial,save,validateSave,resetEncounter,stats,canVisit,victory,skillsView,guideView,start,exportSave};
 const SUPPORT=[
@@ -474,13 +474,14 @@ const EFFECT_NAMES={attack:'攻擊',guard:'減傷',fracture:'破甲',power:'技�
 const TARGET_NAMES={allies:'我方全體',weakest:'生命比例最低的隊友',enemies:'敵方全體',enemy:'目前集火目標'};
 function initHero(h){h.name??='';h.supportLevels??=[1,0,0];h.supportSlots??=[0,null];return h;}
 initial=function(job){return initHero(solo.initial(job));};
-function createParty(hero){return {version:3,members:[initHero(hero)],active:[hero.job],selected:hero.job,map:hero.map,difficulty:hero.difficulty||0,encounterMode:'group',etherBossClaims:[],cleared:hero.won,playTimeMs:0};}
+function createParty(hero){hero.playerId??=hero.job;return {version:3,members:[initHero(hero)],active:[memberKey(hero)],selected:memberKey(hero),map:hero.map,difficulty:hero.difficulty||0,encounterMode:'group',etherBossClaims:[],cleared:hero.won,playTimeMs:0};}
 function heroes(){return party?party.active.map(partyMember).filter(Boolean):state?[state]:[];}
 function living(){return heroes().filter(h=>h.hp>0);}
 function withHero(hero,fn){const previous=state;state=hero;try{return fn();}finally{state=previous;}}
 function syncParty(){if(!party)return;for(const h of party.members){h.map=party.map;h.difficulty=party.difficulty;if(party.cleared&&h.lv>=GS('progression.levelCaps.beforeClear',30))h.won=true;}}
 function packParty(){syncParty();return party;}
 save=function(show=false){
+ if(globalThis.__EMBERWILD_TEAM_BOOT_RAW&&!globalThis.__EMBERWILD_TEAM_READY)return;
  if(!saveReady||!state||partyBusy)return;
  if(!party)party=createParty(state);
  let payload,previous=null,backupWritten=false;
@@ -502,6 +503,7 @@ save=function(show=false){
  }
 };
 function validateParty(data){
+ data=EmberwildTeams.prepareSave(data);
  data=EmberwildTokens.prepareSave(data,RULES.bagCapacity);
  if(data?.version!==3){const h=initHero(solo.validateSave(data));return createParty(h);}
  if(!Array.isArray(data.members)||data.members.length<1||data.members.length>513||!Array.isArray(data.active)||data.active.length<1||data.active.length>3||new Set(data.active).size!==data.active.length||!['single','group'].includes(data.encounterMode)||!Number.isInteger(data.map)||!MAPS[data.map]||![0,1,2].includes(data.difficulty)||typeof data.cleared!=='boolean')throw Error('隊伍資料無效');
@@ -513,6 +515,7 @@ function validateParty(data){
   const h=solo.validateSave({...raw,map:0});initHero(h);
   if(h.companionId!==undefined&&(!Number.isInteger(h.companionId)||h.companionId<10||h.companionId>1000000000||EmberwildCompanions.defaultPlans.find(p=>p.id===h.companionId)?.job!==h.job&&data.companionProfiles?.[h.companionId]?.job!==h.job))throw Error('夥伴識別無效');
   if(!Array.isArray(h.supportLevels)||h.supportLevels.length!==3||h.supportLevels.some((n,i)=>!Number.isInteger(n)||n<0||n>Math.max(1,Math.floor(GS('skills.support.maxLevel',5)))||n>0&&(h.lv<SUPPORT[h.job][i].level||i===2&&!h.advanced))||!Array.isArray(h.supportSlots)||h.supportSlots.length!==2||h.supportSlots.some(i=>i!==null&&(!Number.isInteger(i)||i<0||i>2||h.supportLevels[i]<1))||h.supportSlots[0]!==null&&h.supportSlots[0]===h.supportSlots[1])throw Error('輔助技能資料無效');
+  if(result.members.length===0)h.playerId=raw.playerId??h.job;
   result.members.push(h);
  }
  if(result.enlisted!==undefined){const keys=result.members.map(memberKey);if(!Array.isArray(result.enlisted)||!result.enlisted.length||new Set(result.enlisted).size!==result.enlisted.length||result.enlisted.some(k=>!keys.includes(k))||result.active.some(k=>!result.enlisted.includes(k)))throw Error('現役夥伴資料無效');if(!result.enlisted.includes(result.selected))result.selected=result.enlisted[0];}
@@ -1694,6 +1697,7 @@ try{
 
 try{
   const raw=localStorage.getItem(KEY);
+  globalThis.__EMBERWILD_TEAM_BOOT_RAW=raw;
   globalThis.__EMBERWILD_BOOT_SAVE_RAW=raw;
   globalThis.__EMBERWILD_BOOT_SAVE_ERROR=null;
   if(raw){loadParty(JSON.parse(raw));note('隊伍存檔已載入。');}

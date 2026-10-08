@@ -102,6 +102,7 @@
 
   function materialCount(key){if(key==='鍛鐵')return state.ore;if(key==='粉塵')return state.dust;return state.materials[key]||0;}
   function setMaterialCount(key,value){value=Math.max(0,Math.floor(value));if(key==='鍛鐵')state.ore=value;else if(key==='粉塵')state.dust=value;else state.materials[key]=value;}
+  globalThis.materialCount=materialCount;globalThis.setMaterialCount=setMaterialCount;
   function economyResourceSnapshot(){return {gold:state.gold,ore:state.ore,dust:state.dust,potions:state.potions,healingPotions:economyClone(healingInventory()),materials:economyClone(state.materials),consumables:economyClone(state.consumables),gems:[...state.gems]};}
   function restoreEconomyResources(s){state.gold=s.gold;state.ore=s.ore;state.dust=s.dust;state.potions=s.potions;const inv=healingInventory();for(const k of Object.keys(inv))delete inv[k];Object.assign(inv,s.healingPotions);for(const k of Object.keys(state.materials))delete state.materials[k];Object.assign(state.materials,s.materials);for(const k of Object.keys(state.consumables))delete state.consumables[k];Object.assign(state.consumables,s.consumables);state.gems.splice(0,state.gems.length,...s.gems);}
 

@@ -47,6 +47,7 @@
     for(const [k,v] of Object.entries(perm.classes))if(!/^\d+$/.test(k)||!classes[Number(k)]||!object(v)||typeof v.activated!=='boolean'||typeof v.advanced!=='boolean'||!int(v.xp)||!v.activated&&(v.xp||v.advanced))fail('職業永久成長無效');
     for(const [k,v] of Object.entries(perm.masteries))if(!/^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/.test(k)||!int(v))fail('武器／元素精通無效');
     for(const [k,v] of Object.entries(perm.gemInstances))if(!/^gem-\d+$/.test(k)||!int(v,0,2))fail('技能寶石實體無效');
+    if(perm.playerKey!==(members[0].playerId??members[0].job))fail('主角永久識別不符');
     const owned=new Map(items.map(g=>[g.id,g])),people=new Set(members.slice(1).map(h=>h.companionId??h.job)),ids=new Set(),totals=budget(level,progression,perm);
     for(const p of b.plans){
       if(!p||!/^team-\d+$/.test(p.id)||ids.has(p.id)||typeof p.name!=='string'||!p.name.trim()||Array.from(p.name).length>24||/[\u0000-\u001f]/.test(p.name)||p.job!==null&&(!int(p.job,0,classes.length-1)||!perm.classes[p.job]?.activated))fail('隊伍名稱或職業無效');ids.add(p.id);

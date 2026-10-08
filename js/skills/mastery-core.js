@@ -91,8 +91,7 @@ const MASTERY_DEFAULTS={xpBase:8,xpLinear:5,xpQuadratic:1,skillUseXp:2,basicAtta
 function ensureMasterySettings(settings){
   if(!settings||typeof settings!=='object')return settings;
   settings.progression??={};settings.progression.starting??={};settings.progression.levelRewards??={};
-  settings.progression.starting.skillPoints=0;
-  settings.progression.levelRewards.skillPoints=0;
+  if(!settings.meta?.teamBuildVersion){settings.progression.starting.skillPoints=0;settings.progression.levelRewards.skillPoints=0;}
   if(settings.quests?.tutorial)settings.quests.tutorial.skillLevelRequirement=1;
   settings.skills??={};settings.skills.mastery??={};
   for(const [k,v] of Object.entries(MASTERY_DEFAULTS))if(!Number.isFinite(Number(settings.skills.mastery[k])))settings.skills.mastery[k]=v;
@@ -205,7 +204,7 @@ function ensureHeroMastery(h){
   if(!h||!Number.isInteger(Number(h.job)))return h;
   if(Array.isArray(h.skills))h.skills=h.skills.map(v=>Number(v)>0?1:0);
   if(Array.isArray(h.supportLevels))h.supportLevels=h.supportLevels.map(v=>Number(v)>0?1:0);
-  h.mastery=normalizeMastery(h.mastery,h.job);
+  h.mastery=globalThis.__EMBERWILD_TEAM_MASTERY?.(h)||normalizeMastery(h.mastery,h.job);
   migrateGearList(h.bag);
   return h;
 }
@@ -276,6 +275,7 @@ function gainMastery(h,key,amount){
   if(!h||!key||!validMasteries(h.job).includes(key))return 0;
   ensureHeroMastery(h);const add=Math.max(0,Math.floor(Number(amount)||0));if(!add)return 0;
   const before=masteryLevelFromXp(h.mastery[key]);h.mastery[key]+=add;const after=masteryLevelFromXp(h.mastery[key]);
+  globalThis.__EMBERWILD_TEAM_GAIN?.(h,add);
   const k=masteryGainKey(h,key);currentBattleMastery[k]=(currentBattleMastery[k]||0)+add;
   if(after>before)note(`${characterName(h)}・${MASTERY_LABELS[key]||key}精通提升至 Lv${after}`);
   return add;
