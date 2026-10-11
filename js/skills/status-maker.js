@@ -129,7 +129,7 @@ function statusDamageAmount(raw,source,target,fx){
 }
 function executeStatusPeriodic(inst,fx,immediate=false){
   const source=partyMember(inst.sourceKey??inst.sourceJob)||foes.find(e=>e.id===inst.sourceKey)||null,target=statusTargetByKey(inst.targetKey);if(!target||target.hp<=0)return 0;
-  const raw=Math.max(0,statusBasisValue(fx.basis,source,target)*fx.coefficient),prefix=immediate?'立即':'持續';
+  const basis=statusBasisValue(fx.basis,source,target)*fx.coefficient,raw=Math.max(0,fx.kind==='heal'?healingAmount(source,basis):basis),prefix=immediate?'立即':'持續';
   if(fx.kind==='heal'){
     const max=statusMaxHp(target),before=target.hp;target.hp=Math.min(max,target.hp+Math.max(0,Math.round(raw)));let healed=Math.max(0,target.hp-before);
     if(fx.resolution==='overflowShield'&&raw>healed){const overflow=Math.max(0,Math.round(raw-healed));target.shield=Math.max(Number(target.shield)||0,overflow);}
@@ -161,7 +161,7 @@ function applyCustomStatus(defOrId,source,target){
   activeStatuses.push(inst);applyStatusControl(def,target,source);
   const regenRate=def.modifiers.filter(m=>m.kind==='regen').reduce((sum,m)=>sum+Math.max(0,Number(m.value)||0),0);
   if(regenRate>0&&statusIsHero(target)){
-    const max=statusMaxHp(target),before=target.hp;target.hp=Math.min(max,target.hp+max*regenRate);const healed=Math.max(0,target.hp-before);
+    const max=statusMaxHp(target),before=target.hp;target.hp=Math.min(max,target.hp+healingAmount(source,max*regenRate));const healed=Math.max(0,target.hp-before);
     if(healed>0&&source&&typeof recordCombatContribution==='function')recordCombatContribution(source,'healing',healed);
     if(healed>0)note(def.name+'・再生 → '+characterName(target)+' '+Math.round(healed)+' 生命');
   }
@@ -243,7 +243,7 @@ resolveHit=function(e,amount,h,element,crit,options={}){const dealt=statusResolv
 
 // Add custom status modifiers to the same aggregation path used by existing buffs/debuffs.
 const statusEffectTotalBase=effectTotal;
-effectTotal=function(target,kind){return statusEffectTotalBase(target,kind)+activeStatuses.filter(x=>x.targetKey===target&&partyClock<x.expiresClock).reduce((sum,x)=>sum+x.definition.modifiers.filter(m=>m.kind===kind).reduce((n,m)=>n+m.value,0),0);};
+effectTotal=function(target,kind){return statusEffectTotalBase(target,kind)+activeStatuses.filter(x=>x.targetKey===target&&partyClock<x.expiresClock).reduce((sum,x)=>sum+x.definition.modifiers.filter(m=>m.kind===kind).reduce((n,m)=>n+(m.kind==='regen'?healingAmount(partyMember(x.sourceKey??x.sourceJob),m.value):m.value),0),0);};
 const statusCombatSpeedBase=combatSpeed;
 combatSpeed=function(e){let v=statusCombatSpeedBase(e);const frost=activeStatuses.some(x=>x.targetKey===e?.id&&partyClock<x.expiresClock&&x.definition.control?.kind==='frost');if(frost){const slow=Math.max(...activeStatuses.filter(x=>x.targetKey===e?.id&&partyClock<x.expiresClock&&x.definition.control?.kind==='frost').map(x=>x.definition.control.slowPct||.30));v=Math.max(1,Math.round(v*(1-Math.min(.95,slow))));}return v;};
 const statusInitiativeBase=initiativeOrder;
@@ -254,7 +254,7 @@ castPartySkill=function(h,i,v){
   const sk=CLASSES[h.job]?.skills?.[i],meta=sk?.[6];if(!sk||sk[5]!=='applyStatus')return statusCastBase(h,i,v);
   const def=statusById(meta?.statusId);if(!def||!statusAllowedTargetsForDefinition(def).includes(meta?.statusTarget||'enemy'))return false;const targets=statusTargetsForSkill(h,meta);if(!targets.length)return false;
   let success=false;for(const target of targets)success=applyCustomStatus(def,h,target)||success;
-  if(success&&h.sockets?.[i]===2&&sk[1]==='active'){const pv=v||battleStats(h),before=h.hp;h.hp=Math.min(pv.hp,h.hp+Math.round(pv.atk*GS('skills.gems.hybridActiveHealAttack',.10)));const recovered=Math.max(0,h.hp-before);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}
+  if(success&&h.sockets?.[i]===2&&sk[1]==='active'){const pv=v||battleStats(h),before=h.hp;h.hp=Math.min(pv.hp,h.hp+Math.round(healingAmount(h,pv.atk*GS('skills.gems.hybridActiveHealAttack',.10))));const recovered=Math.max(0,h.hp-before);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}
   const mastery=globalThis.__EMBERWILD_MASTERY;
   if(success&&meta?.mastery&&mastery?.gainMastery)mastery.gainMastery(h,meta.mastery,mastery.masterySettings().skillUseXp);
   return success;

@@ -55,8 +55,8 @@
     let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(enemyAvailableForSingleTarget)?.id];
     for(const target of targets.filter(Boolean)){
       effects=effects.filter(e=>!((e.sourceKey??e.source)===memberKey(h)&&e.skill===index&&e.target===target));
-      effects.push({source:h.job,sourceKey:memberKey(h),skill:index,target,kind:sk.kind,element:sk.element,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});
-      if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);if(ally){const before=ally.hp;ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));const recovered=Math.max(0,ally.hp-before);if(recovered>0)recordCombatContribution(h,'healing',recovered);}}
+      effects.push({source:h.job,sourceKey:memberKey(h),skill:index,target,kind:sk.kind,element:sk.element,value:sk.kind==='regen'?healingAmount(h,supportAmount(h.job,index)):supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});
+      if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);if(ally){const before=ally.hp;ally.hp=Math.min(solo.stats(ally).hp,ally.hp+healingAmount(h,solo.stats(ally).hp*supportAmount(h.job,index)));const recovered=Math.max(0,ally.hp-before);if(recovered>0)recordCombatContribution(h,'healing',recovered);}}
     }
     note(characterName(h)+'施放 '+sk.name+' · '+Math.round(sk.duration)+' 回合');
   };

@@ -128,10 +128,10 @@ affixLabel=function(a,g){if(a?.type===17)return `掉寶率 +${a.value}%`;return 
 
 // Save import compatibility for the newer affix types 16/17 while retaining the older validator for all other fields.
 const dropRateValidateSaveBase=validateSave;
-validateSave=function(input){
+validateSave=function(input,options){
   const copy=JSON.parse(JSON.stringify(input)),newTypes=new Map();
   for(const g of copy?.bag||[])for(let i=0;i<(g.affix||[]).length;i++){const a=g.affix[i];if(a&&[16,17,18].includes(a.type)){if(!Number.isFinite(a.value)||a.value<0||a.value>RULES.affixMax||!Number.isInteger(a.rank)||a.rank<0||a.rank>3)throw Error('新詞條資料無效');newTypes.set(g.id+':'+i,a.type);a.type=15;}}
-  const out=dropRateValidateSaveBase(copy);for(const g of out.bag||[])for(let i=0;i<(g.affix||[]).length;i++){const t=newTypes.get(g.id+':'+i);if(t!==undefined)g.affix[i].type=t;}return out;
+  const out=dropRateValidateSaveBase(copy,options);for(const g of out.bag||[])for(let i=0;i<(g.affix||[]).length;i++){const t=newTypes.get(g.id+':'+i);if(t!==undefined)g.affix[i].type=t;}return out;
 };solo.validateSave=validateSave;
 
 const dropTableBalanceReferenceBase=balanceReference;

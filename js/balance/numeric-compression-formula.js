@@ -193,7 +193,7 @@
     const absorb=Math.min(Math.max(0,Number(e.shield)||0),d);e.shield=Math.max(0,(Number(e.shield)||0)-absorb);d-=absorb;
     const actual=Math.min(e.hp,d);e.hp=Math.max(0,e.hp-d);
     if(actual>0)recordCombatContribution(h,'damage',actual);
-    const beforeLifesteal=h.hp;h.hp=Math.min(v.hp,h.hp+actual*v.lifesteal);
+    const beforeLifesteal=h.hp;h.hp=Math.min(v.hp,h.hp+healingAmount(h,actual*v.lifesteal));
     const healed=Math.max(0,h.hp-beforeLifesteal);if(healed>0)recordCombatContribution(h,'healing',healed);
     if(actual>0&&e.hp>0)triggerFollowupDebuffs(e);
     return actual;
@@ -208,11 +208,11 @@
       if(sk[5]==='shieldLowest'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const amount=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),r=applyPureShield(ally,amount);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 護盾 '+r.generated+(r.upgraded?'':'（現有護盾較高，維持不變）'));return true;}
     }
     const storedBonus=sk[1]==='active'?Math.max(0,Number(h.nextActiveDamageBonus)||0):0,basePower=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),power=basePower*((storedBonus>0&&['damage','drain'].includes(sk[5]))?1+storedBonus:1),element=coreSkillElement(h.job,i),profile=skillCombatProfile(h,i,v);let success=false;
-    if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(basePower));const recovered=Math.max(0,ally.hp-beforeHp);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');success=true;}
+    if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(healingAmount(h,basePower)));const recovered=Math.max(0,ally.hp-beforeHp);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');success=true;}
     else if(sk[5]==='shield'){const shieldResult=applyPureShield(h,basePower);note(pureShieldCastLog(h,sk[0],shieldResult));success=true;}
-    else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const crit=Math.random()<profile.critChance,d=resolveHit(e,power,h,element,crit,{critDamage:profile.critDamage,defensePenetration:profile.defensePenetration,defenseIgnore:profile.defenseIgnore});total+=d;results.push(combatEnemyName(e)+' '+d+(crit?'（暴擊）':''));}if(sk[5]==='drain'){const beforeDrain=h.hp;h.hp=Math.min(v.hp,h.hp+total);const recovered=Math.max(0,h.hp-beforeDrain);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害','playerDamage');success=true;}
+    else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const crit=Math.random()<profile.critChance,d=resolveHit(e,power,h,element,crit,{critDamage:profile.critDamage,defensePenetration:profile.defensePenetration,defenseIgnore:profile.defenseIgnore});total+=d;results.push(combatEnemyName(e)+' '+d+(crit?'（暴擊）':''));}if(sk[5]==='drain'){const beforeDrain=h.hp;h.hp=Math.min(v.hp,h.hp+healingAmount(h,total));const recovered=Math.max(0,h.hp-beforeDrain);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害','playerDamage');success=true;}
     if(success&&sk[1]==='active'&&storedBonus>0)delete h.nextActiveDamageBonus;
-    if(success&&h.sockets[i]===2&&sk[1]==='active'){const beforeGem=h.hp;h.hp=Math.min(v.hp,h.hp+Math.round(v.atk*GS('skills.gems.hybridActiveHealAttack',.10)));const recovered=Math.max(0,h.hp-beforeGem);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}
+    if(success&&h.sockets[i]===2&&sk[1]==='active'){const beforeGem=h.hp;h.hp=Math.min(v.hp,h.hp+Math.round(healingAmount(h,v.atk*GS('skills.gems.hybridActiveHealAttack',.10))));const recovered=Math.max(0,h.hp-beforeGem);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}
     return success;
   };
 

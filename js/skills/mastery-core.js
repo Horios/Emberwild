@@ -201,11 +201,13 @@ function migrateAllKnownWeapons(){
 const masteryGearBase=gear;
 gear=function(...args){return ensureGearWeaponType(masteryGearBase(...args));};
 
+function isCompanionHero(h){return !!h&&(h.companionId!==undefined||!!party?.members?.slice(1).includes(h));}
 function ensureHeroMastery(h){
   if(!h||!Number.isInteger(Number(h.job)))return h;
   if(Array.isArray(h.skills))h.skills=h.skills.map(v=>Number(v)>0?1:0);
   if(Array.isArray(h.supportLevels))h.supportLevels=h.supportLevels.map(v=>Number(v)>0?1:0);
-  h.mastery=globalThis.__EMBERWILD_TEAM_MASTERY?.(h)||normalizeMastery(h.mastery,h.job);
+  if(isCompanionHero(h))delete h.mastery;
+  else h.mastery=globalThis.__EMBERWILD_TEAM_MASTERY?.(h)||normalizeMastery(h.mastery,h.job);
   migrateGearList(h.bag);
   return h;
 }
@@ -227,19 +229,19 @@ function skillWeaponAllowed(h,meta){
 function coreMissingRequirements(h,i,forUse=false){
   const sk=CLASSES[h.job]?.skills?.[i];if(!sk)return ['技能不存在'];
   const meta=runtimeCoreMeta(h.job,i),reasons=[];if(typeof skillAllowedForPartner==='function'&&!skillAllowedForPartner(h,meta))reasons.push('指定夥伴專屬');
-  if(!forUse&&h.lv<sk[2])reasons.push(`角色 LV${sk[2]}`);
-  if(!forUse&&skillRequiresAdvanced(sk,i)&&!h.advanced)reasons.push('完成二轉');
+  if(!isCompanionHero(h)&&!forUse&&h.lv<sk[2])reasons.push(`角色 LV${sk[2]}`);
+  if(!isCompanionHero(h)&&!forUse&&skillRequiresAdvanced(sk,i)&&!h.advanced)reasons.push('完成二轉');
   const req=meta.requiredMastery,reqLv=Math.max(0,Math.floor(Number(meta.requiredMasteryLevel)||0));
-  if(!forUse&&req&&masteryLevelFromXp(h.mastery?.[req]||0)<reqLv)reasons.push(`${MASTERY_LABELS[req]||req}精通 Lv${reqLv}`);
+  if(!isCompanionHero(h)&&!forUse&&req&&masteryLevelFromXp(h.mastery?.[req]||0)<reqLv)reasons.push(`${MASTERY_LABELS[req]||req}精通 Lv${reqLv}`);
   if(!skillWeaponAllowed(h,meta))reasons.push(`武器 ${meta.weaponTypes.map(x=>WEAPON_TYPE_LABELS[x]||x).join('／')}`);
   return reasons;
 }
 function supportMissingRequirements(h,i,forUse=false){
   const sk=SUPPORT[h.job]?.[i];if(!sk)return ['技能不存在'];const reasons=[];if(typeof skillAllowedForPartner==='function'&&!skillAllowedForPartner(h,sk))reasons.push('指定夥伴專屬');
-  if(!forUse&&h.lv<sk.level)reasons.push(`角色 LV${sk.level}`);
-  if(!forUse&&i===2&&!h.advanced)reasons.push('完成二轉');
+  if(!isCompanionHero(h)&&!forUse&&h.lv<sk.level)reasons.push(`角色 LV${sk.level}`);
+  if(!isCompanionHero(h)&&!forUse&&i===2&&!h.advanced)reasons.push('完成二轉');
   const req=sk.requiredMastery,reqLv=Math.max(0,Math.floor(Number(sk.requiredMasteryLevel)||0));
-  if(!forUse&&req&&masteryLevelFromXp(h.mastery?.[req]||0)<reqLv)reasons.push(`${MASTERY_LABELS[req]||req}精通 Lv${reqLv}`);
+  if(!isCompanionHero(h)&&!forUse&&req&&masteryLevelFromXp(h.mastery?.[req]||0)<reqLv)reasons.push(`${MASTERY_LABELS[req]||req}精通 Lv${reqLv}`);
   if(!skillWeaponAllowed(h,sk))reasons.push(`武器 ${(sk.weaponTypes||[]).map(x=>WEAPON_TYPE_LABELS[x]||x).join('／')}`);
   return reasons;
 }
@@ -273,6 +275,7 @@ supportAmount=function(job,index){const sk=SUPPORT[job]?.[index];return sk?Numbe
 let currentBattleMastery={},lastBattleMastery={};
 function masteryGainKey(h,key){return `${memberKey(h)}:${key}`;}
 function gainMastery(h,key,amount){
+  if(isCompanionHero(h)){delete h.mastery;return 0;}
   if(!h||!key||!validMasteries(h.job).includes(key))return 0;
   ensureHeroMastery(h);const add=Math.max(0,Math.floor(Number(amount)||0));if(!add)return 0;
   const before=masteryLevelFromXp(h.mastery[key]);h.mastery[key]+=add;const after=masteryLevelFromXp(h.mastery[key]);
@@ -330,15 +333,16 @@ const masteryValidatePartyBase=validateParty;
 validateParty=function(input){
   const raw=clone(input),prepared=prepSaveForLegacyValidator(input),p=masteryValidatePartyBase(prepared);
   const rawRows=raw?.version===3?raw.members:[raw];
-  for(const h of p.members||[]){
+  for(const [memberIndex,h] of (p.members||[]).entries()){
     const source=rawRows?.find(x=>memberKey(x)===memberKey(h)),rawMastery=source?.mastery;
-    if(rawMastery!==undefined){
+    if(memberIndex===0&&rawMastery!==undefined){
       if(!rawMastery||typeof rawMastery!=='object'||Array.isArray(rawMastery))throw Error('精通資料無效');
       const valid=new Set(validMasteries(h.job));
       for(const [key,value] of Object.entries(rawMastery))if(!valid.has(key)||!Number.isSafeInteger(value)||value<0||value>1e12)throw Error('精通 XP 無效：'+key);
     }
     for(const g of source?.bag||[])if(Number(g?.slot)===0&&g.weaponType!==undefined&&!WEAPON_TYPES.has(g.weaponType))throw Error('裝備類型資料無效');
-    h.mastery=normalizeMastery(rawMastery,h.job);ensureHeroMastery(h);
+    if(memberIndex>0)delete h.mastery;else h.mastery=normalizeMastery(rawMastery,h.job);
+    if(memberIndex===0)ensureHeroMastery(h);
   }
   migrateWeaponCatalog();migrateGearList(p.sharedGear?.items);for(const h of p.members||[])migrateGearList(h.bag);
   return p;

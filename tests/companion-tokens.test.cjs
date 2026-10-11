@@ -7,7 +7,7 @@ test('real runtime: five distinct internal growth profiles, decimals and zero gr
  const r=game(),result=json(r,`(()=>{const player=stats(playerHero()),rows=[];for(const lv of [1,2,15,30,60]){playerHero().lv=lv;playerHero().won=lv>=30;syncParty();rows.push(party.members.slice(1).map(h=>({id:h.companionId,lv:h.lv,...stats(h)})));}const h=partyMember(10),before=stats(h),g=gear(12,0,3,0);g.plus=10;state.bag.push(g);h.equipped[0]=g.id;const after=stats(h);return {player,rows,before,after,weapon:__EMBERWILD_MASTERY.currentWeaponType(h),count:state.bag.length};})()`);
  assert.deepEqual(result.before,result.after);assert.equal(result.weapon,'sword');assert.equal(result.count,6);
  assert.deepEqual(result.rows.map(row=>row.map(h=>h.lv)),[1,2,15,30,60].map(lv=>Array(5).fill(lv)));
- assert.equal(result.rows[0][0].hp,47);assert.equal(result.rows[0][1].hp,51);assert.notEqual(result.rows[4][0].atk,result.rows[4][1].atk);assert.equal(result.rows[4][0].crit,result.rows[0][0].crit);
+ assert.equal(result.rows[0][0].hp,47);assert.equal(result.rows[0][1].hp,56);assert.notEqual(result.rows[4][0].atk,result.rows[4][1].atk);assert.equal(result.rows[4][0].crit,result.rows[0][0].crit);
  const d=json(r,`exportableBalance().companions[0]`);assert.equal(d.growthPerLevel.hp,6.1);assert.equal(d.equipmentInternalized,1);assert.deepEqual(r.errors,[]);
 });
 test('single-slot eligibility, exclusive UID ownership, reserves, compound percentages, quality, enhancement, save/reload',()=>{

@@ -382,7 +382,7 @@ function migrateLegacyEquipmentSlotsInSave(s){
  return s;
 }
 // Validate a private copy; migrations never modify an untrusted caller object.
-function validateSave(input) {
+function validateSave(input,{companion=false}={}) {
   const fail=message=>{throw Error(message);};
   const int=(v,min=0,max=1e12)=>Number.isSafeInteger(v)&&v>=min&&v<=max;
   const num=(v,min=0,max=1e12)=>Number.isFinite(v)&&v>=min&&v<=max;
@@ -405,7 +405,7 @@ function validateSave(input) {
   if(!array(s.gems,3)||!s.gems.every(v=>int(v,0,1e9)))fail('寶石陣列無效');
   for(const k of ['advanced','won','autoPotion'])if(typeof s[k]!=='boolean')fail('角色狀態無效');
   if(!int(s.tutorial,0,3)||s.advanced&&s.lv<GS('progression.advance.level',15)||s.won&&s.lv<GS('progression.levelCaps.beforeClear',30))fail('角色進度無效');
-  for(let i=0;i<skillCount;i++)if(s.skills[i]>0&&(s.lv<CLASSES[s.job].skills[i][2]||skillRequiresAdvanced(CLASSES[s.job].skills[i],i)&&!s.advanced))fail('尚未解鎖的技能');
+  for(let i=0;i<skillCount;i++)if(!companion&&s.skills[i]>0&&(s.lv<CLASSES[s.job].skills[i][2]||skillRequiresAdvanced(CLASSES[s.job].skills[i],i)&&!s.advanced))fail('尚未解鎖的技能');
   if(!array(s.active,2)||!s.active.every(i=>i===null||int(i,0,s.skills.length-1)&&s.skills[i]>0&&(i>=skillCount||CLASSES[s.job].skills[i][1]==='active'))||s.active[0]!==null&&s.active[0]===s.active[1])fail('主動槽無效');
   // Unknown trailing active slots belong to late-installed skills. Do not expose them
   // to early renderers; the original boot bytes are rehydrated after those skills exist.
@@ -534,9 +534,9 @@ function validateParty(data){
  const result={companionEquipmentVersion:EmberwildTokens.VERSION,pendingGearLoot:data.pendingGearLoot,progressionCurveVersion:data.progressionCurveVersion,progressionXpRequirements:data.progressionXpRequirements?[...data.progressionXpRequirements]:undefined,version:3,enlisted:data.enlisted,members:[],active:[...data.active],selected:data.selected,map:data.map,difficulty:data.difficulty,encounterMode:'group',cleared:data.cleared,playTimeMs,companionNames:data.companionNames,companionProfiles:data.companionProfiles,...EmberwildTimedBoosts.validateState(data)};
  for(const raw of data.members){
   // Reserves may be below the expedition level; validate their personal data at home.
-  const h=solo.validateSave({...raw,map:0});initHero(h);
+  const companion=result.members.length>0,h=solo.validateSave({...raw,map:0},{companion});initHero(h);
   if(h.companionId!==undefined&&(!Number.isInteger(h.companionId)||h.companionId<10||h.companionId>1000000000||EmberwildCompanions.defaultPlans.find(p=>p.id===h.companionId)?.job!==h.job&&data.companionProfiles?.[h.companionId]?.job!==h.job))throw Error('夥伴識別無效');
-  if(!Array.isArray(h.supportLevels)||h.supportLevels.length!==3||h.supportLevels.some((n,i)=>!Number.isInteger(n)||n<0||n>Math.max(1,Math.floor(GS('skills.support.maxLevel',5)))||n>0&&(h.lv<SUPPORT[h.job][i].level||i===2&&!h.advanced))||!Array.isArray(h.supportSlots)||h.supportSlots.length!==2||h.supportSlots.some(i=>i!==null&&(!Number.isInteger(i)||i<0||i>2||h.supportLevels[i]<1))||h.supportSlots[0]!==null&&h.supportSlots[0]===h.supportSlots[1])throw Error('輔助技能資料無效');
+  if(!Array.isArray(h.supportLevels)||h.supportLevels.length!==3||h.supportLevels.some((n,i)=>!Number.isInteger(n)||n<0||n>Math.max(1,Math.floor(GS('skills.support.maxLevel',5)))||!companion&&n>0&&(h.lv<SUPPORT[h.job][i].level||i===2&&!h.advanced))||!Array.isArray(h.supportSlots)||h.supportSlots.length!==2||h.supportSlots.some(i=>i!==null&&(!Number.isInteger(i)||i<0||i>2||h.supportLevels[i]<1))||h.supportSlots[0]!==null&&h.supportSlots[0]===h.supportSlots[1])throw Error('輔助技能資料無效');
   if(result.members.length===0)h.playerId=raw.playerId??h.job;
   result.members.push(h);
  }
@@ -558,6 +558,7 @@ function setEncounterMode(mode){if(mode!=='group')return;resetEncounter();party.
 function supportAmount(job,index){const h=party.members.find(h=>h.job===job),sk=SUPPORT[job][index],perLevel=Number.isFinite(sk.effectPerLevel)?sk.effectPerLevel:GS('skills.support.effectPerExtraLevel',.2);return sk.value+Math.max(0,(Number(h.supportLevels[index])||0)-1)*perLevel;}
 function effectTotal(target,kind){return effects.filter(e=>e.target===target&&e.kind===kind&&e.until>partyClock).reduce((sum,e)=>sum+e.value,0);}
 function heroKey(h){return 'hero-'+memberKey(h);}
+function healingAmount(h,amount){return globalThis.scaleHeroHealing?.(h,amount)??amount;}
 function battleStats(h){const v=solo.stats(h),key=heroKey(h);v.atk=Math.round(v.atk*(1+effectTotal(key,'attack')));v.crit=Math.min(GAME_BALANCE.combat.statCaps.crit,v.crit+effectTotal(key,'critical'));return v;}
 function castSupport(h,index){const sk=SUPPORT[h.job][index];let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(enemyAvailableForSingleTarget)?.id];for(const target of targets.filter(Boolean)){effects=effects.filter(e=>!(e.source===h.job&&e.skill===index&&e.target===target));effects.push({source:h.job,skill:index,target,kind:sk.kind,value:supportAmount(h.job,index),until:partyClock+sk.duration,name:sk.name});if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));}}note(characterName(h)+'施放 '+sk.name+' · '+sk.duration+' 回合');}
 function learnSupport(i){const sk=SUPPORT[state.job][i];if(!sk||state.sp<1||state.supportLevels[i]>=Math.max(1,Math.floor(GS('skills.support.maxLevel',5)))||state.lv<sk.level||i===2&&!state.advanced||!skillPrerequisitesMet(sk,state))return;state.sp--;state.supportLevels[i]++;save();render();}
@@ -1437,7 +1438,7 @@ function unlockBalanceTools(){const input=$('balance-tools-password');if(!input|
 
 // Save validation compatibility for skills appended by a test configuration.
 const update09LegacyValidateSave=solo.validateSave;
-function dynamicValidateSave(input){return update09LegacyValidateSave(input);}
+function dynamicValidateSave(input,options){return update09LegacyValidateSave(input,options);}
 solo.validateSave=dynamicValidateSave;validateSave=dynamicValidateSave;
 
 

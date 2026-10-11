@@ -420,7 +420,14 @@
 
   function applyIdentityStatEffect(v,e,attackBox){
     const n=Number(e.value)||0;
-    if(e.key==='attackPct')attackBox.value+=n;
+    if(e.key==='flatAttack')v.atk+=n;
+    else if(e.key==='flatHp')v.hp+=n;
+    else if(e.key==='flatDefense')v.def+=n;
+    else if(e.key==='speed')attackBox.speed=(attackBox.speed||0)+n;
+    else if(e.key==='elementDamagePct'&&e.element)v.elementDamage[e.element]=(v.elementDamage[e.element]||0)+n/100;
+    else if(e.key==='elementResistPct'&&e.element)v.resist[e.element]=(v.resist[e.element]||0)+n/100;
+    else if(e.key==='raceDamagePct'&&e.race)v.raceDamage[e.race]=(v.raceDamage[e.race]||0)+n/100;
+    else if(e.key==='attackPct')attackBox.value+=n;
     else if(e.key==='hpPct')attackBox.hp+=n;
     else if(e.key==='defensePct')attackBox.defense+=n;
     else if(e.key==='crit')v.crit+=n/100;
@@ -464,12 +471,16 @@
         else if(a.type===18)v.defenseIgnore+=a.value/100;
       }
     }
+    const passives=globalThis.companionPassiveStatEffects?.(h)||[];
+    for(const e of passives)applyIdentityStatEffect(v,e,attackBox);
+    fixedSpeed+=attackBox.speed||0;
     if(attackBox.value)v.atk*=1+attackBox.value/100;
     if(attackBox.hp)v.hp*=1+attackBox.hp/100;
     if(attackBox.defense)v.def*=1+attackBox.defense/100;
     v.crit=Math.min(GAME_BALANCE.combat.statCaps.crit,v.crit);v.pierce=Math.min(GAME_BALANCE.combat.statCaps.pierce,v.pierce);v.defenseIgnore=Math.min(GAME_BALANCE.combat.statCaps.defenseIgnore??.75,v.defenseIgnore);v.evasion=Math.min(GAME_BALANCE.combat.statCaps.evasion,v.evasion);v.lifesteal=Math.min(GAME_BALANCE.combat.statCaps.lifesteal,v.lifesteal);
     const heroBase=GS('combat.speed.heroBase',[102,108,116,96]);v.speed=Math.round((initial.speed??(heroBase[h.job]??100)+GS('combat.speed.heroPerLevel',.5))+(h.lv-1)*(growth.speed??GS('combat.speed.heroPerLevel',.5))+Math.min(GS('combat.speed.bonusCap',5),(v.evasion||0)*GS('combat.speed.evasionWeight',10)+(v.crit||0)*GS('combat.speed.critWeight',5))+fixedSpeed);
     for(const k of ['hp','atk','def'])v[k]=Math.round(v[k]);
+    if(passives.length){v.hp=Math.max(1,v.hp);v.atk=Math.max(0,v.atk);v.def=Math.max(0,v.def);v.speed=Math.max(1,v.speed);v.critDamage=Math.max(1,v.critDamage);}
     return v;
   };
   solo.stats=stats;

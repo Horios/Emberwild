@@ -15,7 +15,7 @@
     if(['attack','guard','critical','power'].includes(a.action)){
       effects=effects.filter(e=>!(e.tokenOwner===memberKey(h)&&e.tokenId===g.id));
       effects.push({source:heroKey(h),skill:-1,target:heroKey(h),kind:a.action,value:a.value,until:eventClock()+a.duration,name:g.snapshot.name,tokenOwner:memberKey(h),tokenId:g.id});
-    }else if(a.action==='heal'){h.hp=Math.min(v.hp,h.hp+Math.round(v.hp*a.value));if(h.hp>before)recordCombatContribution(h,'healing',h.hp-before);}
+    }else if(a.action==='heal'){h.hp=Math.min(v.hp,h.hp+Math.round(healingAmount(h,v.hp*a.value)));if(h.hp>before)recordCombatContribution(h,'healing',h.hp-before);}
     else if(a.action==='shield')applyPureShield(h,v.hp*a.value);
     else if(a.action==='extraDamage'&&target?.hp>0&&!extraDepth){
       extraDepth++;try{const dealt=resolveHit(target,v.atk*a.value,h,weaponElement(h),false,{tokenExtra:true});note(g.snapshot.name+'・追擊 → '+combatEnemyName(target)+' '+dealt+' 傷害','playerDamage');}finally{extraDepth--;}

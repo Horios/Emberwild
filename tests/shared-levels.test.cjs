@@ -32,7 +32,7 @@ test('Player EXP drives all companion levels, growth, acquisition and progress d
     await t.test('Unacquired and dynamically added companions display the current level and recruit with complete growth and skill builds',async()=>{
       const r=await page.evaluate(()=>{
         __levelReset(27,false,false);
-        const doc=exportableBalance(),plan={...doc.companions[0],id:1042,names:['晚加入的夥伴'],initialStats:{hp:18,atk:9,def:2,crit:.07,critDamage:1.5,speed:100},growthPerLevel:{hp:2,atk:3,def:1,crit:0,critDamage:0,speed:2},growthSteps:[]};doc.companions.push(plan);applyBalanceConfig(doc,{persist:false});
+        const doc=exportableBalance(),plan={...doc.companions[0],id:1042,names:['晚加入的夥伴'],passives:[],initialStats:{hp:18,atk:9,def:2,crit:.07,critDamage:1.5,speed:100},growthPerLevel:{hp:2,atk:3,def:1,crit:0,critDamage:0,speed:2},growthSteps:[]};doc.companions.push(plan);applyBalanceConfig(doc,{persist:false});
         showCompanionRecruitment();const levels=[...document.querySelectorAll('#modal .member-level')].map(x=>x.textContent);closeModal();
         const h=acquireCompanion(1042),build={lv:h.lv,points:h.stats.slice(),skills:h.skills.slice(),active:h.active.slice(),support:h.supportLevels.slice(),advanced:h.advanced};closeModal();
         const old={stats:h.stats,equipped:h.equipped,advanced:h.advanced};h.stats=[0,0,0];h.equipped=[null,null,null,null,null];h.advanced=false;const actual=stats(h);Object.assign(h,old);
@@ -78,8 +78,8 @@ test('Player EXP drives all companion levels, growth, acquisition and progress d
         const normalized=structuredClone(packParty());loadParty(normalized);loadParty(structuredClone(packParty()));
         return {migrated,after:{levels:party.members.map(h=>h.lv),xp:party.members.map(h=>h.xp),name:partyMember(10).name,gems:playerHero().gems[2],inBag:!!findGear(g.id)},saved:save()};
       });
-      assert.deepEqual(r.migrated.levels,Array(6).fill(10));assert.deepEqual(r.migrated.xp,[321,0,0,0,0,0]);assert.equal(r.migrated.name,'保留的夥伴名字');assert.equal(r.migrated.advanced,false);assert.equal(r.migrated.skills,0);assert.equal(r.migrated.slot,null);assert(r.migrated.inBag);assert.equal(r.migrated.socket,null);assert.equal(r.migrated.gems,1);
-      assert.deepEqual(r.after.levels,r.migrated.levels);assert.deepEqual(r.after.xp,r.migrated.xp);assert.equal(r.after.name,r.migrated.name);assert.equal(r.after.gems,1);assert(r.after.inBag);assert(r.saved);
+      assert.deepEqual(r.migrated.levels,Array(6).fill(10));assert.deepEqual(r.migrated.xp,[321,0,0,0,0,0]);assert.equal(r.migrated.name,'保留的夥伴名字');assert.equal(r.migrated.advanced,false);assert.equal(r.migrated.skills,1);assert.equal(r.migrated.slot,null);assert(r.migrated.inBag);assert.equal(r.migrated.socket,2);assert.equal(r.migrated.gems,0);
+      assert.deepEqual(r.after.levels,r.migrated.levels);assert.deepEqual(r.after.xp,r.migrated.xp);assert.equal(r.after.name,r.migrated.name);assert.equal(r.after.gems,0);assert(r.after.inBag);assert(r.saved);
     });
 
     await t.test('Both progress bars always show the player, update after EXP gains and remain visible when a companion is selected',async()=>{
