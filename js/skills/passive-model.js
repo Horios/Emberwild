@@ -11,7 +11,7 @@
     {id:'test-defense',name:'防禦強化（測試）',effects:[{key:'defensePct',value:10}]},
     {id:'test-health',name:'生命強化（測試）',effects:[{key:'hpPct',value:10}]},
     {id:'test-healing',name:'治療強化（測試）',effects:[{key:'healingPct',value:15}]}
-  ].map(d=>({...d,description:'取得時常駐生效，不占技能槽。',kind:'buff',target:'self'}));
+  ].map(d=>({...d,description:'取得時常駐生效，不占技能槽。',kind:'buff',target:'self',requiredLevel:1}));
   const defaultAssignments={10:['test-attack'],11:['test-defense','test-health'],12:['test-attack'],13:['test-healing'],14:['test-attack']};
   const ident=s=>typeof s==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(s);
   function assert(ok,message){if(!ok)throw Error(message);}
@@ -33,7 +33,9 @@
         if(e.key==='raceDamagePct'){assert(races.includes(e.race),'被動種族無效：'+d.id);out.race=e.race;}
         return out;
       });
-      return {id:d.id,name:d.name.trim(),description:d.description??'',kind,target,effects};
+      const requiredLevel=d.requiredLevel??1;assert(Number.isSafeInteger(requiredLevel)&&requiredLevel>=1,'被動解鎖等級無效：'+d.id);
+      assert(d.partnerId==null||Number.isInteger(d.partnerId)&&d.partnerId>=10,'被動指定夥伴無效：'+d.id);
+      return {id:d.id,name:d.name.trim(),description:d.description??'',kind,target,effects,requiredLevel,...(d.partnerId!=null?{partnerId:d.partnerId}:{})};
     });
   }
   function assignments(raw,id){

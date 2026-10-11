@@ -51,7 +51,8 @@
   try{const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(saved?.companions)plans=parsePlans(saved.companions,saved);if(saved){config=Model.normalizeSettings(saved.companionSettings,saved.classes||CLASSES,saved.balanceSettings||GAMEPLAY_SETTINGS);passiveDefinitions=Passive.normalize(saved.passiveDefinitions);}}catch(e){console.warn('夥伴平衡設定無法載入，使用內建角色',e);}
   const byId=()=>new Map(plans.map(p=>[p.id,p]));
   function companionPlan(h){const current=byId().get(h?.companionId);return current?.job===h?.job?current:party?.companionProfiles?.[h?.companionId]?.job===h?.job?party.companionProfiles[h.companionId]:null;}
-  function passivesFor(h){return (companionPlan(h)?.passives||[]).map(id=>passiveDefinitions.find(d=>d.id===id)).filter(Boolean);}
+  function allPassivesFor(h){return (companionPlan(h)?.passives||[]).map(id=>passiveDefinitions.find(d=>d.id===id)).filter(Boolean);}
+  function passivesFor(h){return allPassivesFor(h).filter(d=>d.partnerId===h.companionId&&h.lv>=d.requiredLevel);}
   function passiveEffectsFor(h){
     const out=passivesFor(h).filter(d=>d.target==='self').flatMap(d=>d.effects);
     if(party?.active.includes(memberKey(h)))for(const owner of heroes().filter(x=>x.hp>0))out.push(...passivesFor(owner).filter(d=>d.target==='allies').flatMap(d=>d.effects));
@@ -105,14 +106,15 @@
     h.ap=0;h.sp=0;
     delete h.mastery;
     syncHeroSkillArrays(h);
-    h.skills=h.skills.map((_,i)=>Number(plan.core.includes(i)&&!!CLASSES[h.job].skills[i]&&skillAllowedForPartner(h,CLASSES[h.job].skills[i][6])));
-    h.supportLevels=SUPPORT[h.job].map((sk,i)=>Number(plan.support.includes(i)&&skillAllowedForPartner(h,sk)));
+    h.skills=h.skills.map((_,i)=>Number(plan.core.includes(i)&&!!CLASSES[h.job].skills[i]&&h.lv>=CLASSES[h.job].skills[i][2]&&skillAllowedForPartner(h,CLASSES[h.job].skills[i][6])));
+    h.supportLevels=SUPPORT[h.job].map((sk,i)=>Number(plan.support.includes(i)&&h.lv>=sk.level&&skillAllowedForPartner(h,sk)));
     h.active=plan.active.filter(i=>h.skills[i]&&CLASSES[h.job].skills[i]?.[1]==='active').slice(0,2);
     while(h.active.length<2)h.active.push(null);
     h.procSlots=plan.proc.filter(i=>h.skills[i]&&CLASSES[h.job].skills[i]?.[1]==='proc').slice(0,PROC_SLOT_COUNT);
     while(h.procSlots.length<PROC_SLOT_COUNT)h.procSlots.push(null);
     h.supportSlots=plan.support.filter(i=>h.supportLevels[i]).slice(-2);
     while(h.supportSlots.length<2)h.supportSlots.push(null);
+    h.sockets.forEach((gem,i)=>{if(gem!==null&&!h.skills[i]){h.gems[gem]++;h.sockets[i]=null;}});
     if(fullHealth)h.hp=stats(h).hp;else h.hp=Math.min(h.hp,stats(h).hp);
   }
   // The first member is the player. Companions have no independent EXP pool.
@@ -230,8 +232,8 @@
   function compareMembers(a,b){const player=party.members[0];return Number(b===player)-Number(a===player)||Number(party.active.includes(memberKey(b)))-Number(party.active.includes(memberKey(a)))||a.job-b.job||memberKey(a)-memberKey(b);}
   function sortedEnlistedHeroes(){return enlistedHeroes().sort(compareMembers);}
   function partnerRating(h){return !h||h===party?.members[0]?null:companionPlan(h)?.rating??'D';}
-  function skillAllowedForPartner(h,meta){return meta?.partnerId==null||h?.companionId===meta.partnerId;}
-  function validatePartnerSkills(doc){for(let j=0;j<doc.classes.length;j++)for(const sk of [...doc.classes[j].skills,...doc.supportSkills[j]])if(sk.partnerId!=null&&!doc.companions.some(p=>p.id===sk.partnerId&&p.job===j))throw Error('技能指定夥伴不存在或職業不符：'+sk.name);}
+  function skillAllowedForPartner(h,meta){return meta?.partnerId==null?!(h?.companionId!==undefined||!!party?.members?.slice(1).includes(h)):h?.companionId===meta.partnerId;}
+  function validatePartnerSkills(doc){return EmberwildCompanionSkills.validate(doc);}
   function cleanPartnerSkillSlots(h){h.active=h.active.map(i=>i===null||skillAllowedForPartner(h,CLASSES[h.job].skills[i]?.[6])?i:null);h.procSlots=h.procSlots.map(i=>i===null||skillAllowedForPartner(h,CLASSES[h.job].skills[i]?.[6])?i:null);h.supportSlots=h.supportSlots.map(i=>i===null||skillAllowedForPartner(h,SUPPORT[h.job][i])?i:null);}
   function installPartnerSkills(doc){for(let j=0;j<doc.classes.length;j++){for(let i=0;i<doc.classes[j].skills.length;i++){CLASSES[j].skills[i][6]??={};CLASSES[j].skills[i][6].partnerId=doc.classes[j].skills[i].partnerId??null;}for(let i=0;i<doc.supportSkills[j].length;i++)SUPPORT[j][i].partnerId=doc.supportSkills[j][i].partnerId??null;}}
   globalThis.isPartnerEnlisted=isEnlisted;globalThis.enlistedHeroes=enlistedHeroes;globalThis.sortedEnlistedHeroes=sortedEnlistedHeroes;globalThis.partnerRating=partnerRating;globalThis.skillAllowedForPartner=skillAllowedForPartner;
@@ -239,19 +241,32 @@
   globalThis.setPartnerEnlisted=function(key,enabled){const h=partyMember(key);if(!h||isEnlisted(h)===enabled)return false;if(!enabled&&party.active.includes(key)){toast('請先取消上陣或替換隊伍');return false;}if(enabled&&party.enlisted.length>=config.activeLimit){toast('現役夥伴已達上限');return false;}party.enlisted=enabled?[...party.enlisted,key]:party.enlisted.filter(k=>k!==key);if(!party.enlisted.includes(party.selected)){party.selected=party.enlisted[0];state=partyMember(party.selected);}for(const [page,id] of pageHeroSelection)if(!party.enlisted.includes(id))pageHeroSelection.delete(page);save();render();return true;};
   const originalValidateBalance=validateBalanceConfig;
   let restoringDefaults=false;
-  validateBalanceConfig=function(input){const definitions=Passive.normalize(restoringDefaults?undefined:input?.passiveDefinitions),next=parsePlans(restoringDefaults?undefined:input?.companions,{...input,passiveDefinitions:definitions},{checkSkills:!restoringDefaults});const result=originalValidateBalance(input);result.companions=next;result.passiveDefinitions=definitions;result.companionSettings=Model.normalizeSettings(input?.companionSettings,result.classes,result.balanceSettings||GAMEPLAY_SETTINGS);validatePartnerSkills(result);return result;};
+  const stockSkillPools=originalValidateBalance(exportableBalance()).classes.map((c,j)=>copy(c.skills.slice(0,Math.max(...DEFAULT_PLANS.filter(p=>p.job===j).flatMap(p=>p.core))+1)));
+  function prepareSkillDocument(input){
+    const source=copy(input);
+    if(restoringDefaults&&source.companionSkillVersion!==1){
+      source.companions=copy(DEFAULT_PLANS);source.passiveDefinitions=Passive.normalize();
+      source.classes.forEach((c,j)=>{while(c.skills.length<stockSkillPools[j].length)c.skills.push(copy(stockSkillPools[j][c.skills.length]));});
+    }
+    source.passiveDefinitions=Passive.normalize(source.passiveDefinitions);source.companions=parsePlans(source.companions,source);
+    return EmberwildCompanionSkills.migrate(source);
+  }
+  globalThis.prepareCompanionSkillDocument=prepareSkillDocument;
+  validateBalanceConfig=function(input){
+    const source=prepareSkillDocument(input),definitions=Passive.normalize(source.passiveDefinitions),next=parsePlans(source.companions,{...source,passiveDefinitions:definitions});
+    const result=originalValidateBalance(source);result.companionSkillVersion=1;result.companions=next;result.passiveDefinitions=definitions;result.companionSettings=Model.normalizeSettings(source.companionSettings,result.classes,result.balanceSettings||GAMEPLAY_SETTINGS);validatePartnerSkills(result);return result;
+  };
   const originalApplyBalance=applyBalanceConfig;
   applyBalanceConfig=function(input,{persist=true}={}){
-    const next=parsePlans(restoringDefaults?undefined:input?.companions,restoringDefaults?undefined:input,{checkSkills:!restoringDefaults});
-    const checked=validateBalanceConfig(input);originalApplyBalance(checked,{persist:false});plans=next;config=checked.companionSettings;passiveDefinitions=checked.passiveDefinitions;installPartnerSkills(checked);
+    const checked=validateBalanceConfig(input);originalApplyBalance(checked,{persist:false});plans=checked.companions;config=checked.companionSettings;passiveDefinitions=checked.passiveDefinitions;installPartnerSkills(checked);
     if(party){ensureRoster(party);for(const h of party.members){applyPlan(h);cleanPartnerSkillSlots(h);}save();}
     if(persist)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));
     if(state)render();
   };
   const originalExportBalance=exportableBalance;
-  exportableBalance=function(){const doc=originalExportBalance();doc.companions=copy(plans);doc.passiveDefinitions=copy(passiveDefinitions);doc.companionSettings=copy(config);for(let j=0;j<doc.classes.length;j++)for(let i=0;i<doc.classes[j].skills.length;i++)doc.classes[j].skills[i].partnerId=CLASSES[j].skills[i][6]?.partnerId??null;doc.notes=[...(doc.notes||[]),'companions 是可招募夥伴模板：core/support 取得時自帶，沒有等級、二轉與精通限制；active/proc 依順序配置。passives 引用 passiveDefinitions，常駐生效、不占技能槽。'];return doc;};
+  exportableBalance=function(){const doc=originalExportBalance();doc.companionSkillVersion=1;doc.companions=copy(plans);doc.passiveDefinitions=copy(passiveDefinitions);doc.companionSettings=copy(config);for(let j=0;j<doc.classes.length;j++)for(let i=0;i<doc.classes[j].skills.length;i++)doc.classes[j].skills[i].partnerId=CLASSES[j].skills[i][6]?.partnerId??null;doc.notes=[...(doc.notes||[]),'companions 是可招募夥伴模板：core/support 為夥伴專屬技能，達到需求角色等級後自動學會，不需要二轉與精通；active/proc 依順序配置。passives 引用該夥伴的 passiveDefinitions，達到 requiredLevel 後常駐生效、不占技能槽。'];return doc;};
   const originalResetBalance=resetBalanceJSON;
-  resetBalanceJSON=function(){restoringDefaults=true;try{originalResetBalance();}finally{restoringDefaults=false;}plans=parsePlans();passiveDefinitions=Passive.normalize();config=Model.defaults(CLASSES,GAMEPLAY_SETTINGS);if(party){ensureRoster(party);for(const h of party.members){applyPlan(h);cleanPartnerSkillSlots(h);}save();}if(state)render();};
+  resetBalanceJSON=function(){restoringDefaults=true;try{originalResetBalance();}finally{restoringDefaults=false;}config=Model.defaults(CLASSES,GAMEPLAY_SETTINGS);if(party){ensureRoster(party);for(const h of party.members){applyPlan(h);cleanPartnerSkillSlots(h);}save();}if(state)render();};
   for(const name of ['allocate','resetStats','learn','learnSupport','equipSkill','clearActiveSkill','slotProcSkill','clearProcSkill','slotSupport','socket','advance']){
     const original=globalThis[name];if(typeof original!=='function')continue;
     globalThis[name]=function(...args){if(companionPlan(state))return toast('夥伴的技能與配點依固定走向自動成長');return original(...args);};
@@ -277,13 +292,13 @@
       const missing=mastery?(isCore?mastery.coreMissingRequirements(h,i,!!learned):mastery.supportMissingRequirements(h,i,!!learned)):[];
       const growthMissing=missing;
       const name=isCore?sk[0]:sk.name,flavor=isCore?coreSkillFlavor(h.job,i):sk.description;
-      const detail=(isCore?coreSkillDetail(h.job,i,h):supportSkillDetail(h.job,i,h)).replace(/ · 需求 LV\d+(?:／二轉)?/g,''),status=equipped.length?'已配置':learned?'自帶':'未配置';
+      const detail=isCore?coreSkillDetail(h.job,i,h):supportSkillDetail(h.job,i,h),status=equipped.length?'已配置':learned?'已解鎖':'未解鎖';
       const gem=isCore?h.sockets?.[i]:null;
       return `<article class="companion-skill-card" data-companion-skill="${kind}:${i}"><div class="skill-list-title">${globalThis.__EMBERWILD_MASTERY_UI?.skillIcon?.(h.job,kind,i)||''}<b>${esc(name)}</b><span class="skill-state ${learned?'learned':'locked'}">${status}</span><span>${isCore?(sk[1]==='proc'?'普攻觸發':'主動'):'輔助'}</span></div>${skillTypeBadges(h.job,i,isCore?'core':'support')}${skillMechanicsDetails(h.job,i,isCore?'core':'support')}${flavor?`<p class="small">${esc(flavor)}</p>`:''}<p>${esc(detail)}</p>${equipped.length?`<p class="small companion-skill-equipped">已配置：${esc(equipped.join('、'))}</p>`:''}${growthMissing.length?`<p class="small">使用條件：${esc(growthMissing.join('、'))}</p>`:''}${gem!=null&&GEMS[gem]?`<p class="small">鑲嵌寶石：${esc(GEMS[gem].name)}</p>`:''}</article>`;
     }).filter(Boolean).join('');
     const rows=skillRows('core',core)+skillRows('support',support);
-    const passiveRows=passivesFor(h).map(d=>`<article class="companion-skill-card" data-companion-passive="${esc(d.id)}"><div class="skill-list-title"><b>${esc(d.name)}</b><span class="skill-state learned">常駐被動</span><span>${d.kind==='debuff'?'DEBUFF':'BUFF'}</span></div><p>${esc(d.effects.map(Passive.effectText).join('、'))}</p><p class="small">${esc(Passive.targets[d.target])} · ${d.target==='self'?'取得後常時生效':'上陣且存活時提供常駐光環'} · 不占技能槽</p>${d.description?`<p class="small">${esc(d.description)}</p>`:''}</article>`).join('');
-    return `<p class="small companion-skill-note">${plan?'技能取得時自帶，沒有等級、二轉與精通限制；依固定配置使用。':'保留原有隊員的技能與配置。'}</p>${slots}<div class="companion-skill-list">${rows||'<p class="small">此夥伴尚無技能。</p>'}</div><h3>常駐被動</h3><div class="companion-skill-list">${passiveRows||'<p class="small">此夥伴尚無被動。</p>'}</div>`;
+    const passiveRows=allPassivesFor(h).map(d=>`<article class="companion-skill-card" data-companion-passive="${esc(d.id)}"><div class="skill-list-title"><b>${esc(d.name)}</b><span class="skill-state ${h.lv>=d.requiredLevel?'learned':'locked'}">${h.lv>=d.requiredLevel?'常駐被動':'未解鎖'}</span><span>${d.kind==='debuff'?'DEBUFF':'BUFF'}</span></div><p>${esc(d.effects.map(Passive.effectText).join('、'))}</p><p class="small">需求 LV${d.requiredLevel} · ${esc(Passive.targets[d.target])} · ${d.target==='self'?'解鎖後常時生效':'上陣且存活時提供常駐光環'} · 不占技能槽</p>${d.description?`<p class="small">${esc(d.description)}</p>`:''}</article>`).join('');
+    return `<p class="small companion-skill-note">${plan?'技能達到需求角色等級後自動解鎖，不需要二轉與精通；依固定配置使用。':'保留原有隊員的技能與配置。'}</p>${slots}<div class="companion-skill-list">${rows||'<p class="small">此夥伴尚無技能。</p>'}</div><h3>常駐被動</h3><div class="companion-skill-list">${passiveRows||'<p class="small">此夥伴尚無被動。</p>'}</div>`;
   }
   const baseCharacterView=characterView;
   characterView=function(){
@@ -294,6 +309,11 @@
   const baseRender=render;
   render=function(){syncCompanionLevels();return baseRender();};
   globalThis.__EMBERWILD_COMPANION_TEST_API={get plans(){return copy(plans);},get config(){return copy(config);},get passiveDefinitions(){return copy(passiveDefinitions);},parsePlans,ensureRoster,companionPlan,passivesFor,passiveEffectsFor,applyPlan};
-  try{const raw=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(raw){installPartnerSkills(raw);if(party)for(const h of party.members)cleanPartnerSkillSlots(h);}}catch(e){console.warn('專屬技能載入失敗',e);}
+  try{
+    const raw=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');
+    if(raw)applyBalanceConfig(raw,{persist:true});
+    else{const doc=exportableBalance();delete doc.companionSkillVersion;applyBalanceConfig(doc,{persist:false});}
+  }catch(e){console.warn('專屬技能載入失敗',e);}
+
   if(state&&party)render();
 })();
