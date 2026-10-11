@@ -53,6 +53,12 @@
     for(const p of b.plans){
       if(!p||!/^team-\d+$/.test(p.id)||ids.has(p.id)||typeof p.name!=='string'||!p.name.trim()||Array.from(p.name).length>24||/[\u0000-\u001f]/.test(p.name)||p.job!==null&&(!int(p.job,0,classes.length-1)||!perm.classes[p.job]?.activated))fail('隊伍名稱或職業無效');ids.add(p.id);
       const c=p.job===null?0:classes[p.job].skills.length,s=p.job===null?0:(supports[p.job]||[]).length;
+      // Skill pools grow append-only (including independently owned companion skills).
+      // Old plans keep their indices; new positions are unlearned and have no gems.
+      // Never trim extra saved entries or replace malformed/nonempty data here.
+      for(const [field,count,empty] of [['skills',c,0],['supportLevels',s,0],['sockets',c,null]]){
+        if(Array.isArray(p[field])&&p[field].length<count)p[field].push(...Array(count-p[field].length).fill(empty));
+      }
       if(!Array.isArray(p.stats)||p.stats.length!==3||p.stats.some(n=>!int(n,0,100000))||p.stats.reduce((a,v)=>a+v,0)>totals.ap||!Array.isArray(p.skills)||p.skills.length!==c||p.skills.some(n=>!int(n,0,1))||!Array.isArray(p.supportLevels)||p.supportLevels.length!==s||p.supportLevels.some(n=>!int(n,0,1))||spent(p,classes,supports,cfg.defaultLearnCost)>totals.sp)fail('隊伍配點超出額度');
       for(const [kind,list] of [['core',p.skills],['support',p.supportLevels]])if(list.some((v,i)=>v&&!perm.unlocks[key(p.job,kind,i)]))fail('隊伍學習了尚未永久解鎖的技能');
       for(const [field,list,type] of [['active',p.skills,'active'],['procSlots',p.skills,'proc'],['supportSlots',p.supportLevels,null]]){const slots=p[field];if(!Array.isArray(slots)||slots.length!==2||new Set(slots.filter(v=>v!==null)).size!==slots.filter(v=>v!==null).length||slots.some(i=>i!==null&&(!int(i,0,list.length-1)||!list[i]||type&&classes[p.job].skills[i].activation!==type)))fail('隊伍技能槽無效');}
