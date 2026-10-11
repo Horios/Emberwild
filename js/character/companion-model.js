@@ -14,10 +14,11 @@
     const out={initialStats:{...Object.fromEntries(statKeys.map(k=>[k,0])),hp:cls.hp,atk:cls.atk,def:cls.def,crit:plan.job===2?(settings?.progression?.baseCrit?.archer??.17):(settings?.progression?.baseCrit?.default??.07),critDamage:settings?.combat?.baseCritDamage??1.5,...cls.initialStats,speed:cls.initialStats?.speed??(speed.heroBase||[102,108,116,96])[plan.job]+(speed.heroPerLevel??.5),...plan.initialStats},growthPerLevel:{...Object.fromEntries(statKeys.map(k=>[k,0])),hp:per.hp??4,atk:per.attack??1,def:per.defense??1,...cls.growthPerLevel,speed:cls.growthPerLevel?.speed??speed.heroPerLevel??.5,...plan.growthPerLevel},growthSteps:copy(plan.growthSteps??cls.growthSteps??[])};
     // Old definitions keep their custom growth and gain a conservative equipment
     // budget once. Explicit v1 definitions contain that budget in their own fields.
-    if(plan.id!==undefined&&plan.equipmentInternalized!==1){const b=({10:[17,6,2,1.1,.65,.2],11:[21,5,3,1.5,.4,.35],12:[14,6,2,.85,.7,.18],13:[20,5,2,1.25,.5,.25],14:[15,6,2,.95,.65,.2]})[plan.id]||[17,6,2,1,.6,.2];['hp','atk','def'].forEach((k,i)=>{out.initialStats[k]+=b[i];out.growthPerLevel[k]+=b[i+3];});}
+    if(plan.id!==undefined&&plan.equipmentInternalized!==1){const b=({10:[17,6,2,1.1,.65,.2],11:[21,5,3,1.5,.4,.35],12:[14,6,2,.85,.7,.18],13:[20,5,2,1.25,.5,.25],14:[15,6,2,.95,.65,.2]})[plan.statTemplateId??plan.id]||[17,6,2,1,.6,.2];['hp','atk','def'].forEach((k,i)=>{out.initialStats[k]+=b[i];out.growthPerLevel[k]+=b[i+3];});}
     return out;
   }
   function validatePlanStats(p){
+    if(p.statTemplateId!==undefined&&(!Number.isInteger(p.statTemplateId)||p.statTemplateId<10||p.statTemplateId>1000000000))throw Error('夥伴原有成長來源無效：'+p.id);
     if(p.rating!==undefined&&!ratings.includes(p.rating))throw Error('夥伴評級無效：'+p.id);
     if(p.equipmentInternalized!==undefined&&p.equipmentInternalized!==1)throw Error('夥伴裝備內化版本無效：'+p.id);
     for(const field of ['initialStats','growthPerLevel'])if(p[field]!==undefined){

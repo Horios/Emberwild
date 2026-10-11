@@ -4,8 +4,10 @@
   const copy=value=>JSON.parse(JSON.stringify(value));
   function checkPlan(p,{classes=CLASSES,supportSkills=SUPPORT,checkSkills=true}={}){
     if(!p||!Number.isInteger(p.id)||p.id<10||p.id>1000000000||!Number.isInteger(p.job)||p.job<0||p.job>=classes.length)throw Error('夥伴 ID 或職業無效');
-    if(typeof p.role!=='string'||!p.role.trim()||p.role.length>40||typeof p.description!=='string'||p.description.length>200||typeof p.weapon!=='string'||p.weapon.length>80)throw Error('夥伴說明或武器無效：'+p.id);
-    if(!Array.isArray(p.names)||!p.names.length||p.names.length>30||p.names.some(name=>typeof name!=='string'||!name.trim()||name!==name.trim()||Array.from(name).length>20||/[\u0000-\u001f\u007f]/.test(name)))throw Error('夥伴隨機名字無效：'+p.id);
+    if(typeof p.description!=='string'||p.description.length>200||typeof p.weapon!=='string'||p.weapon.length>80)throw Error('夥伴說明或武器無效：'+p.id);
+    const name=p.name??p.names?.[0];
+    if(typeof name!=='string'||!name.trim()||name!==name.trim()||Array.from(name).length>20||/[\u0000-\u001f\u007f]/.test(name))throw Error('夥伴角色名稱無效：'+p.id);
+    if(p.name===undefined&&(!Array.isArray(p.names)||!p.names.length||p.names.length>30||p.names.some(n=>typeof n!=='string'||!n.trim()||n!==n.trim()||Array.from(n).length>20||/[\u0000-\u001f\u007f]/.test(n))))throw Error('舊版夥伴名字池無效：'+p.id);
     if(!Array.isArray(p.points)||!p.points.length||p.points.length>32||p.points.some(n=>!Number.isInteger(n)||n<0||n>2))throw Error('夥伴配點順序無效：'+p.id);
     for(const key of ['core','active','proc','support'])if(!Array.isArray(p[key])||p[key].length>64||new Set(p[key]).size!==p[key].length||p[key].some(n=>!Number.isInteger(n)||n<0||n>63))throw Error('夥伴技能索引無效：'+p.id+' '+key);
     if(checkSkills){
@@ -13,14 +15,14 @@
       const type=sk=>Array.isArray(sk)?sk[1]:sk?.activation;
       if(p.core.some(i=>!skills[i])||p.active.some(i=>!p.core.includes(i)||type(skills[i])!=='active')||p.proc.some(i=>!p.core.includes(i)||type(skills[i])!=='proc')||p.support.some(i=>!supports[i]))throw Error('夥伴技能與職業技能池不相容：'+p.id);
     }
-    const out=Model.validatePlanStats(p);out.passives=Passive.assignments(p.passives,p.id);
+    const out=Model.validatePlanStats(p);out.name=name;delete out.role;delete out.names;out.passives=Passive.assignments(p.passives,p.id);
     for(const key of ['mastery','masteries','masteryLevel','requiredMastery','requiredMasteryLevel'])delete out[key];
     if(out.equipmentInternalized!==1){const def=Model.definition(out,classes,GAMEPLAY_SETTINGS);out.initialStats=def.initialStats;out.growthPerLevel=def.growthPerLevel;out.growthSteps=def.growthSteps;out.equipmentInternalized=1;}return out;
   }
-  function parsePlans(input,doc,{checkSkills=true}={}){
+  function parsePlans(input,doc,{checkSkills=true,preserveLegacyNames=false}={}){
     if(input===undefined)input=copy(DEFAULT_PLANS);
     if(!Array.isArray(input)||input.length>512)throw Error('夥伴角色數量無效');
-    const plans=input.map(p=>checkPlan(p,{classes:doc?.classes||CLASSES,supportSkills:doc?.supportSkills||SUPPORT,checkSkills}));
+    const plans=input.map(p=>{const out=checkPlan(p,{classes:doc?.classes||CLASSES,supportSkills:doc?.supportSkills||SUPPORT,checkSkills});if(preserveLegacyNames&&p.name===undefined){delete out.name;out.names=copy(p.names);}return out;});
     const ids=new Set(plans.map(p=>p.id));
     if(ids.size!==plans.length)throw Error('夥伴 ID 重複');
     const passiveIds=new Set(Passive.normalize(doc?.passiveDefinitions).map(d=>d.id));
@@ -90,10 +92,8 @@
     for(const plan of rosterPlansFor(p)){
       const member=p.members.find(h=>h.companionId===plan.id);
       if(member?.name?.trim())p.companionNames[plan.id]=validCharacterName(member.name);
-      else if(!p.companionNames[plan.id]){
-        const unused=plan.names.filter(n=>!Object.values(p.companionNames).includes(n));
-        p.companionNames[plan.id]=(unused.length?unused:plan.names)[rand((unused.length?unused:plan.names).length)];
-      }
+      else if(!member)p.companionNames[plan.id]=plan.name;
+      else if(!p.companionNames[plan.id])p.companionNames[plan.id]=plan.name;
       if(member&&!member.name)member.name=p.companionNames[plan.id];
     }
   }
@@ -193,7 +193,7 @@
   window.requestCompanionRename=function(id){
     const plan=rosterPlans().find(p=>p.id===id);if(!party||!plan)return;
     const name=partyMember(id)?.name||party.companionNames?.[id]||'';
-    $('modal').innerHTML=`<h2>修改夥伴名字</h2><p>${esc(plan.role)} · ${esc(CLASSES[plan.job].name)}</p><label for="companion-rename-input">名字（最多 20 字）</label><input id="companion-rename-input" maxlength="40" autocomplete="off" value="${esc(name)}"><div class="actions"><button class="primary" onclick="confirmCompanionRename(${id})">儲存名字</button><button onclick="closeModal()">取消</button></div>`;
+    $('modal').innerHTML=`<h2>修改夥伴名字</h2><p>${esc(plan.name)} · ${esc(CLASSES[plan.job].name)}</p><label for="companion-rename-input">名字（最多 20 字）</label><input id="companion-rename-input" maxlength="40" autocomplete="off" value="${esc(name)}"><div class="actions"><button class="primary" onclick="confirmCompanionRename(${id})">儲存名字</button><button onclick="closeModal()">取消</button></div>`;
     $('modal').showModal();
   };
   window.confirmCompanionRename=function(id){
@@ -248,13 +248,13 @@
       source.companions=copy(DEFAULT_PLANS);source.passiveDefinitions=Passive.normalize();
       source.classes.forEach((c,j)=>{while(c.skills.length<stockSkillPools[j].length)c.skills.push(copy(stockSkillPools[j][c.skills.length]));});
     }
-    source.passiveDefinitions=Passive.normalize(source.passiveDefinitions);source.companions=parsePlans(source.companions,source);
+    source.passiveDefinitions=Passive.normalize(source.passiveDefinitions);source.companions=parsePlans(source.companions,source,{preserveLegacyNames:true});
     return EmberwildCompanionSkills.migrate(source);
   }
   globalThis.prepareCompanionSkillDocument=prepareSkillDocument;
   validateBalanceConfig=function(input){
     const source=prepareSkillDocument(input),definitions=Passive.normalize(source.passiveDefinitions),next=parsePlans(source.companions,{...source,passiveDefinitions:definitions});
-    const result=originalValidateBalance(source);result.companionSkillVersion=1;result.companions=next;result.passiveDefinitions=definitions;result.companionSettings=Model.normalizeSettings(source.companionSettings,result.classes,result.balanceSettings||GAMEPLAY_SETTINGS);validatePartnerSkills(result);return result;
+    const result=originalValidateBalance(source);result.companionSkillVersion=1;result.companionNameVersion=1;result.companions=next;result.passiveDefinitions=definitions;result.companionSettings=Model.normalizeSettings(source.companionSettings,result.classes,result.balanceSettings||GAMEPLAY_SETTINGS);validatePartnerSkills(result);return result;
   };
   const originalApplyBalance=applyBalanceConfig;
   applyBalanceConfig=function(input,{persist=true}={}){
@@ -264,7 +264,7 @@
     if(state)render();
   };
   const originalExportBalance=exportableBalance;
-  exportableBalance=function(){const doc=originalExportBalance();doc.companionSkillVersion=1;doc.companions=copy(plans);doc.passiveDefinitions=copy(passiveDefinitions);doc.companionSettings=copy(config);for(let j=0;j<doc.classes.length;j++)for(let i=0;i<doc.classes[j].skills.length;i++)doc.classes[j].skills[i].partnerId=CLASSES[j].skills[i][6]?.partnerId??null;doc.notes=[...(doc.notes||[]),'companions 是可招募夥伴模板：core/support 為夥伴專屬技能，達到需求角色等級後自動學會，不需要二轉與精通；active/proc 依順序配置。passives 引用該夥伴的 passiveDefinitions，達到 requiredLevel 後常駐生效、不占技能槽。'];return doc;};
+  exportableBalance=function(){const doc=originalExportBalance();doc.companionSkillVersion=1;doc.companionNameVersion=1;doc.companions=copy(plans);doc.passiveDefinitions=copy(passiveDefinitions);doc.companionSettings=copy(config);for(let j=0;j<doc.classes.length;j++)for(let i=0;i<doc.classes[j].skills.length;i++)doc.classes[j].skills[i].partnerId=CLASSES[j].skills[i][6]?.partnerId??null;doc.notes=[...(doc.notes||[]),'companions 每位角色使用單一 name 與獨立技能池；core/support 為夥伴專屬技能，達到需求角色等級後自動學會，不需要二轉與精通；active/proc 依順序配置。passives 引用該夥伴的 passiveDefinitions，達到 requiredLevel 後常駐生效、不占技能槽。'];return doc;};
   const originalResetBalance=resetBalanceJSON;
   resetBalanceJSON=function(){restoringDefaults=true;try{originalResetBalance();}finally{restoringDefaults=false;}config=Model.defaults(CLASSES,GAMEPLAY_SETTINGS);if(party){ensureRoster(party);for(const h of party.members){applyPlan(h);cleanPartnerSkillSlots(h);}save();}if(state)render();};
   for(const name of ['allocate','resetStats','learn','learnSupport','equipSkill','clearActiveSkill','slotProcSkill','clearProcSkill','slotSupport','socket','advance']){
@@ -312,7 +312,7 @@
   try{
     const raw=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');
     if(raw)applyBalanceConfig(raw,{persist:true});
-    else{const doc=exportableBalance();delete doc.companionSkillVersion;applyBalanceConfig(doc,{persist:false});}
+    else{const doc=exportableBalance();delete doc.companionSkillVersion;delete doc.companionNameVersion;doc.companions=copy(DEFAULT_PLANS);applyBalanceConfig(doc,{persist:false});}
   }catch(e){console.warn('專屬技能載入失敗',e);}
 
   if(state&&party)render();
