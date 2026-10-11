@@ -27,3 +27,14 @@
 - 節點 3：平衡器欄位、狀態解除分類、匯入匯出與整合測試，完成後推送兩個分支。
 
 不宣稱涵蓋所有 RPG：位移／碰撞、施法打斷、MP 消耗／回復、任意戰鬥召喚 AI、反擊／傷害反射、任意事件被動與狀態層數仍需要各自獨立設計，不能僅靠新增效果名稱完成。這些不在本次共用效果補齊範圍。
+
+## 節點 2：共用效果完成
+
+- 新增選用 target、hitCount（1～20，每段完整倍率）、powerBasis、damageResolution（standard/fixed/true）、healResolution、drainRate。fixed 不套用防禦／暴擊／屬性但仍由護盾吸收；true 額外穿透護盾。
+- 新增 cleanse／dispel／revive；解除數量 1～99，復活比例 0.001～1。復活只處理上場陣亡單位，不重置怪物已發放獎勵。
+- 新增 onHitStatusId／onHitStatusChance；主效果成功命中後，每次施放每目標最多判定一次，閃避與死亡目標不附加。
+- 狀態新增 polarity（auto/buff/debuff/neutral）及 dispellable（預設 true）。auto 混合正負效果判定 neutral；被動光環、護盾及消耗品不由淨化／驅散解除。
+- 核心匯入初始層即保存新 metadata，避免啟動時較早的匯出覆蓋設定；新設定驗證失敗不更動目前資料。
+- 玩家、夥伴與怪物沿用原施放資格、技能等級、寶石、精通、冷卻及技能誘發規則。既有未設定新欄位的技能仍委派原執行路徑。
+
+驗證：新效果 runtime／schema 回歸測試及既有夥伴被動測試。平衡器 UI 同步留待節點 3。

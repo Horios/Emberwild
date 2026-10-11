@@ -2,7 +2,7 @@
    Monsters keep only skillId references; definitions remain in CLASSES / SKILL_ELEMENTS. */
 (()=>{
   let enemySharedCooldowns=Object.create(null);
-  const BASIC_EFFECTS=new Set(['damage','heal','shield','drain','nextActiveDamage','advanceNextRound','shieldLowest','applyStatus','induceSkill']);
+  const BASIC_EFFECTS=new Set(['cleanse','dispel','revive','damage','heal','shield','drain','nextActiveDamage','advanceNextRound','shieldLowest','applyStatus','induceSkill']);
   const idFor=(job,index)=>CLASSES[job]?.skills?.[index]?.[6]?.sharedId||`job${job}-core${index}`;
   function sharedCoreSkillPool(){
     const out=[];
@@ -59,6 +59,7 @@
     if(before>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);
     return dealt;
   }
+  globalThis.sharedEnemySkillDamage=damageHero;
   function applyEnemyStatusSkill(e,sk){
     const api=globalThis.__EMBERWILD_STATUS_TEST_API,meta=sk.meta||{};if(!api?.apply||!meta.statusId)return false;
     const mode=meta.statusTarget||'enemy';let targets=[];
@@ -71,6 +72,8 @@
   }
   function castEnemySharedSkillEffect(e,sk){
     if(!e||e.hp<=0||!sk||sk.meta?.partnerId!=null||!BASIC_EFFECTS.has(sk.effect))return false;
+    const common=globalThis.EmberwildSkillEffectRuntime;
+    if(common?.configured({...sk.meta,effect:sk.effect}))return common.castEnemy(e,sk);
     const v=enemyBattleStats(e),basePower=v.atk*sk.power*(1+effectTotal(e.id,'power'))*(1-Math.min(GAMEPLAY_SETTINGS.combat.caps.weaken,effectTotal(e.id,'weaken'))),element=sk.element||e.element||'physical';
     if(sk.effect==='heal'){
       const target=weakestFoe()||e,before=target.hp;target.hp=Math.min(target.maxhp,target.hp+Math.round(basePower));note(combatEnemyName(e)+'・'+sk.name+' → '+combatEnemyName(target)+' 恢復 '+Math.max(0,target.hp-before)+' 生命');return true;

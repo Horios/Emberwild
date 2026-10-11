@@ -13,6 +13,13 @@ const STATUS_ELEMENTS=['physical','fire','ice','wind','light','shadow'];
 function statusNum(v,fallback=0){v=Number(v);return Number.isFinite(v)?v:fallback;}
 function statusInt(v,fallback=0,min=0,max=99){return Math.max(min,Math.min(max,Math.round(statusNum(v,fallback))));}
 function statusClamp01(v,fallback=0){return Math.max(0,Math.min(1,statusNum(v,fallback)));}
+function statusPolarity(def){
+  if(['buff','debuff','neutral'].includes(def?.polarity))return def.polarity;
+  let good=false,bad=!!def?.control;
+  for(const m of def?.modifiers||[]){if(!m.value)continue;const negative=['fracture','weaken','vulnerable','damageAmp','followup'].includes(m.kind);if(negative===(m.value>0))bad=true;else good=true;}
+  for(const fx of def?.periodic||[]){if(!(fx.coefficient>0))continue;if(fx.kind==='heal')good=true;else bad=true;}
+  return good===bad?'neutral':good?'buff':'debuff';
+}
 function normalizeStatusDefinition(raw,index=0){
   raw=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
   const tags=[...new Set((Array.isArray(raw.tags)?raw.tags:[]).filter(x=>STATUS_TAGS.includes(x)))];
@@ -34,7 +41,7 @@ function normalizeStatusDefinition(raw,index=0){
     const allowed=kind==='heal'?STATUS_HEAL_RESOLUTIONS:STATUS_DAMAGE_RESOLUTIONS;
     return {kind,basis:STATUS_BASIS.includes(x?.basis)?x.basis:'casterAttack',coefficient:Math.max(0,statusNum(x?.coefficient,0)),resolution:allowed.includes(x?.resolution)?x.resolution:allowed[0],element:STATUS_ELEMENTS.includes(x?.element)?x.element:'physical'};
   }):[];
-  return {id:String(raw.id||('status-'+(index+1))).trim()||('status-'+(index+1)),name:String(raw.name||'未命名狀態').trim()||'未命名狀態',tags,duration:statusInt(raw.duration,1,1,99),modifiers,control,periodic};
+  return {polarity:['auto','buff','debuff','neutral'].includes(raw.polarity)?raw.polarity:'auto',dispellable:raw.dispellable!==false,id:String(raw.id||('status-'+(index+1))).trim()||('status-'+(index+1)),name:String(raw.name||'未命名狀態').trim()||'未命名狀態',tags,duration:statusInt(raw.duration,1,1,99),modifiers,control,periodic};
 }
 function validateStatusDefinition(raw){
   const s=normalizeStatusDefinition(raw),issues=[];
@@ -168,6 +175,27 @@ function applyCustomStatus(defOrId,source,target){
   if(def.tags.includes('instant'))for(const fx of def.periodic)executeStatusPeriodic(inst,fx,true);
   note((source?(statusIsHero(source)?characterName(source):combatEnemyName(source))+' → ':'')+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' 獲得狀態「'+def.name+'」· '+def.duration+' 回合');
   return true;
+}
+function removeStatusEffects(target,polarity,limit=99){
+  const key=statusTargetKey(target);if(!key)return 0;
+  let left=Math.max(1,Math.min(99,Math.floor(Number(limit)||99))),removed=0;const controls=new Set();
+  activeStatuses=activeStatuses.filter(inst=>{
+    if(left>0&&inst.targetKey===key&&partyClock<inst.expiresClock&&inst.definition.dispellable!==false&&statusPolarity(inst.definition)===polarity){left--;removed++;if(inst.definition.control)controls.add(inst.definition.control.kind);return false;}return true;
+  });
+  const api=globalThis.__EMBERWILD_CONTROL_TEST_API;
+  for(const kind of controls)if(!activeStatuses.some(inst=>inst.targetKey===key&&partyClock<inst.expiresClock&&inst.definition.control?.kind===kind))api?.clear?.(target,kind);
+  effects=effects.filter(fx=>{
+    const def={modifiers:[{kind:fx.kind,value:fx.value}],periodic:['dotAttack','dotMaxHp'].includes(fx.kind)?[{kind:'damage',coefficient:fx.value}]:[]};
+    if(left>0&&fx.target===key&&fx.until>partyClock&&statusPolarity(def)===polarity){left--;removed++;return false;}return true;
+  });
+  if(polarity==='debuff'&&!statusIsHero(target)&&left>0){
+    for(const kind of ['polymorph','freeze','frost','rage','fear']){
+      if(left<=0)break;
+      if(activeStatuses.some(inst=>inst.targetKey===key&&partyClock<inst.expiresClock&&inst.definition.control&&(inst.definition.control.kind===kind||kind==='rage'&&inst.definition.control.kind==='tauntRage')))continue;
+      if(api?.clear?.(target,kind)){left--;removed++;}
+    }
+  }
+  return removed;
 }
 function tickCustomStatuses(){
   if(lastStatusTickClock===partyClock)return;lastStatusTickClock=partyClock;
@@ -303,6 +331,6 @@ if(typeof resetBalanceJSON==='function'){
 // A saved balance file may have been loaded by earlier compatibility layers before this extension installed.
 try{const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(saved?.schema===BALANCE_SCHEMA){statusDefinitions=normalizeStatusList(saved.statusDefinitions);attachStatusSkillExtras(saved);}}catch(e){console.warn('自訂狀態資料還原失敗',e);}
 
-globalThis.__EMBERWILD_STATUS_TEST_API={schema:STATUS_SCHEMA_VERSION,normalize:normalizeStatusDefinition,validate:validateStatusDefinition,selfTest:statusPureSelfTest,get definitions(){return deepClone(statusDefinitions);},get active(){return deepClone(activeStatuses);},apply:applyCustomStatus,tick:tickCustomStatuses};
+globalThis.__EMBERWILD_STATUS_TEST_API={schema:STATUS_SCHEMA_VERSION,normalize:normalizeStatusDefinition,validate:validateStatusDefinition,selfTest:statusPureSelfTest,get definitions(){return deepClone(statusDefinitions);},get active(){return deepClone(activeStatuses);},apply:applyCustomStatus,tick:tickCustomStatuses,remove:removeStatusEffects,polarity:statusPolarity,basis:statusBasisValue,damage:statusApplyShieldAwareDamage,maxHp:statusMaxHp};
 if(state)render();
 })();
