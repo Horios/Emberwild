@@ -3,7 +3,7 @@
 (()=>{
   const T=__EMBERWILD_TEAMS,M=EmberwildTeams,copy=M.copy;
   const disposable=g=>g&&!g.locked&&!inlineAffixDrafts.has(affixDraftKey(g));
-  const quickDisposable=g=>disposable(g)&&!MToken(g)&&!gearWearer(g.id)&&!M.references(T.build(),g.id).length&&!(g.plus>0)&&!g.rerolled&&g.boss===undefined;
+  const quickDisposable=g=>disposable(g)&&[0,1].includes(gearQualityRank(g))&&!MToken(g)&&!gearWearer(g.id)&&!M.references(T.build(),g.id).length&&!(g.plus>0)&&!g.rerolled&&g.boss===undefined;
   function dispose(ids,mode,includeEnhance=true,quick=false){
     if(!quick&&!T.safe())return false;T.capture();const items=[...new Set(ids)].map(findGear).filter(quick?quickDisposable:disposable);if(!items.length)return false;
     const refs=new Map();for(const g of items)for(const p of M.references(T.build(),g.id))refs.set(p.id,p.name);
@@ -28,7 +28,7 @@
   salvageAll=()=>dispose(state.bag.filter(g=>!MToken(g)&&gearQualityRank(g)===0&&(g.plus||0)===0&&!g.affix.length&&g.boss===undefined).map(g=>g.id),'salvage',false);
   const MToken=g=>EmberwildTokens.isToken(g);
   globalThis.quickDisposeJournalGear=function(q,mode){
-    if(!party||![0,2].includes(q)||!['salvage','sell'].includes(mode))return false;
+    if(!party||![0,1].includes(q)||!['salvage','sell'].includes(mode))return false;
     const ok=dispose(state.bag.filter(g=>gearQualityRank(g)===q).map(g=>g.id),mode,true,true);
     if(!ok)toast('沒有可快速整理的'+AFFIX_RANK[q]+'裝備，或操作未保存');return ok;
   };
