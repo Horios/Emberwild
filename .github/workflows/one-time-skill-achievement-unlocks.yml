@@ -45,6 +45,7 @@ jobs:
             node --check js/character/companion-unlocks.js &&
             git diff --check &&
             npm ci &&
+            npx playwright install --with-deps chromium &&
             npm run test:teams &&
             node --test tests/achievements.test.cjs tests/skill-board.test.cjs
           } > /tmp/validation.log 2>&1
