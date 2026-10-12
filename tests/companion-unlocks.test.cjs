@@ -19,10 +19,10 @@ test('Visibility has only two values, legacy states migrate and condition editor
 test('Region unlock uses the player gate; elite progress counts only elites in the configured region exactly once',()=>{
  const r=game();rules(r);assert.equal(r.run('companionUnlocked(15)'),false);assert.equal(r.run('companionUnlocked(16)'),false);
  r.run('acquireCompanion(16);');assert.equal(r.run('partyMember(16)'),undefined);
- r.run('playerHero().lv=20;syncParty();save()');assert.equal(r.run('companionTicketCount(15)'),1);r.run('useCompanionRecruitmentTicket(15)');assert.equal(r.run('companionUnlocked(15)'),true);
+ r.run('playerHero().lv=20;syncParty();save();claimAllMailboxAttachments()');assert.equal(r.run('companionTicketCount(15)'),1);r.run('useCompanionRecruitmentTicket(15)');assert.equal(r.run('companionUnlocked(15)'),true);
  r.run("globalThis.defeat=(kind,region)=>{const e=makeEnemy(region,playerHero(),()=>.5);e.kind=kind;e.hp=0;rewardGroupKill(e);return e;};defeat('normal',0);defeat('boss',0);defeat('elite',1);");assert.equal(r.run('party.companionUnlocks.eliteKills[0]||0'),0);
  r.run("for(let i=0;i<49;i++)defeat('elite',0)");assert.equal(r.run('companionUnlocked(16)'),false);assert.equal(r.run('party.achievements.eliteKills[0]'),49);
- r.run("globalThis.last=defeat('elite',0);rewardGroupKill(last);");assert.equal(r.run('party.companionUnlocks.eliteKills[0]'),50);assert.equal(r.run('companionTicketCount(16)'),1);r.run('useCompanionRecruitmentTicket(16)');assert.equal(r.run('companionUnlocked(16)'),true);
+ r.run("globalThis.last=defeat('elite',0);rewardGroupKill(last);claimAllMailboxAttachments();");assert.equal(r.run('party.companionUnlocks.eliteKills[0]'),50);assert.equal(r.run('companionTicketCount(16)'),1);r.run('useCompanionRecruitmentTicket(16)');assert.equal(r.run('companionUnlocked(16)'),true);
  r.run('acquireCompanion(16);closeModal();save();loadParty(structuredClone(packParty()));');assert.equal(r.run('partyMember(16).name'),'凱斯');assert.equal(r.run('party.companionUnlocks.eliteKills[0]'),50);
  const reload=loadRuntime(root,'index.html',Object.fromEntries(r.values));assert.equal(reload.run('party.companionUnlocks.eliteKills[0]'),50);assert.equal(reload.run('companionUnlocked(16)'),true);
  assert.deepEqual(r.errors,[]);assert.deepEqual(reload.errors,[]);
