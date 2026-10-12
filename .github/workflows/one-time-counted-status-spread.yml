@@ -20,8 +20,10 @@ jobs:
           fetch-depth: 0
       - name: Rebase onto latest chatgpt-dev
         run: git pull --rebase origin chatgpt-dev
-      - name: Apply patch
-        run: python3 .github/scripts/patch-counted-status.py
+      - name: Apply patches
+        run: |
+          python3 .github/scripts/patch-counted-status.py
+          python3 .github/scripts/patch-support-status-validator.py
       - name: Run targeted tests
         run: |
           npm install --ignore-scripts
@@ -30,8 +32,8 @@ jobs:
         run: |
           git config user.name "ChatGPT"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/one-time-counted-status-spread.yml .github/scripts/patch-counted-status.py
-          git add js/core/core-game.js js/skills/status-maker.js js/combat/skill-effect-runtime.js tests/status-advanced.test.cjs package.json
+          git rm .github/workflows/one-time-counted-status-spread.yml .github/scripts/patch-counted-status.py .github/scripts/patch-support-status-validator.py
+          git add js/core/core-game.js js/skills/status-maker.js js/skills/support-debuff.js js/combat/skill-effect-runtime.js tests/status-advanced.test.cjs package.json
           git commit -m "feat: add counted status targeting and damage spread"
           git pull --rebase origin chatgpt-dev
           git push origin HEAD:chatgpt-dev
