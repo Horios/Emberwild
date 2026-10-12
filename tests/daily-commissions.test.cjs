@@ -3,6 +3,8 @@ const {loadRuntime}=require('./headless-runtime.cjs'),root=path.resolve(__dirnam
 const json=(r,s)=>JSON.parse(r.run('JSON.stringify('+s+')'));
 function game(time){const r=loadRuntime(root,'index.html',{},time);r.run('selectSaveSlot(1);start(0);closeModal();recruitCompanion(10);closeModal()');return r;}
 function task(r,source='gather',kind='gem'){
+  // This suite explicitly exercises compatibility with pre-designer daily saves.
+  r.run('delete playerHero().board.tasks[0].designVersion;delete playerHero().board.tasks[0].objectives;delete playerHero().board.tasks[0].rewards');
   r.run(`{const q=playerHero().board.tasks[0];q.source=${JSON.stringify(source)};q.mat=${JSON.stringify(source==='potion'?'簡易治療藥水':source==='alchemy'?'紅色草泥':source==='monster'?'黏稠凝膠':'紅色草')};q.n=3;q.kind=${JSON.stringify(kind)};q.done=false;delete q.item;if(q.source==='potion'){q.item='heal_small';setHealPotionCount(q.item,5);}else playerHero().materials[q.mat]=5;}`);
 }
 test('One daily commission survives six save/load cycles for every product, with exact shared-stock deductions',()=>{
@@ -31,7 +33,7 @@ test('Insufficient stock, full gear bags and failed persistence leave no rewards
  for(const source of ['gather','potion']){task(r,source,'gear');const prior=r.run('JSON.stringify(packParty())');r.run('globalThis.originalSave=save;save=()=>false');assert.equal(r.run('claimBoard(state.board.tasks[0].id)'),false);assert.equal(r.run('JSON.stringify(packParty())'),prior);r.run('save=originalSave');assert.equal(r.run('claimBoard(state.board.tasks[0].id)'),true);}
 });
 test('Legacy three-task boards migrate once without duplicating shared tasks or losing side-quest progress',()=>{
- const r=game();r.run('globalThis.old=JSON.parse(JSON.stringify(packParty()));const b=old.members[0].board;delete b.dailyVersion;delete b.day;b.next=Date.now()+100000;b.tasks=MAPS[0].mobs.slice(0,3).map((mob,i)=>({id:"legacy-"+i,map:0,mat:mob[2],n:8,kind:"gem",gem:0,slot:0,rar:2,done:false}));old.members[0].claimed=[QUESTS[0].id];old.members[0].repeat=12;loadParty(old)');assert.equal(r.run('state.board.tasks.length'),1);assert.equal(r.run('state.board.dailyVersion'),1);assert.equal(r.run('state.repeat'),12);assert(r.run('state.claimed.includes(QUESTS[0].id)'));r.run('loadParty(packParty())');assert.equal(r.run('state.board.tasks.length'),1);
+ const r=game();r.run('globalThis.old=JSON.parse(JSON.stringify(packParty()));const b=old.members[0].board;delete b.dailyVersion;delete b.designVersion;delete b.day;b.next=Date.now()+100000;b.tasks=MAPS[0].mobs.slice(0,3).map((mob,i)=>({id:"legacy-"+i,map:0,mat:mob[2],n:8,kind:"gem",gem:0,slot:0,rar:2,done:false}));old.members[0].claimed=[QUESTS[0].id];old.members[0].repeat=12;loadParty(old)');assert.equal(r.run('state.board.tasks.length'),1);assert.equal(r.run('state.board.dailyVersion'),1);assert.equal(r.run('state.repeat'),12);assert(r.run('state.claimed.includes(QUESTS[0].id)'));r.run('loadParty(packParty())');assert.equal(r.run('state.board.tasks.length'),1);
 });
 test('Malformed daily dates, sources, item references and extra tasks fail import atomically',()=>{
  const r=game();task(r,'potion');const before=r.run('JSON.stringify(packParty())');
