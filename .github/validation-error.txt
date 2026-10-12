@@ -1,1150 +1,508 @@
 
-added 2 packages, and audited 3 packages in 957ms
+added 2 packages, and audited 3 packages in 2s
 
 found 0 vulnerabilities
+Installing dependencies...
+Switching to root user to install dependencies...
+Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+Hit:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+Get:6 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
+Get:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+Get:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+Get:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble/main all Packages [640 B]
+Get:8 https://packages.microsoft.com/ubuntu/24.04/prod noble/main armhf Packages [12.3 kB]
+Get:9 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [548 kB]
+Get:10 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [492 kB]
+Get:11 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1375 kB]
+Get:12 http://azure.archive.ubuntu.com/ubuntu noble-updates/main Translation-en [306 kB]
+Get:13 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages [1702 kB]
+Get:14 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe Translation-en [342 kB]
+Get:15 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Packages [1761 kB]
+Get:16 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted Translation-en [401 kB]
+Get:17 http://azure.archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Packages [55.0 kB]
+Get:18 http://azure.archive.ubuntu.com/ubuntu noble-updates/multiverse Translation-en [14.3 kB]
+Get:19 http://azure.archive.ubuntu.com/ubuntu noble-security/main amd64 Packages [1121 kB]
+Get:20 http://azure.archive.ubuntu.com/ubuntu noble-security/main Translation-en [228 kB]
+Get:21 http://azure.archive.ubuntu.com/ubuntu noble-security/universe amd64 Packages [1220 kB]
+Get:22 http://azure.archive.ubuntu.com/ubuntu noble-security/universe Translation-en [245 kB]
+Get:23 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted amd64 Packages [1669 kB]
+Get:24 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted Translation-en [383 kB]
+Get:25 http://azure.archive.ubuntu.com/ubuntu noble-security/multiverse amd64 Packages [49.8 kB]
+Get:26 http://azure.archive.ubuntu.com/ubuntu noble-security/multiverse Translation-en [12.4 kB]
+Fetched 12.3 MB in 1s (13.0 MB/s)
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+libasound2t64 is already the newest version (1.2.11-1ubuntu0.3).
+libasound2t64 set to manually installed.
+libatk-bridge2.0-0t64 is already the newest version (2.52.0-1build1).
+libatk-bridge2.0-0t64 set to manually installed.
+libatk1.0-0t64 is already the newest version (2.52.0-1build1).
+libatk1.0-0t64 set to manually installed.
+libatspi2.0-0t64 is already the newest version (2.52.0-1build1).
+libatspi2.0-0t64 set to manually installed.
+libcairo2 is already the newest version (1.18.0-3build1).
+libcairo2 set to manually installed.
+libcups2t64 is already the newest version (2.4.7-1.2ubuntu7.14).
+libcups2t64 set to manually installed.
+libdbus-1-3 is already the newest version (1.14.10-4ubuntu4.1).
+libdbus-1-3 set to manually installed.
+libdrm2 is already the newest version (2.4.125-1ubuntu0.1~24.04.2).
+libdrm2 set to manually installed.
+libgbm1 is already the newest version (25.2.8-0ubuntu0.24.04.4).
+libgbm1 set to manually installed.
+libglib2.0-0t64 is already the newest version (2.80.0-6ubuntu3.9).
+libglib2.0-0t64 set to manually installed.
+libnspr4 is already the newest version (2:4.35-1.1build1).
+libnspr4 set to manually installed.
+libnss3 is already the newest version (2:3.98-1ubuntu0.2).
+libnss3 set to manually installed.
+libpango-1.0-0 is already the newest version (1.52.1+ds-1build1).
+libpango-1.0-0 set to manually installed.
+libx11-6 is already the newest version (2:1.8.7-1build1).
+libx11-6 set to manually installed.
+libxcb1 is already the newest version (1.15-1ubuntu2).
+libxcb1 set to manually installed.
+libxcomposite1 is already the newest version (1:0.4.5-1build3).
+libxcomposite1 set to manually installed.
+libxdamage1 is already the newest version (1:1.1.6-1build1).
+libxdamage1 set to manually installed.
+libxext6 is already the newest version (2:1.3.4-1build2).
+libxext6 set to manually installed.
+libxfixes3 is already the newest version (1:6.0.0-2build1).
+libxfixes3 set to manually installed.
+libxkbcommon0 is already the newest version (1.6.0-1build1).
+libxkbcommon0 set to manually installed.
+libxrandr2 is already the newest version (2:1.5.2-2build1).
+libxrandr2 set to manually installed.
+xvfb is already the newest version (2:21.1.12-1ubuntu1.8).
+fonts-noto-color-emoji is already the newest version (2.047-0ubuntu0.24.04.1).
+libfontconfig1 is already the newest version (2.15.0-1.1ubuntu2).
+libfontconfig1 set to manually installed.
+fonts-liberation is already the newest version (1:2.1.5-3).
+fonts-liberation set to manually installed.
+The following additional packages will be installed:
+  xfonts-encodings xfonts-utils
+Recommended packages:
+  fonts-ipafont-mincho fonts-tlwg-loma
+The following NEW packages will be installed:
+  fonts-freefont-ttf fonts-ipafont-gothic fonts-tlwg-loma-otf fonts-unifont
+  fonts-wqy-zenhei xfonts-cyrillic xfonts-encodings xfonts-scalable
+  xfonts-utils
+The following packages will be upgraded:
+  libfreetype6
+1 upgraded, 9 newly installed, 0 to remove and 22 not upgraded.
+Need to get 21.5 MB of archives.
+After this operation, 79.5 MB of additional disk space will be used.
+Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+Get:2 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 fonts-ipafont-gothic all 00303-21ubuntu1 [3513 kB]
+Get:3 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 fonts-freefont-ttf all 20211204+svn4273-2 [5641 kB]
+Get:4 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 fonts-tlwg-loma-otf all 1:0.7.3-1 [107 kB]
+Get:5 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 fonts-unifont all 1:15.1.01-1build1 [2993 kB]
+Get:6 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 fonts-wqy-zenhei all 0.9.45-8 [7472 kB]
+Get:7 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 libfreetype6 amd64 2.13.2+dfsg-1ubuntu0.2 [403 kB]
+Get:8 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 xfonts-encodings all 1:1.0.5-0ubuntu2 [578 kB]
+Get:9 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 xfonts-utils amd64 1:7.7+6build3 [94.4 kB]
+Get:10 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 xfonts-cyrillic all 1:1.0.5+nmu1 [384 kB]
+Get:11 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 xfonts-scalable all 1:1.0.3-1.3 [304 kB]
+Fetched 21.5 MB in 2s (13.5 MB/s)
+Selecting previously unselected package fonts-ipafont-gothic.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 203191 files and directories currently installed.)
+Preparing to unpack .../0-fonts-ipafont-gothic_00303-21ubuntu1_all.deb ...
+Unpacking fonts-ipafont-gothic (00303-21ubuntu1) ...
+Selecting previously unselected package fonts-freefont-ttf.
+Preparing to unpack .../1-fonts-freefont-ttf_20211204+svn4273-2_all.deb ...
+Unpacking fonts-freefont-ttf (20211204+svn4273-2) ...
+Selecting previously unselected package fonts-tlwg-loma-otf.
+Preparing to unpack .../2-fonts-tlwg-loma-otf_1%3a0.7.3-1_all.deb ...
+Unpacking fonts-tlwg-loma-otf (1:0.7.3-1) ...
+Selecting previously unselected package fonts-unifont.
+Preparing to unpack .../3-fonts-unifont_1%3a15.1.01-1build1_all.deb ...
+Unpacking fonts-unifont (1:15.1.01-1build1) ...
+Selecting previously unselected package fonts-wqy-zenhei.
+Preparing to unpack .../4-fonts-wqy-zenhei_0.9.45-8_all.deb ...
+Unpacking fonts-wqy-zenhei (0.9.45-8) ...
+Preparing to unpack .../5-libfreetype6_2.13.2+dfsg-1ubuntu0.2_amd64.deb ...
+Unpacking libfreetype6:amd64 (2.13.2+dfsg-1ubuntu0.2) over (2.13.2+dfsg-1ubuntu0.1) ...
+Selecting previously unselected package xfonts-encodings.
+Preparing to unpack .../6-xfonts-encodings_1%3a1.0.5-0ubuntu2_all.deb ...
+Unpacking xfonts-encodings (1:1.0.5-0ubuntu2) ...
+Selecting previously unselected package xfonts-utils.
+Preparing to unpack .../7-xfonts-utils_1%3a7.7+6build3_amd64.deb ...
+Unpacking xfonts-utils (1:7.7+6build3) ...
+Selecting previously unselected package xfonts-cyrillic.
+Preparing to unpack .../8-xfonts-cyrillic_1%3a1.0.5+nmu1_all.deb ...
+Unpacking xfonts-cyrillic (1:1.0.5+nmu1) ...
+Selecting previously unselected package xfonts-scalable.
+Preparing to unpack .../9-xfonts-scalable_1%3a1.0.3-1.3_all.deb ...
+Unpacking xfonts-scalable (1:1.0.3-1.3) ...
+Setting up fonts-wqy-zenhei (0.9.45-8) ...
+Setting up fonts-freefont-ttf (20211204+svn4273-2) ...
+Setting up fonts-tlwg-loma-otf (1:0.7.3-1) ...
+Setting up libfreetype6:amd64 (2.13.2+dfsg-1ubuntu0.2) ...
+Setting up xfonts-encodings (1:1.0.5-0ubuntu2) ...
+Setting up fonts-ipafont-gothic (00303-21ubuntu1) ...
+update-alternatives: using /usr/share/fonts/opentype/ipafont-gothic/ipag.ttf to provide /usr/share/fonts/truetype/fonts-japanese-gothic.ttf (fonts-japanese-gothic.ttf) in auto mode
+Setting up fonts-unifont (1:15.1.01-1build1) ...
+Setting up xfonts-utils (1:7.7+6build3) ...
+Setting up xfonts-cyrillic (1:1.0.5+nmu1) ...
+Setting up xfonts-scalable (1:1.0.3-1.3) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Not building database; man-db/auto-update is not 'true'.
+Processing triggers for fontconfig (2.15.0-1.1ubuntu2) ...
+
+Running kernel seems to be up-to-date.
+
+Restarting services...
+ systemctl restart php8.3-fpm.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+Downloading Chrome for Testing 151.0.7922.34 (playwright chromium v1234) from https://cdn.playwright.dev/builds/cft/151.0.7922.34/linux64/chrome-linux64.zip
+|                                                                                |   0% of 184.3 MiB
+|■■■■■■■■                                                                        |  10% of 184.3 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 184.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 184.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 184.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 184.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 184.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 184.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 184.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 184.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 184.3 MiB
+Chrome for Testing 151.0.7922.34 (playwright chromium v1234) downloaded to /home/runner/.cache/ms-playwright/chromium-1234
+Downloading FFmpeg (playwright ffmpeg v1011) from https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-linux.zip
+|                                                                                |   0% of 2.3 MiB
+|■■■■■■■■                                                                        |  10% of 2.3 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 2.3 MiB
+FFmpeg (playwright ffmpeg v1011) downloaded to /home/runner/.cache/ms-playwright/ffmpeg-1011
+Downloading Chrome Headless Shell 151.0.7922.34 (playwright chromium-headless-shell v1234) from https://cdn.playwright.dev/builds/cft/151.0.7922.34/linux64/chrome-headless-shell-linux64.zip
+|                                                                                |   0% of 114.7 MiB
+|■■■■■■■■                                                                        |  10% of 114.7 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 114.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 114.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 114.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 114.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 114.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 114.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 114.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 114.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 114.7 MiB
+Chrome Headless Shell 151.0.7922.34 (playwright chromium-headless-shell v1234) downloaded to /home/runner/.cache/ms-playwright/chromium_headless_shell-1234
 
 > test:teams
 > node --test tests/team-model.test.cjs tests/team-save-compatibility.test.cjs tests/team-save-compatibility.browser.test.cjs tests/team-runtime.test.cjs tests/team-builds.browser.test.cjs
 
 TAP version 13
 # Subtest: Chromium: create blank plans, choose classes, learn, allocate, copy, rename, safety gate and exact reload through actual UI
+    # Subtest: new plan has no class, build, equipment or companions and uses the full level budget
+    not ok 1 - new plan has no class, build, equipment or companions and uses the full level budget
+      ---
+      duration_ms: 243.935588
+      type: 'test'
+      location: '/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:7:11'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        undefined !== 12
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 12
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:9:321)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:7:3)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: actual class, attribute and skill controls save the current team independently
+    ok 2 - actual class, attribute and skill controls save the current team independently
+      ---
+      duration_ms: 621.360678
+      type: 'test'
+      ...
+    # Subtest: copy and rename use actual controls without creating another item or companion
+    ok 3 - copy and rename use actual controls without creating another item or companion
+      ---
+      duration_ms: 213.617861
+      type: 'test'
+      ...
+    # Subtest: reset and class confirmation leave permanent progress and other plans intact
+    ok 4 - reset and class confirmation leave permanent progress and other plans intact
+      ---
+      duration_ms: 144.713047
+      type: 'test'
+      ...
+    # Subtest: running and paused encounters disable UI; stopping and safe switching reset HP, cooldowns and the encounter
+    ok 5 - running and paused encounters disable UI; stopping and safe switching reset HP, cooldowns and the encounter
+      ---
+      duration_ms: 210.106281
+      type: 'test'
+      ...
+    # Subtest: actual save download and file import restore every team and shared resource
+    ok 6 - actual save download and file import restore every team and shared resource
+      ---
+      duration_ms: 212.017845
+      type: 'test'
+      ...
+    # Subtest: browser reload restores all snapshots, global mastery and exactly the existing item UIDs
+    ok 7 - browser reload restores all snapshots, global mastery and exactly the existing item UIDs
+      ---
+      duration_ms: 1088.161888
+      type: 'test'
+      ...
+    1..7
 not ok 1 - Chromium: create blank plans, choose classes, learn, allocate, copy, rename, safety gate and exact reload through actual UI
   ---
-  duration_ms: 36.294542
+  duration_ms: 5047.890259
   type: 'test'
   location: '/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:3:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    browserType.launch: Executable doesn't exist at /home/runner/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
-    ╔════════════════════════════════════════════════════════════╗
-    ║ Looks like Playwright was just installed or updated.       ║
-    ║ Please run the following command to download new browsers: ║
-    ║                                                            ║
-    ║     npx playwright install                                 ║
-    ║                                                            ║
-    ║ <3 Playwright Team                                         ║
-    ╚════════════════════════════════════════════════════════════╝
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
   code: 'ERR_TEST_FAILURE'
-  stack: |-
-    openRuntime (/home/runner/work/Emberwild/Emberwild/tests/runtime.cjs:5:32)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:4:19)
   ...
 # Subtest: Chromium: worn equipment can be force-sold after a native warning naming all plans, with cancellation and one reward
-not ok 2 - Chromium: worn equipment can be force-sold after a native warning naming all plans, with cancellation and one reward
+ok 2 - Chromium: worn equipment can be force-sold after a native warning naming all plans, with cancellation and one reward
   ---
-  duration_ms: 34.866241
+  duration_ms: 1345.925363
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:42:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    browserType.launch: Executable doesn't exist at /home/runner/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
-    ╔════════════════════════════════════════════════════════════╗
-    ║ Looks like Playwright was just installed or updated.       ║
-    ║ Please run the following command to download new browsers: ║
-    ║                                                            ║
-    ║     npx playwright install                                 ║
-    ║                                                            ║
-    ║ <3 Playwright Team                                         ║
-    ╚════════════════════════════════════════════════════════════╝
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    openRuntime (/home/runner/work/Emberwild/Emberwild/tests/runtime.cjs:5:32)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:43:16)
   ...
 # Subtest: Chromium: preview copies old saves once and never overwrites or resurrects the production slots
-not ok 3 - Chromium: preview copies old saves once and never overwrites or resurrects the production slots
+ok 3 - Chromium: preview copies old saves once and never overwrites or resurrects the production slots
   ---
-  duration_ms: 9.156205
+  duration_ms: 4062.278413
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:54:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    browserType.launch: Executable doesn't exist at /home/runner/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
-    ╔════════════════════════════════════════════════════════════╗
-    ║ Looks like Playwright was just installed or updated.       ║
-    ║ Please run the following command to download new browsers: ║
-    ║                                                            ║
-    ║     npx playwright install                                 ║
-    ║                                                            ║
-    ║ <3 Playwright Team                                         ║
-    ╚════════════════════════════════════════════════════════════╝
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    openRuntime (/home/runner/work/Emberwild/Emberwild/tests/runtime.cjs:5:32)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:55:23)
   ...
 # Subtest: Chromium: actual designer point rules, unlock/learning fields, download and game import use one contract
+    # Subtest: embedded schema is byte-identical to the runtime model
+    not ok 1 - embedded schema is byte-identical to the runtime model
+      ---
+      duration_ms: 0.473914
+      type: 'test'
+      location: '/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:70:11'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, open '/home/runner/work/Emberwild/Emberwild-Balance/balance-editor.html'"
+      code: 'ENOENT'
+      stack: |-
+        Object.readFileSync (node:fs:440:20)
+        TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:70:97)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        TestContext.test (node:internal/test_runner/test:373:20)
+        TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:70:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
 not ok 4 - Chromium: actual designer point rules, unlock/learning fields, download and game import use one contract
   ---
-  duration_ms: 6.645648
+  duration_ms: 30937.837936
   type: 'test'
   location: '/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:67:1'
   failureType: 'testCodeFailure'
   error: |-
-    browserType.launch: Executable doesn't exist at /home/runner/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
-    ╔════════════════════════════════════════════════════════════╗
-    ║ Looks like Playwright was just installed or updated.       ║
-    ║ Please run the following command to download new browsers: ║
-    ║                                                            ║
-    ║     npx playwright install                                 ║
-    ║                                                            ║
-    ║ <3 Playwright Team                                         ║
-    ╚════════════════════════════════════════════════════════════╝
+    locator.click: Timeout 30000ms exceeded.
+    Call log:
+      - waiting for locator('[data-sec="teamSettings"]')
+    
   code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
   stack: |-
-    openRuntime (/home/runner/work/Emberwild/Emberwild/tests/runtime.cjs:5:32)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:68:21)
+    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-builds.browser.test.cjs:71:48)
   ...
 # Subtest: skill point fields are removed and ability points remain
 ok 5 - skill point fields are removed and ability points remain
   ---
-  duration_ms: 1.647288
+  duration_ms: 0.967326
   type: 'test'
   ...
 # Subtest: blank snapshots, configuration copy and reference cleanup never copy items
 ok 6 - blank snapshots, configuration copy and reference cleanup never copy items
   ---
-  duration_ms: 0.440002
+  duration_ms: 0.246478
   type: 'test'
   ...
 # Subtest: unlock rules support boss, elite and boss-equipment achievements without learn costs
 ok 7 - unlock rules support boss, elite and boss-equipment achievements without learn costs
   ---
-  duration_ms: 0.800696
+  duration_ms: 0.414229
   type: 'test'
   ...
 # Subtest: missing equipped UIDs are cleared without touching resources or real items
 ok 8 - missing equipped UIDs are cleared without touching resources or real items
   ---
-  duration_ms: 0.301433
+  duration_ms: 0.173449
   type: 'test'
   ...
 # Subtest: A: initial class stays intact; new late team is blank; configurations and copies are independent
-not ok 9 - A: initial class stays intact; new late team is blank; configurations and copies are independent
+ok 9 - A: initial class stays intact; new late team is blank; configurations and copies are independent
   ---
-  duration_ms: 671.604278
+  duration_ms: 872.175021
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:5:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:6:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.start (node:internal/test_runner/test:944:17)
-    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
   ...
 # Subtest: B: stable player identity and global class/element/weapon mastery survive free class changes and reload
-not ok 10 - B: stable player identity and global class/element/weapon mastery survive free class changes and reload
+ok 10 - B: stable player identity and global class/element/weapon mastery survive free class changes and reload
   ---
-  duration_ms: 399.132097
+  duration_ms: 1076.415551
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:9:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:10:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
 # Subtest: C: real fire skill mastery threshold, one-time material unlock, team learning and reset remain separate
-not ok 11 - C: real fire skill mastery threshold, one-time material unlock, team learning and reset remain separate
+ok 11 - C: real fire skill mastery threshold, one-time material unlock, team learning and reset remain separate
   ---
-  duration_ms: 357.648643
+  duration_ms: 1942.724068
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:13:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:14:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: D: real level rewards apply to all plans without overwriting allocations or repeat-load grants
-not ok 12 - D: real level rewards apply to all plans without overwriting allocations or repeat-load grants
+ok 12 - D: real level rewards apply to all plans without overwriting allocations or repeat-load grants
   ---
-  duration_ms: 360.605186
+  duration_ms: 916.263239
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:17:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:18:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: achievement and boss-equipment skill gates use shared progression counters and account inventory
-not ok 13 - achievement and boss-equipment skill gates use shared progression counters and account inventory
+ok 13 - achievement and boss-equipment skill gates use shared progression counters and account inventory
   ---
-  duration_ms: 342.282669
+  duration_ms: 2344.519068
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:21:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:22:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: resets and class changes ask confirmation; cancel leaves every configuration unchanged
-not ok 14 - resets and class changes ask confirmation; cancel leaves every configuration unchanged
+ok 14 - resets and class changes ask confirmation; cancel leaves every configuration unchanged
   ---
-  duration_ms: 318.37166
+  duration_ms: 1155.319953
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:24:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:25:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: E: equipment references warn all teams; cancellation and force sale are atomic and grant once
-not ok 15 - E: equipment references warn all teams; cancellation and force sale are atomic and grant once
+ok 15 - E: equipment references warn all teams; cancellation and force sale are atomic and grant once
   ---
-  duration_ms: 325.711809
+  duration_ms: 838.301211
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:27:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:28:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: batch salvage uses the same reference warning, clears all plans, keeps locks and pending affixes
-not ok 16 - batch salvage uses the same reference warning, clears all plans, keeps locks and pending affixes
+ok 16 - batch salvage uses the same reference warning, clears all plans, keeps locks and pending affixes
   ---
-  duration_ms: 322.615521
+  duration_ms: 785.765408
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:30:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:31:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: one physical token can differ by team; same-team duplicate ownership is rejected
-not ok 17 - one physical token can differ by team; same-team duplicate ownership is rejected
+ok 17 - one physical token can differ by team; same-team duplicate ownership is rejected
   ---
-  duration_ms: 328.254865
+  duration_ms: 810.269671
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:33:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:34:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: gem instances are referenced when copying; changing or resetting releases each physical gem only once
-not ok 18 - gem instances are referenced when copying; changing or resetting releases each physical gem only once
+ok 18 - gem instances are referenced when copying; changing or resetting releases each physical gem only once
   ---
-  duration_ms: 329.415986
+  duration_ms: 906.460302
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:36:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:37:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: F: running, paused encounters and between encounters block all configuration paths in core logic
-not ok 19 - F: running, paused encounters and between encounters block all configuration paths in core logic
+ok 19 - F: running, paused encounters and between encounters block all configuration paths in core logic
   ---
-  duration_ms: 322.458305
+  duration_ms: 559.9007
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:39:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:40:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: stop and safe switches reset all transient battle state while keeping permanent gains and item deadlines
-not ok 20 - stop and safe switches reset all transient battle state while keeping permanent gains and item deadlines
+ok 20 - stop and safe switches reset all transient battle state while keeping permanent gains and item deadlines
   ---
-  duration_ms: 320.308919
+  duration_ms: 610.988351
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:42:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:43:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: G: new saves, exact cold boot and repeated imports preserve every team, UID and permanent result
-not ok 21 - G: new saves, exact cold boot and repeated imports preserve every team, UID and permanent result
+ok 21 - G: new saves, exact cold boot and repeated imports preserve every team, UID and permanent result
   ---
-  duration_ms: 327.251863
+  duration_ms: 1210.390519
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:45:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:46:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: legacy saves migrate learned skills into permanent unlocks and preserve allocations, mastery and inventory
-not ok 22 - legacy saves migrate learned skills into permanent unlocks and preserve allocations, mastery and inventory
+ok 22 - legacy saves migrate learned skills into permanent unlocks and preserve allocations, mastery and inventory
   ---
-  duration_ms: 324.684993
+  duration_ms: 607.890506
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:48:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:49:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: missing UID references become empty; corrupted allocations/slots/permanent records reject before live mutation
-not ok 23 - missing UID references become empty; corrupted allocations/slots/permanent records reject before live mutation
+ok 23 - missing UID references become empty; corrupted allocations/slots/permanent records reject before live mutation
   ---
-  duration_ms: 321.177215
+  duration_ms: 561.932142
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:51:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:52:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: failed saves roll back class switching, configuration resets, material unlock and referenced item disposal
-not ok 24 - failed saves roll back class switching, configuration resets, material unlock and referenced item disposal
+ok 24 - failed saves roll back class switching, configuration resets, material unlock and referenced item disposal
   ---
-  duration_ms: 324.822161
+  duration_ms: 578.573225
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:54:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:55:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: real sword basic attacks and fire casts feed the existing XP rules into only the active player class
-not ok 25 - real sword basic attacks and fire casts feed the existing XP rules into only the active player class
+ok 25 - real sword basic attacks and fire casts feed the existing XP rules into only the active player class
   ---
-  duration_ms: 349.036838
+  duration_ms: 569.152327
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:57:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:58:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: class advancement is permanent and its existing cost is paid once; revisiting does not charge or reset mastery
-not ok 26 - class advancement is permanent and its existing cost is paid once; revisiting does not charge or reset mastery
+ok 26 - class advancement is permanent and its existing cost is paid once; revisiting does not charge or reset mastery
   ---
-  duration_ms: 316.96806
+  duration_ms: 589.543042
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:60:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:61:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: supported v1 and v2 single-hero saves use the same idempotent migration as version 3
-not ok 27 - supported v1 and v2 single-hero saves use the same idempotent migration as version 3
+ok 27 - supported v1 and v2 single-hero saves use the same idempotent migration as version 3
   ---
-  duration_ms: 317.537811
+  duration_ms: 1117.969437
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:63:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:64:38)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: old all-companion formations preserve their three active members across migration and copies
-not ok 28 - old all-companion formations preserve their three active members across migration and copies
+ok 28 - old all-companion formations preserve their three active members across migration and copies
   ---
-  duration_ms: 322.643568
+  duration_ms: 584.560852
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:66:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:67:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: material unlock failure and ordinary allocation failure refund resources and leave the live configuration intact
-not ok 29 - material unlock failure and ordinary allocation failure refund resources and leave the live configuration intact
+ok 29 - material unlock failure and ordinary allocation failure refund resources and leave the live configuration intact
   ---
-  duration_ms: 319.541258
+  duration_ms: 1228.301017
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:69:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:70:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: plan limits retain existing plans; blank plans round-trip and never contain battle-resource snapshots
-not ok 30 - plan limits retain existing plans; blank plans round-trip and never contain battle-resource snapshots
+ok 30 - plan limits retain existing plans; blank plans round-trip and never contain battle-resource snapshots
   ---
-  duration_ms: 321.299701
+  duration_ms: 1259.147872
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:72:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:73:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Subtest: balance edits check every plan before mutation, expand new skill arrays, and roll back a failed save
 not ok 31 - balance edits check every plan before mutation, expand new skill arrays, and roll back a failed save
   ---
-  duration_ms: 325.995645
+  duration_ms: 4459.050181
   type: 'test'
   location: '/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:75:1'
   failureType: 'testCodeFailure'
   error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
+    Expected values to be strictly equal:
     
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
   stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    game (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:4:30)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:76:10)
+    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-runtime.test.cjs:90:9)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.processPendingSubtests (node:internal/test_runner/test:744:18)
@@ -1155,183 +513,279 @@ not ok 31 - balance edits check every plan before mutation, expand new skill arr
 # Subtest: Chromium: legacy slot continues without an error, preserves plans and reloads the migrated save
 not ok 32 - Chromium: legacy slot continues without an error, preserves plans and reloads the migrated save
   ---
-  duration_ms: 53.380055
+  duration_ms: 2339.201453
   type: 'test'
   location: '/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.browser.test.cjs:3:1'
   failureType: 'testCodeFailure'
   error: |-
-    browserType.launch: Executable doesn't exist at /home/runner/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
-    ╔════════════════════════════════════════════════════════════╗
-    ║ Looks like Playwright was just installed or updated.       ║
-    ║ Please run the following command to download new browsers: ║
-    ║                                                            ║
-    ║     npx playwright install                                 ║
-    ║                                                            ║
-    ║ <3 Playwright Team                                         ║
-    ╚════════════════════════════════════════════════════════════╝
-  code: 'ERR_TEST_FAILURE'
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        abilityCredit: 0,
+        classes: {
+          '0': {
+            activated: true,
+    ...
+        playerKey: 0,
+    -   skillCredit: 2,
+        unlocks: {
+          '0:core:0': true,
+          '0:core:6': true,
+          '0:support:0': true,
+          '0:support:1': true,
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    playerKey: 0
+    abilityCredit: 0
+    skillCredit: 2
+    classes:
+      0:
+        activated: true
+        xp: 0
+        advanced: false
+      1:
+        activated: true
+        xp: 0
+        advanced: false
+      2:
+        activated: false
+        xp: 0
+        advanced: false
+      3:
+        activated: false
+        xp: 0
+        advanced: false
+    masteries:
+      sword: 0
+      axe: 0
+      hammer: 0
+      fire: 0
+      ice: 0
+      wind: 0
+      shadow: 0
+    unlocks:
+      0:core:0: true
+      0:support:0: true
+      0:core:6: true
+      0:support:1: true
+      1:core:0: true
+      1:core:1: true
+      1:core:3: true
+      1:core:7: true
+      1:core:8: true
+      1:support:0: true
+      1:support:1: true
+    payments:
+    gemInstances:
+      gem-1: 0
+      gem-2: 1
+    gemSerial: 3
+  actual:
+    playerKey: 0
+    abilityCredit: 0
+    classes:
+      0:
+        activated: true
+        xp: 0
+        advanced: false
+      1:
+        activated: true
+        xp: 0
+        advanced: false
+      2:
+        activated: false
+        xp: 0
+        advanced: false
+      3:
+        activated: false
+        xp: 0
+        advanced: false
+    masteries:
+      sword: 0
+      axe: 0
+      hammer: 0
+      fire: 0
+      ice: 0
+      wind: 0
+      shadow: 0
+    unlocks:
+      0:core:0: true
+      0:support:0: true
+      0:core:6: true
+      0:support:1: true
+      1:core:0: true
+      1:core:1: true
+      1:core:3: true
+      1:core:7: true
+      1:core:8: true
+      1:support:0: true
+      1:support:1: true
+    payments:
+    gemInstances:
+      gem-1: 0
+      gem-2: 1
+    gemSerial: 3
+  operator: 'deepStrictEqual'
   stack: |-
-    openRuntime (/home/runner/work/Emberwild/Emberwild/tests/runtime.cjs:5:32)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.browser.test.cjs:4:16)
+    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.browser.test.cjs:9:98)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
 # Subtest: Chromium: genuinely excessive allocations still show the recovery dialog and download unchanged original JSON
-not ok 33 - Chromium: genuinely excessive allocations still show the recovery dialog and download unchanged original JSON
+ok 33 - Chromium: genuinely excessive allocations still show the recovery dialog and download unchanged original JSON
   ---
-  duration_ms: 25.640721
+  duration_ms: 2099.645802
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.browser.test.cjs:14:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    browserType.launch: Executable doesn't exist at /home/runner/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell
-    ╔════════════════════════════════════════════════════════════╗
-    ║ Looks like Playwright was just installed or updated.       ║
-    ║ Please run the following command to download new browsers: ║
-    ║                                                            ║
-    ║     npx playwright install                                 ║
-    ║                                                            ║
-    ║ <3 Playwright Team                                         ║
-    ╚════════════════════════════════════════════════════════════╝
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    openRuntime (/home/runner/work/Emberwild/Emberwild/tests/runtime.cjs:5:32)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.browser.test.cjs:16:42)
   ...
 # Subtest: real pre-ownership saves append only empty skill positions and preserve all plans, allocations, gems and permanent records
 not ok 34 - real pre-ownership saves append only empty skill positions and preserve all plans, allocations, gems and permanent records
   ---
-  duration_ms: 554.85003
+  duration_ms: 1024.202146
   type: 'test'
   location: '/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.test.cjs:11:1'
   failureType: 'testCodeFailure'
   error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
     
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
+      {
+        abilityCredit: 0,
+        classes: {
+          '0': {
+            activated: true,
+    ...
+        playerKey: 0,
+    -   skillCredit: 2,
+        unlocks: {
+          '0:core:0': true,
+          '0:core:6': true,
+          '0:support:0': true,
+          '0:support:1': true,
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    playerKey: 0
+    abilityCredit: 0
+    skillCredit: 2
+    classes:
+      0:
+        activated: true
+        xp: 0
+        advanced: false
+      1:
+        activated: true
+        xp: 0
+        advanced: false
+      2:
+        activated: false
+        xp: 0
+        advanced: false
+      3:
+        activated: false
+        xp: 0
+        advanced: false
+    masteries:
+      sword: 0
+      axe: 0
+      hammer: 0
+      fire: 0
+      ice: 0
+      wind: 0
+      shadow: 0
+    unlocks:
+      0:core:0: true
+      0:support:0: true
+      0:core:6: true
+      0:support:1: true
+      1:core:0: true
+      1:core:1: true
+      1:core:3: true
+      1:core:7: true
+      1:core:8: true
+      1:support:0: true
+      1:support:1: true
+    payments:
+    gemInstances:
+      gem-1: 0
+      gem-2: 1
+    gemSerial: 3
+  actual:
+    playerKey: 0
+    abilityCredit: 0
+    classes:
+      0:
+        activated: true
+        xp: 0
+        advanced: false
+      1:
+        activated: true
+        xp: 0
+        advanced: false
+      2:
+        activated: false
+        xp: 0
+        advanced: false
+      3:
+        activated: false
+        xp: 0
+        advanced: false
+    masteries:
+      sword: 0
+      axe: 0
+      hammer: 0
+      fire: 0
+      ice: 0
+      wind: 0
+      shadow: 0
+    unlocks:
+      0:core:0: true
+      0:support:0: true
+      0:core:6: true
+      0:support:1: true
+      1:core:0: true
+      1:core:1: true
+      1:core:3: true
+      1:core:7: true
+      1:core:8: true
+      1:support:0: true
+      1:support:1: true
+    payments:
+    gemInstances:
+      gem-1: 0
+      gem-2: 1
+    gemSerial: 3
+  operator: 'deepStrictEqual'
   stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.test.cjs:12:10)
+    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.test.cjs:14:70)
     Test.runInAsyncScope (node:async_hooks:214:14)
     Test.run (node:internal/test_runner/test:1047:25)
     Test.start (node:internal/test_runner/test:944:17)
     startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
   ...
 # Subtest: exact browser boot bytes reload safely and repeated import/save never grants points, skills or extra gem instances
-not ok 35 - exact browser boot bytes reload safely and repeated import/save never grants points, skills or extra gem instances
+ok 35 - exact browser boot bytes reload safely and repeated import/save never grants points, skills or extra gem instances
   ---
-  duration_ms: 483.118738
+  duration_ms: 2162.75869
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.test.cjs:20:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.test.cjs:21:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
 # Subtest: migration still rejects malformed, over-budget and out-of-range data before replacing the current party
-not ok 36 - migration still rejects malformed, over-budget and out-of-range data before replacing the current party
+ok 36 - migration still rejects malformed, over-budget and out-of-range data before replacing the current party
   ---
-  duration_ms: 359.374528
+  duration_ms: 1014.370764
   type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.test.cjs:28:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    js/character/companions.js: <anonymous_script>:1
-    undefined
-    ^
-    
-    SyntaxError: "undefined" is not valid JSON
-        at JSON.parse (<anonymous>)
-        at clone (js/skills/mastery-core.js:3:21)
-        at validateBalanceConfig (js/skills/mastery-core.js:438:128)
-        at validateBalanceConfig (js/character/class-growth.js:34:15)
-        at validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-        at validateBalanceConfig (js/skills/status-maker.js:309:13)
-        at validateBalanceConfig (js/character/starter-pack.js:194:16)
-        at validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-        at js/character/companions.js:260:25
-        at js/character/companions.js:348:3
-  code: 'ERR_TEST_FAILURE'
-  stack: |-
-    JSON.parse (<anonymous>)
-    clone (js/skills/mastery-core.js:3:21)
-    validateBalanceConfig (js/skills/mastery-core.js:438:128)
-    validateBalanceConfig (js/character/class-growth.js:34:15)
-    validateBalanceConfig (js/combat/control-status-summon.js:311:12)
-    validateBalanceConfig (js/skills/status-maker.js:309:13)
-    validateBalanceConfig (js/character/starter-pack.js:194:16)
-    validateBalanceConfig (js/ui/text-rarity-runtime.js:56:135)
-    js/character/companions.js:260:25
-    js/character/companions.js:348:3
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:31:76)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/team-save-compatibility.test.cjs:29:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 1..36
-# tests 36
+# tests 44
 # suites 0
-# pass 4
-# fail 32
+# pass 37
+# fail 7
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 8086.730444
+# duration_ms 42079.290297
