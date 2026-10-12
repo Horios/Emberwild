@@ -15,7 +15,7 @@
       const type=sk=>Array.isArray(sk)?sk[1]:sk?.activation;
       if(p.core.some(i=>!skills[i])||p.active.some(i=>!p.core.includes(i)||type(skills[i])!=='active')||p.proc.some(i=>!p.core.includes(i)||type(skills[i])!=='proc')||p.support.some(i=>!supports[i]))throw Error('夥伴技能與職業技能池不相容：'+p.id);
     }
-    const out=Model.validatePlanStats(p);out.name=name;out.availability=EmberwildCompanionSkills.availability(p);out.unlockCondition=EmberwildCompanionSkills.unlockCondition(p);delete out.role;delete out.names;out.passives=Passive.assignments(p.passives,p.id);
+    const out=Model.validatePlanStats(p);out.name=name;out.availability=EmberwildCompanionSkills.availability(p);out.unlockCondition=EmberwildCompanionSkills.unlockCondition(p);out.duplicateTicketGold=EmberwildCompanionSkills.duplicateTicketGold(p);delete out.role;delete out.names;out.passives=Passive.assignments(p.passives,p.id);
     for(const key of ['mastery','masteries','masteryLevel','requiredMastery','requiredMasteryLevel'])delete out[key];
     if(out.equipmentInternalized!==1){const def=Model.definition(out,classes,GAMEPLAY_SETTINGS);out.initialStats=def.initialStats;out.growthPerLevel=def.growthPerLevel;out.growthSteps=def.growthSteps;out.equipmentInternalized=1;}return out;
   }

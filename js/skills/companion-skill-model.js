@@ -1,24 +1,26 @@
 /* Ownership uses the existing skill pools and stable indices; migration only appends. */
-(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.EmberwildCompanionSkills=api;})(globalThis,function(){
+(function(root,factory){const api=factory(typeof module==='object'&&module.exports?require('../character/achievement-model.js'):root.EmberwildAchievements);if(typeof module==='object'&&module.exports)module.exports=api;else root.EmberwildCompanionSkills=api;})(globalThis,function(Achievements){
   const copy=x=>JSON.parse(JSON.stringify(x));
   const availabilityLabels={visible:'顯示',hidden:'隱藏'};
-  const unlockTypes={initial:'初始開放',region:'開啟指定地區',elite:'擊敗指定地區菁英',ticket:'商店隨機招募券'};
+  const unlockTypes={initial:'初始開放',achievement:'達成指定成就',ticket:'商店隨機招募券'};
   function availability(p){let value=p.availability??(p.id>=15&&p.id<=29?'hidden':'visible');if(['unlocked','locked'].includes(value))value='visible';if(!Object.hasOwn(availabilityLabels,value))throw Error('夥伴顯示狀態無效：'+p.id);return value;}
+  function duplicateTicketGold(p){const value=p.duplicateTicketGold??100;if(!Number.isSafeInteger(value)||value<0||value>1e9)throw Error('重複招募券轉換金幣無效：'+p.id);return value;}
   function unlockCondition(p,maps){
     const c=p.unlockCondition??{type:p.availability==='locked'?'region':'initial',mapIndex:1};
-    if(!c||typeof c!=='object'||Array.isArray(c)||!Object.hasOwn(unlockTypes,c.type))throw Error('夥伴解鎖條件無效：'+p.id);
+    if(!c||typeof c!=='object'||Array.isArray(c)||!Object.hasOwn(unlockTypes,c.type)&&!['region','elite'].includes(c.type))throw Error('夥伴解鎖條件無效：'+p.id);
     if(['region','elite'].includes(c.type)){
       if(!Number.isInteger(c.mapIndex)||c.mapIndex<0||c.mapIndex>999||maps&&!maps[c.mapIndex])throw Error('夥伴解鎖地區無效：'+p.id);
-      if(c.type==='elite'&&(!Number.isSafeInteger(c.count)||c.count<1||c.count>1000000000))throw Error('夥伴菁英數量無效：'+p.id);
-      return {type:c.type,mapIndex:c.mapIndex,...(c.type==='elite'?{count:c.count}:{})};
+      if(c.type==='elite'&&(!Number.isSafeInteger(c.count)||c.count<1||c.count>1000))throw Error('夥伴菁英數量無效：'+p.id);
+      return {type:'achievement',achievementIds:Achievements.conditions([Achievements.id(c.mapIndex,c.type==='region'?'open':'elite',c.type==='elite'?Math.ceil(c.count/50)*50:0)],maps)};
     }
+    if(c.type==='achievement')return {type:'achievement',achievementIds:Achievements.conditions(c.achievementIds,maps)};
     if(c.type==='ticket'){
       if(!Number.isFinite(c.chance)||c.chance<=0||c.chance>1||!Number.isSafeInteger(c.price)||c.price<0||c.price>1000000000)throw Error('夥伴招募券設定無效：'+p.id);
       return {type:'ticket',chance:c.chance,price:c.price};
     }
     return {type:'initial'};
   }
-  function normalizeUnlocks(doc){for(const p of doc.companions||[]){p.unlockCondition=unlockCondition(p,doc.balanceSettings?.maps?.catalog);p.availability=availability(p);}return doc;}
+  function normalizeUnlocks(doc){for(const p of doc.companions||[]){p.unlockCondition=unlockCondition(p,doc.balanceSettings?.maps?.catalog);p.availability=availability(p);p.duplicateTicketGold=duplicateTicketGold(p);}return doc;}
   function validateUnlockProgress(raw){
     if(raw===undefined)return {version:1,unlocked:[],regions:[],eliteKills:{}};
     if(!raw||raw.version!==1||!Array.isArray(raw.unlocked)||raw.unlocked.length>512||new Set(raw.unlocked).size!==raw.unlocked.length||raw.unlocked.some(id=>!Number.isInteger(id)||id<10||id>1e9)||!Array.isArray(raw.regions)||raw.regions.length>1000||new Set(raw.regions).size!==raw.regions.length||raw.regions.some(i=>!Number.isInteger(i)||i<0||i>999)||!raw.eliteKills||typeof raw.eliteKills!=='object'||Array.isArray(raw.eliteKills)||Object.entries(raw.eliteKills).some(([key,n])=>! /^(0|[1-9]\d{0,2})$/.test(key)||!Number.isSafeInteger(n)||n<0||n>1e12))throw Error('夥伴解鎖進度無效');
@@ -66,7 +68,7 @@
   function validate(doc){
     if(doc.companionSkillVersion!==1)throw Error('夥伴技能版本無效');
     if(doc.companionNameVersion!==1)throw Error('夥伴名稱版本無效');
-    const names=new Set();for(const p of doc.companions||[]){availability(p);unlockCondition(p,doc.balanceSettings?.maps?.catalog);if(typeof p.name!=='string'||!p.name.trim()||p.name!==p.name.trim()||Array.from(p.name).length>20||/[\u0000-\u001f\u007f]/.test(p.name)||names.has(p.name)||p.role!==undefined||p.names!==undefined)throw Error('夥伴角色名稱無效或重複：'+p.id);names.add(p.name);}
+    const names=new Set();for(const p of doc.companions||[]){availability(p);duplicateTicketGold(p);unlockCondition(p,doc.balanceSettings?.maps?.catalog);if(typeof p.name!=='string'||!p.name.trim()||p.name!==p.name.trim()||Array.from(p.name).length>20||/[\u0000-\u001f\u007f]/.test(p.name)||names.has(p.name)||p.role!==undefined||p.names!==undefined)throw Error('夥伴角色名稱無效或重複：'+p.id);names.add(p.name);}
     for(let job=0;job<doc.classes.length;job++)for(const pool of [doc.classes[job].skills,doc.supportSkills[job]]){
       if(!Array.isArray(pool)||pool.length>64)throw Error('技能池最多 64 個');
       for(const sk of pool)if(sk.partnerId!=null&&(!Number.isInteger(sk.partnerId)||!doc.companions.some(p=>p.id===sk.partnerId&&p.job===job)))throw Error('技能指定夥伴不存在或職業不符：'+sk.name);
@@ -95,11 +97,11 @@
       const core=profile.names.map(name=>pool.findIndex(sk=>sk.partnerId===p.id&&sk.name===name));
       const passive=doc.passiveDefinitions.find(d=>d.partnerId===p.id&&d.effects.some(e=>e.key===profile.passive));
       if(core.some(i=>i<0)||!passive)throw Error('內建夥伴技能不存在：'+p.id);
-      p.core=core;p.active=core.filter(i=>pool[i].activation==='active');p.proc=core.filter(i=>pool[i].activation==='proc');p.support=[];p.passives=[passive.id];p.description=profile.description;p.availability=p.id>=10&&p.id<=14?'visible':'hidden';p.unlockCondition={type:'initial'};
+      p.core=core;p.active=core.filter(i=>pool[i].activation==='active');p.proc=core.filter(i=>pool[i].activation==='proc');p.support=[];p.passives=[passive.id];p.description=profile.description;p.availability=p.id>=10&&p.id<=14?'visible':'hidden';p.unlockCondition={type:'initial'};p.duplicateTicketGold=100;
       core.forEach((i,n)=>pool[i].requiredLevel=n?3:1);
       passive.requiredLevel=8;passive.name=({attackPct:'攻擊強化',defensePct:'防禦強化',healingPct:'治療強化'})[profile.passive];passive.description='達到解鎖等級且啟用時常駐生效，不占技能槽。';
     }
     return doc;
   }
-  return {copy,cloneSkills,clonePassives,migrate,validate,configureDefaults,availability,availabilityLabels,unlockCondition,unlockTypes,normalizeUnlocks,validateUnlockProgress};
+  return {copy,cloneSkills,clonePassives,migrate,validate,configureDefaults,availability,availabilityLabels,unlockCondition,unlockTypes,normalizeUnlocks,validateUnlockProgress,duplicateTicketGold};
 });
