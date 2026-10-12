@@ -1,6 +1,8 @@
 /* Ownership uses the existing skill pools and stable indices; migration only appends. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.EmberwildCompanionSkills=api;})(globalThis,function(){
   const copy=x=>JSON.parse(JSON.stringify(x));
+  const availabilityLabels={unlocked:'已解鎖',locked:'未解鎖',hidden:'隱藏'};
+  function availability(p){const value=p.availability??(p.id>=15&&p.id<=29?'hidden':'unlocked');if(!Object.hasOwn(availabilityLabels,value))throw Error('夥伴解鎖狀態無效：'+p.id);return value;}
   function cloneSkills(doc,p,ownerId){
     const core=doc.classes[p.job].skills,support=doc.supportSkills[p.job],remap=new Map();
     const indices=[...new Set([...p.core,...core.flatMap((sk,i)=>ownerId!==undefined&&sk.partnerId===ownerId?[i]:[])])];
@@ -43,7 +45,7 @@
   function validate(doc){
     if(doc.companionSkillVersion!==1)throw Error('夥伴技能版本無效');
     if(doc.companionNameVersion!==1)throw Error('夥伴名稱版本無效');
-    const names=new Set();for(const p of doc.companions||[]){if(typeof p.name!=='string'||!p.name.trim()||p.name!==p.name.trim()||Array.from(p.name).length>20||/[\u0000-\u001f\u007f]/.test(p.name)||names.has(p.name)||p.role!==undefined||p.names!==undefined)throw Error('夥伴角色名稱無效或重複：'+p.id);names.add(p.name);}
+    const names=new Set();for(const p of doc.companions||[]){availability(p);if(typeof p.name!=='string'||!p.name.trim()||p.name!==p.name.trim()||Array.from(p.name).length>20||/[\u0000-\u001f\u007f]/.test(p.name)||names.has(p.name)||p.role!==undefined||p.names!==undefined)throw Error('夥伴角色名稱無效或重複：'+p.id);names.add(p.name);}
     for(let job=0;job<doc.classes.length;job++)for(const pool of [doc.classes[job].skills,doc.supportSkills[job]]){
       if(!Array.isArray(pool)||pool.length>64)throw Error('技能池最多 64 個');
       for(const sk of pool)if(sk.partnerId!=null&&(!Number.isInteger(sk.partnerId)||!doc.companions.some(p=>p.id===sk.partnerId&&p.job===job)))throw Error('技能指定夥伴不存在或職業不符：'+sk.name);
@@ -57,5 +59,26 @@
     }
     return doc;
   }
-  return {copy,cloneSkills,clonePassives,migrate,validate};
+  // Built-in catalog only; positional pools stay intact for existing saves.
+  function configureDefaults(doc){
+    const profiles={
+      10:{names:['裂地斬','反擊之刃'],passive:'attackPct',description:'專注劍術輸出；LV1 裂地斬、LV3 反擊之刃、LV8 攻擊強化。'},
+      11:{names:['嘲諷','堅毅壁壘'],passive:'defensePct',description:'專注承受敵方攻勢；LV1 嘲諷、LV3 堅毅壁壘、LV8 防禦強化。'},
+      12:{names:['火焰箭','餘燼爆發'],passive:'attackPct',description:'專注火焰法術輸出；LV1 火焰箭、LV3 餘燼爆發、LV8 攻擊強化。'},
+      13:{names:['治癒禱言','生命泉源'],passive:'healingPct',description:'專注隊伍治療；LV1 治癒禱言、LV3 生命泉源、LV8 治療強化。'},
+      14:{names:['穿透箭','連射'],passive:'attackPct',description:'專注箭術輸出；LV1 穿透箭、LV3 連射、LV8 攻擊強化。'}
+    };
+    for(const p of doc.companions||[]){
+      const profile=profiles[p.statTemplateId??p.id];if(!profile)continue;
+      const pool=doc.classes[p.job].skills;
+      const core=profile.names.map(name=>pool.findIndex(sk=>sk.partnerId===p.id&&sk.name===name));
+      const passive=doc.passiveDefinitions.find(d=>d.partnerId===p.id&&d.effects.some(e=>e.key===profile.passive));
+      if(core.some(i=>i<0)||!passive)throw Error('內建夥伴技能不存在：'+p.id);
+      p.core=core;p.active=core.filter(i=>pool[i].activation==='active');p.proc=core.filter(i=>pool[i].activation==='proc');p.support=[];p.passives=[passive.id];p.description=profile.description;p.availability=p.id>=10&&p.id<=14?'unlocked':'hidden';
+      core.forEach((i,n)=>pool[i].requiredLevel=n?3:1);
+      passive.requiredLevel=8;passive.name=({attackPct:'攻擊強化',defensePct:'防禦強化',healingPct:'治療強化'})[profile.passive];passive.description='達到解鎖等級且啟用時常駐生效，不占技能槽。';
+    }
+    return doc;
+  }
+  return {copy,cloneSkills,clonePassives,migrate,validate,configureDefaults,availability,availabilityLabels};
 });
