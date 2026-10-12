@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   migrate:
-    if: "${{ github.event.head_commit.message != 'chore: capture migration error' }}"
+    if: "${{ github.event.head_commit.message != 'chore: capture migration error' && github.event.head_commit.message != 'chore: capture validation error' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,23 +33,38 @@ jobs:
             exit $status
           fi
       - name: Validate
+        shell: bash
         run: |
-          node --check js/character/team-model.js
-          node --check js/skills/mastery-core.js
-          node --check js/character/team-runtime.js
-          node --check js/ui/team-builds.js
-          node --check js/core/core-game.js
-          node --check js/character/companion-unlocks.js
-          git diff --check
-          npm ci
-          npm run test:teams
-          node --test tests/achievements.test.cjs tests/skill-board.test.cjs
+          set +e
+          {
+            node --check js/character/team-model.js &&
+            node --check js/skills/mastery-core.js &&
+            node --check js/character/team-runtime.js &&
+            node --check js/ui/team-builds.js &&
+            node --check js/core/core-game.js &&
+            node --check js/character/companion-unlocks.js &&
+            git diff --check &&
+            npm ci &&
+            npm run test:teams &&
+            node --test tests/achievements.test.cjs tests/skill-board.test.cjs
+          } > /tmp/validation.log 2>&1
+          status=$?
+          cat /tmp/validation.log
+          if [ $status -ne 0 ]; then
+            cp /tmp/validation.log .github/validation-error.txt
+            git config user.name "ChatGPT"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/validation-error.txt
+            git commit -m "chore: capture validation error"
+            git push origin HEAD:chatgpt-dev
+            exit $status
+          fi
       - name: Commit migration
         run: |
           git config user.name "ChatGPT"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/one-time-skill-achievement-unlocks.yml .github/scripts/skill-achievement-migration.py .github/scripts/fix-skill-migration.py
-          rm -f .github/migration-error.txt
+          rm -f .github/migration-error.txt .github/validation-error.txt
           git add -A js .github tests/team-model.test.cjs tests/team-runtime.test.cjs
           git commit -m "feat: gate player skills by achievements without skill points"
           git push origin HEAD:chatgpt-dev
