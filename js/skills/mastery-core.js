@@ -92,7 +92,7 @@ const MASTERY_DEFAULTS={xpBase:8,xpLinear:5,xpQuadratic:1,skillUseXp:2,basicAtta
 function ensureMasterySettings(settings){
   if(!settings||typeof settings!=='object')return settings;
   settings.progression??={};settings.progression.starting??={};settings.progression.levelRewards??={};
-  if(!settings.meta?.teamBuildVersion){settings.progression.starting.skillPoints=0;settings.progression.levelRewards.skillPoints=0;}
+  delete settings.progression.starting.skillPoints;delete settings.progression.levelRewards.skillPoints;
   if(settings.quests?.tutorial)settings.quests.tutorial.skillLevelRequirement=1;
   settings.skills??={};settings.skills.mastery??={};
   for(const [k,v] of Object.entries(MASTERY_DEFAULTS))if(!Number.isFinite(Number(settings.skills.mastery[k])))settings.skills.mastery[k]=v;
@@ -159,6 +159,15 @@ function applyDefaultSkillPlan(){
   }
 }
 applyDefaultSkillPlan();
+function applyDefaultAchievementSkillConditions(){
+  const empty=()=>({classMasteryLevel:0,quests:[],materials:[],bossKills:[],eliteKills:[],bossEquipment:[]});
+  for(let job=0;job<CLASSES.length;job++){
+    const second=runtimeCoreMeta(job,4);second.unlockConditions=empty();second.unlockConditions.bossKills=[{mapIndex:2,count:1}];
+    if(SUPPORT[job]?.[2]){SUPPORT[job][2].unlockConditions=empty();SUPPORT[job][2].unlockConditions.eliteKills=[{mapIndex:2,count:10}];}
+    const late=runtimeCoreMeta(job,5);late.unlockConditions=empty();late.unlockConditions.bossEquipment=[{mapIndex:3,quantity:1}];
+  }
+}
+applyDefaultAchievementSkillConditions();
 
 function migrateWeaponCatalog(forms=ITEM_FORMS){
   if(!Array.isArray(forms))return forms;
@@ -214,7 +223,7 @@ function ensureHeroMastery(h){
 const masteryInitHeroBase=initHero;
 initHero=function(h){return ensureHeroMastery(masteryInitHeroBase(h));};
 const masteryInitialBase=initial;
-initial=function(job){const h=masteryInitialBase(job);h.sp=Number.isSafeInteger(h.sp)?h.sp:0;return ensureHeroMastery(h);};
+initial=function(job){const h=masteryInitialBase(job);delete h.sp;return ensureHeroMastery(h);};
 
 function currentWeapon(h){
   if(!h)return null;
@@ -426,12 +435,12 @@ validateBalanceConfig=function(input){
   out.balanceSettings=clone(full.balanceSettings);out.masteryTypes=clone(full.masteryTypes);out.skillIcons=clone(full.skillIcons);
   for(let job=0;job<(out.classes||[]).length;job++)for(let i=0;i<(out.classes[job]?.skills||[]).length;i++){
     const src=full.classes[job].skills[i],dst=out.classes[job].skills[i];
-    for(const key of ['mastery','requiredMastery','requiredMasteryLevel','weaponTypes','iconType'])dst[key]=clone(src[key]);
+    for(const key of ['mastery','requiredMastery','requiredMasteryLevel','weaponTypes','iconType'])dst[key]=clone(src[key]);dst.unlockConditions=clone(src.unlockConditions||{classMasteryLevel:0,quests:[],materials:[],bossKills:[],eliteKills:[],bossEquipment:[]});
     delete dst.prerequisites;delete dst.prerequisiteSkill;delete dst.prerequisiteLevel;dst.powerPerLevel=0;if(dst.activation==='proc')dst.procChancePerLevel=0;
   }
   for(let job=0;job<(out.supportSkills||[]).length;job++)for(let i=0;i<(out.supportSkills[job]||[]).length;i++){
     const src=full.supportSkills[job][i],dst=out.supportSkills[job][i];
-    for(const key of ['mastery','requiredMastery','requiredMasteryLevel','weaponTypes','iconType'])dst[key]=clone(src[key]);
+    for(const key of ['mastery','requiredMastery','requiredMasteryLevel','weaponTypes','iconType'])dst[key]=clone(src[key]);dst.unlockConditions=clone(src.unlockConditions||{classMasteryLevel:0,quests:[],materials:[],bossKills:[],eliteKills:[],bossEquipment:[]});
     delete dst.prerequisites;delete dst.prerequisiteSkill;delete dst.prerequisiteLevel;dst.effectPerLevel=0;
   }
   for(let job=0;job<(out.equipmentForms||[]).length;job++)for(let i=0;i<(out.equipmentForms[job]?.[0]||[]).length;i++)out.equipmentForms[job][0][i].weaponType=full.equipmentForms[job][0][i].weaponType;
@@ -442,12 +451,12 @@ function applyOverhaulMeta(doc){
   ensureMasterySettings(GAMEPLAY_SETTINGS);
   for(let job=0;job<CLASSES.length;job++)for(let i=0;i<CLASSES[job].skills.length;i++){
     const src=doc.classes?.[job]?.skills?.[i];if(!src)continue;const meta=runtimeCoreMeta(job,i);
-    Object.assign(meta,{mastery:src.mastery??null,requiredMastery:src.requiredMastery??null,requiredMasteryLevel:Math.max(0,Math.min(100,Math.floor(Number(src.requiredMasteryLevel)||0))),weaponTypes:clone(src.weaponTypes||[]),iconType:normalizeSkillIconType(src.iconType),powerPerLevel:0});delete meta.prerequisites;delete meta.prerequisiteSkill;delete meta.prerequisiteLevel;
+    Object.assign(meta,{mastery:src.mastery??null,requiredMastery:src.requiredMastery??null,requiredMasteryLevel:Math.max(0,Math.min(100,Math.floor(Number(src.requiredMasteryLevel)||0))),weaponTypes:clone(src.weaponTypes||[]),iconType:normalizeSkillIconType(src.iconType),powerPerLevel:0,unlockConditions:clone(src.unlockConditions||{classMasteryLevel:0,quests:[],materials:[],bossKills:[],eliteKills:[],bossEquipment:[]})});delete meta.prerequisites;delete meta.prerequisiteSkill;delete meta.prerequisiteLevel;
     if(CLASSES[job].skills[i][1]==='proc')meta.procChancePerLevel=0;
   }
   for(let job=0;job<SUPPORT.length;job++)for(let i=0;i<SUPPORT[job].length;i++){
     const src=doc.supportSkills?.[job]?.[i];if(!src)continue;
-    Object.assign(SUPPORT[job][i],{mastery:src.mastery??null,requiredMastery:src.requiredMastery??null,requiredMasteryLevel:Math.max(0,Math.min(100,Math.floor(Number(src.requiredMasteryLevel)||0))),weaponTypes:clone(src.weaponTypes||[]),iconType:normalizeSkillIconType(src.iconType),effectPerLevel:0});delete SUPPORT[job][i].prerequisites;delete SUPPORT[job][i].prerequisiteSkill;delete SUPPORT[job][i].prerequisiteLevel;
+    Object.assign(SUPPORT[job][i],{mastery:src.mastery??null,requiredMastery:src.requiredMastery??null,requiredMasteryLevel:Math.max(0,Math.min(100,Math.floor(Number(src.requiredMasteryLevel)||0))),weaponTypes:clone(src.weaponTypes||[]),iconType:normalizeSkillIconType(src.iconType),effectPerLevel:0,unlockConditions:clone(src.unlockConditions||{classMasteryLevel:0,quests:[],materials:[],bossKills:[],eliteKills:[],bossEquipment:[]})});delete SUPPORT[job][i].prerequisites;delete SUPPORT[job][i].prerequisiteSkill;delete SUPPORT[job][i].prerequisiteLevel;
   }
   migrateWeaponCatalog();migrateAllKnownWeapons();
   for(const h of party?.members||[])ensureHeroMastery(h);if(state)ensureHeroMastery(state);
@@ -477,7 +486,7 @@ exportableBalance=function(){
   migrateWeaponCatalog(out.equipmentForms);
   out.masteryTypes=MASTERIES_BY_JOB.map((types,job)=>({job,types:[...types]}));
   out.notes=(out.notes||[]).filter(x=>!/技能等級|每級|skill level|powerPerLevel|procChancePerLevel|effectPerLevel|前置|prerequisite/i.test(String(x)));
-  out.notes.push('第一次大修：技能僅有未學／已學，技能點與技能等級不再參與遊戲計算。','mastery 保存精通 XP，等級由 balanceSettings.skills.mastery 的共用曲線即時計算。','mastery / requiredMastery / requiredMasteryLevel / weaponTypes 分別描述培養精通、學習精通條件與可用武器；學習精通等級要求限制為 0～100。','weaponType 與 mastery 為獨立概念；戰士／弓箭手普通攻擊依目前武器類型累積精通，法師／牧師則依技能 mastery 累積。');
+  out.notes.push('技能只有未學／已學；沒有技能點成本，達成永久解鎖條件後可直接學習。','mastery 保存精通 XP，等級由 balanceSettings.skills.mastery 的共用曲線即時計算。','mastery / requiredMastery / requiredMasteryLevel / weaponTypes 分別描述培養精通、學習精通條件與可用武器；學習精通等級要求限制為 0～100。','weaponType 與 mastery 為獨立概念；戰士／弓箭手普通攻擊依目前武器類型累積精通，法師／牧師則依技能 mastery 累積。');
   return out;
 };
 

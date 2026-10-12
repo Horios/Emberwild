@@ -7,8 +7,8 @@
   let cfg=M.settings(),hydrating=false,suppressSave=false,resettingBalance=false;
   const classDocs=()=>CLASSES.map(c=>({skills:c.skills.map(sk=>({...sk[6],activation:sk[1]}))}));
   const build=()=>party?.buildSystem,player=()=>party?.members[0],plan=()=>build()?.plans.find(p=>p.id===build().activeId);
-  const coreRule=(j,i)=>M.rules(mastery.coreMeta(j,i),cfg.defaultLearnCost),supportRule=(j,i)=>M.rules(SUPPORT[j]?.[i],cfg.defaultLearnCost);
-  const costs=p=>p.job===null?0:M.spent(p,classDocs(),SUPPORT,cfg.defaultLearnCost);
+  const coreRule=(j,i)=>M.rules(mastery.coreMeta(j,i)),supportRule=(j,i)=>M.rules(SUPPORT[j]?.[i]);
+  const costs=()=>0;
   const budgets=()=>M.budget(player().lv,GAMEPLAY_SETTINGS.progression,build().permanent);
   function masteryView(h){
     if(h!==player()||!build())return null;
@@ -28,17 +28,16 @@
   function migrate(){
     const h=player();if(!h)return;if(build())return;
     h.playerId??=h.job;
-    const permanent={playerKey:memberKey(h),abilityCredit:0,skillCredit:0,classes:{},masteries:copy(h.mastery||{}),unlocks:{},payments:{},gemInstances:{},gemSerial:1};
+    const permanent={playerKey:memberKey(h),abilityCredit:0,classes:{},masteries:copy(h.mastery||{}),unlocks:{},payments:{},gemInstances:{},gemSerial:1};
     CLASSES.forEach((_,j)=>permanent.classes[j]={activated:j===h.job,xp:j===h.job?Object.values(h.mastery||{}).reduce((n,v)=>n+v,0):0,advanced:j===h.job&&h.advanced});
     const p=M.blank('team-1','隊伍 1',h.job,h.skills.length,h.supportLevels.length);party.buildSystem={version:M.VERSION,activeId:p.id,serial:2,plans:[p],permanent};snapshot(p);
     for(const [kind,list] of [['core',h.skills],['support',h.supportLevels]])list.forEach((v,i)=>{if(v)permanent.unlocks[M.key(h.job,kind,i)]=true;});
     h.sockets.forEach((type,i)=>{if(type!==null){const id='gem-'+permanent.gemSerial++;permanent.gemInstances[id]=type;p.sockets[i]=id;}});
     const total=budgets();permanent.abilityCredit=Math.max(0,(h.ap||0)+h.stats.reduce((a,v)=>a+v,0)-total.ap);
-    // The original free starting core/support skills remain a one-time grant.
-    permanent.skillCredit=Math.max(coreRule(h.job,0).learnCost+supportRule(h.job,0).learnCost,(h.sp||0)+costs(p)-total.sp,0);
+    delete h.sp;
     refreshUnlocks();syncPoints();
   }
-  function syncPoints(){if(!build())return;const h=player(),p=plan(),t=budgets();h.ap=Math.max(0,t.ap-h.stats.reduce((a,v)=>a+v,0));h.sp=Math.max(0,t.sp-costs(p));}
+  function syncPoints(){if(!build())return;const h=player(),t=budgets();h.ap=Math.max(0,t.ap-h.stats.reduce((a,v)=>a+v,0));delete h.sp;}
   function capture(){
     if(!party||hydrating)return;migrate();const h=player(),p=plan();
     if(p.job!==null){p.job=h.job;const c=build().permanent.classes[h.job];if(c)c.advanced=h.advanced;}
@@ -65,6 +64,11 @@
     if(mastery.masteryLevelFromXp(c?.xp||0)<r.unlockConditions.classMasteryLevel)reasons.push('職業精通 Lv'+r.unlockConditions.classMasteryLevel);
     for(const q of r.unlockConditions.quests)if(!(q==='tutorial'&&h.tutorial>=3)&&!h.claimed.includes(q))reasons.push('永久任務：'+q);
     for(const m of r.unlockConditions.materials)if(materialCount(m.name)<m.quantity)reasons.push(m.name+' ×'+m.quantity);
+    const achievements=party?.achievements||{},sum=obj=>Object.values(obj||{}).reduce((n,v)=>n+(Number(v)||0),0),mapName=i=>i<0?'任意區域':(MAPS[i]?.name||('區域 '+i)),bossName=i=>i<0?'任意 BOSS':(MAPS[i]?.boss?.[0]||mapName(i)+' BOSS');
+    for(const x of r.unlockConditions.bossKills){const n=x.mapIndex<0?sum(achievements.bossKills):(achievements.bossKills?.[x.mapIndex]||0);if(n<x.count)reasons.push('擊敗 '+bossName(x.mapIndex)+' '+n+'/'+x.count);}
+    for(const x of r.unlockConditions.eliteKills){const n=x.mapIndex<0?sum(achievements.eliteKills):(achievements.eliteKills?.[x.mapIndex]||0);if(n<x.count)reasons.push('擊敗 '+mapName(x.mapIndex)+'菁英 '+n+'/'+x.count);}
+    const seen=new Set(),owned=[];for(const g of party?.sharedGear?.items||[]){if(g?.id&&!seen.has(g.id)){seen.add(g.id);owned.push(g);}}for(const member of party?.members||[])for(const g of member?.bag||[]){if(g?.id&&!seen.has(g.id)){seen.add(g.id);owned.push(g);}}const bossGear=owned.filter(g=>g?.boss!==undefined);
+    for(const x of r.unlockConditions.bossEquipment){const n=bossGear.filter(g=>x.mapIndex<0||(g.region??g.boss)===x.mapIndex).length;if(n<x.quantity)reasons.push('持有 '+bossName(x.mapIndex)+'裝備 '+n+'/'+x.quantity);}
     return reasons;
   }
   function refreshUnlocks(){
@@ -88,9 +92,9 @@
   globalThis.renameTeamPlan=function(id,name){if(!safe())return false;if(name===undefined)name=prompt('隊伍名稱（最多 24 字）',build().plans.find(p=>p.id===id)?.name||'');if(typeof name!=='string'||!name.trim()||Array.from(name.trim()).length>24||/[\u0000-\u001f]/.test(name))return false;return transaction(()=>{const p=build().plans.find(p=>p.id===id);if(!p)throw Error('找不到隊伍');p.name=name.trim();});};
   globalThis.switchTeamPlan=function(id){if(!safe()||id===build().activeId||!build().plans.some(p=>p.id===id))return false;return transaction(()=>{build().activeId=id;apply(plan());refreshUnlocks();});};
   function releaseSockets(p){const ids=p.sockets.filter(Boolean);p.sockets=p.sockets.map(()=>null);for(const id of ids)if(!build().plans.some(other=>other.sockets.includes(id))){const type=build().permanent.gemInstances[id];player().gems[type]++;delete build().permanent.gemInstances[id];}}
-  globalThis.resetSkills=function(){if(state!==player()||!safe()||!confirm('免費重置本隊所有技能學習與裝配？返還技能點；永久解鎖與精通保留。'))return false;return transaction(()=>{const p=plan();releaseSockets(p);p.skills.fill(0);p.supportLevels.fill(0);p.active.fill(null);p.procSlots.fill(null);p.supportSlots.fill(null);apply(p);});};
+  globalThis.resetSkills=function(){if(state!==player()||!safe()||!confirm('免費重置本隊所有技能學習與裝配？永久解鎖與精通保留。'))return false;return transaction(()=>{const p=plan();releaseSockets(p);p.skills.fill(0);p.supportLevels.fill(0);p.active.fill(null);p.procSlots.fill(null);p.supportSlots.fill(null);apply(p);});};
   const resetBase=resetStats;resetStats=function(){if(state!==player())return resetBase();if(!safe()||!confirm('免費重置本隊能力點？其他隊伍與永久成長保留。'))return false;return transaction(()=>{plan().stats=[0,0,0];apply(plan());});};
-  function learnTeam(kind,i){if(state!==player()||!safe()||plan().job===null)return false;capture();const p=plan(),j=p.job,list=kind==='core'?player().skills:player().supportLevels,k=M.key(j,kind,i),r=kind==='core'?coreRule(j,i):supportRule(j,i);if(!Number.isInteger(i)||i<0||i>=list.length||list[i])return false;if(!build().permanent.unlocks[k]){toast('尚未永久解鎖：'+unlockMissing(j,kind,i).join('、'));return false;}if(player().sp<r.learnCost){toast('本隊技能點不足');return false;}return transaction(()=>{list[i]=1;});}
+  function learnTeam(kind,i){if(state!==player()||!safe()||plan().job===null)return false;capture();const p=plan(),j=p.job,list=kind==='core'?player().skills:player().supportLevels,k=M.key(j,kind,i),r=kind==='core'?coreRule(j,i):supportRule(j,i);if(!Number.isInteger(i)||i<0||i>=list.length||list[i])return false;if(!build().permanent.unlocks[k]){toast('尚未永久解鎖：'+unlockMissing(j,kind,i).join('、'));return false;}return transaction(()=>{list[i]=1;});}
   const learnBase=learn,supportBase=learnSupport;
   learn=function(i){return state===player()?learnTeam('core',i):learnBase(i);};learnSupport=function(i){return state===player()?learnTeam('support',i):supportBase(i);};
   globalThis.unlockTeamSkill=function(kind,i){if(!safe()||!['core','support'].includes(kind)||plan().job===null)return false;const j=plan().job,k=M.key(j,kind,i);if(build().permanent.unlocks[k])return true;const missing=unlockMissing(j,kind,i);if(missing.length){toast('尚未達成：'+missing.join('、'));return false;}return transaction(()=>{const r=kind==='core'?coreRule(j,i):supportRule(j,i);for(const m of r.unlockConditions.materials)setMaterialCount(m.name,materialCount(m.name)-m.quantity);build().permanent.unlocks[k]=true;if(r.unlockConditions.materials.length)build().permanent.payments[k]=true;});};
@@ -107,8 +111,8 @@
   const xpBase=awardXP;awardXP=function(...args){const out=xpBase(...args);if(build()){syncPoints();refreshUnlocks();}return out;};
   const advanceBase=advance;advance=function(){if(!safe()||state===player()&&plan()?.job===null)return false;if(state!==player())return advanceBase();return transaction(()=>{advanceBase();build().permanent.classes[state.job].advanced=state.advanced;refreshUnlocks();});};
   const baseBalanceValidate=validateBalanceConfig;validateBalanceConfig=function(input){return baseBalanceValidate(M.normalizeDocument(input));};
-  function applyRules(d){cfg=M.settings(d.teamSettings);d.classes.forEach((c,j)=>c.skills.forEach((sk,i)=>Object.assign(mastery.coreMeta(j,i),M.rules(sk,cfg.defaultLearnCost))));d.supportSkills.forEach((list,j)=>list.forEach((sk,i)=>Object.assign(SUPPORT[j][i],M.rules(sk,cfg.defaultLearnCost))));}
-  const baseExport=exportableBalance;exportableBalance=function(){const d=baseExport();d.teamSettings=copy(cfg);d.balanceSettings.meta.teamBuildVersion=M.VERSION;for(const [j,c] of d.classes.entries())c.skills.forEach((sk,i)=>Object.assign(sk,coreRule(j,i)));d.supportSkills.forEach((list,j)=>list.forEach((sk,i)=>Object.assign(sk,supportRule(j,i))));d.notes=d.notes.filter(x=>!String(x).includes('技能點與技能等級不再'));d.notes.push('永久解鎖共用；學習投入與 2 主動／2 觸發／2 輔助槽由各隊伍獨立保存。');return d;};
+  function applyRules(d){cfg=M.settings(d.teamSettings);d.classes.forEach((c,j)=>c.skills.forEach((sk,i)=>Object.assign(mastery.coreMeta(j,i),M.rules(sk))));d.supportSkills.forEach((list,j)=>list.forEach((sk,i)=>Object.assign(SUPPORT[j][i],M.rules(sk))));}
+  const baseExport=exportableBalance;exportableBalance=function(){const d=baseExport();d.teamSettings=copy(cfg);d.balanceSettings.meta.teamBuildVersion=M.VERSION;for(const [j,c] of d.classes.entries())c.skills.forEach((sk,i)=>Object.assign(sk,coreRule(j,i)));d.supportSkills.forEach((list,j)=>list.forEach((sk,i)=>Object.assign(sk,supportRule(j,i))));d.notes=d.notes.filter(x=>!String(x).includes('技能點'));d.notes.push('技能沒有技能點成本；永久解鎖共用，學習與 2 主動／2 觸發／2 輔助槽由各隊伍獨立保存。');d.notes.push('技能 unlockConditions 可指定職業精通、任務、材料、BOSS 擊殺、菁英擊殺與持有 BOSS 裝備；同一技能的多項條件需全部達成。');return d;};
   function stageBalanceBuild(d){
     if(!build())return null;
     const next=copy(build());
@@ -189,7 +193,8 @@
   globalThis.stopTeamExploration=function(){
     if(!party)return false;running=false;if(roundIterator?.return)roundIterator.return();roundIterator=null;if(typeof activeBattleStat!=='undefined'&&activeBattleStat)finalizeBattleStatistics('abandoned');resetBattleState();save();render();return true;
   };
-  globalThis.__EMBERWILD_TEAMS={build,plan,player,capture,apply,budgets,costs,busy,safe,valid,refreshUnlocks,unlockMissing,coreRule,supportRule,settings:()=>copy(cfg),validateBuild,resetBattleState};
+  function unlockSummary(j,kind,i){const r=kind==='core'?coreRule(j,i):supportRule(j,i),u=r.unlockConditions,parts=[],mapName=n=>n<0?'任意區域':(MAPS[n]?.name||('區域 '+n)),bossName=n=>n<0?'任意 BOSS':(MAPS[n]?.boss?.[0]||mapName(n)+' BOSS');if(u.classMasteryLevel)parts.push('職業精通 Lv'+u.classMasteryLevel);parts.push(...u.quests.map(q=>'任務 '+q),...u.materials.map(m=>m.name+' ×'+m.quantity),...u.bossKills.map(x=>'擊敗 '+bossName(x.mapIndex)+' ×'+x.count),...u.eliteKills.map(x=>'擊敗 '+mapName(x.mapIndex)+'菁英 ×'+x.count),...u.bossEquipment.map(x=>'持有 '+bossName(x.mapIndex)+'裝備 ×'+x.quantity));return parts;}
+  globalThis.__EMBERWILD_TEAMS={build,plan,player,capture,apply,budgets,costs,busy,safe,valid,refreshUnlocks,unlockMissing,unlockSummary,coreRule,supportRule,settings:()=>copy(cfg),validateBuild,resetBattleState};
   // Read the exact boot bytes after all late validators are installed.
   const boot=globalThis.__EMBERWILD_TEAM_BOOT_RAW;
   try{const d=M.normalizeDocument(JSON.parse(localStorage.getItem(BALANCE_KEY)||'null')||baseExport());applyRules(d);Object.assign(GAMEPLAY_SETTINGS.progression.starting,d.balanceSettings.progression.starting);Object.assign(GAMEPLAY_SETTINGS.progression.levelRewards,d.balanceSettings.progression.levelRewards);GAMEPLAY_SETTINGS.meta.teamBuildVersion=M.VERSION;

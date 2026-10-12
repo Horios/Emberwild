@@ -55,7 +55,7 @@
       if(e.kind==='elite'){a.eliteKills[region]=Math.min(1e12,(a.eliteKills[region]||0)+1);party.companionUnlocks.eliteKills[region]=a.eliteKills[region];}
       if(['boss','final'].includes(e.kind))a.bossKills[region]=Math.min(1e12,(a.bossKills[region]||0)+1);
     }
-    const out=baseReward(e);syncUnlocks();if(a.completed.length>before||party.mailbox.serial>beforeMail)save();return out;
+    const out=baseReward(e);syncUnlocks();globalThis.__EMBERWILD_TEAMS?.refreshUnlocks?.();if(a.completed.length>before||party.mailbox.serial>beforeMail)save();return out;
   };
   globalThis.useCompanionRecruitmentTicket=function(id){
     const p=plans().find(p=>p.id===id)||party?.companionProfiles?.[id],duplicate=companionUnlocked(id);

@@ -9,9 +9,9 @@ function expectedPlans(r){
  return legacy.buildSystem.plans.map(p=>{const out=structuredClone(p);if(p.job!==null)for(const [field,count,empty] of [['skills',counts[p.job].core,0],['supportLevels',counts[p.job].support,0],['sockets',counts[p.job].core,null]])out[field].push(...Array(count-out[field].length).fill(empty));return out;});
 }
 test('real pre-ownership saves append only empty skill positions and preserve all plans, allocations, gems and permanent records',()=>{
- const r=loadRuntime(root);r.ctx.legacy=structuredClone(legacy);const expected=expectedPlans(r),original=JSON.stringify(legacy);
+ const r=loadRuntime(root);r.ctx.legacy=structuredClone(legacy);const expected=expectedPlans(r),expectedPermanent=structuredClone(legacy.buildSystem.permanent),original=JSON.stringify(legacy);delete expectedPermanent.skillCredit;
  r.run('loadParty(legacy)');
- assert.deepEqual(json(r,'party.buildSystem.plans'),expected);assert.deepEqual(json(r,'party.buildSystem.permanent'),legacy.buildSystem.permanent);
+ assert.deepEqual(json(r,'party.buildSystem.plans'),expected);assert.deepEqual(json(r,'party.buildSystem.permanent'),expectedPermanent);
  assert.deepEqual(json(r,'playerHero().gems'),legacy.members[0].gems);assert.deepEqual(json(r,'state.bag.map(g=>g.id)'),legacy.members.flatMap(h=>h.bag.map(g=>g.id)));
  assert.equal(r.run('JSON.stringify(legacy)'),original);assert.equal(r.run('partyMember(10).name'),legacy.members[1].name);
  for(const id of ['team-1','team-2','team-3','team-2']){r.ctx.id=id;r.run('switchTeamPlan(id);loadParty(packParty());');assert.deepEqual(json(r,'party.buildSystem.plans'),expected);}
