@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   migrate:
+    if: github.event.head_commit.message != 'chore: capture migration error'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,9 +17,21 @@ jobs:
           ref: chatgpt-dev
           fetch-depth: 0
       - name: Apply migration
+        shell: bash
         run: |
-          python3 .github/scripts/fix-skill-migration.py
-          python3 .github/scripts/skill-achievement-migration.py
+          set +e
+          { python3 .github/scripts/fix-skill-migration.py && python3 .github/scripts/skill-achievement-migration.py; } > /tmp/migration.log 2>&1
+          status=$?
+          cat /tmp/migration.log
+          if [ $status -ne 0 ]; then
+            cp /tmp/migration.log .github/migration-error.txt
+            git config user.name "ChatGPT"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/migration-error.txt
+            git commit -m "chore: capture migration error"
+            git push origin HEAD:chatgpt-dev
+            exit $status
+          fi
       - name: Validate
         run: |
           node --check js/character/team-model.js
@@ -36,6 +49,7 @@ jobs:
           git config user.name "ChatGPT"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/one-time-skill-achievement-unlocks.yml .github/scripts/skill-achievement-migration.py .github/scripts/fix-skill-migration.py
-          git add js/character/team-model.js js/skills/mastery-core.js js/character/team-runtime.js js/ui/team-builds.js js/core/core-game.js js/character/companion-unlocks.js tests/team-model.test.cjs tests/team-runtime.test.cjs
+          rm -f .github/migration-error.txt
+          git add -A js .github tests/team-model.test.cjs tests/team-runtime.test.cjs
           git commit -m "feat: gate player skills by achievements without skill points"
           git push origin HEAD:chatgpt-dev
