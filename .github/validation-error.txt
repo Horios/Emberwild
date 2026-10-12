@@ -1,5 +1,5 @@
 
-added 2 packages, and audited 3 packages in 2s
+added 2 packages, and audited 3 packages in 1s
 
 found 0 vulnerabilities
 Installing dependencies...
@@ -10,10 +10,10 @@ Hit:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
 Get:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
 Get:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
 Get:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease [126 kB]
-Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble/main all Packages [640 B]
+Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [492 kB]
 Get:8 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [548 kB]
-Get:9 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [492 kB]
-Get:10 https://packages.microsoft.com/ubuntu/24.04/prod noble/main armhf Packages [12.3 kB]
+Get:9 https://packages.microsoft.com/ubuntu/24.04/prod noble/main armhf Packages [12.3 kB]
+Get:10 https://packages.microsoft.com/ubuntu/24.04/prod noble/main all Packages [640 B]
 Get:11 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1375 kB]
 Get:12 http://azure.archive.ubuntu.com/ubuntu noble-updates/main Translation-en [306 kB]
 Get:13 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages [1702 kB]
@@ -30,7 +30,7 @@ Get:23 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted amd64 Pa
 Get:24 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted Translation-en [383 kB]
 Get:25 http://azure.archive.ubuntu.com/ubuntu noble-security/multiverse amd64 Packages [49.8 kB]
 Get:26 http://azure.archive.ubuntu.com/ubuntu noble-security/multiverse Translation-en [12.4 kB]
-Fetched 12.3 MB in 1s (11.5 MB/s)
+Fetched 12.3 MB in 1s (10.7 MB/s)
 Reading package lists...
 Reading package lists...
 Building dependency tree...
@@ -107,7 +107,7 @@ Get:8 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 xfonts-encodings a
 Get:9 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 xfonts-utils amd64 1:7.7+6build3 [94.4 kB]
 Get:10 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 xfonts-cyrillic all 1:1.0.5+nmu1 [384 kB]
 Get:11 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 xfonts-scalable all 1:1.0.3-1.3 [304 kB]
-Fetched 21.5 MB in 1s (38.3 MB/s)
+Fetched 21.5 MB in 2s (13.7 MB/s)
 Selecting previously unselected package fonts-ipafont-gothic.
 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 203191 files and directories currently installed.)
 Preparing to unpack .../0-fonts-ipafont-gothic_00303-21ubuntu1_all.deb ...
@@ -203,328 +203,5 @@ Downloading Chrome Headless Shell 151.0.7922.34 (playwright chromium-headless-sh
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 114.7 MiB
 |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 114.7 MiB
 Chrome Headless Shell 151.0.7922.34 (playwright chromium-headless-shell v1234) downloaded to /home/runner/.cache/ms-playwright/chromium_headless_shell-1234
-TAP version 13
-# Subtest: Every eligible region has open achievements and exactly 20 stages per kill category at 50..1000
-not ok 1 - Every eligible region has open achievements and exactly 20 stages per kill category at 50..1000
-  ---
-  duration_ms: 2.258988
-  type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/achievements.test.cjs:7:1'
-  failureType: 'testCodeFailure'
-  error: "ENOENT: no such file or directory, open '/home/runner/work/Emberwild/Emberwild-Balance/balance-editor.html'"
-  code: 'ENOENT'
-  stack: |-
-    Object.readFileSync (node:fs:440:20)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/achievements.test.cjs:11:16)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.start (node:internal/test_runner/test:944:17)
-    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
-  ...
-# Subtest: Real kills count their own region and category once; staged achievements stop at 1000 and include final bosses
-ok 2 - Real kills count their own region and category once; staged achievements stop at 1000 and include final bosses
-  ---
-  duration_ms: 1275.956792
-  type: 'test'
-  ...
-# Subtest: Achievement awards a named ticket once, not immediate unlock; actual inventory use unlocks and later stages do not award again
-ok 3 - Achievement awards a named ticket once, not immediate unlock; actual inventory use unlocks and later stages do not award again
-  ---
-  duration_ms: 7782.549213
-  type: 'test'
-  ...
-# Subtest: Region completion and retroactive linking issue tickets; hidden companions wait, owned companions keep their unlocks
-ok 4 - Region completion and retroactive linking issue tickets; hidden companions wait, owned companions keep their unlocks
-  ---
-  duration_ms: 9468.441523
-  type: 'test'
-  ...
-# Subtest: Shop tickets enter inventory, pending tickets stop refresh, failed purchase/use do not consume gold or tickets
-ok 5 - Shop tickets enter inventory, pending tickets stop refresh, failed purchase/use do not consume gold or tickets
-  ---
-  duration_ms: 3525.850145
-  type: 'test'
-  ...
-# Subtest: Claimed mail persists without duplicate prizes on reload; invalid data fails atomically and player saves are isolated
-ok 6 - Claimed mail persists without duplicate prizes on reload; invalid data fails atomically and player saves are isolated
-  ---
-  duration_ms: 6285.655073
-  type: 'test'
-  ...
-# Subtest: Legacy elite counters migrate into achievements without losing counts; existing unlocks are retained and boss counters start at zero
-ok 7 - Legacy elite counters migrate into achievements without losing counts; existing unlocks are retained and boss counters start at zero
-  ---
-  duration_ms: 937.471939
-  type: 'test'
-  ...
-# Subtest: Designer links multiple real achievements and exports rules that produce game tickets; filters show progress and rewards
-not ok 8 - Designer links multiple real achievements and exports rules that produce game tickets; filters show progress and rewards
-  ---
-  duration_ms: 0.725642
-  type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/achievements.test.cjs:51:1'
-  failureType: 'testCodeFailure'
-  error: "ENOENT: no such file or directory, open '/home/runner/work/Emberwild/Emberwild-Balance/balance-editor.html'"
-  code: 'ENOENT'
-  stack: |-
-    Object.readFileSync (node:fs:440:20)
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:25:47)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/achievements.test.cjs:52:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
-  ...
-# Subtest: Duplicate tickets convert once with a popup and configurable gold; failed saves and gold cap preserve the voucher
-not ok 9 - Duplicate tickets convert once with a popup and configurable gold; failed saves and gold cap preserve the voucher
-  ---
-  duration_ms: 0.675217
-  type: 'test'
-  location: '/home/runner/work/Emberwild/Emberwild/tests/achievements.test.cjs:57:1'
-  failureType: 'testCodeFailure'
-  error: "ENOENT: no such file or directory, open '/home/runner/work/Emberwild/Emberwild-Balance/balance-editor.html'"
-  code: 'ENOENT'
-  stack: |-
-    Object.readFileSync (node:fs:440:20)
-    loadRuntime (/home/runner/work/Emberwild/Emberwild/tests/headless-runtime.cjs:25:47)
-    TestContext.<anonymous> (/home/runner/work/Emberwild/Emberwild/tests/achievements.test.cjs:58:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
-  ...
-# Subtest: Player skills use sorted level groups with SVG tiles and show only the clicked skill detail
-ok 10 - Player skills use sorted level groups with SVG tiles and show only the clicked skill detail
-  ---
-  duration_ms: 1519.293153
-  type: 'test'
-  ...
-# Subtest: Learning, equipping and gem changes refresh the selected detail while keeping real team state
-ok 11 - Learning, equipping and gem changes refresh the selected detail while keeping real team state
-  ---
-  duration_ms: 1541.955127
-  type: 'test'
-  ...
-# Subtest: Other class previews have no mutation controls and switching classes or plans clears stale selection
-ok 12 - Other class previews have no mutation controls and switching classes or plans clears stale selection
-  ---
-  duration_ms: 1496.49326
-  type: 'test'
-  ...
-# Subtest: Redraws replace the actual skills scroll region but restore its position through learn and equip actions
-ok 13 - Redraws replace the actual skills scroll region but restore its position through learn and equip actions
-  ---
-  duration_ms: 1213.78077
-  type: 'test'
-  ...
-# Subtest: Three colored gem choices share one slot; replacing, removing and reloading preserve physical inventory
-ok 14 - Three colored gem choices share one slot; replacing, removing and reloading preserve physical inventory
-  ---
-  duration_ms: 2261.208354
-  type: 'test'
-  ...
-# Subtest: skill point fields are removed and ability points remain
-ok 15 - skill point fields are removed and ability points remain
-  ---
-  duration_ms: 1.725394
-  type: 'test'
-  ...
-# Subtest: blank snapshots, configuration copy and reference cleanup never copy items
-ok 16 - blank snapshots, configuration copy and reference cleanup never copy items
-  ---
-  duration_ms: 0.502597
-  type: 'test'
-  ...
-# Subtest: unlock rules support boss, elite and boss-equipment achievements without learn costs
-ok 17 - unlock rules support boss, elite and boss-equipment achievements without learn costs
-  ---
-  duration_ms: 0.853729
-  type: 'test'
-  ...
-# Subtest: missing equipped UIDs are cleared without touching resources or real items
-ok 18 - missing equipped UIDs are cleared without touching resources or real items
-  ---
-  duration_ms: 0.299145
-  type: 'test'
-  ...
-# Subtest: A: initial class stays intact; new late team is blank; configurations and copies are independent
-ok 19 - A: initial class stays intact; new late team is blank; configurations and copies are independent
-  ---
-  duration_ms: 1619.741368
-  type: 'test'
-  ...
-# Subtest: B: stable player identity and global class/element/weapon mastery survive free class changes and reload
-ok 20 - B: stable player identity and global class/element/weapon mastery survive free class changes and reload
-  ---
-  duration_ms: 1107.058268
-  type: 'test'
-  ...
-# Subtest: C: real fire skill mastery threshold, one-time material unlock, team learning and reset remain separate
-ok 21 - C: real fire skill mastery threshold, one-time material unlock, team learning and reset remain separate
-  ---
-  duration_ms: 2790.54255
-  type: 'test'
-  ...
-# Subtest: D: real level rewards apply to all plans without overwriting allocations or repeat-load grants
-ok 22 - D: real level rewards apply to all plans without overwriting allocations or repeat-load grants
-  ---
-  duration_ms: 1454.301915
-  type: 'test'
-  ...
-# Subtest: achievement and boss-equipment skill gates use shared progression counters and account inventory
-ok 23 - achievement and boss-equipment skill gates use shared progression counters and account inventory
-  ---
-  duration_ms: 2915.701012
-  type: 'test'
-  ...
-# Subtest: resets and class changes ask confirmation; cancel leaves every configuration unchanged
-ok 24 - resets and class changes ask confirmation; cancel leaves every configuration unchanged
-  ---
-  duration_ms: 1077.470958
-  type: 'test'
-  ...
-# Subtest: E: equipment references warn all teams; cancellation and force sale are atomic and grant once
-ok 25 - E: equipment references warn all teams; cancellation and force sale are atomic and grant once
-  ---
-  duration_ms: 1242.706731
-  type: 'test'
-  ...
-# Subtest: batch salvage uses the same reference warning, clears all plans, keeps locks and pending affixes
-ok 26 - batch salvage uses the same reference warning, clears all plans, keeps locks and pending affixes
-  ---
-  duration_ms: 1164.054071
-  type: 'test'
-  ...
-# Subtest: one physical token can differ by team; same-team duplicate ownership is rejected
-ok 27 - one physical token can differ by team; same-team duplicate ownership is rejected
-  ---
-  duration_ms: 1385.427309
-  type: 'test'
-  ...
-# Subtest: gem instances are referenced when copying; changing or resetting releases each physical gem only once
-ok 28 - gem instances are referenced when copying; changing or resetting releases each physical gem only once
-  ---
-  duration_ms: 1216.982544
-  type: 'test'
-  ...
-# Subtest: F: running, paused encounters and between encounters block all configuration paths in core logic
-ok 29 - F: running, paused encounters and between encounters block all configuration paths in core logic
-  ---
-  duration_ms: 1169.204327
-  type: 'test'
-  ...
-# Subtest: stop and safe switches reset all transient battle state while keeping permanent gains and item deadlines
-ok 30 - stop and safe switches reset all transient battle state while keeping permanent gains and item deadlines
-  ---
-  duration_ms: 1313.883829
-  type: 'test'
-  ...
-# Subtest: G: new saves, exact cold boot and repeated imports preserve every team, UID and permanent result
-ok 31 - G: new saves, exact cold boot and repeated imports preserve every team, UID and permanent result
-  ---
-  duration_ms: 2184.723016
-  type: 'test'
-  ...
-# Subtest: legacy saves migrate learned skills into permanent unlocks and preserve allocations, mastery and inventory
-ok 32 - legacy saves migrate learned skills into permanent unlocks and preserve allocations, mastery and inventory
-  ---
-  duration_ms: 954.226944
-  type: 'test'
-  ...
-# Subtest: missing UID references become empty; corrupted allocations/slots/permanent records reject before live mutation
-ok 33 - missing UID references become empty; corrupted allocations/slots/permanent records reject before live mutation
-  ---
-  duration_ms: 873.687684
-  type: 'test'
-  ...
-# Subtest: failed saves roll back class switching, configuration resets, material unlock and referenced item disposal
-ok 34 - failed saves roll back class switching, configuration resets, material unlock and referenced item disposal
-  ---
-  duration_ms: 877.964651
-  type: 'test'
-  ...
-# Subtest: real sword basic attacks and fire casts feed the existing XP rules into only the active player class
-ok 35 - real sword basic attacks and fire casts feed the existing XP rules into only the active player class
-  ---
-  duration_ms: 937.700511
-  type: 'test'
-  ...
-# Subtest: class advancement is permanent and its existing cost is paid once; revisiting does not charge or reset mastery
-ok 36 - class advancement is permanent and its existing cost is paid once; revisiting does not charge or reset mastery
-  ---
-  duration_ms: 933.341447
-  type: 'test'
-  ...
-# Subtest: supported v1 and v2 single-hero saves use the same idempotent migration as version 3
-ok 37 - supported v1 and v2 single-hero saves use the same idempotent migration as version 3
-  ---
-  duration_ms: 1796.515087
-  type: 'test'
-  ...
-# Subtest: old all-companion formations preserve their three active members across migration and copies
-ok 38 - old all-companion formations preserve their three active members across migration and copies
-  ---
-  duration_ms: 928.484218
-  type: 'test'
-  ...
-# Subtest: material unlock failure and ordinary allocation failure refund resources and leave the live configuration intact
-ok 39 - material unlock failure and ordinary allocation failure refund resources and leave the live configuration intact
-  ---
-  duration_ms: 1915.764334
-  type: 'test'
-  ...
-# Subtest: plan limits retain existing plans; blank plans round-trip and never contain battle-resource snapshots
-ok 40 - plan limits retain existing plans; blank plans round-trip and never contain battle-resource snapshots
-  ---
-  duration_ms: 1840.033395
-  type: 'test'
-  ...
-# Subtest: balance edits check every plan before mutation, expand new skill arrays, and roll back a failed save
-ok 41 - balance edits check every plan before mutation, expand new skill arrays, and roll back a failed save
-  ---
-  duration_ms: 5350.737701
-  type: 'test'
-  ...
-# Subtest: Chromium: legacy slot continues without an error, preserves plans and reloads the migrated save
-ok 42 - Chromium: legacy slot continues without an error, preserves plans and reloads the migrated save
-  ---
-  duration_ms: 3670.890815
-  type: 'test'
-  ...
-# Subtest: Chromium: genuinely excessive allocations still show the recovery dialog and download unchanged original JSON
-ok 43 - Chromium: genuinely excessive allocations still show the recovery dialog and download unchanged original JSON
-  ---
-  duration_ms: 1913.607905
-  type: 'test'
-  ...
-# Subtest: real pre-ownership saves append only empty skill positions and preserve all plans, allocations, gems and permanent records
-ok 44 - real pre-ownership saves append only empty skill positions and preserve all plans, allocations, gems and permanent records
-  ---
-  duration_ms: 1386.228232
-  type: 'test'
-  ...
-# Subtest: exact browser boot bytes reload safely and repeated import/save never grants points, skills or extra gem instances
-ok 45 - exact browser boot bytes reload safely and repeated import/save never grants points, skills or extra gem instances
-  ---
-  duration_ms: 2726.263869
-  type: 'test'
-  ...
-# Subtest: migration still rejects malformed, over-budget and out-of-range data before replacing the current party
-ok 46 - migration still rejects malformed, over-budget and out-of-range data before replacing the current party
-  ---
-  duration_ms: 1341.299908
-  type: 'test'
-  ...
-1..46
-# tests 46
-# suites 0
-# pass 43
-# fail 3
-# cancelled 0
-# skipped 0
-# todo 0
-# duration_ms 37204.414259
+Cloning into '../Emberwild-Balance'...
+fatal: could not read Username for 'https://github.com': No such device or address
