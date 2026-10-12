@@ -4,11 +4,12 @@
   const pointers=new Set();
   let interacting=false,pendingRender=false,pendingJournal=false,releaseTimer=null,activeSelect=null;
 
+  globalThis.isEmberwildUIInteracting=()=>interacting;
   function finishInteraction(){
     if(pointers.size||activeSelect)return;
     clearTimeout(releaseTimer);releaseTimer=null;
     interacting=false;
-    if(pendingRender){pendingRender=false;pendingJournal=false;gameRender();}
+    if(pendingRender){pendingRender=false;pendingJournal=false;gameRender();globalThis.__EMBERWILD_AFTER_RENDER?.();}
     else if(pendingJournal){pendingJournal=false;gameRefreshJournal();}
   }
   function scheduleRelease(delay){
@@ -40,9 +41,9 @@
       activeSelect=null;
       scheduleRelease(0);
     }
-    const select=event.target.closest?.('#app select');
+    const select=event.target.closest?.('#app select, #modal select');
     if(select)holdSelect(select);
-    if(event.target.closest?.('#app button, #app a, #app input, #app select, #app textarea, #app label, #app summary, #app [role="button"]')){
+    if(event.target.closest?.('#app button, #app a, #app input, #app select, #app textarea, #app label, #app summary, #app [role="button"], #modal button, #modal input, #modal select, #modal textarea, #modal label, #utilityNavigation button')){
       clearTimeout(releaseTimer);releaseTimer=null;
       pointers.add(event.pointerId);
       interacting=true;
@@ -57,7 +58,7 @@
     if(interacting&&!pointers.size&&!activeSelect)scheduleRelease(0);
   },true);
   document.addEventListener('keydown',event=>{
-    if(!event.target.matches?.('#app select'))return;
+    if(!event.target.matches?.('#app select, #modal select'))return;
     if(event.key==='Escape')releaseSelect(event);
     else if([' ','Enter','ArrowDown','ArrowUp','Home','End','PageUp','PageDown'].includes(event.key))holdSelect(event.target);
   },true);

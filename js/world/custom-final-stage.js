@@ -32,19 +32,14 @@
   };
 
   function stageEnemyFromRow(row,mi,h,kind){
-    const runtime=MAPS[mi],ahead=GS('progression.mapAheadAllowance',5),n=GAMEPLAY_SETTINGS.monsters.normal,k=GAMEPLAY_SETTINGS.monsters.kindMultipliers;
+    const runtime=MAPS[mi],ahead=EmberwildProgression.encounterLevelLead(GAMEPLAY_SETTINGS,h.lv);
     const maxLv=Math.max(runtime.min,Math.min(runtime.max,h.lv+ahead)),lv=runtime.min+Math.floor(Math.random()*Math.max(1,maxLv-runtime.min+1));
-    const kindHp=kind==='elite'?k.eliteHp:1,kindAtk=kind==='elite'?k.eliteAttack:1,kindDef=kind==='elite'?k.eliteDefense:1;
-    let hp=Math.round((n.hpBase+lv*n.hpPerLevel+lv*lv*n.hpQuadratic)*kindHp*row.hpMultiplier),atk=Math.round((n.attackBase+lv*n.attackPerLevel)*kindAtk*row.attackMultiplier),def=Math.round(lv*n.defensePerLevel*kindDef*row.defenseMultiplier);
-    const mode=h.difficulty||0,d=MODES[mode],a=GAMEPLAY_SETTINGS.monsters.awakened;
-    if(lv>a.threshold){const progress=lv-a.threshold;hp=Math.round(hp*(a.hpBaseMultiplier+progress*a.hpPerLevel));atk=Math.round(atk*(a.attackBaseMultiplier+progress*a.attackPerLevel));def=Math.round(def*a.defenseMultiplier);}
-    hp=Math.round(hp*d.hp);atk=Math.round(atk*d.atk);def=Math.round(def*d.def);
+    const mode=h.difficulty||0,{hp,atk,def}=EmberwildProgression.monsterStats(GAMEPLAY_SETTINGS,lv,kind,mode,row);
     return {name:(kind==='elite'?'菁英・':'')+row.name,icon:'',mat:row.material,lv,hp,maxhp:hp,atk,def,kind,turn:0,monsterId:row.id,maxDrops:row.maxDrops,element:row.element,race:row.race,difficulty:mode,region:mi,stageOrder:row.stageOrder};
   }
   function finalBossFromRow(row,mi,h){
-    const f=GAMEPLAY_SETTINGS.monsters.finalBoss,mc=worldMapConfig(mi),lv=mc?.progressionGate===true?Math.round(f.level):Math.round(MAPS[mi].max),mode=h.difficulty||0,d=MODES[mode];
-    let hp=Math.round(f.hp*row.hpMultiplier),atk=Math.round(f.attack*row.attackMultiplier),def=Math.round(f.defense*row.defenseMultiplier);
-    hp=Math.round(hp*d.hp);atk=Math.round(atk*d.atk);def=Math.round(def*d.def);
+    const f=GAMEPLAY_SETTINGS.monsters.finalBoss,mc=worldMapConfig(mi),lv=mc?.progressionGate===true?Math.round(f.level):Math.round(MAPS[mi].max),mode=h.difficulty||0;
+    const {hp,atk,def}=EmberwildProgression.monsterStats(GAMEPLAY_SETTINGS,lv,'final',mode,row);
     return {name:row.name,icon:'',mat:row.material,lv,hp,maxhp:hp,atk,def,kind:'final',turn:0,monsterId:row.id,maxDrops:row.maxDrops,element:row.element,race:row.race,difficulty:mode,region:mi,stageOrder:row.stageOrder};
   }
   function configuredStageRows(mi){
@@ -119,12 +114,12 @@
     const customStageBestiaryBase=showRegionBestiary;
     showRegionBestiary=function(){
       if(!party||!isFinal(party.map))return customStageBestiaryBase();
-      const mi=party.map,m=MAPS[mi],rows=configuredStageRows(mi),parts=rows.map(x=>{const r=x.row,label=x.kind==='final'?'最終首領':x.kind==='elite'?'菁英隨從':'普通隨從';return `<p><b>${esc(r.name)}</b> <span class="tag">${label}${x.count>1?' ×'+x.count:''}</span> · ${ELEMENTS[r.element]}／${RACES[r.race]}<br>專屬掉落：${esc(r.material)} · 隊列 ${x.order}</p>`;}).join('');$('modal').innerHTML=`<h2>${esc(m.name)} · 終局關卡編成</h2>${parts}<button onclick="closeModal()">關閉</button>`;$('modal').showModal();
+      const mi=party.map,m=MAPS[mi],rows=configuredStageRows(mi),parts=rows.map(x=>{const r=x.row,label=x.kind==='final'?'最終首領':x.kind==='elite'?'菁英隨從':'普通隨從';return `<p><b>${esc(r.name)}</b> <span class="tag">${label}${x.count>1?' ×'+x.count:''}</span> · ${ELEMENTS[r.element]}／${RACES[r.race]}<br>${configuredDropDescription(r,x.kind,mi)} · 隊列 ${x.order}</p>`;}).join('');$('modal').innerHTML=`<h2>${esc(m.name)} · 終局關卡編成</h2>${parts}<button onclick="closeModal()">關閉</button>`;$('modal').showModal();
     };
   }
   if(typeof note==='function'){
     const customStageNoteBase=note;
-    note=function(text){if(party&&isFinal(party.map)&&/^噬日者已倒下！/.test(String(text)))return;return customStageNoteBase(text);};
+    note=function(text,type){if(party&&isFinal(party.map)&&/^噬日者已倒下！/.test(String(text)))return;return customStageNoteBase(text,type);};
   }
   if(typeof exportableBalance==='function'){
     const customStageExportBase=exportableBalance;

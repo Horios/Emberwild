@@ -1,0 +1,9 @@
+/* SVG adapts the existing text-rarity.css keyframes; no JavaScript animation loop. */
+.emberwild-icon{display:inline-block;vertical-align:middle;flex:none;overflow:visible;max-width:none;max-height:none}
+.ew-icon-motion{transform-box:view-box;transform-origin:50% 50%}
+/* base.css disables decorative animation globally. Opt in only configured SVGs. */
+.emberwild-icon .ew-icon-motion{animation:var(--ew-icon-animation,none)!important}
+.team-skill-row h3 .skill-icon-glyph{display:inline-grid;vertical-align:middle;margin-right:8px}
+@keyframes ew-icon-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.emberwild-icon .ew-icon-motion{animation:none!important;transform:none!important;clip-path:none!important}}
+@media(forced-colors:active){.emberwild-icon{color:CanvasText!important}.emberwild-icon g{color:CanvasText!important;filter:none!important}}

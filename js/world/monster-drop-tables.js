@@ -65,6 +65,17 @@ function heroDropRateBonus(h){return equipment(h).flatMap(g=>g.affix||[]).filter
 function partyDropRateBonus(){const hs=party?heroes():(state?[state]:[]);return hs.reduce((n,h)=>n+heroDropRateBonus(h),0);}
 function effectiveDropChance(rule,e,bonus=partyDropRateBonus()){const mode=Math.max(0,Math.min(2,Number(e?.difficulty)||0)),base=Math.max(0,Math.min(1,Number(rule?.chanceByDifficulty?.[mode])||0));return Math.min(1,base*(1+Math.max(0,Number(bonus)||0)));}
 function configuredDropRules(e){const id=e.monsterId||resolveMonsterCatalogId(e);return (GAMEPLAY_SETTINGS.drops?.entries||[]).filter(r=>r.enabled!==false&&r.sources.includes(id)&&r.kinds.includes(e.kind));}
+function configuredDropDescription(row,kind,mapIndex){
+  const e={monsterId:row.id,kind,region:mapIndex,difficulty:party?.difficulty??state?.difficulty??0},bonus=partyDropRateBonus();
+  const rules=configuredDropRules(e).filter(rule=>effectiveDropChance(rule,e,bonus)>0);
+  if(!rules.length)return '掉落表：此難度無啟用中的物品掉落';
+  const items=rules.map(rule=>{
+    const name=rule.type==='sourceMaterial'?(kind==='boss'?bossMaterial(mapIndex,e.difficulty):row.material):rule.type==='material'?rule.key:rule.name;
+    const chance=Number((effectiveDropChance(rule,e,bonus)*100).toFixed(2)),qty=rule.quantityMin===rule.quantityMax?rule.quantityMin:rule.quantityMin+'～'+rule.quantityMax;
+    return esc(name)+' ×'+qty+'（'+chance+'%）';
+  });
+  return '掉落表：'+items.join('、')+'；最多 '+Math.max(0,Math.floor(row.maxDrops??99))+' 項';
+}
 function randomQuantity(rule,rng=Math.random){const lo=Math.max(1,Math.floor(rule.quantityMin||1)),hi=Math.max(lo,Math.floor(rule.quantityMax||lo));return lo+Math.floor(rng()*(hi-lo+1));}
 function ensureLegendaryDropAffix(g){
   // Equipment rarity is determined by affix quality. A "legendary gear" drop therefore
@@ -80,12 +91,12 @@ function ensureLegendaryDropAffix(g){
 }
 function grantConfiguredDrop(rule,e,rng=Math.random){
   const qty=randomQuantity(rule,rng),mode=e.difficulty||0,mi=e.region??state.map,tier=regionTier(mi),r=GAMEPLAY_SETTINGS.rewards;
-  if(rule.type==='sourceMaterial'||rule.type==='material'){const key=rule.type==='sourceMaterial'?(e.kind==='boss'?bossMaterial(mi,mode):e.mat):rule.key;state.materials[key]=(state.materials[key]||0)+qty;note('獲得 '+key+' ×'+qty);return {name:key,count:qty};}
-  if(rule.type==='ore'){state.ore+=qty;note('獲得 鍛鐵 ×'+qty);return {name:'鍛鐵',count:qty};}
-  if(rule.type==='dust'){state.dust+=qty;note('獲得 寶石粉塵 ×'+qty);return {name:'寶石粉塵',count:qty};}
-  if(rule.type==='potion'){const item=typeof healPotionItems==='function'?(healPotionItems().find(x=>x.id==='heal_standard')||healPotionItems()[0]):null;if(item&&typeof healPotionCount==='function'&&typeof setHealPotionCount==='function')setHealPotionCount(item.id,healPotionCount(item.id)+qty);else state.potions+=qty;note('獲得 '+(item?.name||'治療藥水')+' ×'+qty);return {name:item?.name||'治療藥水',count:qty};}
-  if(rule.type==='item'){const item=SHOP.find(x=>x.id===rule.key);if(!item)return null;if(typeof isHealPotion==='function'&&isHealPotion(item)&&typeof healPotionCount==='function'&&typeof setHealPotionCount==='function')setHealPotionCount(item.id,healPotionCount(item.id)+qty);else{state.consumables??={};state.consumables[item.id]=(state.consumables[item.id]||0)+qty;}note('獲得 '+item.name+' ×'+qty);return {name:item.name,count:qty};}
-  if(rule.type==='gem'){for(let q=0;q<qty;q++){const i=rule.key==='random'?Math.floor(rng()*GEMS.length):Math.max(0,Math.min(GEMS.length-1,Number(rule.key)||0));state.gems[i]++;note('獲得 '+GEMS[i].name);}return {name:rule.key==='random'?'隨機技能寶石':GEMS[Number(rule.key)||0].name,count:qty};}
+  if(rule.type==='sourceMaterial'||rule.type==='material'){const key=rule.type==='sourceMaterial'?(e.kind==='boss'?bossMaterial(mi,mode):e.mat):rule.key;state.materials[key]=(state.materials[key]||0)+qty;note('獲得 '+key+' ×'+qty,'item');return {name:key,count:qty};}
+  if(rule.type==='ore'){state.ore+=qty;note('獲得 鍛鐵 ×'+qty,'item');return {name:'鍛鐵',count:qty};}
+  if(rule.type==='dust'){state.dust+=qty;note('獲得 寶石粉塵 ×'+qty,'item');return {name:'寶石粉塵',count:qty};}
+  if(rule.type==='potion'){const item=typeof healPotionItems==='function'?(healPotionItems().find(x=>x.id==='heal_standard')||healPotionItems()[0]):null;if(item&&typeof healPotionCount==='function'&&typeof setHealPotionCount==='function')setHealPotionCount(item.id,healPotionCount(item.id)+qty);else state.potions+=qty;note('獲得 '+(item?.name||'治療藥水')+' ×'+qty,'item');return {name:item?.name||'治療藥水',count:qty};}
+  if(rule.type==='item'){const item=SHOP.find(x=>x.id===rule.key);if(!item)return null;if(typeof isHealPotion==='function'&&isHealPotion(item)&&typeof healPotionCount==='function'&&typeof setHealPotionCount==='function')setHealPotionCount(item.id,healPotionCount(item.id)+qty);else{state.consumables??={};state.consumables[item.id]=(state.consumables[item.id]||0)+qty;}note('獲得 '+item.name+' ×'+qty,'item');return {name:item.name,count:qty};}
+  if(rule.type==='gem'){for(let q=0;q<qty;q++){const i=rule.key==='random'?Math.floor(rng()*GEMS.length):Math.max(0,Math.min(GEMS.length-1,Number(rule.key)||0));state.gems[i]++;note('獲得 '+GEMS[i].name,'item');}return {name:rule.key==='random'?'隨機技能寶石':GEMS[Number(rule.key)||0].name,count:qty};}
   if(rule.type==='gear'||rule.type==='gearLegendary'){for(let q=0;q<qty;q++){const rar=rule.type==='gearLegendary'?0:(rng()<r.equipmentQuality.rareChance?2:rng()<r.equipmentQuality.fineConditionalChance?1:0),g=gear(tier,Math.floor(rng()*4),rar);modeAffixes(g,mode);if(rule.type==='gearLegendary')ensureLegendaryDropAffix(g);addGear(g);}return {name:rule.name,count:qty};}
   if(rule.type==='bossGear'){for(let q=0;q<qty;q++)addGear(bossGear(mi,state.job,mode));return {name:rule.name,count:qty};}
   return null;
@@ -101,10 +112,10 @@ function rollConfiguredDrops(e,rng=Math.random){
 victory=function(){
   let e=enemy;if(!e)return;lastDefeatedEnemy={...e};let mode=e.difficulty||0,d=MODES[mode],mi=e.region??state.map,tier=regionTier(mi),kindIndex=e.kind==='normal'?0:e.kind==='elite'?1:2,r=GAMEPLAY_SETTINGS.rewards,mult=[r.kindMultiplier.normal,r.kindMultiplier.elite,r.kindMultiplier.boss][kindIndex],firstClear=e.kind==='final'&&!state.won;
   state.totalKills++;state.kills[e.mat]=(state.kills[e.mat]||0)+1;if(!state.discovered.includes(e.mat))state.discovered.push(e.mat);
-  let gold=Math.round((r.gold.base+e.lv*r.gold.perLevel)*mult*d.xp),xp=Math.round((r.xp.base+e.lv*r.xp.perLevel)*mult*d.xp);state.gold+=gold;state.ore+=Math.ceil(tier*(kindIndex===0?r.ore.normalKindMultiplier:r.ore.eliteBossKindMultiplier)*d.ore);
+  let gold=Math.round((r.gold.base+e.lv*r.gold.perLevel)*mult*d.xp),xp=EmberwildProgression.enemyXp(GAMEPLAY_SETTINGS,e.lv,e.kind,mode);state.gold+=gold;state.ore+=Math.ceil(tier*(kindIndex===0?r.ore.normalKindMultiplier:r.ore.eliteBossKindMultiplier)*d.ore);
   rollConfiguredDrops(e);awardEther(e);
   if(e.kind==='final'){state.won=true;state.modeClears[mode]++;state.materials['日蝕王冠']=Math.max(1,state.materials['日蝕王冠']||0);running=false;}
-  awardXP(xp);state.hp=Math.min(stats().hp,state.hp+stats().hp*r.postVictoryHeal);state.shield=0;note(`擊敗 ${e.name}（${d.name}）· +${xp} EXP、${gold} 金幣`);enemy=null;
+  awardXP(xp);state.hp=Math.min(stats().hp,state.hp+stats().hp*r.postVictoryHeal);state.shield=0;note(`擊敗 ${e.name}（${d.name}）· ${gold} 金幣`);enemy=null;
   if(e.kind==='final'){$('modal').innerHTML=`<h1>${firstClear?'等級界限已突破':'再次戰勝噬日者'}</h1><p>${d.name}模式通關。${firstClear?'等級上限提升。':'可繼續探索或挑戰更高難度。'}</p><button class="primary" onclick="closeModal()">繼續旅程</button>`;$('modal').showModal();}save();
 };solo.victory=victory;
 
@@ -114,14 +125,13 @@ rollAffixes=function(g){return oldAffixRoll(g).map(a=>{const cfg=GAME_BALANCE.af
 const dropRateAffixLabelBase=affixLabel;
 affixLabel=function(a,g){if(a?.type===17)return `掉寶率 +${a.value}%`;return dropRateAffixLabelBase(a,g);};
 /* Keep the unified equipment filter model; affix type 17 needs no separate filter override. */
-filteredGear=function(){const members=party?.members?.length?party.members:[state],equippedIds=filters.hideEquipped?new Set(members.flatMap(h=>Array.isArray(h.equipped)?h.equipped.filter(Boolean):[])):null;return state.bag.filter(g=>(filters.slot==='all'||g.slot===Number(filters.slot))&&(filters.job==='all'||gearWearableJobs(g).includes(Number(filters.job)))&&(filters.boss==='all'||(filters.boss==='boss')===(g.boss!==undefined))&&(filters.effectRank==='all'||gearQualityRank(g)===Number(filters.effectRank))&&(!equippedIds||!equippedIds.has(g.id))).sort((a,b)=>Number(!!gearWearer(b.id))-Number(!!gearWearer(a.id))||b.tier-a.tier||gearQualityRank(b)-gearQualityRank(a));};
 
 // Save import compatibility for the newer affix types 16/17 while retaining the older validator for all other fields.
 const dropRateValidateSaveBase=validateSave;
-validateSave=function(input){
+validateSave=function(input,options){
   const copy=JSON.parse(JSON.stringify(input)),newTypes=new Map();
   for(const g of copy?.bag||[])for(let i=0;i<(g.affix||[]).length;i++){const a=g.affix[i];if(a&&[16,17,18].includes(a.type)){if(!Number.isFinite(a.value)||a.value<0||a.value>RULES.affixMax||!Number.isInteger(a.rank)||a.rank<0||a.rank>3)throw Error('新詞條資料無效');newTypes.set(g.id+':'+i,a.type);a.type=15;}}
-  const out=dropRateValidateSaveBase(copy);for(const g of out.bag||[])for(let i=0;i<(g.affix||[]).length;i++){const t=newTypes.get(g.id+':'+i);if(t!==undefined)g.affix[i].type=t;}return out;
+  const out=dropRateValidateSaveBase(copy,options);for(const g of out.bag||[])for(let i=0;i<(g.affix||[]).length;i++){const t=newTypes.get(g.id+':'+i);if(t!==undefined)g.affix[i].type=t;}return out;
 };solo.validateSave=validateSave;
 
 const dropTableBalanceReferenceBase=balanceReference;

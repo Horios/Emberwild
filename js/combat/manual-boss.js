@@ -8,6 +8,9 @@
 
   GAMEPLAY_SETTINGS_DEFAULTS.monsters.bossMeter ??={normalProgress:1,eliteMultiplier:1.5,progressPerCharge:100,maxCharges:100,maxStageEnemies:20};
   GAMEPLAY_SETTINGS.monsters.bossMeter ??=clone(GAMEPLAY_SETTINGS_DEFAULTS.monsters.bossMeter);
+  // Random BOSS chances are compatibility data only; manual challenges own spawning.
+  GAMEPLAY_SETTINGS_DEFAULTS.monsters.encounter.bossChance=0;
+  GAMEPLAY_SETTINGS.monsters.encounter.bossChance=0;
 
   function normalizeBossStageRow(m){
     if(!m||typeof m!=='object')return m;
@@ -27,6 +30,7 @@
     const base=normalizeGameplaySettings;
     normalizeGameplaySettings=function(input){
       const prepared=clone(input||{});prepared.monsters??={};
+      prepared.monsters.encounter={...(prepared.monsters.encounter||{}),bossChance:0};
       prepared.monsters.bossMeter={...clone(GAMEPLAY_SETTINGS_DEFAULTS.monsters.bossMeter),...(prepared.monsters.bossMeter||{})};
       if(Array.isArray(prepared.maps?.catalog))for(const m of prepared.maps.catalog)if(m?.mapType!=='final')m.bossChance=0;
       if(Array.isArray(prepared.monsters?.catalog))prepared.monsters.catalog=prepared.monsters.catalog.map(m=>normalizeBossStageRow({...m}));
@@ -91,8 +95,8 @@
       const runtime=MAPS[map],cat=monsterCatalog(),normals=cat.filter(m=>m.mapIndex===map&&m.kind==='normal'&&m.enabled!==false),elites=normals.filter(m=>m.eliteEnabled!==false);
       if(!normals.length)throw Error('地圖沒有啟用中的普通怪物：'+runtime.name);
       const eliteChance=mc.eliteEnabled&&elites.length?Math.max(0,Math.min(1,Number(mc.eliteChance)||0)):0,elite=rng()<eliteChance,row=weightedPick(elite?elites:normals,rng),kind=elite?'elite':'normal';
-      const ahead=GS('progression.mapAheadAllowance',5),maxLv=Math.min(runtime.max,h.lv+ahead),lv=runtime.min+Math.floor(rng()*Math.max(1,maxLv-runtime.min+1)),n=GAMEPLAY_SETTINGS.monsters.normal,k=GAMEPLAY_SETTINGS.monsters.kindMultipliers;
-      const hp=Math.round((n.hpBase+lv*n.hpPerLevel+lv*lv*n.hpQuadratic)*(elite?k.eliteHp:1)*row.hpMultiplier),atk=Math.round((n.attackBase+lv*n.attackPerLevel)*(elite?k.eliteAttack:1)*row.attackMultiplier),def=Math.round(lv*n.defensePerLevel*(elite?k.eliteDefense:1)*row.defenseMultiplier);
+      const ahead=EmberwildProgression.encounterLevelLead(GAMEPLAY_SETTINGS,h.lv),maxLv=Math.min(runtime.max,h.lv+ahead),lv=runtime.min+Math.floor(rng()*Math.max(1,maxLv-runtime.min+1));
+      const {hp,atk,def}=EmberwildProgression.baseMonsterStats(GAMEPLAY_SETTINGS,lv,kind,row);
       return {name:(elite?'菁英・':'')+row.name,icon:'',mat:row.material,lv,hp,maxhp:hp,atk,def,kind,turn:0,monsterId:row.id,maxDrops:row.maxDrops,element:row.element,race:row.race};
     };
   }
@@ -109,12 +113,9 @@
   if(typeof rewardGroupKill==='function'){const base=rewardGroupKill;rewardGroupKill=function(e){const eligible=!!e&&!e.rewarded,result=base(e);if(eligible&&e.rewarded)addBossProgress(e);return result;};}
 
   function enemyFromStageRow(row,mi,h,kind,order){
-    const runtime=MAPS[mi],n=GAMEPLAY_SETTINGS.monsters.normal,k=GAMEPLAY_SETTINGS.monsters.kindMultipliers,a=GAMEPLAY_SETTINGS.monsters.awakened,mode=h.difficulty||0,d=MODES[mode],ahead=GS('progression.mapAheadAllowance',5);
+    const runtime=MAPS[mi],mode=h.difficulty||0,ahead=EmberwildProgression.encounterLevelLead(GAMEPLAY_SETTINGS,h.lv);
     const maxLv=Math.max(runtime.min,Math.min(runtime.max,h.lv+ahead)),lv=kind==='boss'?runtime.max:runtime.min+Math.floor(Math.random()*Math.max(1,maxLv-runtime.min+1));
-    const kh=kind==='boss'?k.bossHp:kind==='elite'?k.eliteHp:1,ka=kind==='boss'?k.bossAttack:kind==='elite'?k.eliteAttack:1,kd=kind==='boss'?k.bossDefense:kind==='elite'?k.eliteDefense:1;
-    let hp=Math.round((n.hpBase+lv*n.hpPerLevel+lv*lv*n.hpQuadratic)*kh*row.hpMultiplier),atk=Math.round((n.attackBase+lv*n.attackPerLevel)*ka*row.attackMultiplier),def=Math.round(lv*n.defensePerLevel*kd*row.defenseMultiplier);
-    if(lv>a.threshold){const p=lv-a.threshold;hp=Math.round(hp*(a.hpBaseMultiplier+p*a.hpPerLevel));atk=Math.round(atk*(a.attackBaseMultiplier+p*a.attackPerLevel));def=Math.round(def*a.defenseMultiplier);}
-    hp=Math.round(hp*d.hp);atk=Math.round(atk*d.atk);def=Math.round(def*d.def);
+    const {hp,atk,def}=EmberwildProgression.monsterStats(GAMEPLAY_SETTINGS,lv,kind,mode,row);
     return {name:(kind==='elite'?'菁英・':'')+row.name,icon:'',mat:row.material,lv,hp,maxhp:hp,atk,def,kind,turn:0,monsterId:row.id,maxDrops:row.maxDrops,element:row.element,race:row.race,difficulty:mode,region:mi,bossChallenge:true,stageOrder:order};
   }
   function configuredBossStageRows(mi){
@@ -163,8 +164,8 @@
     const base=showRegionBestiary;
     showRegionBestiary=function(){
       if(!party||isFinalMapIndex(party.map))return base();const mi=party.map,m=MAPS[mi],mc=mapConfig(mi),cat=monsterCatalog(),normals=cat.filter(x=>x.mapIndex===mi&&x.kind==='normal'),stage=configuredBossStageRows(mi);
-      const roaming=normals.filter(x=>x.enabled!==false).map(x=>`<p><b>${esc(x.name)}</b> · ${ELEMENTS[x.element]}／${RACES[x.race]}${x.eliteEnabled!==false?' · 可出現菁英':''}<br>專屬掉落：${esc(x.material)}</p>`).join('');
-      const stageHtml=stage.map(x=>`<p><b>${esc(x.row.name)}</b> <span class="tag">${x.kind==='boss'?'BOSS':x.kind==='elite'?'菁英隨從':'普通隨從'}${x.count>1?' ×'+x.count:''}</span> · 隊列 ${x.order}<br>專屬掉落：${esc(x.row.material)}</p>`).join('');
+      const roaming=normals.filter(x=>x.enabled!==false).map(x=>`<p><b>${esc(x.name)}</b> · ${ELEMENTS[x.element]}／${RACES[x.race]}${x.eliteEnabled!==false?' · 可出現菁英':''}<br>普通 ${configuredDropDescription(x,'normal',mi)}${x.eliteEnabled!==false?'<br>菁英 '+configuredDropDescription(x,'elite',mi):''}</p>`).join('');
+      const stageHtml=stage.map(x=>`<p><b>${esc(x.row.name)}</b> <span class="tag">${x.kind==='boss'?'BOSS':x.kind==='elite'?'菁英隨從':'普通隨從'}${x.count>1?' ×'+x.count:''}</span> · 隊列 ${x.order}<br>${configuredDropDescription(x.row,x.kind,mi)}</p>`).join('');
       $('modal').innerHTML=`<h2>${esc(m.name)} · 怪物與掉落</h2><h3>一般探索</h3>${roaming||'<p class="small">沒有啟用中的普通怪物。</p>'}<h3>BOSS 關卡 ${mc?.bossEnabled===false?'<span class="tag">已停用</span>':''}</h3>${stageHtml}<button onclick="closeModal()">關閉</button>`;$('modal').showModal();
     };
   }

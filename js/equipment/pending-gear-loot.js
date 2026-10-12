@@ -9,7 +9,7 @@ addGear=function(g){
   g.rar=0;
   pendingGearLoot.push(g);
   const q=typeof gearQualityRank==='function'?gearQualityRank(g):0;
-  note(`獲得 ${AFFIX_RANK[q]} ${equipmentDisplayName(g)}${g.boss!==undefined?'（BOSS 專屬）':''}（待結算）`);
+  note(`獲得 ${AFFIX_RANK[q]} ${equipmentDisplayName(g)}${g.boss!==undefined?'（BOSS 專屬）':''}（待結算）`,'item');
   if(typeof addExpeditionLoot==='function')addExpeditionLoot(equipmentDisplayName(g),1,q);
 };
 

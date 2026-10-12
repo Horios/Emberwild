@@ -16,30 +16,16 @@
     s.meta??={};
     s.meta.numericCompressionVersion=COMPRESSION_VERSION;
     s.progression??={};s.progression.statsPerLevel??={};s.progression.statsPerPoint??={};s.progression.advance??={};
-    Object.assign(s.progression.statsPerLevel,{hp:.9,attack:.18,defense:.1});
-    Object.assign(s.progression.statsPerPoint,{hp:.55,attack:.1,defense:.06});
-    Object.assign(s.progression.advance,{hpMultiplier:1.12,attackMultiplier:1.15,defenseMultiplier:1.12});
+    Object.assign(s.progression.statsPerLevel,{hp:4,attack:1,defense:1});
     s.skills??={};s.skills.core??={};s.skills.gems??={};
     s.skills.core.effectPerExtraLevel=.18;
     Object.assign(s.skills.gems,{effectMultiplier:1.10,hybridMultiplier:1.05,hybridActiveHealAttack:.10});
     s.equipment??={};s.equipment.baseStats??={};s.equipment.enhance??={};s.equipment.boss??={};s.equipment.difficultyAffix??={};
-    Object.assign(s.equipment.baseStats,{weaponAttackPerTier:.7,armorHpPerTier:2.2,armorDefensePerTier:.45,offhandAttackPerTier:.3,offhandHpPerTier:.8,accessoryAttackPerTier:.3,accessoryHpPerTier:.8});
-    s.equipment.enhance.statPerLevel=.06;
-    s.equipment.boss.powerByDifficulty=[1,1.15,1.3];
     Object.assign(s.equipment.difficultyAffix,{baseAttackPerTier:.6,baseHpPerTier:2.2,defenseBasePerTier:.5,defensePerRankPerTier:.2,critBase:2,critPerRank:2});
-    s.monsters??={};s.monsters.normal??={};s.monsters.kindMultipliers??={};s.monsters.finalBoss??={};s.monsters.awakened??={};
-    Object.assign(s.monsters.normal,{hpBase:4,hpPerLevel:3,hpQuadratic:.08,attackBase:1.6,attackPerLevel:.55,defensePerLevel:.55});
-    Object.assign(s.monsters.kindMultipliers,{bossHp:2.4,eliteHp:1.45,bossAttack:1.3,eliteAttack:1.15,eliteDefense:1.1,bossDefense:1.2});
-    Object.assign(s.monsters.finalBoss,{level:40,hp:7800,attack:48,defense:30});
-    Object.assign(s.monsters.awakened,{threshold:30,hpBaseMultiplier:1.5,hpPerLevel:.04,attackBaseMultiplier:1.4,attackPerLevel:.03,defenseMultiplier:1.25});
-    if(Array.isArray(s.difficulty?.modes)&&s.difficulty.modes.length>=3){
-      Object.assign(s.difficulty.modes[0],{hp:1,attack:1,defense:1});
-      Object.assign(s.difficulty.modes[1],{hp:1.55,attack:1.25,defense:1.15});
-      Object.assign(s.difficulty.modes[2],{hp:2.25,attack:1.55,defense:1.3});
-    }
     s.combat??={};s.combat.damageFormula??={};
     Object.assign(s.combat.damageFormula,{attackCoefficient:1,defenseCoefficient:.55,minimumDamage:1});
     s.combat.defenseEffectiveness=s.combat.damageFormula.defenseCoefficient;
+    EmberwildProgression.applyDefaults(s);
     return s;
   }
   function ensureCompressionBalance(b){
@@ -80,7 +66,6 @@
     out.balanceSettings??={};out.balance??={};
     if(fresh){
       ensureCompressionSettings(out.balanceSettings);ensureCompressionBalance(out.balance);
-      const classBase=[[15,3,2],[10,4,1],[11,4,1],[12,3,2]];
       const powers=[
         [1.35,.9,.65,.4,2.05,.8],
         [1.55,.9,.8,.45,2.6,1.15],
@@ -88,10 +73,10 @@
         [1.4,1,.7,.65,2.0,.9]
       ];
       (out.classes||[]).forEach((cls,job)=>{
-        const base=classBase[job]||[12,3,1];cls.hp=base[0];cls.atk=base[1];cls.def=base[2];
+        EmberwildProgression.applyClassDefaults(cls,job);
         (cls.skills||[]).forEach((sk,i)=>{if(Number.isFinite(powers[job]?.[i]))sk.power=powers[job][i];});
       });
-      if(out.equipmentPowerSystem?.strength?.multipliers)out.equipmentPowerSystem.strength.multipliers=[1,1.04,1.08,1.12,1.16,1.20,1.24,1.28,1.32,1.36];
+      if(out.equipmentPowerSystem?.strength?.multipliers)out.equipmentPowerSystem.strength.multipliers=clone(EmberwildProgression.defaults.powerMultipliers);
       for(const list of [out.equipmentPowerSystem?.prefixes,out.equipmentPowerSystem?.suffixes])for(const x of list||[])if(x?.effect?.key==='pierce')x.effect.value=Math.max(1,Number((Number(x.effect.value||0)*.6).toFixed(2)));
       for(const x of out.equipmentPowerSystem?.bossAffixes||[])for(const e of x.effects||[])if(e?.key==='pierce')e.value=Math.max(1,Number((Number(e.value||0)*.6).toFixed(2)));
     }else{
@@ -99,6 +84,10 @@
       out.balanceSettings.combat??={};out.balanceSettings.combat.damageFormula??={attackCoefficient:1,defenseCoefficient:.55,minimumDamage:1};
       out.balance.combat??={};out.balance.combat.statCaps??={};out.balance.combat.statCaps.defenseIgnore??=.75;
       out.balance.affixes??={};out.balance.affixes.extendedValues??={};out.balance.affixes.extendedValues.defenseIgnore??={normal:0,fine:4,rare:8,legendary:12};
+      // Old v1 JSON used the same encounter/difficulty multipliers for gold and EXP.
+      const rewards=out.balanceSettings.rewards??={};rewards.xp??={};
+      rewards.xp.kindMultiplier??=clone(rewards.kindMultiplier||EmberwildProgression.defaults.settings.rewards.xp.kindMultiplier);
+      for(const [i,d] of (out.balanceSettings.difficulty?.modes||[]).entries())d.xpMultiplier??=d.reward??EmberwildProgression.defaults.settings.difficulty.modes[i].xpMultiplier;
     }
     (out.classes||[]).forEach((cls,job)=>(cls.skills||[]).forEach((sk,i)=>normalizeSkillExtras(sk,job,i)));
     for(const item of out.items||[])item.statEffects=normalizeStatEffects(item.statEffects);
@@ -194,7 +183,7 @@
     const afterIgnore=Math.max(0,e.def*(1-fracture)*(1-ignore)),effectiveDefense=Math.max(0,afterIgnore-penetration);
     let d=Math.max(minimumDamage,Math.round(rawAmount*attackCoefficient-effectiveDefense*defenseCoefficient));
     if(crit)d=Math.round(d*Math.max(1,Number.isFinite(options.critDamage)?options.critDamage:v.critDamage));
-    const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic&&tonic.element===element?GS('combat.supply.elementTonicDamage',.2):0);
+    const bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+supplyEffect(h,'elementTonic',element);
     const amp=effectTotal(e.id,'damageAmp')+effectTotal(e.id,'vulnerable');
     d=Math.max(minimumDamage,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)));
     const guard=Math.min(GAMEPLAY_SETTINGS.combat.caps.guard,effectTotal(e.id,'guard'));
@@ -204,7 +193,7 @@
     const absorb=Math.min(Math.max(0,Number(e.shield)||0),d);e.shield=Math.max(0,(Number(e.shield)||0)-absorb);d-=absorb;
     const actual=Math.min(e.hp,d);e.hp=Math.max(0,e.hp-d);
     if(actual>0)recordCombatContribution(h,'damage',actual);
-    const beforeLifesteal=h.hp;h.hp=Math.min(v.hp,h.hp+actual*v.lifesteal);
+    const beforeLifesteal=h.hp;h.hp=Math.min(v.hp,h.hp+healingAmount(h,actual*v.lifesteal));
     const healed=Math.max(0,h.hp-beforeLifesteal);if(healed>0)recordCombatContribution(h,'healing',healed);
     if(actual>0&&e.hp>0)triggerFollowupDebuffs(e);
     return actual;
@@ -219,20 +208,24 @@
       if(sk[5]==='shieldLowest'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const amount=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),r=applyPureShield(ally,amount);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 護盾 '+r.generated+(r.upgraded?'':'（現有護盾較高，維持不變）'));return true;}
     }
     const storedBonus=sk[1]==='active'?Math.max(0,Number(h.nextActiveDamageBonus)||0):0,basePower=v.atk*skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),power=basePower*((storedBonus>0&&['damage','drain'].includes(sk[5]))?1+storedBonus:1),element=coreSkillElement(h.job,i),profile=skillCombatProfile(h,i,v);let success=false;
-    if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(basePower));const recovered=Math.max(0,ally.hp-beforeHp);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');success=true;}
+    if(sk[5]==='heal'){const ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(!ally)return false;const maxHp=stats(ally).hp,beforeHp=ally.hp;ally.hp=Math.min(maxHp,beforeHp+Math.round(healingAmount(h,basePower)));const recovered=Math.max(0,ally.hp-beforeHp);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);note(characterName(h)+'・'+sk[0]+' → '+characterName(ally)+' 恢復 '+Math.round(recovered)+' 生命');success=true;}
     else if(sk[5]==='shield'){const shieldResult=applyPureShield(h,basePower);note(pureShieldCastLog(h,sk[0],shieldResult));success=true;}
-    else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const crit=Math.random()<profile.critChance,d=resolveHit(e,power,h,element,crit,{critDamage:profile.critDamage,defensePenetration:profile.defensePenetration,defenseIgnore:profile.defenseIgnore});total+=d;results.push(combatEnemyName(e)+' '+d+(crit?'（暴擊）':''));}if(sk[5]==='drain'){const beforeDrain=h.hp;h.hp=Math.min(v.hp,h.hp+total);const recovered=Math.max(0,h.hp-beforeDrain);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害');success=true;}
+    else{const targets=coreSkillTargets(sk);if(!targets.length)return false;let total=0;const results=[];for(const e of targets){const crit=Math.random()<profile.critChance,d=resolveHit(e,power,h,element,crit,{critDamage:profile.critDamage,defensePenetration:profile.defensePenetration,defenseIgnore:profile.defenseIgnore});total+=d;results.push(combatEnemyName(e)+' '+d+(crit?'（暴擊）':''));}if(sk[5]==='drain'){const beforeDrain=h.hp;h.hp=Math.min(v.hp,h.hp+healingAmount(h,total));const recovered=Math.max(0,h.hp-beforeDrain);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}note(characterName(h)+'・'+sk[0]+' ['+ELEMENTS[element]+'] → '+results.join('、')+' 傷害','playerDamage');success=true;}
     if(success&&sk[1]==='active'&&storedBonus>0)delete h.nextActiveDamageBonus;
-    if(success&&h.sockets[i]===2&&sk[1]==='active'){const beforeGem=h.hp;h.hp=Math.min(v.hp,h.hp+Math.round(v.atk*GS('skills.gems.hybridActiveHealAttack',.10)));const recovered=Math.max(0,h.hp-beforeGem);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}
+    if(success&&h.sockets[i]===2&&sk[1]==='active'){const beforeGem=h.hp;h.hp=Math.min(v.hp,h.hp+Math.round(healingAmount(h,v.atk*GS('skills.gems.hybridActiveHealAttack',.10))));const recovered=Math.max(0,h.hp-beforeGem);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}
     return success;
   };
 
   const compressionUseSupplyBase=useSupply;
   useSupply=function(id){
     const item=SHOP.find(x=>x.id===id);if(!item||(state.consumables[id]||0)<1)return;
-    state.consumables[id]--;const turns=Math.max(1,Math.round(Number(item.duration)||1));
-    state[item.type]={element:item.element,remainingTurns:turns,totalTurns:turns,until:0,statEffects:normalizeStatEffects(item.statEffects)};
-    save();render();toast('已使用'+item.name);
+    const previous=state[item.type],count=state.consumables[id],previousHp=state.hp;let buff;
+    if(EmberwildTimedBoosts.isElementalItem(item)){
+      buff=EmberwildTimedBoosts.createElementalBuff({...item,statEffects:normalizeStatEffects(item.statEffects)});
+    }else{const turns=Math.max(1,Math.round(Number(item.duration)||1));buff={element:item.element,remainingTurns:turns,totalTurns:turns,until:0,statEffects:normalizeStatEffects(item.statEffects)};}
+    state.consumables[id]--;state[item.type]=buff;withHero(state,clampVitals);
+    if(save()===false){state.consumables[id]=count;state[item.type]=previous;state.hp=previousHp;return false;}
+    render();toast('已使用'+item.name);return true;
   };
   function itemStatText(item){
     const s=normalizeStatEffects(item?.statEffects),labels={hp:'生命',attack:'攻擊',defense:'防禦',attackPct:'總攻擊',critRate:'暴擊率',critDamage:'暴擊傷害',defensePenetration:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避',elementBonus:'全屬性增傷',bossDamage:'BOSS 傷害',speed:'速度'},percent=new Set(['attackPct','critRate','critDamage','defenseIgnore','lifesteal','evasion','elementBonus','bossDamage']);

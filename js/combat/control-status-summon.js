@@ -165,7 +165,7 @@
       target=candidates[rand(candidates.length)];
     }
     if(target.__controlSummon){
-      target.hp=Math.max(0,target.hp-1);note(combatEnemyName(e)+' 攻擊 '+target.name+'，陷阱生命 -1（剩餘 '+target.hp+'）。');onTrapHit(target,e);return;
+      target.hp=Math.max(0,target.hp-1);note(combatEnemyName(e)+' 攻擊 '+target.name+'，陷阱生命 -1（剩餘 '+target.hp+'）。','enemyDamage');onTrapHit(target,e);return;
     }
     const h=target,beforeHp=h.hp,v=battleStats(h),ev=enemyBattleStats(e),c=GAMEPLAY_SETTINGS.combat,fb=c.finalBoss,multi=e.kind==='final'?(e.turn>fb.enrageAfterTurn?fb.enrageMultiplier:e.turn%Math.max(1,Math.round(fb.specialEveryTurns))===0?fb.specialMultiplier:1):1+Math.max(0,e.lv-h.lv)*c.levelGapDamagePerLevel;
     const formula=c.damageFormula||{},attackCoefficient=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defenseCoefficient=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:c.defenseEffectiveness,minimumDamage=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
@@ -176,13 +176,14 @@
     if(elementBonus)hit=Math.max(minimumDamage,Math.round(hit*(1+elementBonus)));
     hit=Math.max(minimumDamage,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));
     if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+combatEnemyName(e)+'的攻擊');return;}
-    const ward=activeSupply(h,'ward'),resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+(ward&&ward.element===e.element?c.supply.wardResistance:0));
+    const resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+supplyEffect(h,'ward',e.element));
     hit=Math.max(minimumDamage,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;
     if(absorb>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'mitigation',absorb);
     const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);
+    globalThis.EmberwildTokenRuntime?.afterDamage(h,e,beforeHp,h.hp);
     if(ev.lifesteal>0)e.hp=Math.min(e.maxhp,e.hp+Math.round((beforeHp-h.hp)*ev.lifesteal));
-    if(absorb>0&&hpDamage===0)note(combatEnemyName(e)+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）');
-    else note(combatEnemyName(e)+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?'（護盾吸收 '+absorb+'，剩餘 '+Math.round(h.shield)+'）':''));
+    if(absorb>0&&hpDamage===0)note(combatEnemyName(e)+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）','enemyDamage');
+    else note(combatEnemyName(e)+' → '+characterName(h)+' '+hpDamage+' 傷害'+(absorb?'（護盾吸收 '+absorb+'，剩餘 '+Math.round(h.shield)+'）':''),'enemyDamage');
     if(beforeHp>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,battleDeathMoveName(e));
   };
 
@@ -232,7 +233,7 @@
       success=summonTrap(h,effect,trapMeta);
     }
     if(success&&h.sockets?.[i]===2&&sk[1]==='active'){
-      const before=h.hp;h.hp=Math.min(profileV.hp,h.hp+Math.round(profileV.atk*GS('skills.gems.hybridActiveHealAttack',.10)));
+      const before=h.hp;h.hp=Math.min(profileV.hp,h.hp+Math.round(healingAmount(h,profileV.atk*GS('skills.gems.hybridActiveHealAttack',.10))));
       const recovered=Math.max(0,h.hp-before);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);
     }
     const mastery=globalThis.__EMBERWILD_MASTERY;
@@ -338,6 +339,7 @@
 
   globalThis.__EMBERWILD_CONTROL_TEST_API={
     get states(){return controlStates;},get summons(){return combatSummons;},
+    clear(e,kind){const s=stateFor(e?.id,false),key=kind==='tauntRage'?'rage':kind;if(!s?.[key])return false;delete s[key];cleanState(e.id);return true;},
     applyPolymorph,applyFreeze,applyFrost,applyRage,applyFear,isPolymorphed,ensureControlSkills
   };
   if(state){syncAllHeroSkillArrays();render();}

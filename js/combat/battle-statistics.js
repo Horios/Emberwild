@@ -22,7 +22,7 @@ function normalizeBattleStatistics(raw){
       if(r.drops&&typeof r.drops==='object'&&!Array.isArray(r.drops))for(const [name,n] of Object.entries(r.drops).slice(0,600)){
         const v=Math.max(0,Math.min(1e9,Math.floor(Number(n)||0)));if(v)drops[String(name).slice(0,120)]=v;
       }
-      rows.push({time:Number.isFinite(r.time)?Math.max(0,Math.floor(r.time)):0,difficulty:[0,1,2].includes(r.difficulty)?r.difficulty:0,result:r.result==='wipe'?'wipe':'victory',xp:Math.max(0,Math.min(1e12,Math.floor(Number(r.xp)||0))),drops,deaths});
+      rows.push({time:Number.isFinite(r.time)?Math.max(0,Math.floor(r.time)):0,difficulty:[0,1,2].includes(r.difficulty)?r.difficulty:0,result:['wipe','abandoned'].includes(r.result)?r.result:'victory',xp:Math.max(0,Math.min(1e12,Math.floor(Number(r.xp)||0))),drops,deaths});
     }
     if(rows.length)out.maps[mi]=rows;
   }
@@ -53,7 +53,7 @@ function recordBattleDeath(h,e,cause){
 }
 function finalizeBattleStatistics(result){
   if(!activeBattleStat||!party)return;
-  const rec={time:activeBattleStat.time,difficulty:activeBattleStat.difficulty,result:result==='wipe'?'wipe':'victory',xp:Math.max(0,Math.floor(activeBattleStat.xp||0)),drops:{...activeBattleStat.drops},deaths:activeBattleStat.deaths.map(x=>({...x}))};
+  const rec={time:activeBattleStat.time,difficulty:activeBattleStat.difficulty,result:['wipe','abandoned'].includes(result)?result:'victory',xp:Math.max(0,Math.floor(activeBattleStat.xp||0)),drops:{...activeBattleStat.drops},deaths:activeBattleStat.deaths.map(x=>({...x}))};
   const map=activeBattleStat.map,stats=ensureBattleStatistics(),rows=stats.maps[map]||(stats.maps[map]=[]);
   rows.push(rec);if(rows.length>BATTLE_STATS_LIMIT)rows.splice(0,rows.length-BATTLE_STATS_LIMIT);
   activeBattleStat=null;
@@ -117,11 +117,11 @@ function statisticsView(){
   const difficultyCounts=[0,1,2].map(i=>a.records.filter(r=>r.difficulty===i).length);
   return heading('STATISTICS / 戰鬥統計',m.name,`<span class="tag">最近 ${a.records.length} / ${BATTLE_STATS_LIMIT} 場</span>`)+
   `<section class="statistics-summary">
-    <article class="card"><span class="statistics-number">${a.records.length.toLocaleString()}</span><span class="statistics-label">已完成戰鬥</span></article>
+    <article class="card"><span class="statistics-number">${a.records.filter(r=>r.result!=='abandoned').length.toLocaleString()}</span><span class="statistics-label">已完成戰鬥</span></article>
     <article class="card"><span class="statistics-number">${a.xp.toLocaleString()}</span><span class="statistics-label">總獲得經驗</span></article>
     <article class="card"><span class="statistics-number">${a.wipes.toLocaleString()}</span><span class="statistics-label">總全滅次數</span></article>
     <article class="card"><span class="statistics-number">${a.deaths.toLocaleString()}</span><span class="statistics-label">總死亡次數</span></article>
-  </section><p class="small">統計只計算在此地圖完成的群怪遭遇；中途換圖、換隊員或切換難度不計場次。模式場次：${MODES.map((d,i)=>`${d.name} ${difficultyCounts[i]}`).join(' ／ ')}</p>
+  </section><p class="small">統計只計算在此地圖完成的群怪遭遇；停止探索保留已取得獎勵並記錄為中止，不計完成場次；中途換圖、換隊員或切換難度不計場次。模式場次：${MODES.map((d,i)=>`${d.name} ${difficultyCounts[i]}`).join(' ／ ')}</p>
   <div class="statistics-layout"><section class="panel"><h2>掉落道具</h2><div class="statistics-loot-list">${a.drops.length?a.drops.map(([name,n])=>`<div class="statistics-loot-row"><span>${esc(name)}</span><b>×${n.toLocaleString()}</b></div>`).join(''):'<p class="statistics-empty">最近的戰鬥尚無掉落紀錄。</p>'}</div></section>
   <section class="panel"><h2>隊員死亡統計</h2><div class="statistics-members">${party.members.map(h=>{const d=a.memberData.get(memberKey(h))||{count:0,recent:[]};return `<article class="statistics-member"><h3><span>${esc(characterName(h))}</span><span class="tag">死亡 ${d.count}</span></h3>${d.recent.length?`<ol class="statistics-deaths">${d.recent.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'<p class="statistics-empty">最近 300 場內沒有死亡紀錄。</p>'}</article>`;}).join('')}</div><p class="small">每名隊員最多顯示最近 5 次直接致死來源，格式為「怪物名稱－招式名稱」。</p></section></div>`;
 }

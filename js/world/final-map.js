@@ -45,13 +45,13 @@
   victory=function(){
     let e=enemy;if(!e)return;lastDefeatedEnemy={...e};let mode=e.difficulty||0,d=MODES[mode],mi=e.region??state.map,tier=regionTier(mi),kindIndex=e.kind==='normal'?0:e.kind==='elite'?1:2,r=GAMEPLAY_SETTINGS.rewards,mult=[r.kindMultiplier.normal,r.kindMultiplier.elite,r.kindMultiplier.boss][kindIndex],gateFinal=e.kind==='final'&&isGateMap(mi),firstClear=gateFinal&&!state.won;
     state.totalKills++;state.kills[e.mat]=(state.kills[e.mat]||0)+1;if(!state.discovered.includes(e.mat))state.discovered.push(e.mat);
-    let gold=Math.round((r.gold.base+e.lv*r.gold.perLevel)*mult*d.xp),xp=Math.round((r.xp.base+e.lv*r.xp.perLevel)*mult*d.xp);state.gold+=gold;state.ore+=Math.ceil(tier*(kindIndex===0?r.ore.normalKindMultiplier:r.ore.eliteBossKindMultiplier)*d.ore);
+    let gold=Math.round((r.gold.base+e.lv*r.gold.perLevel)*mult*d.xp),xp=EmberwildProgression.enemyXp(GAMEPLAY_SETTINGS,e.lv,e.kind,mode);state.gold+=gold;state.ore+=Math.ceil(tier*(kindIndex===0?r.ore.normalKindMultiplier:r.ore.eliteBossKindMultiplier)*d.ore);
     rollConfiguredDrops(e);awardEther(e);
     if(e.kind==='final'){
       running=false;
       if(gateFinal){state.won=true;state.modeClears[mode]++;if(e.mat)state.materials[e.mat]=Math.max(1,state.materials[e.mat]||0);}
     }
-    awardXP(xp);state.hp=Math.min(stats().hp,state.hp+stats().hp*r.postVictoryHeal);state.shield=0;note(`擊敗 ${combatEnemyName(e)}（${d.name}）· +${xp} EXP、${gold} 金幣`);enemy=null;
+    awardXP(xp);state.hp=Math.min(stats().hp,state.hp+stats().hp*r.postVictoryHeal);state.shield=0;note(`擊敗 ${combatEnemyName(e)}（${d.name}）· ${gold} 金幣`);enemy=null;
     if(e.kind==='final'&&!partyBusy){
       const title=gateFinal?(firstClear?'等級界限已突破':'再次完成突破關卡'):'終局首領已擊敗',body=gateFinal?(firstClear?'等級上限提升，通關後區域已解鎖。':'可繼續探索通關後區域，或挑戰其他終局地圖。'):`已完成「${MAPS[mi]?.name||'終局地圖'}」。此地圖不會改變等級上限。`;
       $('modal').innerHTML=`<h1>${title}</h1><p>${esc(body)}</p><button class="primary" onclick="closeModal()">繼續旅程</button>`;$('modal').showModal();

@@ -2,6 +2,43 @@
 .roster-page .roster-row{min-height:70px}
 .roster-page .roster-row>div:first-child{min-width:0}
 .roster-page .roster-row p{line-height:1.5}
+.member-identity{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.member-tags{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:3px 10px;font-size:.8125rem;line-height:1.5;vertical-align:baseline}
+.member-tags .member-tag,.member-status{border:0;padding:0;margin:0;white-space:nowrap}
+.member-tags .member-job{color:var(--green)}
+.member-tags .member-level{color:var(--muted)}
+.member-tags .member-player{color:var(--gold)}
+.member-status.is-active{color:var(--green)}
+.member-status.is-reserve,.member-status.is-archived{color:var(--muted)}
+.member-tags .member-rating{font-weight:700}
+.member-tags .member-rating-d{color:#aeb4b7}
+.member-tags .member-rating-c{color:#f4f5f5}
+.member-tags .member-rating-b{color:#79d997}
+.member-tags .member-rating-a{color:#cc9dff}
+.member-tags .member-rating-s{color:#f4cc62}
+.member-tags .member-rating-ss,.member-tags .member-rating-sss{color:#c5b7ff}
+@supports ((background-clip:text) or (-webkit-background-clip:text)){
+ .member-tags .member-rating-ss,.member-tags .member-rating-sss{background-image:linear-gradient(110deg,#ffada8,#f6dc80,#94e8c4,#95d9ff,#d3afff);background-clip:text;-webkit-background-clip:text;color:transparent}
+ .member-tags .member-rating-sss{background-image:linear-gradient(110deg,#ffd287,#ffc1db,#bcafff,#94e5ff,#adf4c4,#ffd287);background-size:250% 100%;animation:member-rating-shimmer 6s linear infinite!important}
+}
+@keyframes member-rating-shimmer{from{background-position:0% 50%}to{background-position:100% 50%}}
+@media(prefers-reduced-motion:reduce){.member-tags .member-rating-sss{animation:none!important}}
+.roster-player-row{border-left:2px solid var(--gold);padding-left:10px}
+.adventurer-summary{display:block;min-width:0;margin:0 3px 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.adventurer-summary h2{display:block;font-size:15px;line-height:1.4;margin:0 0 3px;overflow-wrap:anywhere}
+.adventurer-summary p{margin:0 0 7px;font-size:11px}
+.player-progress{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;max-width:380px;min-width:0;font-size:12px}
+.player-progress-level{white-space:nowrap;color:var(--gold);font-weight:700}
+.player-exp-bar{position:relative;display:grid;align-items:center;min-height:24px;min-width:0;overflow:hidden;background:#182124;border:1px solid #53694f;border-radius:3px}
+.player-exp-fill{position:absolute;inset:0 auto 0 0;background:#4f6740}
+.player-exp-text{position:relative;display:block;z-index:1;text-align:center;font-size:11px;line-height:1.3;padding:3px 5px;overflow-wrap:anywhere;color:#f4f5e9;font-variant-numeric:tabular-nums}
+.player-progress-sidebar{grid-template-columns:minmax(0,1fr);gap:5px}
+.player-progress-sidebar .player-exp-text{font-size:10px}
+.layout>main>.expedition-progress{flex:0 0 auto;margin:0 0 3px}
+.player-progress-character{margin:0 0 10px}
+.page-hero-tabs>button.member-selector{width:190px!important;height:auto!important;min-height:56px;text-align:left}
+.member-selector>b{display:block}
+.member-selector .member-tags{display:flex;font-size:.75rem;gap:2px 8px}
 .roster-team-status{padding-bottom:10px;border-bottom:1px solid var(--line)}
 .roster-team-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px;margin-top:8px}
 .roster-team-slot{display:grid;gap:3px;padding:8px;border:1px solid var(--line);background:#202b23}
@@ -39,3 +76,30 @@
 .companion-ability-extra p{margin:4px 0;overflow-wrap:anywhere}
 @media(max-width:1100px){.character-ability-scroll.has-companions{grid-template-columns:1fr}.has-companions .player-character-content .grid{grid-template-columns:minmax(0,1.2fr) minmax(220px,1fr)}}
 @media(max-width:780px){.player-character-content .grid{grid-template-columns:1fr}.companion-key-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.companion-extra-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.partner-roster-page{min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.partner-owned-list{min-height:0;overflow:auto;flex:1;scrollbar-gutter:stable}
+.roster-page .roster-owned-row{display:block}
+.roster-member-header{display:flex;justify-content:space-between;align-items:center;gap:8px 16px;flex-wrap:wrap}
+.roster-member-header>div:first-child{flex:1 1 220px;min-width:0}
+.companion-roster-details{display:grid;gap:6px;margin-top:9px}
+.companion-roster-details>details{min-width:0;border:1px solid var(--line);border-radius:4px;background:#182124}
+.companion-roster-details>details>summary{padding:7px 10px;cursor:pointer;color:var(--green);font-size:13px;font-weight:700}
+.companion-roster-detail-content{padding:4px 10px 10px}
+.companion-skill-loadout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0}
+.companion-skill-slot-group{display:grid;align-content:start;gap:4px;padding:8px;background:#24283f;font-size:12px;overflow-wrap:anywhere}
+.companion-skill-slot-group>b{color:var(--gold)}
+.companion-skill-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.companion-skill-card{min-width:0;padding:8px;border:1px solid var(--line);border-radius:4px;overflow-wrap:anywhere}
+.companion-skill-card p{font-size:12px}
+.companion-skill-card .skill-list-title{display:flex;flex-wrap:wrap;gap:5px 10px;font-size:12px}
+.companion-skill-card .skill-icon-glyph>svg{width:24px;height:24px}
+.companion-skill-equipped{color:var(--green)}
+@media(max-width:780px){.companion-skill-list{grid-template-columns:1fr}.companion-skill-loadout{grid-template-columns:1fr}.roster-page .roster-member-header .roster-member-actions{justify-content:flex-start}}
+.worn-loadout-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.worn-slot-choice{display:grid;gap:6px;width:100%;text-align:left;white-space:normal;background:transparent}
+.worn-slot-choice .slot-label{color:var(--gold)}
+.worn-slot.selected-slot{border-color:var(--gold)}
+.worn-candidate-pane{min-width:0;border-left:1px solid var(--line);padding-left:12px}
+.worn-candidate-list{display:grid;gap:7px}
+.worn-candidate{display:grid;gap:5px;text-align:left;white-space:normal;width:100%}
+@media(max-width:1000px){.worn-loadout-grid{grid-template-columns:1fr}.worn-candidate-pane{border-left:0;border-top:1px solid var(--line);padding:10px 0 0}}

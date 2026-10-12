@@ -2,7 +2,7 @@
    Monsters keep only skillId references; definitions remain in CLASSES / SKILL_ELEMENTS. */
 (()=>{
   let enemySharedCooldowns=Object.create(null);
-  const BASIC_EFFECTS=new Set(['damage','heal','shield','drain','nextActiveDamage','advanceNextRound','shieldLowest','applyStatus']);
+  const BASIC_EFFECTS=new Set(['cleanse','dispel','revive','damage','heal','shield','drain','nextActiveDamage','advanceNextRound','shieldLowest','applyStatus','induceSkill']);
   const idFor=(job,index)=>CLASSES[job]?.skills?.[index]?.[6]?.sharedId||`job${job}-core${index}`;
   function sharedCoreSkillPool(){
     const out=[];
@@ -21,7 +21,7 @@
   function scopeAllowsHero(scope){return scope==='character'||scope==='shared';}
   globalThis.sharedSkillScopeAllowsEnemy=scopeAllowsEnemy;
   globalThis.sharedSkillScopeAllowsHero=scopeAllowsHero;
-  function assignments(e){return (monsterRow(e)?.skillAssignments||[]).map(a=>sharedSkillById(a?.skillId)).filter(Boolean).filter(sk=>e.lv>=sk.requiredLevel&&scopeAllowsEnemy(sk.usageScope,e.kind));}
+  function assignments(e){return (monsterRow(e)?.skillAssignments||[]).map(a=>sharedSkillById(a?.skillId)).filter(Boolean).filter(sk=>sk.meta?.partnerId==null&&e.lv>=sk.requiredLevel&&scopeAllowsEnemy(sk.usageScope,e.kind));}
   function cdBox(e){return enemySharedCooldowns[e.id]??=(Object.create(null));}
   function tickCooldowns(e){const box=cdBox(e);for(const k of Object.keys(box))box[k]=Math.max(0,Math.floor(Number(box[k])||0)-1);}
   function activeReady(e,previewTick=false){const box=cdBox(e);return assignments(e).find(sk=>sk.activation==='active'&&BASIC_EFFECTS.has(sk.effect)&&Math.max(0,(box[sk.id]||0)-(previewTick?1:0))<=0)||null;}
@@ -51,13 +51,15 @@
     const crit=Math.random()<profile.critChance;if(crit)hit*=profile.critDamage;
     hit*=1+(ev.elementDamage?.[element]||0)+(element==='physical'?0:(ev.elementBonus||0));
     hit*=1-Math.min(c.caps?.guard??.75,effectTotal(heroKey(h),'guard'));
-    const ward=activeSupply(h,'ward'),resist=Math.min(c.caps?.resistance??.75,(hv.resist?.[element]||0)+(ward&&ward.element===element?(c.supply?.wardResistance??.25):0));
+    const resist=Math.min(c.caps?.resistance??.75,(hv.resist?.[element]||0)+supplyEffect(h,'ward',element));
     hit=Math.max(min,Math.round(hit*(1-resist)));
     const absorb=Math.min(h.shield,hit);h.shield-=absorb;if(absorb>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'mitigation',absorb);
     const hpDamage=Math.max(0,hit-absorb),before=h.hp;h.hp=Math.max(0,h.hp-hpDamage);
+    const dealt=Math.max(0,before-h.hp);globalThis.EmberwildTokenRuntime?.afterDamage(h,e,before,h.hp);
     if(before>0&&h.hp<=0&&typeof recordBattleDeath==='function')recordBattleDeath(h,e,sk.name);
-    return Math.max(0,before-h.hp);
+    return dealt;
   }
+  globalThis.sharedEnemySkillDamage=damageHero;
   function applyEnemyStatusSkill(e,sk){
     const api=globalThis.__EMBERWILD_STATUS_TEST_API,meta=sk.meta||{};if(!api?.apply||!meta.statusId)return false;
     const mode=meta.statusTarget||'enemy';let targets=[];
@@ -68,8 +70,10 @@
     else{const hs=heroTargets({...sk,maxTargets:1,meta:{...meta,target:'enemy'}});targets=hs.slice(0,1);}
     let ok=false;for(const t of targets)ok=api.apply(meta.statusId,e,t)||ok;return ok;
   }
-  function castEnemySharedSkill(e,sk){
-    if(!e||e.hp<=0||!sk||!BASIC_EFFECTS.has(sk.effect))return false;
+  function castEnemySharedSkillEffect(e,sk){
+    if(!e||e.hp<=0||!sk||sk.meta?.partnerId!=null||!BASIC_EFFECTS.has(sk.effect))return false;
+    const common=globalThis.EmberwildSkillEffectRuntime;
+    if(common?.configured({...sk.meta,effect:sk.effect}))return common.castEnemy(e,sk);
     const v=enemyBattleStats(e),basePower=v.atk*sk.power*(1+effectTotal(e.id,'power'))*(1-Math.min(GAMEPLAY_SETTINGS.combat.caps.weaken,effectTotal(e.id,'weaken'))),element=sk.element||e.element||'physical';
     if(sk.effect==='heal'){
       const target=weakestFoe()||e,before=target.hp;target.hp=Math.min(target.maxhp,target.hp+Math.round(basePower));note(combatEnemyName(e)+'・'+sk.name+' → '+combatEnemyName(target)+' 恢復 '+Math.max(0,target.hp-before)+' 生命');return true;
@@ -85,7 +89,11 @@
     for(const h of targets){const dealt=damageHero(e,h,power,element,sk);total+=dealt;parts.push(characterName(h)+' '+dealt);}
     if(sk.effect==='drain'||v.lifesteal>0){const rate=(sk.effect==='drain'?1:0)+Math.max(0,v.lifesteal||0),heal=Math.round(total*rate);e.hp=Math.min(e.maxhp,e.hp+heal);}
     if(sk.activation==='active'&&stored>0)delete e.nextActiveDamageBonus;
-    note(combatEnemyName(e)+'・'+sk.name+' → '+parts.join('、')+' 傷害');return true;
+    note(combatEnemyName(e)+'・'+sk.name+' → '+parts.join('、')+' 傷害','enemyDamage');return true;
+  }
+  function castEnemySharedSkill(e,sk){
+    if(globalThis.EmberwildInductionRuntime)return EmberwildInductionRuntime.castEnemy(e,sk,castEnemySharedSkillEffect);
+    return castEnemySharedSkillEffect(e,sk);
   }
   globalThis.castEnemySharedSkill=castEnemySharedSkill;
   function procChance(sk){const m=sk.meta||{},base=Number(m.procBaseChance);return Math.max(0,Math.min(1,Number.isFinite(base)?base:Number(GS('skills.proc.baseChance',.22))||.22));}
@@ -164,17 +172,17 @@
   for(let job=0;job<CLASSES.length;job++)for(let i=0;i<CLASSES[job].skills.length;i++){CLASSES[job].skills[i][6]??={};CLASSES[job].skills[i][6].sharedId??=`job${job}-core${i}`;CLASSES[job].skills[i][6].usageScope??='character';}
 
   globalThis.coreSkillUsageScope=function(job,index){return sharedCoreSkillPool().find(x=>x.job===job&&x.index===index)?.usageScope||'character';};
-  globalThis.coreSkillAvailableToHero=function(job,index){return scopeAllowsHero(coreSkillUsageScope(job,index));};
+  globalThis.coreSkillAvailableToHero=function(job,index,h=state){return scopeAllowsHero(coreSkillUsageScope(job,index))&&(typeof skillAllowedForPartner!=='function'||skillAllowedForPartner(h,CLASSES[job]?.skills?.[index]?.[6]));};
   function cleanHeroSkillSlots(h){
     if(!h)return;
-    if(Array.isArray(h.active))h.active=h.active.map(i=>i===null||coreSkillAvailableToHero(h.job,i)?i:null);
-    if(Array.isArray(h.procSlots))h.procSlots=h.procSlots.map(i=>i===null||coreSkillAvailableToHero(h.job,i)?i:null);
+    if(Array.isArray(h.active))h.active=h.active.map(i=>i===null||coreSkillAvailableToHero(h.job,i,h)?i:null);
+    if(Array.isArray(h.procSlots))h.procSlots=h.procSlots.map(i=>i===null||coreSkillAvailableToHero(h.job,i,h)?i:null);
   }
   if(typeof learn==='function'){const base=learn;learn=function(i){if(!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物學習');return base(i);};}
   if(typeof equipSkill==='function'){const base=equipSkill;equipSkill=function(i,slot){if(!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物使用');return base(i,slot);};}
   if(typeof slotProcSkill==='function'){const base=slotProcSkill;slotProcSkill=function(i,slot){if(i!==null&&!coreSkillAvailableToHero(state.job,i))return toast('此技能分類不提供人物使用');return base(i,slot);};}
-  if(typeof validProcIndex==='function'){const base=validProcIndex;validProcIndex=function(h,i){return coreSkillAvailableToHero(h.job,i)&&base(h,i);};}
-  if(typeof castPartySkill==='function'){const base=castPartySkill;castPartySkill=function(h,i,v){if(!h?.skills?.[i]||!coreSkillAvailableToHero(h.job,i)||globalThis.__EMBERWILD_MASTERY?.coreMissingRequirements(h,i,true).length)return false;return base(h,i,v);};}
+  if(typeof validProcIndex==='function'){const base=validProcIndex;validProcIndex=function(h,i){return coreSkillAvailableToHero(h.job,i,h)&&base(h,i);};}
+  if(typeof castPartySkill==='function'){const base=castPartySkill;castPartySkill=function(h,i,v){if(!h?.skills?.[i]||!coreSkillAvailableToHero(h.job,i,h)||globalThis.__EMBERWILD_MASTERY?.coreMissingRequirements(h,i,true).length)return false;return base(h,i,v);};}
 
   if(typeof exportableBalance==='function'){
     const base=exportableBalance;

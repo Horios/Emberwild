@@ -55,8 +55,8 @@
     let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(enemyAvailableForSingleTarget)?.id];
     for(const target of targets.filter(Boolean)){
       effects=effects.filter(e=>!((e.sourceKey??e.source)===memberKey(h)&&e.skill===index&&e.target===target));
-      effects.push({source:h.job,sourceKey:memberKey(h),skill:index,target,kind:sk.kind,element:sk.element,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});
-      if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);if(ally){const before=ally.hp;ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));const recovered=Math.max(0,ally.hp-before);if(recovered>0)recordCombatContribution(h,'healing',recovered);}}
+      effects.push({source:h.job,sourceKey:memberKey(h),skill:index,target,kind:sk.kind,element:sk.element,value:sk.kind==='regen'?healingAmount(h,supportAmount(h.job,index)):supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});
+      if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);if(ally){const before=ally.hp;ally.hp=Math.min(solo.stats(ally).hp,ally.hp+healingAmount(h,solo.stats(ally).hp*supportAmount(h.job,index)));const recovered=Math.max(0,ally.hp-before);if(recovered>0)recordCombatContribution(h,'healing',recovered);}}
     }
     note(characterName(h)+'施放 '+sk.name+' · '+Math.round(sk.duration)+' 回合');
   };
@@ -90,7 +90,7 @@
       target.hp=Math.max(0,target.hp-dealt);
       if(dealt>0)recordCombatContribution(caster,'damage',dealt);
       total+=dealt;
-      note(`${fx.name}追打 [${ELEMENTS[element]}] → ${combatEnemyName(target)} ${dealt} 傷害${crit?'（暴擊）':''}`);
+      note(`${fx.name}追打 [${ELEMENTS[element]}] → ${combatEnemyName(target)} ${dealt} 傷害${crit?'（暴擊）':''}`,'playerDamage');
     }
     return total;
   }
@@ -105,7 +105,7 @@
     const attackCoefficient=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defenseCoefficient=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:(GAMEPLAY_SETTINGS.combat.defenseEffectiveness??.55),minimumDamage=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
     let d=Math.max(minimumDamage,Math.round(amount*attackCoefficient-effectiveDefense*defenseCoefficient));
     if(crit)d=Math.round(d*v.critDamage);
-    const tonic=activeSupply(h,'elementTonic'),bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+(tonic&&tonic.element===element?GS('combat.supply.elementTonicDamage',.2):0);
+    const bonus=(v.elementDamage[element]||0)+(element==='physical'?0:v.elementBonus)+supplyEffect(h,'elementTonic',element);
     const amp=effectTotal(e.id,'damageAmp')+effectTotal(e.id,'vulnerable');
     d=Math.max(minimumDamage,Math.round(d*elementFactor(element,e.element)*(1+bonus)*(1+(v.raceDamage[e.race]||0))*(1+amp)));
     const actual=Math.min(e.hp,d);
@@ -134,7 +134,7 @@
       e.hp=Math.max(0,e.hp-dealt);
       if(dealt>0&&caster)recordCombatContribution(caster,'damage',dealt);
       total+=dealt;
-      note(`${fx.name} → ${combatEnemyName(e)} ${dealt} 持續傷害`);
+      note(`${fx.name} → ${combatEnemyName(e)} ${dealt} 持續傷害`,'playerDamage');
     }
     return total;
   }
@@ -167,7 +167,7 @@
     }
     for(const h of party.members){
       const who=characterName(h)+(party.active.includes(memberKey(h))?'':'（候補）');
-      for(const key of ['imbue','ward','elementTonic']){const b=activeSupply(h,key);if(!b)continue;const labels={imbue:['附魔藥水','普攻改為'+ELEMENTS[b.element]+'屬性'],ward:['抗性藥水',ELEMENTS[b.element]+'傷害減免 '+Math.round(GS('combat.supply.wardResistance',.25)*10000)/100+'%'],elementTonic:['增幅藥水',ELEMENTS[b.element]+'傷害增加 '+Math.round(GS('combat.supply.elementTonicDamage',.2)*10000)/100+'%']};rows.push(row(who,ELEMENTS[b.element]+labels[key][0],labels[key][1],Math.ceil(b.remainingTurns)+' / '+Math.ceil(b.totalTurns||b.remainingTurns)+' 回合','出戰回合'));}
+      for(const key of ['imbue','ward','elementTonic']){const b=activeSupply(h,key);if(!b)continue;const d=supplyBuffDetails(b,key);rows.push(row(who,d.name,d.detail,d.time,d.clock));}
       if(h.shield>0)rows.push(row(who,'護盾','可抵擋所有來源傷害 · 剩餘 '+Math.round(h.shield),'無回合期限','耗盡或戰鬥結束'));
     }
     return rows.join('')||'<tr><td colspan="5" class="no-buffs">目前沒有生效中的 BUFF、DEBUFF 或消耗品效果。</td></tr>';
@@ -178,8 +178,8 @@
     const debuffValidateBalanceBase=validateBalanceConfig;
     validateBalanceConfig=function(input){
       const copy=JSON.parse(JSON.stringify(input));
-      const allowedKinds=new Set(['attack','critical','fracture','guard','power','regen','weaken','followup','dotAttack','dotMaxHp','damageAmp','vulnerable']);
-      const allowedTargets=new Set(['allies','enemy','enemies','weakest']);
+      const allowedKinds=new Set(['attack','critical','fracture','guard','power','regen','weaken','followup','dotAttack','dotMaxHp','damageAmp','vulnerable','applyStatus']);
+      const allowedTargets=new Set(['allies','enemy','enemies','weakest','rankedAllies','rankedEnemies']);
       for(const [job,list] of (copy.supportSkills||[]).entries())for(const [i,sk] of (list||[]).entries()){
         normalizeSupportDebuffSkill(sk);
         if(sk&&!Number.isFinite(sk.effectPerLevel))sk.effectPerLevel=Number(copy.balanceSettings?.skills?.support?.effectPerExtraLevel??.2);
