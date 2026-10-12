@@ -50,7 +50,7 @@ test('Legacy elite counters migrate into achievements without losing counts; exi
 });
 test('Designer links multiple real achievements and exports rules that produce game tickets; filters show progress and rewards',()=>{
  const e=loadRuntime(editor,'balance-editor.html');e.run("selectCompanionUnlock(15);document.getElementById('companionUnlockType').onchange({target:{value:'achievement'}});setCompanionAchievementCondition('region-0-boss-50',true);document.getElementById('companionAvailability').value='visible';selectCompanionDesign(15);document.getElementById('companionAvailability').onchange({target:{value:'visible'}})");assert.deepEqual(json(e,'validateData()'),[]);
- const r=game();r.ctx.doc=json(e,'__EMBERWILD_MASTERY_EDITOR.cleanExport()');r.run('applyBalanceConfig(doc);setAchievementFilter("region","0");setAchievementFilter("kind","boss");setTab("achievements")');assert.match(r.elements.get('app').innerHTML,/region-0-boss-50/);assert(!r.elements.get('app').innerHTML.includes('成就與獎勵通知'));assert(!r.elements.get('app').innerHTML.includes('data-achievement="region-0-elite-50"'));
+ const r=game();r.ctx.doc=json(e,'__EMBERWILD_MASTERY_EDITOR.cleanExport()');r.run('applyBalanceConfig(doc);setAchievementFilter("region","0");setAchievementFilter("kind","boss");setTab("achievements")');assert.match(r.elements.get('modal').innerHTML,/region-0-boss-50/);assert(!r.elements.get('modal').innerHTML.includes('成就與獎勵通知'));assert(!r.elements.get('modal').innerHTML.includes('data-achievement="region-0-elite-50"'));
  r.run('party.achievements.bossKills[0]=49');kill(r,'boss');assert.equal(r.run('companionTicketCount(15)'),1);assert.deepEqual(r.errors,[]);assert.deepEqual(e.errors,[]);
 });
 

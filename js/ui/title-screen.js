@@ -1,6 +1,7 @@
 /* Save slots are selected before boot; switching slots reloads the complete hydration chain. */
 (function(){
   let titleOpen=true,choosingCharacter=false,pendingCreation=null,approvedCreation=null,pendingDelete=null;
+  globalThis.isEmberwildTitleOpen=()=>titleOpen;
   let lastPlayTick=Date.now(),wasVisible=document.visibilityState!=='hidden',allowTitleSave=false;
   const gameRender=render,gameStart=start,gameSave=save,gameNewGame=newGame,gameAcceptImport=acceptImport;
 

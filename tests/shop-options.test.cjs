@@ -44,6 +44,7 @@ test('Options, shop pools, transactions and editor JSON use the real loaded modu
         assert.equal(await runtime.page.locator('.options-list button').filter({hasText:'返回標題'}).count(),1);
         assert.equal(await runtime.page.locator('#options-test-json-import').count(),hasJSON?1:0);
         assert.equal(await runtime.page.locator('aside nav button[onclick="returnToTitle()"] ').count(),0);
+        await runtime.page.getByRole('button',{name:'關閉彈窗',exact:true}).click();
         await runtime.page.getByRole('button',{name:'冒險指南',exact:true}).click();
         assert.equal(await runtime.page.locator('main [onclick="showBalanceToolsAccess()"] ').count(),0);
       }

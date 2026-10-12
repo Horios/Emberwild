@@ -14,7 +14,7 @@
       const completed=new Set(a.completed);
       for(const entry of catalog()){
         const value=entry.kind==='open'?Number(progress.regions.includes(entry.mapIndex)):(entry.kind==='elite'?a.eliteKills:a.bossKills)[entry.mapIndex]||0;
-        if(!completed.has(entry.id)&&value>=(entry.kind==='open'?1:entry.count)){completed.add(entry.id);a.completed.push(entry.id);}
+        if(!completed.has(entry.id)&&value>=(entry.kind==='open'?1:entry.count)){completed.add(entry.id);a.completed.push(entry.id);if(tab==='achievements'||globalThis.isUtilityDialogOpen?.('achievements'))a.readCompleted.push(entry.id);}
       }
       for(const p of plans()){
         if(p.availability==='hidden'||progress.unlocked.includes(p.id))continue;

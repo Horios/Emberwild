@@ -1,6 +1,6 @@
 # 地區成就與夥伴招募券
 
-遊戲側欄新增「成就」，依地區、成就類型、達成狀態篩選，只顯示進度條與達成紀錄。預設顯示目前地區，避免一次列出所有地區的階段。
+頂部獎牌按鈕開啟「成就」彈窗，依地區、成就類型、達成狀態篩選，只顯示進度條與達成紀錄。預設顯示目前地區，避免一次列出所有地區的階段。
 
 - 每個地區有一項開放成就，依主角的地圖進入門檻判定，已開放後永久保留。
 - 菁英／BOSS 各自以 50、100、150……1000 為目標，共 20 階段，各地區獨立，各難度合計。
@@ -12,7 +12,7 @@
 
 成就券需先從信箱領取，商店券直接放入「背包 → 道具 → 夥伴招募券」。使用後才開放指定角色招募，不隨機抽取角色，也不直接加入隊伍。已持有券或已解鎖的角色停止刷新商店招募券。購買或使用時若存檔失敗，金幣、券數及解鎖狀態回復。
 
-資料：`achievements`（version=2）保存 eliteKills、bossKills、completed、rewardCompanions、tickets；郵件獨立保存在 mailbox。成就 ID 如 `region-0-open`、`region-0-elite-50`、`region-0-boss-1000`。夥伴條件為 `{type:"achievement",achievementIds:[...]}`。
+資料：`achievements`（version=3）保存 eliteKills、bossKills、completed、readCompleted、rewardCompanions、tickets；郵件獨立保存在 mailbox。成就 ID 如 `region-0-open`、`region-0-elite-50`、`region-0-boss-1000`。夥伴條件為 `{type:"achievement",achievementIds:[...]}`。
 
 相容：舊 `region` 條件轉為地區開放成就；舊 `elite` 條件轉為對應階段（非 50 倍數向上到下一階，最高 1000）。原有 `companionUnlocks.eliteKills` 遷移為新成就菁英數；舊資料沒有地區 BOSS 數，從 0 開始。舊版購買券已立即解鎖的角色保留。玩家存檔互不影響；非法成就／券資料在匯入及啟動時拒絕，原始資料保留。
 
