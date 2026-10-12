@@ -27,7 +27,7 @@ function loadRuntime(root,entry='index.html',saved={},clockStart=Date.parse('202
   for(let i=0;i<scripts.length;i++){
     const src=scripts[i][1].match(/\bsrc="([^"]+)"/),filename=src?src[1]:entry+':script-'+i;
     if(filename.includes('startup-guard'))continue;
-    const code=src?fs.readFileSync(path.join(root,src[1]),'utf8'):scripts[i][2];
+    const code=src?fs.readFileSync(path.join(root,src[1].split('?')[0]),'utf8'):scripts[i][2];
     try{vm.runInContext(code,ctx,{filename,timeout:10000});}catch(e){throw new Error(filename+': '+e.stack);}
   }
   return {ctx,elements,errors,warnings,values,run:code=>vm.runInContext(code,ctx),advance:ms=>{now+=ms;},get now(){return now;}};
