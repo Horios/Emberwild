@@ -47,6 +47,7 @@ jobs:
             git diff --check &&
             npm ci &&
             npx playwright install --with-deps chromium &&
+            git clone --depth 1 --branch main https://github.com/Horios/Emberwild-Balance.git ../Emberwild-Balance &&
             node --test tests/team-model.test.cjs tests/team-save-compatibility.test.cjs tests/team-save-compatibility.browser.test.cjs tests/team-runtime.test.cjs tests/achievements.test.cjs tests/skill-board.test.cjs &&
             node --test --test-name-pattern='Chromium: (create blank plans|worn equipment|preview copies)' tests/team-builds.browser.test.cjs
           } > /tmp/validation.log 2>&1
