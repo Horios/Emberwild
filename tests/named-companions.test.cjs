@@ -24,8 +24,8 @@ test('Designer names import, recruit deterministically and keep sibling stats, s
  assert.equal(r.run('partyMember(15).skills[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(15)).core[0]]'),0);assert.equal(r.run('CLASSES[0].skills[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(10)).core[0]][4]'),first?json(e,'data.classes[0].skills[data.companions.find(p=>p.id===10).core[0]].power'):0);
  r.run('save();loadParty(structuredClone(packParty()));');const restarted=loadRuntime(root,'index.html',Object.fromEntries(r.values));assert.equal(restarted.run('partyMember(15).name'),'雷昂');assert.equal(restarted.run('__EMBERWILD_COMPANION_TEST_API.plans.length'),20);assert.deepEqual(restarted.errors,[]);
 });
-test('Duplicate names reject atomically; legacy acquired names and profiles survive migration and reload',()=>{
+test('Duplicate names reject atomically; legacy acquired names normalize to fixed names while profiles survive migration and reload',()=>{
  const r=game();r.run('recruitCompanion(10);closeModal();');const before=r.run('JSON.stringify(exportableBalance())');assert.throws(()=>r.run('{const d=exportableBalance();d.companions[1].name=d.companions[0].name;applyBalanceConfig(d);}'),/重複/);assert.equal(r.run('JSON.stringify(exportableBalance())'),before);
  r.run(`{const old=structuredClone(packParty());old.members[1].name='既有自訂名稱';old.companionNames[10]='既有自訂名稱';const p=old.companionProfiles[10];delete p.name;p.role='旧定位';p.names=['洛恩','雷昂'];loadParty(old);save();loadParty(structuredClone(packParty()));}`);
- assert.equal(r.run('partyMember(10).name'),'既有自訂名稱');assert.equal(r.run('partyMember(10).companionId'),10);assert.equal(r.run('packParty().companionProfiles[10].role'),undefined);assert.equal(r.run('packParty().companionProfiles[10].names'),undefined);assert.deepEqual(r.errors,[]);
+ assert.equal(r.run('partyMember(10).name'),'洛恩');assert.equal(r.run('partyMember(10).companionId'),10);assert.equal(r.run('packParty().companionProfiles[10].role'),undefined);assert.equal(r.run('packParty().companionProfiles[10].names'),undefined);assert.deepEqual(r.errors,[]);
 });

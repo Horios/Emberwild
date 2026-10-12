@@ -109,15 +109,14 @@
     }
     for(const plan of rosterPlansFor(p)){
       const member=p.members.find(h=>h.companionId===plan.id);
-      if(member?.name?.trim())p.companionNames[plan.id]=validCharacterName(member.name);
-      else if(!member)p.companionNames[plan.id]=plan.name;
-      else if(!p.companionNames[plan.id])p.companionNames[plan.id]=plan.name;
-      if(member&&!member.name)member.name=p.companionNames[plan.id];
+      p.companionNames[plan.id]=plan.name;
+      if(member)member.name=plan.name;
     }
   }
   function rosterPlansFor(p){return [...new Map([...plans,...Object.values(p?.companionProfiles||{})].map(x=>[x.id,x])).values()].sort((a,b)=>a.id-b.id);}
   function applyPlan(h,{fullHealth=false}={}){
     const plan=companionPlan(h);if(!plan)return;
+    h.name=plan.name;
     h.advanced=h.lv>=Math.round(GS('progression.advance.level',15));
     const points=Math.max(0,Math.round(GS('progression.starting.abilityPoints',0)+(h.lv-1)*GS('progression.levelRewards.abilityPoints',3)));
     h.stats=[0,0,0];for(let n=0;n<points;n++)h.stats[plan.points[n%plan.points.length]]++;
@@ -141,6 +140,7 @@
     hideCompanions(party);
     for(const h of party.members){
       if(h===player)continue;
+      const fixedPlan=companionPlan(h);if(fixedPlan){h.name=fixedPlan.name;party.companionNames[h.companionId]=fixedPlan.name;}
       delete h.mastery;
       const previous=h.lv,changed=previous!==player.lv,wasDead=h.hp<=0;
       h.lv=player.lv;h.xp=0;h.won=player.won;
@@ -209,24 +209,20 @@
   const originalRequestHeroName=requestHeroName;
   requestHeroName=function(job,first=false){if(!first)return toast('請在隊伍編成選擇夥伴');return originalRequestHeroName(job,true);};
   const originalRequestRename=requestRename;
-  requestRename=function(key){if(partyMember(key)?.companionId)return requestCompanionRename(key);return originalRequestRename(key);};
-  window.requestCompanionRename=function(id){
-    const plan=rosterPlans().find(p=>p.id===id);if(!party||!plan)return;
-    const name=partyMember(id)?.name||party.companionNames?.[id]||'';
-    $('modal').innerHTML=`<h2>修改夥伴名字</h2><p>${esc(plan.name)} · ${esc(CLASSES[plan.job].name)}</p><label for="companion-rename-input">名字（最多 20 字）</label><input id="companion-rename-input" maxlength="40" autocomplete="off" value="${esc(name)}"><div class="actions"><button class="primary" onclick="confirmCompanionRename(${id})">儲存名字</button><button onclick="closeModal()">取消</button></div>`;
-    $('modal').showModal();
+  requestRename=function(key){
+    if(partyMember(key)!==party?.members[0])return toast('夥伴使用固定名字');
+    return originalRequestRename(key);
   };
-  window.confirmCompanionRename=function(id){
-    if(!party||!rosterPlans().some(p=>p.id===id))return;
-    let name;try{name=validCharacterName($('companion-rename-input').value);if(!name)throw Error('夥伴名字不可留白');}catch(e){toast(e.message);return;}
-    party.companionNames[id]=name;const h=partyMember(id);if(h)h.name=name;
-    closeModal();save();render();toast('名字已更新');
+  const originalConfirmRename=confirmRename;
+  confirmRename=function(key){
+    if(partyMember(key)!==party?.members[0])return;
+    return originalConfirmRename(key);
   };
   const rosterDetails=new Map();
   globalThis.rememberCompanionRosterDetail=function(key,kind,open){if(partyMember(key)&&['ability','skills'].includes(kind))rosterDetails.set(key+':'+kind,!!open);};
   function memberRow(h,manage=false){
     const key=memberKey(h),plan=companionPlan(h),player=h===party.members[0];
-    const header=`<div><div class="member-identity"><b>${esc(characterName(h))}</b>${memberIdentityTags(h)}</div>${plan?`<p class="small">${esc(plan.description)}</p>`:''}</div><div class="roster-member-actions">${manage?`<button onclick="setPartnerEnlisted(${key},${!isEnlisted(h)})" ${party.active.includes(key)?'disabled':''}>${isEnlisted(h)?'移出現役':'編入現役'}</button>`:`<button onclick="toggleMember(${key})">${party.active.includes(key)?'移至後備':'加入上陣'}</button>`}<button onclick="requestRename(${key})">改名</button></div>`;
+    const header=`<div><div class="member-identity"><b>${esc(characterName(h))}</b>${memberIdentityTags(h)}</div>${plan?`<p class="small">${esc(plan.description)}</p>`:''}</div><div class="roster-member-actions">${manage?`<button onclick="setPartnerEnlisted(${key},${!isEnlisted(h)})" ${party.active.includes(key)?'disabled':''}>${isEnlisted(h)?'移出現役':'編入現役'}</button>`:`<button onclick="toggleMember(${key})">${party.active.includes(key)?'移至後備':'加入上陣'}</button>`}${player?`<button onclick="requestRename(${key})">改名</button>`:''}</div>`;
     const detail=(kind,title,view)=>`<details class="companion-roster-${kind}" ${rosterDetails.get(key+':'+kind)?'open':''} ontoggle="rememberCompanionRosterDetail(${key},'${kind}',this.open)"><summary>${title}</summary><div class="companion-roster-detail-content">${withHero(h,view)}</div></details>`;
     return `<article class="roster-row ${player?'roster-player-row':''} ${manage?'roster-owned-row':''}" data-member-key="${key}">${manage?`<div class="roster-member-header">${header}</div>`:header}${manage&&!player?`<div class="companion-roster-details">${detail('ability','夥伴能力',companionCharacterView)}${detail('skills','夥伴技能',companionSkillsView)}</div>`:''}</article>`;
   }

@@ -4,12 +4,12 @@
   const QUALITY_NAMES=(typeof AFFIX_RANK!=='undefined'?AFFIX_RANK:['普通','精良','稀有','傳說']);
   const DEFAULT_GEAR_SELL=[12,30,75,180];
   const defaultMaterialKeys=()=>{
-    const set=new Set(['鍛鐵','粉塵','以太鍛鐵','光輝碎塊','升級卷軸']);
+    const set=new Set(['鍛鐵','粉塵','以太鍛鐵','光輝碎塊','升級卷軸','紅色草','小蟲','藥水瓶','清水']);
     for(const m of (GAMEPLAY_SETTINGS_DEFAULTS?.monsters?.catalog||[]))if(m?.material)set.add(m.material);
     for(const d of (GAMEPLAY_SETTINGS_DEFAULTS?.drops?.entries||[]))if(d?.type==='material'&&d.key)set.add(d.key);
     return [...set];
   };
-  const defaultMaterialPrice=k=>k==='鍛鐵'?2:k==='粉塵'?6:k==='以太鍛鐵'?100:k==='光輝碎塊'?120:k==='升級卷軸'?150:5;
+  const defaultMaterialPrice=k=>k==='紅色草'?1:k==='小蟲'?3:['藥水瓶','清水'].includes(k)?1:k==='鍛鐵'?2:k==='粉塵'?6:k==='以太鍛鐵'?100:k==='光輝碎塊'?120:k==='升級卷軸'?150:5;
   GAMEPLAY_SETTINGS_DEFAULTS.economy ??={};
   GAMEPLAY_SETTINGS_DEFAULTS.economy.equipmentSellPriceByQuality ??=DEFAULT_GEAR_SELL.slice();
   GAMEPLAY_SETTINGS_DEFAULTS.economy.materialDefaultSellPrice ??=5;
@@ -96,7 +96,7 @@
   const economyClone=v=>JSON.parse(JSON.stringify(v));
   function economySettings(){return GAMEPLAY_SETTINGS.economy;}
   function equipmentSellPrice(g){const q=Math.max(0,Math.min(3,gearQualityRank(g)));return Math.max(0,Math.round(Number(economySettings().equipmentSellPriceByQuality[q])||0));}
-  function materialSellPrice(key){const e=economySettings(),row=(e.materialPrices||[]).find(x=>x.key===key);return Math.max(0,Math.round(Number(row?.sellPrice??e.materialDefaultSellPrice)||0));}
+  function materialSellPrice(key){const e=economySettings(),row=(e.materialPrices||[]).find(x=>x.key===key);return Math.max(0,Math.round(Number(row?.sellPrice??(['紅色草','小蟲','藥水瓶','清水'].includes(key)?defaultMaterialPrice(key):e.materialDefaultSellPrice))||0));}
   function itemSellPrice(id){if(id==='__potion__')return Math.max(0,Math.round(Number(economySettings().potionSellPrice)||0));const item=SHOP.find(x=>x.id===id);return Math.max(0,Math.round(Number(item?.sellPrice)||0));}
   globalThis.equipmentSellPrice=equipmentSellPrice;globalThis.materialSellPrice=materialSellPrice;globalThis.itemSellPrice=itemSellPrice;
 
