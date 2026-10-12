@@ -525,13 +525,14 @@ save=function(show=false){
  }
 };
 function validateParty(data){
+ EmberwildCompanionSkills.validateUnlockProgress(data?.companionUnlocks);
  data=EmberwildTeams.prepareSave(data);
  data=EmberwildTokens.prepareSave(data,RULES.bagCapacity);
  if(data?.version!==3){const h=initHero(solo.validateSave(data));return createParty(h);}
  if(!Array.isArray(data.members)||data.members.length<1||data.members.length>513||!Array.isArray(data.active)||data.active.length<1||data.active.length>3||new Set(data.active).size!==data.active.length||!['single','group'].includes(data.encounterMode)||!Number.isInteger(data.map)||!MAPS[data.map]||![0,1,2].includes(data.difficulty)||typeof data.cleared!=='boolean')throw Error('隊伍資料無效');
  const playTimeMs=Number.isSafeInteger(data.playTimeMs)&&data.playTimeMs>=0?data.playTimeMs:0;
  if(data.progressionXpRequirements!==undefined&&(!Array.isArray(data.progressionXpRequirements)||data.progressionXpRequirements.length!==data.members.length||data.progressionXpRequirements.some(n=>!Number.isSafeInteger(n)||n<=0)))throw Error('存檔 EXP 曲線快照無效');
- const result={companionEquipmentVersion:EmberwildTokens.VERSION,pendingGearLoot:data.pendingGearLoot,progressionCurveVersion:data.progressionCurveVersion,progressionXpRequirements:data.progressionXpRequirements?[...data.progressionXpRequirements]:undefined,version:3,enlisted:data.enlisted,members:[],active:[...data.active],selected:data.selected,map:data.map,difficulty:data.difficulty,encounterMode:'group',cleared:data.cleared,playTimeMs,companionNames:data.companionNames,companionProfiles:data.companionProfiles,...EmberwildTimedBoosts.validateState(data)};
+ const result={companionUnlocks:EmberwildCompanionSkills.validateUnlockProgress(data.companionUnlocks),companionEquipmentVersion:EmberwildTokens.VERSION,pendingGearLoot:data.pendingGearLoot,progressionCurveVersion:data.progressionCurveVersion,progressionXpRequirements:data.progressionXpRequirements?[...data.progressionXpRequirements]:undefined,version:3,enlisted:data.enlisted,members:[],active:[...data.active],selected:data.selected,map:data.map,difficulty:data.difficulty,encounterMode:'group',cleared:data.cleared,playTimeMs,companionNames:data.companionNames,companionProfiles:data.companionProfiles,...EmberwildTimedBoosts.validateState(data)};
  for(const raw of data.members){
   // Reserves may be below the expedition level; validate their personal data at home.
   const companion=result.members.length>0,h=solo.validateSave({...raw,map:0},{companion});initHero(h);

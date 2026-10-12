@@ -66,7 +66,7 @@
     return {serial,offers,dayKey:localDayKey(),refreshCount:party?.market?.refreshCount||0};
   };
   ensureMarket=function(){if(!party.market){party.market=generateMarket();save();return;}if(syncMarketDay())save();};
-  const hasRandomRules=()=>SHOP_SETTINGS.randomOffers.entries.some(x=>x.enabled&&(x.selection==='weighted'||x.chance>0));
+  const hasRandomRules=()=>globalThis.hasCompanionRecruitmentOffers?.()||SHOP_SETTINGS.randomOffers.entries.some(x=>x.enabled&&(x.selection==='weighted'||x.chance>0));
   refreshMarket=function(){
     if(!hasRandomRules())return toast('目前沒有啟用的隨機商品');
     ensureMarket();syncMarketDay();const cost=currentRefreshCost();if(state.gold<cost)return toast('刷新需要 '+cost+' 金幣');
