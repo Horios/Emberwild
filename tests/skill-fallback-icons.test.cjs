@@ -16,9 +16,9 @@ test('Chromium: every main class skill has a compact local SVG without changing 
     for(let job=0;job<4;job++){
       await page.locator(`[data-skill-class="${job}"]`).click();
       await page.waitForFunction(job=>document.querySelector('.player-class-skills')?.dataset.playerSkillClass===String(job),job);
-      const rows=await page.locator('.team-skill-row').count();assert(rows>0);
-      assert.equal(await page.locator('.team-skill-row h3 .skill-icon-glyph svg').count(),rows);
-      const icons=await page.locator('.team-skill-row h3 svg').evaluateAll(icons=>icons.map(svg=>({width:svg.getBoundingClientRect().width,height:svg.getBoundingClientRect().height,visible:getComputedStyle(svg).visibility,geometry:svg.querySelectorAll('path,circle,line,rect,polygon,ellipse').length,hidden:svg.getAttribute('aria-hidden')})));
+      const rows=await page.locator('.team-skill-tile').count();assert(rows>0);
+      assert.equal(await page.locator('.team-skill-tile .skill-icon-glyph svg').count(),rows);
+      const icons=await page.locator('.team-skill-tile svg').evaluateAll(icons=>icons.map(svg=>({width:svg.getBoundingClientRect().width,height:svg.getBoundingClientRect().height,visible:getComputedStyle(svg).visibility,geometry:svg.querySelectorAll('path,circle,line,rect,polygon,ellipse').length,hidden:svg.getAttribute('aria-hidden')})));
       for(const icon of icons){assert.equal(icon.width,24);assert.equal(icon.height,24);assert.equal(icon.visible,'visible');assert(icon.geometry>0);assert.equal(icon.hidden,'true');}
       assert.deepEqual(await page.evaluate(()=>({selected:party.selected,state:memberKey(state),build:JSON.stringify(__EMBERWILD_TEAMS.build())})),before);
     }
@@ -38,11 +38,11 @@ test('Chromium: configured custom/Lucide icons and semantic fallback survive rel
       applyBalanceConfig(doc);playerHero().skills[0]=1;playerHero().active=[0,null];__EMBERWILD_TEAMS.capture();selectHero(10);save();setTab('skills');
     });
     const verify=async()=>{
-      const custom=page.locator('[data-team-skill="0:core:0"] h3 svg');
+      const custom=page.locator('[data-team-skill="0:core:0"] svg');
       const appearance=await custom.evaluate(svg=>({width:svg.getBoundingClientRect().width,color:getComputedStyle(svg).color,opacity:getComputedStyle(svg).opacity,animation:getComputedStyle(svg.querySelector('.ew-icon-motion')).animationName}));
       assert.deepEqual(appearance,{width:48,color:'rgb(250, 115, 18)',opacity:'0.75',animation:'tr-float'});
-      assert.equal(await page.locator('[data-team-skill="0:core:1"] h3 .icon-lucide svg').count(),1);
-      assert.equal(await page.locator('[data-team-skill="0:core:2"] h3 .icon-heal svg').count(),1);
+      assert.equal(await page.locator('[data-team-skill="0:core:1"] .icon-lucide svg').count(),1);
+      assert.equal(await page.locator('[data-team-skill="0:core:2"] .icon-heal svg').count(),1);
       const loadout=page.locator('.skill-loadout-slot strong .icon-custom svg');assert.equal(await loadout.count(),1);
       assert.equal(await loadout.evaluate(svg=>svg.getBoundingClientRect().width),16);
       assert.equal(await page.evaluate(()=>party.selected),10);

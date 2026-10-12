@@ -11,8 +11,8 @@ test('Chromium: create blank plans, choose classes, learn, allocate, copy, renam
   });
   await t.test('actual class, attribute and skill controls save the current team independently',async()=>{
    await p.getByLabel('本隊主角職業',{exact:true}).selectOption('1');await p.evaluate(()=>setTab('character'));await p.locator('#stat-alloc-0').fill('4');await p.locator('#stat-alloc-0').locator('..').getByRole('button',{name:'分配',exact:true}).click();await p.evaluate(()=>setTab('skills'));
-   const fire=p.locator('[data-team-skill="1:core:0"]');await fire.getByRole('button',{name:'學習',exact:true}).click();await fire.getByRole('button',{name:'設為主動槽 1',exact:true}).click();
-   await p.waitForFunction(()=>document.querySelector('[data-team-skill="1:core:0"]')?.textContent.includes('本隊已裝配'));assert.match(await fire.textContent(),/本隊已裝配/);assert.match(await p.locator('[data-team-skill="1:core:2"]').textContent(),/尚未永久解鎖/);
+   await p.locator('[data-team-skill="1:core:0"]').click();const fire=p.locator('[data-team-skill-detail="1:core:0"]');await fire.getByRole('button',{name:'學習',exact:true}).click();await fire.getByRole('button',{name:'設為主動槽 1',exact:true}).click();
+   await p.waitForFunction(()=>document.querySelector('[data-team-skill-detail="1:core:0"]')?.textContent.includes('本隊已裝配'));assert.match(await fire.textContent(),/本隊已裝配/);assert.match(await p.locator('[data-team-skill="1:core:2"]').getAttribute('title'),/尚未永久解鎖/);
    const a=await p.evaluate(()=>JSON.parse(localStorage.getItem(KEY)).buildSystem);assert.equal(a.activeId,'team-2');assert.equal(a.plans[0].job,0);assert.deepEqual(a.plans[0].stats,[0,0,0]);assert.equal(a.plans[1].job,1);assert.deepEqual(a.plans[1].stats,[4,0,0]);assert.equal(a.plans[1].skills[0],1);assert.equal(a.plans[1].active[0],0);
   });
   await t.test('copy and rename use actual controls without creating another item or companion',async()=>{

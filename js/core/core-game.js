@@ -639,7 +639,7 @@ function transferGear(id,job){const item=findGear(id),target=partyMember(job);if
 const stablePartyRender=render;
 let previousViewKey=null;
 const viewPositions=new Map();
-const SCROLL_REGIONS='.layout>main,.layout>aside,.current-events,.history-events,.unit-effects,.unit-skills,.inventory-table,.buff-table-scroll,.compact-map-list,.member-content,.member-skill-content,.member-equipment-content,.page-owner-content,.inline-equipment-list,.worn-overview,.worn-character-list,.worn-detail-pane,.guide-scroll,.forge-detail-pane,.forge-gear-list';
+const SCROLL_REGIONS='.layout>main,.layout>aside,.current-events,.history-events,.unit-effects,.unit-skills,.inventory-table,.buff-table-scroll,.compact-map-list,.member-content,.member-skill-content,.member-equipment-content,.page-owner-content,.inline-equipment-list,.worn-overview,.worn-character-list,.worn-detail-pane,.guide-scroll,.forge-detail-pane,.forge-gear-list,.player-skill-page';
 render=function(){
  if(document.querySelectorAll&&previousViewKey){
   viewPositions.set(previousViewKey,{

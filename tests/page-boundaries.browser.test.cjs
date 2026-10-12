@@ -82,7 +82,7 @@ test('Chromium: protagonist pages stay independent of companion selection and cl
    await p.locator('[data-skill-class="'+job+'"]').click();
    await p.waitForFunction(j=>document.querySelector('.player-class-skills')?.dataset.playerSkillClass===String(j),job);
    assert.equal(await p.locator('.player-class-skills').getAttribute('data-player-skill-class'),String(job));
-   assert.equal(await p.locator('.team-skill-row button,.team-skill-row select').count(),0);
+   assert.equal(await p.locator('.team-skill-detail button,.team-skill-detail select').count(),0);
    assert.equal(await p.locator('.skill-loadout-summary').count(),0);
    assert.equal(await p.evaluate(()=>playerHero().job),before.job);
    assert.deepEqual(await p.evaluate(buildSnapshot),builds);
@@ -92,7 +92,7 @@ test('Chromium: protagonist pages stay independent of companion selection and cl
   await p.waitForFunction(()=>document.querySelector('.player-class-skills')?.dataset.playerSkillClass==='0');
   assert.equal(await p.getByRole('button',{name:'免費重置本隊技能',exact:true}).count(),1);
   assert.deepEqual(await p.evaluate(()=>({player:playerHero().skills,companion:partyMember(10).skills})),{player:before.player,companion:before.companion});
-  await p.locator('[data-team-skill="0:core:1"]').getByRole('button',{name:'學習',exact:true}).click();
+  await p.locator('[data-team-skill="0:core:1"]').click();await p.locator('[data-team-skill-detail="0:core:1"]').getByRole('button',{name:'學習',exact:true}).click();
   await p.waitForFunction(()=>playerHero().skills[1]===1);
   assert.deepEqual(await p.evaluate(()=>partyMember(10).skills),before.companion);
   assert.deepEqual(g.errors,[]);
