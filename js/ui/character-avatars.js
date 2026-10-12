@@ -26,7 +26,13 @@
     const previous=picker;picker=null;const modal=$('modal');
     modal.classList.remove('character-avatar-dialog');
     if(previous.label===null)modal.removeAttribute('aria-labelledby');else modal.setAttribute('aria-labelledby',previous.label);
-    requestAnimationFrame(()=>{if(!modal.open)document.querySelector(`[data-avatar-owner="${previous.key}"]`)?.focus({preventScroll:true});});
+    requestAnimationFrame(function focusTrigger(){
+      if(modal.open)return;
+      // The pointer guard may still have a redraw queued after the dialog closes.
+      // Restore focus only after that redraw has replaced the original trigger.
+      if(globalThis.isEmberwildUIInteracting?.()){requestAnimationFrame(focusTrigger);return;}
+      document.querySelector(`[data-avatar-owner="${previous.key}"]`)?.focus({preventScroll:true});
+    });
   }
 
   globalThis.showCharacterAvatarPicker=function(key){

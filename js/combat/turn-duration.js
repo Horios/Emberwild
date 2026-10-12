@@ -106,7 +106,8 @@
     if(!raw || legacyBalance?.timeUnits?.itemDuration!=='battleRounds'){
       const ref=legacyBalance||{balanceSettings:GAMEPLAY_SETTINGS};
       for(const item of SHOP)if(!api.isItem(item)&&!api.isElementalItem(item))item.duration=turnsFromLegacySeconds(item.duration,ref);
-      if(raw)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));
+      // Migrate the complete input; later module fields are not exportable yet.
+      if(raw)localStorage.setItem(BALANCE_KEY,JSON.stringify(normalizeTurnConfig(legacyBalance)));
     }
     migratePartySupplyTurns();
     if(party)save();

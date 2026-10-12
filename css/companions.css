@@ -92,6 +92,7 @@
 .companion-skill-card{min-width:0;padding:8px;border:1px solid var(--line);border-radius:4px;overflow-wrap:anywhere}
 .companion-skill-card p{font-size:12px}
 .companion-skill-card .skill-list-title{display:flex;flex-wrap:wrap;gap:5px 10px;font-size:12px}
+.companion-skill-card .skill-icon-glyph>svg{width:24px;height:24px}
 .companion-skill-equipped{color:var(--green)}
 @media(max-width:780px){.companion-skill-list{grid-template-columns:1fr}.companion-skill-loadout{grid-template-columns:1fr}.roster-page .roster-member-header .roster-member-actions{justify-content:flex-start}}
 .worn-loadout-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
