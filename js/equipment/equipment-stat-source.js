@@ -30,7 +30,9 @@ function normalizeEquipmentFormObject(source){
   for(const [key,value] of Object.entries(ex))legacy.push({key,value});
   if(EQUIPMENT_EFFECT_ELEMENTS.has(form.element)&&form.element!=='physical')legacy.push({key:'basicElement',value:form.element});
  }
- const src=Array.isArray(form.fixedEffects)&&form.fixedEffects.length?form.fixedEffects:legacy;
+ const src=Array.isArray(form.fixedEffects)&&form.fixedEffects.length?[...form.fixedEffects]:legacy;
+ // Legacy import only: migrate element into basicElement, then remove element below. Live equipment never reads element.
+ if(EQUIPMENT_EFFECT_ELEMENTS.has(form.element)&&form.element!=='physical'&&!src.some(e=>e?.key==='basicElement'))src.unshift({key:'basicElement',value:form.element});
  form.fixedEffects=src.map(normalizeFixedEquipmentEffect).filter(Boolean).slice(0,5);
  if(!form.fixedEffects.length)form.fixedEffects=[{key:'flatAttack',value:0}];
  for(const key of ['atk','hp','def','mp','mpRegen','crit','critDamage','pierce','lifesteal','evasion','elementBonus','defenseIgnore','element','exclusive'])delete form[key];
@@ -99,7 +101,8 @@ function exclusiveEquipmentStats(g){
 }
 function exclusiveEquipmentText(g){
   const {form,ex}=exclusiveEquipmentStats(g),parts=[];
-  if(form?.element&&form.element!=='physical')parts.push(`普攻屬性 ${ELEMENTS[form.element]}`);
+  const basicElement=form?.fixedEffects?.find(e=>e?.key==='basicElement')?.value;
+  if(basicElement&&basicElement!=='physical')parts.push(`此武器攻擊屬性 ${ELEMENTS[basicElement]}`);
   const addPct=(key,label)=>{const n=Number(ex[key]);if(Number.isFinite(n)&&n!==0)parts.push(`${label} ${n>0?'+':''}${n}%`);};
   addPct('gearAtkPct','此裝備基礎攻擊');
   addPct('gearHpPct','此裝備基礎生命');
@@ -174,7 +177,7 @@ validateBalanceConfig=function(input){
 const equipmentCleanupApplyBalanceConfig=applyBalanceConfig;
 applyBalanceConfig=function(input,options={}){const result=equipmentCleanupApplyBalanceConfig(input,options);normalizeAllEquipmentForms();migrateCurrentEquipmentMana();if(state)render();return result;};
 const equipmentCleanupExportableBalance=exportableBalance;
-exportableBalance=function(){normalizeAllEquipmentForms();const data=equipmentCleanupExportableBalance();data.balance=cloneBalance(GAME_BALANCE);data._reference=balanceReference();data.notes=[...(data.notes||[]),'equipmentForms.fixedEffects 為每件基底裝備的 1～5 條固定屬性；舊 exclusive / element 匯入時會自動轉換。','魔力資源系統已移除；技能只受冷卻限制。舊裝備中的 mp / mpRegen 欄位僅在匯入時轉換為少量 attackPct，以保留舊裝備價值。','balance.affixes 可直接調整品質機率、詞條倍率、攻擊%與洗鍊成本；_reference 僅為欄位說明。'];return data;};
+exportableBalance=function(){normalizeAllEquipmentForms();const data=equipmentCleanupExportableBalance();data.balance=cloneBalance(GAME_BALANCE);data._reference=balanceReference();data.notes=[...(data.notes||[]),'equipmentForms.fixedEffects 為每件基底裝備的 1～5 條固定屬性；武器攻擊屬性唯一來源為 basicElement。舊 element 僅在匯入時轉換為 basicElement，隨即移除。','魔力資源系統已移除；技能只受冷卻限制。舊裝備中的 mp / mpRegen 欄位僅在匯入時轉換為少量 attackPct，以保留舊裝備價值。','balance.affixes 可直接調整品質機率、詞條倍率、攻擊%與洗鍊成本；_reference 僅為欄位說明。'];return data;};
 
 const equipmentCleanupLoadParty=loadParty;
 loadParty=function(data){const out=equipmentCleanupLoadParty(data);normalizeAllEquipmentForms();migrateCurrentEquipmentMana();return out;};

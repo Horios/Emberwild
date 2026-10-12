@@ -14,7 +14,7 @@
   const BASE_EFFECT_KEYS=new Set([...EQUIPMENT_FIXED_EFFECT_KEYS]);
   const BOSS_EFFECT_KEYS=new Set([...REGULAR_EFFECT_KEYS,'gearAtkPct','gearHpPct','gearDefPct','bossDamagePct']);
   const EFFECT_LABELS={
-    flatAttack:'此裝備攻擊力',flatHp:'此裝備最大生命',flatDefense:'此裝備防禦',basicElement:'普通攻擊屬性',basicAdvanceNextRound:'普攻後下回合前移',gearAtkPct:'此裝備基底攻擊力',gearHpPct:'此裝備基底生命',gearDefPct:'此裝備基底防禦',hpPct:'角色最大生命',defensePct:'角色總防禦',
+    flatAttack:'此裝備攻擊力',flatHp:'此裝備最大生命',flatDefense:'此裝備防禦',basicElement:'此武器攻擊屬性',basicAdvanceNextRound:'普攻後下回合前移',gearAtkPct:'此裝備基底攻擊力',gearHpPct:'此裝備基底生命',gearDefPct:'此裝備基底防禦',hpPct:'角色最大生命',defensePct:'角色總防禦',
     attackPct:'角色總攻擊力',crit:'暴擊率',critDamage:'暴擊傷害',pierce:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避率',elementBonus:'全屬性增傷',bossDamagePct:'對 BOSS 傷害',speed:'速度',
     allCooldownReduction:'全主動／輔助技能冷卻',dropRateBonus:'掉寶率',elementDamagePct:'屬性傷害',elementResistPct:'屬性抗性',raceDamagePct:'種族增傷',skillEffectPct:'核心技能效果',skillCooldownReduction:'核心技能冷卻／觸發'
   };
@@ -360,7 +360,7 @@
   function effectText(effect){
     if(!effect)return '無效果';
     const key=effect.key,value=effect.value,label=EFFECT_LABELS[key]||key;
-    if(key==='basicElement')return '普通攻擊改為'+(ELEMENTS[value]||value)+'屬性';
+    if(key==='basicElement')return '此武器攻擊屬性：'+(ELEMENTS[value]||value)+'（固定屬性 basicElement）';
     if(key==='basicAdvanceNextRound')return '普攻後，下回合行動往前 '+Math.round(Number(value)||0)+' 格';
     if(key==='allCooldownReduction'||key==='skillCooldownReduction')return (key==='skillCooldownReduction'?'核心技能 '+((effect.skill??0)+1)+' ':'')+label+' −'+Number(value)+' 回合';
     if(['flatAttack','flatHp','flatDefense','pierce','speed'].includes(key))return label+' '+(Number(value)>=0?'+':'')+Number(value);
