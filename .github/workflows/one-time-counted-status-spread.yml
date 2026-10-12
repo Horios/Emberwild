@@ -37,3 +37,4 @@ jobs:
           git commit -m "feat: add counted status targeting and damage spread"
           git pull --rebase origin chatgpt-dev
           git push origin HEAD:chatgpt-dev
+# retry: legacy balance configs receive the built-in Pain Spread status before validation
