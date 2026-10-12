@@ -1,1 +1,1 @@
-js/character/team-model.js still contains active skill-point token: defaultLearnCost
+js/character/team-model.js still contains active skill-point token: skillCredit
