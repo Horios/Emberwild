@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   migrate:
-    if: github.event.head_commit.message == 'chore: run basicElement migration'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -110,7 +109,6 @@ jobs:
           node --check js/equipment/equipment-stat-source.js
           node --check js/equipment/equipment-identity.js
           git diff --check
-          git grep -n "itemForm(.*\.element" -- js/core/core-game.js js/equipment || true
 
       - name: Commit migration
         shell: bash
