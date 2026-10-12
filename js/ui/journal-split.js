@@ -6,12 +6,12 @@
   style.textContent=`
     .global-battle-journal{
       --journal-loot-height:180px;
-      grid-template-rows:auto minmax(220px,1fr) 7px var(--journal-loot-height)!important;
+      grid-template-rows:auto minmax(0,1fr) 7px var(--journal-loot-height) auto!important;
     }
     .global-battle-journal:has(.journal-loot-compact:not([open])){
-      grid-template-rows:auto minmax(220px,1fr) 7px auto!important;
+      grid-template-rows:auto minmax(0,1fr) 7px auto auto!important;
     }
-    .global-battle-journal #liveLog{min-height:220px!important;}
+    .global-battle-journal #liveLog{min-height:0!important;}
     .global-battle-journal .battle-log-stream{
       height:100%!important;min-height:0!important;max-height:none!important;
       --battle-log-visible-rows:99!important;
@@ -41,7 +41,7 @@
     const move=e=>{
       const total=journal.getBoundingClientRect().height;
       const head=journal.querySelector('.global-journal-head')?.getBoundingClientRect().height||0;
-      const max=Math.max(90,total-head-260);
+      const max=Math.max(90,total-head-(journal.querySelector('.journal-quick-dispose')?.getBoundingClientRect().height||0)-260);
       globalThis.journalLootHeight=Math.max(70,Math.min(max,startH-(e.clientY-startY)));
       applyHeight();
     };
