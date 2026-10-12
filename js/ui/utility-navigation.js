@@ -7,10 +7,7 @@
     __EMBERWILD_COMPANION_UNLOCK_TEST.syncUnlocks();
     const a=party.achievements,read=new Set(a.readCompleted),gearIds=new Set((pendingGearLoot||[]).map(g=>g.id));
     for(const g of party.sharedGear?.items||state.bag||[])if(inlineAffixDrafts.has(affixDraftKey(g))||pendingAffix?.id===g.id)gearIds.add(g.id);
-    const materials=state.materials||{},board=state.board;
-    let quests=board&&board.next>Date.now()?board.tasks.filter(q=>!q.done&&(materials[q.mat]||0)>=q.n&&(q.kind!=='gear'||state.bag.length<RULES.bagCapacity)).length:0;
-    quests+=QUESTS.filter(q=>!state.claimed.includes(q.id)&&(materials[q.mat]||0)>=q.n).length;
-    const mat=MAPS[questRegion()]?.mobs?.[0]?.[2];if(mat&&(materials[mat]||0)>=8)quests++;
+    const quests=questReadyCount();
     return {mailbox:party.mailbox.messages.filter(m=>!m.read||!m.claimed).length,achievements:a.completed.filter(id=>!read.has(id)).length,equipment:gearIds.size,quests};
   }
   globalThis.numberBadgeCounts=counts;

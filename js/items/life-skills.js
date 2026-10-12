@@ -106,7 +106,7 @@
       gather=null;work=null;message='生活技能產物未能儲存，已回復庫存並停止動作';
     }
     if(message)toast(message);
-    if(changed||message){if(tab==='lifeSkills'||tab==='equipment'||tab==='shop')render();}
+    if(changed||message){if(tab==='lifeSkills'||tab==='equipment'||tab==='shop'||tab==='quests')render();}
     updateLifeProgress();
   }
   globalThis.tickLifeSkills=tickLifeSkills;
