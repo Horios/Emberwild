@@ -85,10 +85,13 @@
     if(!configured({...meta,effect:sk?.effect}))return baseCast(h,i,v);
     if(!h||h.hp<=0||!h.skills?.[i]||!coreSkillAvailableToHero(h.job,i,h)||globalThis.__EMBERWILD_MASTERY?.coreMissingRequirements(h,i,true).length)return false;
     v=v||battleStats(h);
-    const power=skillPower(i,h)*(1+effectTotal(heroKey(h),'power')),ok=cast(h,sk,options(meta),v,power,skillCombatProfile(h,i,v));
-    if(ok&&h.sockets?.[i]===2&&sk.activation==='active')healing(h,h,v.atk*GS('skills.gems.hybridActiveHealAttack',.10));
-    const mastery=globalThis.__EMBERWILD_MASTERY;if(ok&&meta.mastery&&mastery?.gainMastery)mastery.gainMastery(h,meta.mastery,mastery.masterySettings().skillUseXp);
-    return ok;
+    const tracker=status();tracker?.beginSkillCast?.(h,i);let ok=false;
+    try{
+      const power=skillPower(i,h)*(1+effectTotal(heroKey(h),'power'));ok=cast(h,sk,options(meta),v,power,skillCombatProfile(h,i,v));
+      if(ok&&h.sockets?.[i]===2&&sk.activation==='active')healing(h,h,v.atk*GS('skills.gems.hybridActiveHealAttack',.10));
+      const mastery=globalThis.__EMBERWILD_MASTERY;if(ok&&meta.mastery&&mastery?.gainMastery)mastery.gainMastery(h,meta.mastery,mastery.masterySettings().skillUseXp);
+      return ok;
+    }finally{tracker?.endSkillCast?.(h,i,ok);}
   };
   globalThis.EmberwildSkillEffectRuntime={configured,castEnemy(e,sk){const v=enemyBattleStats(e),power=sk.power*(1+effectTotal(e.id,'power'))*(1-Math.min(GAMEPLAY_SETTINGS.combat.caps.weaken,effectTotal(e.id,'weaken')));return cast(e,sk,options(sk.meta||{}),v,power,null);}};
   const validateBase=validateBalanceConfig;

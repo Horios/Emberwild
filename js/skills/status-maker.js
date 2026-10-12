@@ -331,6 +331,101 @@ if(typeof resetBalanceJSON==='function'){
 // A saved balance file may have been loaded by earlier compatibility layers before this extension installed.
 try{const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(saved?.schema===BALANCE_SCHEMA){statusDefinitions=normalizeStatusList(saved.statusDefinitions);attachStatusSkillExtras(saved);}}catch(e){console.warn('自訂狀態資料還原失敗',e);}
 
-globalThis.__EMBERWILD_STATUS_TEST_API={schema:STATUS_SCHEMA_VERSION,normalize:normalizeStatusDefinition,validate:validateStatusDefinition,selfTest:statusPureSelfTest,get definitions(){return deepClone(statusDefinitions);},get active(){return deepClone(activeStatuses);},apply:applyCustomStatus,tick:tickCustomStatuses,remove:removeStatusEffects,polarity:statusPolarity,basis:statusBasisValue,damage:statusApplyShieldAwareDamage,maxHp:statusMaxHp};
+
+/* ADVANCED_COUNTED_STATUS_EXTENSION */
+if(!STATUS_MODIFIER_KINDS.includes('damageSpread'))STATUS_MODIFIER_KINDS.push('damageSpread');
+STATUS_HERO_ONLY_MODIFIERS.add('damageSpread');
+for(const mode of ['rankedAllies','rankedEnemies'])if(!STATUS_TARGETS.includes(mode))STATUS_TARGETS.push(mode);
+Object.assign(STATUS_TARGET_LABELS,{rankedAllies:'依能力排序的我方單位',rankedEnemies:'依能力排序的敵方單位'});
+const ADVANCED_STATUS_TARGET_STATS=['attack','defense','maxHp','currentHp','missingHp','shield','level','crit'];
+const ADVANCED_STATUS_TARGET_ORDERS=['highest','lowest'];
+const PAIN_SPREAD_STATUS_ID='pain-spread';
+const PAIN_SPREAD_DEFAULT={id:PAIN_SPREAD_STATUS_ID,name:'苦痛蔓延',polarity:'buff',dispellable:true,tags:['modifier'],duration:99,uses:1,stackable:false,modifiers:[{kind:'damageSpread',value:.30,targets:2}]};
+
+const advancedNormalizeStatusBase=normalizeStatusDefinition;
+normalizeStatusDefinition=function(raw,index=0){
+  const out=advancedNormalizeStatusBase(raw,index),source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
+  out.uses=statusInt(source.uses,0,0,99);out.stackable=source.stackable===true;
+  out.modifiers=out.modifiers.map((m,i)=>{if(m.kind==='damageSpread')m.targets=statusInt(source.modifiers?.[i]?.targets,2,1,99);return m;});
+  return out;
+};
+const advancedValidateStatusBase=validateStatusDefinition;
+validateStatusDefinition=function(raw){const issues=advancedValidateStatusBase(raw),s=normalizeStatusDefinition(raw);for(const m of s.modifiers)if(m.kind==='damageSpread'&&(!Number.isInteger(m.targets)||m.targets<1||m.targets>99))issues.push('傷害擴散目標數必須介於 1～99');return issues;};
+const advancedAllowedTargetsBase=statusAllowedTargetsForDefinition;
+statusAllowedTargetsForDefinition=function(def){const out=advancedAllowedTargetsBase(def);if(out.includes('allies')&&!out.includes('rankedAllies'))out.push('rankedAllies');if(out.includes('enemies')&&!out.includes('rankedEnemies'))out.push('rankedEnemies');return out;};
+function advancedTargetValue(target,stat){
+  if(stat==='attack')return statusAttack(target);if(stat==='defense')return statusDefense(target);if(stat==='maxHp')return statusMaxHp(target);
+  if(stat==='currentHp')return Math.max(0,Number(target?.hp)||0);if(stat==='missingHp')return Math.max(0,statusMaxHp(target)-(Number(target?.hp)||0));
+  if(stat==='shield')return Math.max(0,Number(target?.shield)||0);if(stat==='level')return Math.max(1,Number(target?.lv)||1);
+  if(stat==='crit')return statusIsHero(target)?Math.max(0,Number(battleStats(target).crit)||0):Math.max(0,Number(target?.crit)||0);return 0;
+}
+const advancedStatusTargetsBase=statusTargetsForSkill;
+statusTargetsForSkill=function(h,meta){
+  const mode=meta?.statusTarget;if(!['rankedAllies','rankedEnemies'].includes(mode))return advancedStatusTargetsBase(h,meta);
+  let pool=mode==='rankedAllies'?living():foes.filter(e=>e.hp>0);if(mode==='rankedAllies'&&meta?.statusTargetIncludeSelf!==true)pool=pool.filter(x=>x!==h);
+  const stat=ADVANCED_STATUS_TARGET_STATS.includes(meta?.statusTargetStat)?meta.statusTargetStat:'attack',order=ADVANCED_STATUS_TARGET_ORDERS.includes(meta?.statusTargetOrder)?meta.statusTargetOrder:'highest';
+  pool=[...pool].sort((a,b)=>{const av=advancedTargetValue(a,stat),bv=advancedTargetValue(b,stat),delta=order==='lowest'?av-bv:bv-av;if(delta)return delta;return String(statusTargetKey(a)).localeCompare(String(statusTargetKey(b)));});
+  return pool.slice(0,1);
+};
+let advancedStatusSerial=0;
+applyCustomStatus=function(defOrId,source,target){
+  const def=typeof defOrId==='string'?statusById(defOrId):normalizeStatusDefinition(defOrId);if(!def||!target||target.hp<=0)return false;
+  const targetKey=statusTargetKey(target),sourceJob=Number.isInteger(source?.job)?source.job:null,sourceKey=sourceJob===null?(source?.id||null):memberKey(source);if(!targetKey)return false;
+  if(!def.stackable)activeStatuses=activeStatuses.filter(x=>!(x.statusId===def.id&&x.targetKey===targetKey));
+  const inst={id:def.id+'@'+targetKey+'@'+(++advancedStatusSerial),statusId:def.id,name:def.name,sourceJob,sourceKey,sourceName:source?(statusIsHero(source)?characterName(source):combatEnemyName(source)):'未知來源',targetKey,appliedClock:partyClock,duration:def.duration,expiresClock:partyClock+def.duration,remainingUses:def.uses>0?def.uses:null,definition:deepClone(def)};
+  activeStatuses.push(inst);applyStatusControl(def,target,source);
+  const regenRate=def.modifiers.filter(m=>m.kind==='regen').reduce((sum,m)=>sum+Math.max(0,Number(m.value)||0),0);
+  if(regenRate>0&&statusIsHero(target)){const max=statusMaxHp(target),before=target.hp;target.hp=Math.min(max,target.hp+healingAmount(source,max*regenRate));const healed=Math.max(0,target.hp-before);if(healed>0&&source&&typeof recordCombatContribution==='function')recordCombatContribution(source,'healing',healed);if(healed>0)note(def.name+'・再生 → '+characterName(target)+' '+Math.round(healed)+' 生命');}
+  if(def.tags.includes('instant'))for(const fx of def.periodic)executeStatusPeriodic(inst,fx,true);
+  note((source?(statusIsHero(source)?characterName(source):combatEnemyName(source))+' → ':'')+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' 獲得狀態「'+def.name+'」· '+def.duration+' 回合'+(inst.remainingUses===null?'':' · '+inst.remainingUses+' 次'));
+  return true;
+};
+function consumeCustomStatusUse(instanceId,count=1){const inst=activeStatuses.find(x=>x.id===instanceId);if(!inst||inst.remainingUses===null)return false;inst.remainingUses=Math.max(0,inst.remainingUses-Math.max(1,Math.floor(Number(count)||1)));if(inst.remainingUses<=0)activeStatuses=activeStatuses.filter(x=>x.id!==instanceId);return true;}
+function ensurePainSpreadDefinition(){if(!statusDefinitions.some(x=>x.id===PAIN_SPREAD_STATUS_ID))statusDefinitions.push(normalizeStatusDefinition(PAIN_SPREAD_DEFAULT,statusDefinitions.length));}
+statusDefinitions=statusDefinitions.map((x,i)=>normalizeStatusDefinition(x,i));ensurePainSpreadDefinition();
+
+const advancedSummaryBase=customStatusSummary;
+customStatusSummary=function(def){const d=normalizeStatusDefinition(def),bits=[];for(const m of d.modifiers)if(m.kind==='damageSpread')bits.push('單體技能傷害擴散 '+Number((m.value*100).toFixed(2))+'% → 額外 '+m.targets+' 名');if(d.uses>0)bits.push('可觸發 '+d.uses+' 次');bits.push(d.stackable?'可疊加':'不可疊加');const base=advancedSummaryBase(d);return [base,...bits].filter(Boolean).join('；');};
+
+function advancedStatusMetaFromSkill(sk){return {statusTarget:sk?.statusTarget||sk?.target||'enemy',statusTargetStat:sk?.statusTargetStat,statusTargetOrder:sk?.statusTargetOrder,statusTargetIncludeSelf:sk?.statusTargetIncludeSelf};}
+const advancedCastSupportBase=castSupport;
+castSupport=function(h,index){
+  const sk=SUPPORT[h.job]?.[index];if(!sk||sk.kind!=='applyStatus')return advancedCastSupportBase(h,index);
+  const def=statusById(sk.statusId);if(!def)return false;const targets=statusTargetsForSkill(h,advancedStatusMetaFromSkill(sk));if(!targets.length)return false;
+  let success=false;for(const target of targets)success=applyCustomStatus(def,h,target)||success;if(success)note(characterName(h)+'施放 '+sk.name+' → '+targets.map(t=>statusIsHero(t)?characterName(t):combatEnemyName(t)).join('、'));return success;
+};
+const advancedSupportDetailBase=typeof supportSkillDetail==='function'?supportSkillDetail:null;
+if(advancedSupportDetailBase)supportSkillDetail=function(job,index,h=state){const sk=SUPPORT[job]?.[index];if(!sk||sk.kind!=='applyStatus')return advancedSupportDetailBase(job,index,h);const def=statusById(sk.statusId),metric={attack:'攻擊',defense:'防禦',maxHp:'最大生命',currentHp:'目前生命',missingHp:'已損生命',shield:'護盾',level:'等級',crit:'暴擊率'}[sk.statusTargetStat]||'攻擊';return '套用狀態：'+(def?.name||sk.statusId||'未指定')+' · 目標 '+(sk.statusTarget==='rankedEnemies'?'敵方':'我方')+(sk.statusTargetOrder==='lowest'?'最低':'最高')+metric+(sk.statusTargetIncludeSelf?'（包含自己）':'（不含自己）')+' · '+(def?customStatusSummary(def):'狀態不存在');};
+
+let advancedSpreadContext=null;
+function spreadStatusEntries(h){const key=heroKey(h);return activeStatuses.filter(x=>x.targetKey===key&&partyClock<x.expiresClock&&(x.remainingUses===null||x.remainingUses>0)).map(inst=>({inst,mods:inst.definition.modifiers.filter(m=>m.kind==='damageSpread'&&m.value>0&&m.targets>0)})).filter(x=>x.mods.length);}
+function isSingleTargetDamageSkill(h,i){const sk=CLASSES[h?.job]?.skills?.[i],meta=sk?.[6]||{};if(!sk||!['damage','drain'].includes(sk[5]))return false;const mode=meta.target||'enemy',max=Math.max(1,Math.floor(meta.maxTargets||1));return mode!=='enemies'&&max===1;}
+function beginStatusSkillCast(h,i){if(advancedSpreadContext||!h||!isSingleTargetDamageSkill(h,i))return false;const entries=spreadStatusEntries(h);if(!entries.length)return false;advancedSpreadContext={caster:h,index:i,entries,primary:null,damage:0};return true;}
+function recordSpreadDamage(target,h,dealt){if(!advancedSpreadContext||advancedSpreadContext.caster!==h||!(dealt>0)||!target)return;if(!advancedSpreadContext.primary)advancedSpreadContext.primary=target;if(advancedSpreadContext.primary===target)advancedSpreadContext.damage+=dealt;}
+function trackedStatusDamage(target,amount,bypassShield=false){const dealt=statusApplyShieldAwareDamage(target,amount,bypassShield);if(advancedSpreadContext)recordSpreadDamage(target,advancedSpreadContext.caster,dealt);return dealt;}
+const advancedResolveHitBase=resolveHit;
+resolveHit=function(e,amount,h,element,crit,options={}){const dealt=advancedResolveHitBase(e,amount,h,element,crit,options);recordSpreadDamage(e,h,dealt);return dealt;};
+function endStatusSkillCast(h,i,result){
+  const ctx=advancedSpreadContext;if(!ctx||ctx.caster!==h||ctx.index!==i)return;advancedSpreadContext=null;if(result===false)return;
+  for(const entry of ctx.entries){
+    if(ctx.primary&&ctx.damage>0){for(const m of entry.mods){const amount=Math.max(0,Math.round(ctx.damage*Math.max(0,Number(m.value)||0))),targets=shuffleCopy(foes.filter(e=>e.hp>0&&e!==ctx.primary)).slice(0,Math.max(1,Math.floor(m.targets||1)));for(const target of targets){const dealt=statusApplyShieldAwareDamage(target,amount,false);if(dealt>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'damage',dealt);if(dealt>0)note(entry.inst.name+'・傷害擴散 → '+combatEnemyName(target)+' '+dealt+' 傷害','playerDamage');}}}
+    consumeCustomStatusUse(entry.inst.id,1);
+  }
+}
+const advancedCastPartyBase=castPartySkill;
+castPartySkill=function(h,i,v){const tracking=beginStatusSkillCast(h,i);let result;try{result=advancedCastPartyBase(h,i,v);return result;}finally{if(tracking)endStatusSkillCast(h,i,result);}};
+
+function copyAdvancedTargetMeta(raw){for(let job=0;job<(raw?.classes||[]).length;job++)for(let i=0;i<(raw.classes[job]?.skills||[]).length;i++){const src=raw.classes[job].skills[i],runtime=CLASSES[job]?.skills?.[i];if(!runtime||src?.effect!=='applyStatus')continue;runtime[6]??={};runtime[6].statusTargetStat=ADVANCED_STATUS_TARGET_STATS.includes(src.statusTargetStat)?src.statusTargetStat:'attack';runtime[6].statusTargetOrder=ADVANCED_STATUS_TARGET_ORDERS.includes(src.statusTargetOrder)?src.statusTargetOrder:'highest';runtime[6].statusTargetIncludeSelf=src.statusTargetIncludeSelf===true;}}
+function validateAdvancedStatusTarget(sk,label,defs){if(sk?.effect!=='applyStatus'&&sk?.kind!=='applyStatus')return;const target=sk.statusTarget||sk.target||'enemy',def=defs.find(x=>x.id===String(sk.statusId||''));if(!def)throw Error(label+' 引用不存在的狀態');if(!STATUS_TARGETS.includes(target))throw Error(label+' 的狀態目標無效');if(!statusAllowedTargetsForDefinition(def).includes(target))throw Error(label+' 的狀態效果與套用目標方向不相容');if(['rankedAllies','rankedEnemies'].includes(target)){if(sk.statusTargetStat!==undefined&&!ADVANCED_STATUS_TARGET_STATS.includes(sk.statusTargetStat))throw Error(label+' 的排序能力無效');if(sk.statusTargetOrder!==undefined&&!ADVANCED_STATUS_TARGET_ORDERS.includes(sk.statusTargetOrder))throw Error(label+' 的排序方向無效');if(sk.statusTargetIncludeSelf!==undefined&&typeof sk.statusTargetIncludeSelf!=='boolean')throw Error(label+' 的包含自己設定無效');}}
+const advancedValidateBalanceBase=validateBalanceConfig;
+validateBalanceConfig=function(input){const defs=(input?.statusDefinitions||[]).map((x,i)=>normalizeStatusDefinition(x,i));if(!defs.some(x=>x.id===PAIN_SPREAD_STATUS_ID))defs.push(normalizeStatusDefinition(PAIN_SPREAD_DEFAULT,defs.length));for(const [job,c] of (input?.classes||[]).entries())for(const [i,sk] of (c.skills||[]).entries())validateAdvancedStatusTarget(sk,'技能 '+job+'-'+i,defs);for(const [job,list] of (input?.supportSkills||[]).entries())for(const [i,sk] of (list||[]).entries())validateAdvancedStatusTarget(sk,'輔助技能 '+job+'-'+i,defs);return advancedValidateBalanceBase(input);};
+const advancedApplyBalanceBase=applyBalanceConfig;
+applyBalanceConfig=function(input,{persist=true}={}){const raw=deepClone(input);raw.statusDefinitions=Array.isArray(raw.statusDefinitions)?raw.statusDefinitions:[];if(!raw.statusDefinitions.some(x=>x?.id===PAIN_SPREAD_STATUS_ID))raw.statusDefinitions.push(deepClone(PAIN_SPREAD_DEFAULT));const out=advancedApplyBalanceBase(raw,{persist:false});statusDefinitions=statusDefinitions.map((x,i)=>normalizeStatusDefinition(x,i));ensurePainSpreadDefinition();copyAdvancedTargetMeta(raw);if(persist)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));if(state)render();return out;};
+const advancedExportBalanceBase=exportableBalance;
+exportableBalance=function(){const out=advancedExportBalanceBase();ensurePainSpreadDefinition();out.statusDefinitions=deepClone(statusDefinitions);for(let job=0;job<(out.classes||[]).length;job++)for(let i=0;i<(out.classes[job]?.skills||[]).length;i++){const runtime=CLASSES[job]?.skills?.[i],sk=out.classes[job].skills[i];if(runtime?.[5]==='applyStatus'){sk.statusTargetStat=runtime[6]?.statusTargetStat||'attack';sk.statusTargetOrder=runtime[6]?.statusTargetOrder||'highest';sk.statusTargetIncludeSelf=runtime[6]?.statusTargetIncludeSelf===true;}}out.notes=[...(out.notes||[]),'狀態 uses > 0 時代表可觸發次數；stackable 控制同一狀態能否在同一目標並存。damageSpread 於單體傷害技能成功施放時觸發並消耗 1 次。','statusTarget=rankedAllies/rankedEnemies 時，以 statusTargetStat 排序；statusTargetOrder 可選 highest/lowest；statusTargetIncludeSelf 控制我方排序是否包含施術者。'];return out;};
+const advancedResetEncounterBase=resetEncounter;
+resetEncounter=function(){advancedStatusSerial=0;advancedSpreadContext=null;return advancedResetEncounterBase();};
+
+globalThis.__EMBERWILD_STATUS_TEST_API={schema:STATUS_SCHEMA_VERSION,normalize:normalizeStatusDefinition,validate:validateStatusDefinition,selfTest:statusPureSelfTest,get definitions(){return deepClone(statusDefinitions);},get active(){return deepClone(activeStatuses);},apply:applyCustomStatus,tick:tickCustomStatuses,remove:removeStatusEffects,polarity:statusPolarity,basis:statusBasisValue,damage:trackedStatusDamage,maxHp:statusMaxHp,consume:consumeCustomStatusUse,beginSkillCast:beginStatusSkillCast,endSkillCast:endStatusSkillCast,targetStats:ADVANCED_STATUS_TARGET_STATS,targetOrders:ADVANCED_STATUS_TARGET_ORDERS};
 if(state)render();
 })();

@@ -178,8 +178,8 @@
     const debuffValidateBalanceBase=validateBalanceConfig;
     validateBalanceConfig=function(input){
       const copy=JSON.parse(JSON.stringify(input));
-      const allowedKinds=new Set(['attack','critical','fracture','guard','power','regen','weaken','followup','dotAttack','dotMaxHp','damageAmp','vulnerable']);
-      const allowedTargets=new Set(['allies','enemy','enemies','weakest']);
+      const allowedKinds=new Set(['attack','critical','fracture','guard','power','regen','weaken','followup','dotAttack','dotMaxHp','damageAmp','vulnerable','applyStatus']);
+      const allowedTargets=new Set(['allies','enemy','enemies','weakest','rankedAllies','rankedEnemies']);
       for(const [job,list] of (copy.supportSkills||[]).entries())for(const [i,sk] of (list||[]).entries()){
         normalizeSupportDebuffSkill(sk);
         if(sk&&!Number.isFinite(sk.effectPerLevel))sk.effectPerLevel=Number(copy.balanceSettings?.skills?.support?.effectPerExtraLevel??.2);
