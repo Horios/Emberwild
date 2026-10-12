@@ -7,7 +7,7 @@ test('Chromium: existing icon maker, offline catalog, appearance/effects, JSON d
   const change=async(key,value)=>{await p.locator(`[data-icon-appearance="${key}"]`).fill(String(value));await p.locator(`[data-icon-appearance="${key}"]`).blur();};
   try{
     baseline=await p.evaluate(()=>__EMBERWILD_TEAM_EDITOR.export());
-    await p.locator('[data-sec="iconMaker"]').click();
+    await require('./runtime.cjs').openEditorSection(p,'iconMaker');
     await t.test('full local catalog, case-insensitive search, all categories, no-match and reset controls',async()=>{
       assert.equal(await p.evaluate(()=>__EMBERWILD_LUCIDE.names.length),1869);assert.equal(await p.locator('[data-lucide-icon]').count(),60);
       await p.locator('#iconLucideSearch').fill('FlAmE');assert.equal(await p.locator('[data-lucide-icon="flame"]').count(),1);
@@ -44,13 +44,13 @@ test('Chromium: existing icon maker, offline catalog, appearance/effects, JSON d
     await t.test('duplicate, clear, reselect and switching definitions leave no previous animation or event handlers',async()=>{
       await p.locator('#iconMakerDuplicate').click();assert.equal(await p.locator('[data-icon-id]').count(),2);await p.locator('[data-icon-appearance="effect"]').selectOption('');await p.locator('#iconLucideClear').click();assert.equal(await p.locator('#iconLucideSelected').textContent(),'未選擇');assert.equal(await p.locator('#iconAppearancePreviews path').count(),0);
       await p.locator('#iconLucideSearch').fill('heart');await p.locator('[data-lucide-icon="heart"]').click();assert.equal(await p.locator('#iconLucideSelected').textContent(),'heart');assert.equal(await p.locator('#iconAppearancePreviews .ew-icon-motion').first().evaluate(el=>getComputedStyle(el).animationName),'none');
-      for(let i=0;i<5;i++){await p.locator('[data-sec="classes"]').click();await p.locator('[data-sec="iconMaker"]').click();}
+      for(let i=0;i<5;i++){await require('./runtime.cjs').openEditorSection(p,'classes');await require('./runtime.cjs').openEditorSection(p,'iconMaker');}
       await p.locator(`[data-icon-id="${originalId}"]`).click();assert.equal(await p.locator('#iconAppearancePreviews .ew-icon-motion').first().evaluate(el=>getComputedStyle(el).animationName),'tr-float');
       await p.locator('[data-add-shape="line"]').click();assert.equal(await p.locator('[data-layer-row]').count(),2);await p.locator('[data-layer-delete="1"]').click();assert.equal(await p.locator('[data-layer-row]').count(),1);
       await p.locator('#iconMakerDuplicate').click();assert.equal(await p.locator('[data-icon-id]').count(),3);await p.locator('#iconMakerDelete').click();assert.equal(await p.locator('[data-icon-id]').count(),2);
     });
     await t.test('original text rarity designer still edits, animates and saves the same effect definition',async()=>{
-      await p.locator('[data-sec="textRarity"]').click();await p.locator('#addRarity').click();await p.locator('#rarityName').fill('保留文字故障');await p.locator('[data-effect="textEffect1"]').selectOption('galleryGlitch');
+      await require('./runtime.cjs').openEditorSection(p,'textRarity');await p.locator('#addRarity').click();await p.locator('#rarityName').fill('保留文字故障');await p.locator('[data-effect="textEffect1"]').selectOption('galleryGlitch');
       assert.equal(await p.locator('#rarityPreview .tr-special-galleryGlitch').first().evaluate(el=>getComputedStyle(el).animationName),'tr-gallery-jitter');await p.locator('#saveRarity').click();assert.equal(await p.evaluate(()=>data.textStyles[0].textEffect1),'galleryGlitch');
     });
     await t.test('existing skill picker applies the current custom icon; real download contains only identifiers/parameters',async()=>{
@@ -62,15 +62,15 @@ test('Chromium: existing icon maker, offline catalog, appearance/effects, JSON d
       assert.deepEqual(await p.evaluate(()=>validateData()),[]);
     });
     await t.test('actual JSON reimport and designer reload reproduce every appearance parameter and preview',async()=>{
-      await p.locator('#fileInput').setInputFiles({name:'icons-roundtrip.json',mimeType:'application/json',buffer:fs.readFileSync(file)});await p.waitForFunction(()=>document.getElementById('status')?.textContent.includes('icons-roundtrip.json'));await p.locator('[data-sec="iconMaker"]').click();await p.locator(`[data-icon-id="${originalId}"]`).click();
+      await p.locator('#fileInput').setInputFiles({name:'icons-roundtrip.json',mimeType:'application/json',buffer:fs.readFileSync(file)});await p.waitForFunction(()=>document.getElementById('status')?.textContent.includes('icons-roundtrip.json'));await require('./runtime.cjs').openEditorSection(p,'iconMaker');await p.locator(`[data-icon-id="${originalId}"]`).click();
       assert.deepEqual(await p.evaluate(()=>JSON.parse(JSON.stringify(data.skillIcons))),doc.skillIcons);assert.equal(await p.locator('[data-icon-appearance="color"]').inputValue(),'#fa7312');
       assert(await p.evaluate(()=>{const holder=document.createElement('div');holder.innerHTML=__EMBERWILD_SKILL_ICONS.svgFor('custom:'+data.skillIcons[0].id,data.skillIcons);return holder.innerHTML===document.querySelector('#iconAppearancePreviews .icon-live-preview>div').innerHTML;}));
-      await p.locator('#cacheBtn').click();await p.reload();await p.locator('[data-sec="iconMaker"]').click();assert.deepEqual(await p.evaluate(()=>JSON.parse(JSON.stringify(data.skillIcons))),doc.skillIcons);
+      await p.locator('#cacheBtn').click();await p.reload();await require('./runtime.cjs').openEditorSection(p,'iconMaker');assert.deepEqual(await p.evaluate(()=>JSON.parse(JSON.stringify(data.skillIcons))),doc.skillIcons);
     });
     await t.test('preview game uses the real options JSON input and renders the same SVG, color, size and animation in the current team UI',async()=>{
-      await g.evaluate(()=>{selectSaveSlot(1);start(0);clearInterval(timer);closeModal();setTab('options');});await g.waitForTimeout(50);await g.evaluate(()=>closeModal());
+      await g.evaluate(()=>{selectSaveSlot(1);start(0);clearInterval(timer);});await g.waitForTimeout(80);await g.evaluate(()=>{closeModal();setTab('options');});
       await g.locator('#options-test-json-import').setInputFiles({name:'icons-roundtrip.json',mimeType:'application/json',buffer:fs.readFileSync(file)});await g.waitForFunction(()=>__EMBERWILD_MASTERY.iconDefinitions().length===2);
-      assert.deepEqual(await g.evaluate(()=>exportableBalance().skillIcons),doc.skillIcons);await g.evaluate(()=>setTab('skills'));
+      assert.deepEqual(await g.evaluate(()=>exportableBalance().skillIcons),doc.skillIcons);await g.evaluate(()=>{closeModal();setTab('skills');});
       const svg=g.locator('[data-team-skill="0:core:0"] svg');assert.equal(await svg.count(),1);assert.equal(await svg.evaluate(el=>el.getBoundingClientRect().width),64);assert.equal(await svg.locator('.ew-icon-motion').evaluate(el=>getComputedStyle(el).animationName),'tr-float');
       assert(await g.evaluate(()=>{const holder=document.createElement('div');holder.innerHTML=__EMBERWILD_SKILL_ICONS.svgFor('custom:'+exportableBalance().skillIcons[0].id,__EMBERWILD_MASTERY.iconDefinitions());return holder.innerHTML===document.querySelector('[data-team-skill="0:core:0"] svg').outerHTML;}));
       await g.emulateMedia({reducedMotion:'reduce'});assert.equal(await svg.locator('.ew-icon-motion').evaluate(el=>getComputedStyle(el).animationName),'none');await g.emulateMedia({reducedMotion:'no-preference'});
@@ -80,7 +80,7 @@ test('Chromium: existing icon maker, offline catalog, appearance/effects, JSON d
       assert.deepEqual(await g.evaluate(()=>party.buildSystem),saved);assert.deepEqual(await g.evaluate(()=>exportableBalance().skillIcons),doc.skillIcons);assert.equal(await g.locator('[data-team-skill="0:core:0"] svg').count(),1);
       await g.evaluate(()=>{const d=exportableBalance();d.skillIcons[0].layers[0].icon='lucide:does-not-exist';applyBalanceConfig(d);});assert.equal(await g.locator('[data-team-skill="0:core:0"] svg path').count(),1);assert.equal(await g.locator('[data-team-skill="0:core:0"] svg circle').count(),1);
       await g.evaluate(()=>{const d=exportableBalance();delete d.skillIcons;d.classes[0].skills[0].iconType='auto';applyBalanceConfig(d);});assert.deepEqual(await g.evaluate(()=>exportableBalance().skillIcons),[]);
-      const legacy=structuredClone(baseline);delete legacy.skillIcons;await p.locator('#fileInput').setInputFiles({name:'legacy.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(legacy))});await p.waitForFunction(()=>document.getElementById('status')?.textContent.includes('legacy.json'));await p.locator('[data-sec="iconMaker"]').click();assert.deepEqual(await p.evaluate(()=>JSON.parse(JSON.stringify(data.skillIcons))),[]);assert.equal(await p.locator('[data-lucide-icon]').count(),60);
+      const legacy=structuredClone(baseline);delete legacy.skillIcons;await p.locator('#fileInput').setInputFiles({name:'legacy.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(legacy))});await p.waitForFunction(()=>document.getElementById('status')?.textContent.includes('legacy.json'));await require('./runtime.cjs').openEditorSection(p,'iconMaker');assert.deepEqual(await p.evaluate(()=>JSON.parse(JSON.stringify(data.skillIcons))),[]);assert.equal(await p.locator('[data-lucide-icon]').count(),60);
       await p.locator('#iconMakerImportBuiltin').click();assert.equal(await p.locator('#iconAppearancePreviews svg').first().evaluate(el=>el.getBoundingClientRect().width),34);assert.equal(await p.locator('#iconAppearancePreviews svg').first().evaluate(el=>getComputedStyle(el).strokeWidth),'2.7px');
     });
     assert.deepEqual(editor.errors,[]);assert.deepEqual(game.errors,[]);
@@ -93,7 +93,7 @@ test('Chromium: standalone HTML works with network offline, including catalog an
     // from disk; offline mode prevents any CDN/resource dependency.
     await p.locator('#cacheBtn').click();await p.context().setOffline(true);await p.reload();
     assert.equal(await p.locator('script[src],link[rel="stylesheet"][href]').count(),0);
-    await p.locator('[data-sec="iconMaker"]').click();await p.locator('#iconLucideSearch').fill('gem');await p.locator('[data-lucide-icon="gem"]').click();await p.locator('[data-icon-appearance="effect"]').selectOption('breathe');
+    await require('./runtime.cjs').openEditorSection(p,'iconMaker');await p.locator('#iconLucideSearch').fill('gem');await p.locator('[data-lucide-icon="gem"]').click();await p.locator('[data-icon-appearance="effect"]').selectOption('breathe');
     assert.equal(await p.locator('#iconLucideSelected').textContent(),'gem');assert.equal(await p.locator('#iconAppearancePreviews .ew-icon-motion').first().evaluate(el=>getComputedStyle(el).animationName),'tr-gallery-breathe');
     assert.deepEqual(e.errors,[]);
   }finally{await e.browser.close();}

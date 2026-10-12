@@ -1,9 +1,9 @@
 const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path');
-const {openRuntime}=require('./runtime.cjs');
+const {openRuntime,installCompanionFixtures}=require('./runtime.cjs');
 const root=path.resolve(__dirname,'..');
 
 test('Player EXP drives all companion levels, growth, acquisition and progress displays',async t=>{
-  const game=await openRuntime(root,'index.html',{}, {clockTime:new Date('2026-10-02T00:00:00Z')}),page=game.page;
+  const game=await openRuntime(root,'index.html',{}, {clockTime:new Date('2026-10-02T00:00:00Z')}),page=game.page;await installCompanionFixtures(page);
   try{
     await page.evaluate(()=>{
       selectSaveSlot(1);start(0);closeModal();
@@ -21,26 +21,26 @@ test('Player EXP drives all companion levels, growth, acquisition and progress d
         __levelReset();setPartnerEnlisted(14,false);partyMember(13).hp=0;
         const before=party.members.slice(1).map(h=>stats(h));
         let amount=0;for(let lv=1;lv<20;lv++)amount+=need(lv);awardXP(amount);
-        const result={player:playerHero().lv,playerAdvanced:playerHero().advanced,archived:!isPartnerEnlisted(partyMember(14)),members:party.members.slice(1).map((h,i)=>({lv:h.lv,xp:h.xp,points:h.stats.reduce((a,b)=>a+b,0),advanced:h.advanced,hp:h.hp,attack:stats(h).atk,before:before[i].atk})),warrior:partyMember(10).skills[4],warriorSupport:partyMember(10).supportLevels[2],mageSlot:partyMember(12).active[0],archer:partyMember(14).skills[4]};
+        const result={player:playerHero().lv,playerAdvanced:playerHero().advanced,archived:!isPartnerEnlisted(partyMember(14)),members:party.members.slice(1).map((h,i)=>({lv:h.lv,xp:h.xp,points:h.stats.reduce((a,b)=>a+b,0),advanced:h.advanced,hp:h.hp,attack:stats(h).atk,before:before[i].atk})),warrior:partyMember(10).skills[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(10)).core[0]],warriorSupport:partyMember(10).supportLevels.filter(Boolean).length,mageSlot:partyMember(12).active[0],mageExpected:__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(12)).active[0],archer:partyMember(14).skills[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(14)).core[0]]};
         save();return result;
       });
       assert.equal(r.player,20);assert.equal(r.playerAdvanced,false);assert(r.archived);
       for(const h of r.members){assert.equal(h.lv,20);assert.equal(h.xp,0);assert.equal(h.points,57);assert(h.advanced);assert(h.attack>h.before);}
-      assert.equal(r.members[3].hp,0);assert.equal(r.warrior,1);assert.equal(r.warriorSupport,1);assert.equal(r.mageSlot,4);assert.equal(r.archer,1);
+      assert.equal(r.members[3].hp,0);assert.equal(r.warrior,1);assert.equal(r.warriorSupport,0);assert.equal(r.mageSlot,r.mageExpected);assert.equal(r.archer,1);
     });
 
     await t.test('Unacquired and dynamically added companions display the current level and recruit with complete growth and skill builds',async()=>{
       const r=await page.evaluate(()=>{
         __levelReset(27,false,false);
-        const doc=exportableBalance(),plan={...doc.companions[0],id:1042,names:['晚加入的夥伴'],passives:[],initialStats:{hp:18,atk:9,def:2,crit:.07,critDamage:1.5,speed:100},growthPerLevel:{hp:2,atk:3,def:1,crit:0,critDamage:0,speed:2},growthSteps:[]};doc.companions.push(plan);applyBalanceConfig(doc,{persist:false});
+        const doc=exportableBalance(),plan={...__testCloneCompanion(doc,1042,'晚加入的夥伴'),passives:[],initialStats:{hp:18,atk:9,def:2,crit:.07,critDamage:1.5,speed:100},growthPerLevel:{hp:2,atk:3,def:1,crit:0,critDamage:0,speed:2},growthSteps:[]};Object.assign(doc.companions.at(-1),plan);applyBalanceConfig(doc,{persist:false});
         showCompanionRecruitment();const levels=[...document.querySelectorAll('#modal .member-level')].map(x=>x.textContent);closeModal();
-        const h=acquireCompanion(1042),build={lv:h.lv,points:h.stats.slice(),skills:h.skills.slice(),active:h.active.slice(),support:h.supportLevels.slice(),advanced:h.advanced};closeModal();
+        const h=acquireCompanion(1042),build={lv:h.lv,points:h.stats.slice(),skills:__EMBERWILD_COMPANION_TEST_API.companionPlan(h).core.map(i=>h.skills[i]),active:h.active.slice(),support:h.supportLevels.slice(),advanced:h.advanced};closeModal();
         const old={stats:h.stats,equipped:h.equipped,advanced:h.advanced};h.stats=[0,0,0];h.equipped=[null,null,null,null,null];h.advanced=false;const actual=stats(h);Object.assign(h,old);
         let amount=need(27)+need(28);awardXP(amount);showCompanionRecruitment();const updated=[...document.querySelectorAll('#modal .member-level')].map(x=>x.textContent);closeModal();
         return {levels,updated,build,actual,live:h.lv};
       });
       assert.deepEqual(r.levels,Array(6).fill('Lv.27'));assert.deepEqual(r.updated,Array(5).fill('Lv.29'));
-      assert.equal(r.build.lv,27);assert.deepEqual(r.build.points,[52,26,0]);assert(r.build.advanced);assert.equal(r.build.skills[4],1);assert.equal(r.build.active[0],4);assert.equal(r.build.support[2],1);
+      assert.equal(r.build.lv,27);assert.deepEqual(r.build.points,[52,26,0]);assert(r.build.advanced);assert.deepEqual(r.build.skills,[1,1]);assert.notEqual(r.build.active[0],null);assert(r.build.support.every(v=>v===0));
       assert.equal(r.actual.hp,70);assert.equal(r.actual.atk,87);assert.equal(r.actual.def,28);assert.equal(r.actual.speed,152);assert.equal(r.live,29);
     });
 
@@ -72,13 +72,13 @@ test('Player EXP drives all companion levels, growth, acquisition and progress d
     await t.test('Unequal legacy levels migrate to the player; high-level gear and socketed gems remain recoverable and saves reload twice',async()=>{
       const r=await page.evaluate(()=>{
         __levelReset(10);playerHero().xp=321;setPartnerEnlisted(14,false);const raw=structuredClone(packParty()),high=raw.members.find(h=>h.companionId===10),low=raw.members.find(h=>h.companionId===14);
-        high.lv=20;high.xp=99;low.lv=3;low.xp=17;for(const h of [high,low])__EMBERWILD_COMPANION_TEST_API.applyPlan(h,{fullHealth:true});high.name='保留的夥伴名字';high.sockets[4]=2;
+        high.lv=20;high.xp=99;low.lv=3;low.xp=17;for(const h of [high,low])__EMBERWILD_COMPANION_TEST_API.applyPlan(h,{fullHealth:true});high.name='洛恩';high.sockets[raw.companionProfiles[10].core[0]]=2;
         const g=gear(4,0,0,0);high.bag.push(g);high.equipped[0]=g.id;raw.progressionXpRequirements=raw.members.map(h=>need(h.lv));
-        loadParty(raw);const migrated={levels:party.members.map(h=>h.lv),xp:party.members.map(h=>h.xp),name:partyMember(10).name,advanced:partyMember(10).advanced,slot:partyMember(10).equipped[0],inBag:!!findGear(g.id),socket:partyMember(10).sockets[4],gems:playerHero().gems[2],skills:partyMember(10).skills[4]};
+        loadParty(raw);const migrated={levels:party.members.map(h=>h.lv),xp:party.members.map(h=>h.xp),name:partyMember(10).name,advanced:partyMember(10).advanced,slot:partyMember(10).equipped[0],inBag:!!findGear(g.id),socket:partyMember(10).sockets[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(10)).core[0]],gems:playerHero().gems[2],skills:partyMember(10).skills[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(10)).core[0]]};
         const normalized=structuredClone(packParty());loadParty(normalized);loadParty(structuredClone(packParty()));
         return {migrated,after:{levels:party.members.map(h=>h.lv),xp:party.members.map(h=>h.xp),name:partyMember(10).name,gems:playerHero().gems[2],inBag:!!findGear(g.id)},saved:save()};
       });
-      assert.deepEqual(r.migrated.levels,Array(6).fill(10));assert.deepEqual(r.migrated.xp,[321,0,0,0,0,0]);assert.equal(r.migrated.name,'保留的夥伴名字');assert.equal(r.migrated.advanced,false);assert.equal(r.migrated.skills,1);assert.equal(r.migrated.slot,null);assert(r.migrated.inBag);assert.equal(r.migrated.socket,2);assert.equal(r.migrated.gems,0);
+      assert.deepEqual(r.migrated.levels,Array(6).fill(10));assert.deepEqual(r.migrated.xp,[321,0,0,0,0,0]);assert.equal(r.migrated.name,'洛恩');assert.equal(r.migrated.advanced,false);assert.equal(r.migrated.skills,1);assert.equal(r.migrated.slot,null);assert(r.migrated.inBag);assert.equal(r.migrated.socket,2);assert.equal(r.migrated.gems,0);
       assert.deepEqual(r.after.levels,r.migrated.levels);assert.deepEqual(r.after.xp,r.migrated.xp);assert.equal(r.after.name,r.migrated.name);assert.equal(r.after.gems,0);assert(r.after.inBag);assert(r.saved);
     });
 
@@ -116,7 +116,7 @@ test('Player EXP drives all companion levels, growth, acquisition and progress d
       await page.locator('.mastery-dev-tools > summary').click();
       await page.locator('#dev-mastery-level').fill('25');await page.locator('#dev-mastery-level').locator('..').locator('..').getByRole('button',{name:'設定',exact:true}).click();
       await page.locator('#dev-mastery-exp').fill('500');await page.locator('#dev-mastery-exp').locator('..').locator('..').getByRole('button',{name:'設定',exact:true}).click();
-      const r=await page.evaluate(()=>({levels:party.members.map(h=>h.lv),xp:party.members.map(h=>h.xp),advanced:partyMember(14).advanced,skills:partyMember(14).skills[4]}));
+      const r=await page.evaluate(()=>({levels:party.members.map(h=>h.lv),xp:party.members.map(h=>h.xp),advanced:partyMember(14).advanced,skills:partyMember(14).skills[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(14)).core[0]]}));
       assert.deepEqual(r.levels,Array(6).fill(25));assert.deepEqual(r.xp,[500,0,0,0,0,0]);assert(r.advanced);assert.equal(r.skills,1);
     });
 

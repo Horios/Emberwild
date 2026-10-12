@@ -104,7 +104,7 @@ test('Equipment ratings, source contributions and existing equipment flows',asyn
       assert.match(out.text,/核心技能 1 核心技能效果 \+56%/);
       assert.match(out.text,/核心技能 1 冷卻 −2 回合/);
       assert.match(out.text,/對 BOSS 傷害 \+15%/);assert.match(out.text,/全屬性增傷 \+8%/);
-      assert.match(out.text,/普通攻擊改為火屬性/);assert.doesNotMatch(out.text,/普通攻擊改為冰屬性/);assert.equal(out.element,'fire');
+      assert.match(out.text,/此武器攻擊屬性：火/);assert.doesNotMatch(out.text,/普通攻擊改為冰屬性/);assert.equal(out.element,'fire');
       assert.ok(out.proc.includes(out.procExpected),out.proc);
     });
     await t.test('Supported prefix/suffix equipment percentages feed the actual game calculation',async()=>{

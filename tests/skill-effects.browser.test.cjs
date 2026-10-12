@@ -8,13 +8,13 @@ test('Chromium: effect controls, status classification, reference protection, co
  try{
   await navigate('statuses');await p.locator('#addStatus').click();await p.locator('#statusName').fill('火焰持續傷害');await p.locator('#statusName').blur();
   await p.locator('[data-status-tag="periodic"]').check();await p.locator('#statusPolarity').selectOption('debuff');await p.locator('#statusDispellable').uncheck();
-  const id=await p.evaluate(()=>data.statusDefinitions[0].id);
+  const id=await p.evaluate(()=>data.statusDefinitions.find(d=>d.name==='火焰持續傷害').id);
   await p.evaluate(()=>{currentSection='skills';selected.skillTab='active';selected.skillClass=0;selected.skill=0;render();});
   await change('target','enemies');await change('hitCount',3);await change('powerBasis','targetMaxHp');await change('damageResolution','true');await change('onHitStatusId',id);await change('onHitStatusChance',0);
-  await navigate('statuses');await p.locator('#delStatus').click();assert(dialogs.at(-1).includes('仍有技能引用'));assert.equal(await p.evaluate(()=>data.statusDefinitions.length),1);
+  await navigate('statuses');await p.locator('#delStatus').click();assert(dialogs.at(-1).includes('仍有技能引用'));assert.equal(await p.evaluate(()=>data.statusDefinitions.length),2);
   await p.evaluate(()=>{currentSection='skills';selected.skillTab='active';selected.skillClass=0;selected.skill=0;render();});
   const downloadPromise=p.waitForEvent('download');await p.locator('#exportBtn').click();const download=await downloadPromise,doc=JSON.parse(fs.readFileSync(await download.path(),'utf8'));
-  assert.equal(doc.classes[0].skills[0].hitCount,3);assert.equal(doc.classes[0].skills[0].onHitStatusChance,0);assert.equal(doc.statusDefinitions[0].dispellable,false);
+  assert.equal(doc.classes[0].skills[0].hitCount,3);assert.equal(doc.classes[0].skills[0].onHitStatusChance,0);assert.equal(doc.statusDefinitions.find(d=>d.id===id).dispellable,false);
   const out=await g.page.evaluate(doc=>{applyBalanceConfig(doc,{persist:true});return exportableBalance();},doc);assert.equal(out.classes[0].skills[0].damageResolution,'true');
   await p.locator('[data-key="effect"]').selectOption('revive');assert.equal(await p.locator('[data-common-effect="target"]').inputValue(),'fallen');assert.equal(await p.locator('[data-common-effect="onHitStatusId"]').count(),0);
   await change('target','fallenAllies');await change('reviveHpRatio',.6);assert.equal(await p.evaluate(()=>data.classes[0].skills[0].reviveHpRatio),.6);

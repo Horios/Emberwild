@@ -116,7 +116,7 @@ test('Options, shop pools, transactions and editor JSON use the real loaded modu
       });for(const result of outcomes)assert.deepEqual(result,{rejected:true,unchanged:true});
     });
     await t.test('Editor adds, edits and removes both pools, and its exported JSON imports through Options',async()=>{
-      await editor.page.locator('[data-sec="shopSettings"]').click();
+      await require('./runtime.cjs').openEditorSection(editor.page,'shopSettings');
       const itemCount=await editor.page.evaluate(()=>data.items.length);
       await editor.page.evaluate(()=>{data.shopSettings.randomOffers.entries=[];data.shopSettings.fixedOffers.entries=[];render();});
       await editor.page.getByRole('button',{name:'新增固定商品',exact:true}).click();

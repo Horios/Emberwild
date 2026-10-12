@@ -20,4 +20,22 @@ async function openRuntime(root,entry='index.html',storage={},options={}) {
   await page.goto('http://emberwild.test'+(options.pathname||'/'),{waitUntil:'load',timeout:30000});
   return {browser,page,errors};
 }
-module.exports={openRuntime};
+async function openEditorSection(page,id){
+  const button=page.locator('[data-sec="'+id+'"]');
+  if(!await button.isVisible())await page.locator('.nav-group').filter({has:button}).locator('summary').click();
+  await button.click();
+}
+async function installCompanionFixtures(page){
+  const setup=()=>{
+    globalThis.__testCloneCompanion=function(doc,id,name,sourceId=10){
+      const p=structuredClone(doc.companions.find(p=>p.id===sourceId));
+      p.id=id;p.name=name;p.availability='visible';p.unlockCondition={type:'initial'};
+      delete p.names;delete p.role;
+      EmberwildCompanionSkills.cloneSkills(doc,p);
+      EmberwildCompanionSkills.clonePassives(doc,p);
+      doc.companions.push(p);return p;
+    };
+  };
+  await page.addInitScript(setup);await page.evaluate(setup);
+}
+module.exports={openRuntime,openEditorSection,installCompanionFixtures};
