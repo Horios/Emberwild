@@ -139,9 +139,23 @@
       for(const [i,offer] of p.market.offers.entries()){if(offer.kind==='item'&&!SHOP.some(x=>x.id===offer.key))throw Error('商店存檔引用不存在的道具：'+offer.key);if(typeof raw.offers?.[i]?.ruleId==='string')offer.ruleId=raw.offers[i].ruleId;}
     }return p;
   };
+  const SHOP_CATEGORIES=[['life','生活技能材料'],['random','隨機商品'],['fixed','固定商品']];
+  let shopCategory='random';
+  globalThis.setShopCategory=function(id){
+    if(!SHOP_CATEGORIES.some(([key])=>key===id))return false;
+    shopCategory=id;if(state)render();return true;
+  };
   shopView=function(){
-    ensureHealingPotionState();ensureMarket();syncMarketDay();const fixed=SHOP_SETTINGS.fixedOffers.entries.filter(x=>x.enabled).map(rule=>productRow(fixedOffer(rule),rule,false)).join(''),cost=currentRefreshCost(),rc=party.market?.refreshCount||0;
-    return heading('SUPPLIES / 全隊共用','商店')+`<div class="shop-catalog-scroll"><section class="shop-section shop-random-section"><div class="shop-section-head"><h2>隨機商品</h2><div class="shop-refresh-meta"><span>第 ${party.market.serial} 批</span><span>今日已刷新 <b>${rc}</b> 次</span><span>每日 0 點重置刷新價格</span></div><div class="actions"><button onclick="refreshMarket()" ${state.gold<cost||!hasRandomRules()?'disabled':''}>刷新 · ${cost} 金幣</button></div></div><div class="shop-product-grid">${marketCards()}</div></section><section class="shop-section shop-fixed-section"><div class="shop-section-head"><h2>固定商品</h2><span class="small">購買後進入共用背包；使用請到「背包 → 道具」。</span></div><div class="shop-product-grid">${fixed||'<div class="shop-empty">目前沒有上架固定商品。</div>'}</div></section></div>`;
+    ensureHealingPotionState();ensureMarket();syncMarketDay();
+    const cost=currentRefreshCost(),rc=party.market?.refreshCount||0;
+    const tabs=`<nav class="shop-category-tabs" aria-label="商店分類">${SHOP_CATEGORIES.map(([id,name])=>`<button class="${shopCategory===id?'primary':''}" aria-pressed="${shopCategory===id}" onclick="setShopCategory('${id}')">${name}</button>`).join('')}</nav>`;
+    let section;
+    if(shopCategory==='life')section=globalThis.lifeShopMaterialsView?.()||'<div class="shop-empty">生活技能材料尚未載入。</div>';
+    else if(shopCategory==='fixed'){
+      const fixed=SHOP_SETTINGS.fixedOffers.entries.filter(x=>x.enabled).map(rule=>productRow(fixedOffer(rule),rule,false)).join('');
+      section=`<section class="shop-section shop-fixed-section"><div class="shop-section-head"><h2>固定商品</h2><span class="small">購買後進入共用背包；使用請到「背包 → 道具」。</span></div><div class="shop-product-grid">${fixed||'<div class="shop-empty">目前沒有上架固定商品。</div>'}</div></section>`;
+    }else section=`<section class="shop-section shop-random-section"><div class="shop-section-head"><h2>隨機商品</h2><div class="shop-refresh-meta"><span>第 ${party.market.serial} 批</span><span>今日已刷新 <b>${rc}</b> 次</span><span>每日 0 點重置刷新價格</span></div><div class="actions"><button onclick="refreshMarket()" ${state.gold<cost||!hasRandomRules()?'disabled':''}>刷新 · ${cost} 金幣</button></div></div><div class="shop-product-grid">${marketCards()}</div></section>`;
+    return heading('SUPPLIES / 全隊共用','商店')+tabs+`<div class="shop-catalog-scroll" data-shop-category="${shopCategory}">${section}</div>`;
   };
 
   function inventoryItemCount(item){return (typeof isHealPotion==='function'&&isHealPotion(item))?healPotionCount(item.id):(state.consumables[item.id]||0);}

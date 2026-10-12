@@ -74,7 +74,7 @@ test('New materials can be sold at requested prices, including after old balance
   r.run('{const d=exportableBalance();d.balanceSettings.economy.materialPrices=d.balanceSettings.economy.materialPrices.filter(x=>!["紅色草","小蟲","清水","藥水瓶"].includes(x.key));applyBalanceConfig(d);}');
   const gold=r.run('state.gold');r.run('sellMaterial("紅色草",4);sellMaterial("小蟲",2);');assert.equal(r.run('state.gold'),gold+10);
   for(const name of ['清水','藥水瓶'])assert(r.run('materialSellPrice('+JSON.stringify(name)+')')<=1);
-  assert.match(r.run('lifeSkillsView()'),/小蟲暫無其他用途/);
+  assert.match(r.run('lifeSkillsView()'),/尚無用途/);
 });
 
 test('Purchases and timed rewards roll back when saving fails',()=>{
@@ -113,4 +113,44 @@ test('Companions use canonical names across UI, rename entry points, old saves a
   r.run('requestRename(0);');r.run(`$('rename-hero-input').value='主角名字';`);r.run('confirmRename(0);');assert.equal(r.run('playerHero().name'),'主角名字');
   r.run('{const old=structuredClone(packParty());old.members[1].name="舊夥伴別名";old.companionNames[10]="舊夥伴別名";loadParty(old);save();}');assert.equal(r.run('partyMember(10).name'),name);
   const reload=loadRuntime(root,'index.html',Object.fromEntries(r.values));assert.equal(reload.run('partyMember(10).name'),name);assert.equal(reload.run('playerHero().name'),'主角名字');assert.deepEqual(reload.errors,[]);
+});
+
+test('Shop categories render only their own products and preserve purchases and active jobs',()=>{
+  const r=game();r.run('setTab("shop");startLifeGathering();');advance(r,2500);
+  const jobs=json(r,'__EMBERWILD_LIFE_SKILLS.jobs'),market=json(r,'party.market');
+  for(const [id,section] of [['life','life-shop-section'],['random','shop-random-section'],['fixed','shop-fixed-section']]){
+    assert.equal(r.run('setShopCategory('+JSON.stringify(id)+')'),true);
+    const view=r.run('shopView()');assert.match(view,new RegExp('data-shop-category="'+id+'"'));
+    assert.equal((view.match(/class="shop-section /g)||[]).length,1);assert(view.includes(section));
+    assert.equal((view.match(/onclick="setShopCategory/g)||[]).length,3);
+    assert.deepEqual(json(r,'__EMBERWILD_LIFE_SKILLS.jobs'),jobs);assert.deepEqual(json(r,'party.market'),market);
+  }
+  r.run('setShopCategory("life");buyLifeMaterial("清水",10);');
+  assert.match(r.run('shopView()'),/data-shop-category="life"/);assert.equal(r.run('materialCount("清水")'),10);
+  assert.equal(r.run('setShopCategory("missing")'),false);assert.match(r.run('shopView()'),/data-shop-category="life"/);
+  advance(r,2500);assert.equal(r.run('materialCount("紅色草")'),1);assert.deepEqual(r.errors,[]);
+});
+
+test('Life stock shows uses and quantities and sells through the shared inventory with save rollback',()=>{
+  const r=game();r.run('setTab("lifeSkills");state.materials["紅色草"]=4;state.materials["小蟲"]=2;');
+  const view=r.run('lifeSkillsView()');assert.match(view,/目前材料庫存/);assert.match(view,/可加工製作紅色草泥/);assert.match(view,/製作簡易治療藥水/);assert.match(view,/尚無用途/);
+  assert.equal((view.match(/class="life-stock-row"/g)||[]).length,5);
+  const gold=r.run('state.gold');
+  r.run(`sellMaterialFromControl({closest:()=>({dataset:{material:'紅色草'},querySelector:()=>({value:'3'})})});sellAllMaterialFromControl({closest:()=>({dataset:{material:'小蟲'}})});`);
+  assert.equal(r.run('state.gold'),gold+9);assert.equal(r.run('materialCount("紅色草")'),1);assert.equal(r.run('materialCount("小蟲")'),0);
+  const savedGold=r.run('state.gold');r.run('globalThis.originalSave=save;save=()=>false;sellMaterial("紅色草",1);save=originalSave;');
+  assert.equal(r.run('state.gold'),savedGold);assert.equal(r.run('materialCount("紅色草")'),1);
+  const gatherPanel=view.split('<h2>採集</h2>')[1].split('<h2>煉金</h2>')[0];
+  assert.doesNotMatch(gatherPanel,/賣價|尚無用途|後續再新增/);assert.deepEqual(r.errors,[]);
+});
+
+test('Gather target selection rejects unsupported targets and cannot change an active cycle',()=>{
+  const r=game();assert.equal(r.run('selectLifeGatheringTarget("herb")'),true);
+  assert.equal(r.run('selectLifeGatheringTarget("bug")'),false);assert.equal(r.run('startLifeGathering("bug")'),false);
+  assert.equal(r.run('startLifeGathering()'),true);advance(r,2500);
+  const job=json(r,'__EMBERWILD_LIFE_SKILLS.jobs');assert.equal(job.gather.target,'herb');
+  assert.equal(r.run('selectLifeGatheringTarget("herb")'),false);assert.deepEqual(json(r,'__EMBERWILD_LIFE_SKILLS.jobs'),job);
+  assert.match(r.run('lifeSkillsView()'),/<select aria-label="採集對象"[^>]+disabled>/);
+  advance(r,2500);assert.equal(r.run('materialCount("紅色草")'),1);
+  r.run('stopLifeGathering();');assert.equal(r.run('selectLifeGatheringTarget("herb")'),true);assert.deepEqual(r.errors,[]);
 });

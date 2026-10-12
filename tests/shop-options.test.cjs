@@ -53,13 +53,21 @@ test('Options, shop pools, transactions and editor JSON use the real loaded modu
         const stone=EmberwildShopCatalog.normalizeRule({id:'stone',type:'item',key:'power_tier_reroll',selection:'extra',chance:1,unitPrice:650,description:'重新抽選 T1～T10 強度階級。'},0,true);
         const cfg=exportableBalance();cfg.shopSettings.randomOffers.entries.push(stone);applyBalanceConfig(cfg,{persist:false});setTab('shop');
       });
-      const rows=await game.page.locator('.shop-product-row').evaluateAll(rows=>rows.map(row=>({description:row.querySelector('.shop-card-description').textContent,effect:row.querySelector('.shop-card-detail').textContent,height:row.getBoundingClientRect().height,width:row.clientWidth,scrollWidth:row.scrollWidth,name:row.querySelector('.shop-product-name').textContent})));
+      const rows=[];
+      for(const category of ['life','random','fixed']){
+        await game.page.evaluate(category=>setShopCategory(category),category);
+        rows.push(...await game.page.locator('.shop-product-row').evaluateAll(rows=>rows.map(row=>({description:row.querySelector('.shop-card-description').textContent,effect:row.querySelector('.shop-card-detail').textContent,height:row.getBoundingClientRect().height,width:row.clientWidth,scrollWidth:row.scrollWidth,name:row.querySelector('.shop-product-name').textContent}))));
+      }
       assert(rows.length>=16);
       for(const row of rows){assert(row.description.startsWith('說明：')&&row.description.length>4);assert(row.effect.startsWith('效果：')&&row.effect.length>4);assert(!/隨機出現|隨機挑選|本批隨機商品/.test(row.description));assert(!/單價|賣價/.test(row.effect));assert(row.height<140,JSON.stringify(row));assert(row.scrollWidth<=row.width+1,JSON.stringify(row));}
       const stone=rows.find(x=>x.name.includes('重鑄'));assert(stone);assert(stone.effect.includes('基底'));assert(stone.description.includes('基底評級'));assert(!/T1|T10/.test(stone.description));
       assert.equal(await game.page.locator('main button[onclick="showTestCodes()"] ').count(),0);
       await game.page.setViewportSize({width:680,height:850});
-      const overflow=await game.page.locator('.shop-product-row').evaluateAll(rows=>rows.some(row=>row.scrollWidth>row.clientWidth+1));assert.equal(overflow,false);
+      for(const category of ['life','random','fixed']){
+        await game.page.evaluate(category=>setShopCategory(category),category);
+        const overflow=await game.page.locator('.shop-product-row').evaluateAll(rows=>rows.some(row=>row.scrollWidth>row.clientWidth+1));assert.equal(overflow,false,category);
+      }
+      await game.page.evaluate(()=>setShopCategory('random'));
       await game.page.setViewportSize({width:1280,height:720});
     });
     await t.test('Fixed and random products credit every resource type and retain item offers after save validation',async()=>{
@@ -129,7 +137,7 @@ test('Options, shop pools, transactions and editor JSON use the real loaded modu
       await preview.page.locator('#options-test-json-import').setInputFiles({name:'shop-test.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(exported))});
       await preview.page.waitForFunction(()=>exportableBalance().shopSettings.fixedOffers.entries[0]?.quantity===3);
       assert.deepEqual(await preview.page.evaluate(()=>exportableBalance().shopSettings),exported.shopSettings);
-      await preview.page.evaluate(()=>setTab('shop'));assert.equal(await preview.page.locator('.fixed-shop-row').count(),1);assert((await preview.page.locator('.fixed-shop-row').innerText()).includes('商店專用治療補給'));assert((await preview.page.locator('.fixed-shop-row').innerText()).includes('27 金幣'));
+      await preview.page.evaluate(()=>{setShopCategory('fixed');setTab('shop');});assert.equal(await preview.page.locator('.fixed-shop-row').count(),1);assert((await preview.page.locator('.fixed-shop-row').innerText()).includes('商店專用治療補給'));assert((await preview.page.locator('.fixed-shop-row').innerText()).includes('27 金幣'));
       await editor.page.evaluate(()=>{globalThis.confirmDelete=()=>true;deleteShopRule('random',0);deleteShopRule('fixed',0);});
       const removed=await editor.page.evaluate(()=>({random:data.shopSettings.randomOffers.entries.length,fixed:data.shopSettings.fixedOffers.entries.length,items:data.items.length,issues:validateData()}));assert.deepEqual(removed,{random:0,fixed:0,items:itemCount,issues:[]});
     });
