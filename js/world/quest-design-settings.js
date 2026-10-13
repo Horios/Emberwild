@@ -2,7 +2,7 @@
 (()=>{
   const M=EmberwildQuestDesign,copy=M.copy;
   const context=()=>({mapCount:GAMEPLAY_SETTINGS.maps.catalog.length,items:SHOP});
-  const stored=localStorage.getItem(BALANCE_KEY);
+  const stored=balanceSourceText();
   let saved=null;try{saved=stored?JSON.parse(stored).balanceSettings?.quests:null;}catch(e){console.warn('委託設定無法讀取，保留原始文字並使用內建設計',e);}
   GAMEPLAY_SETTINGS_DEFAULTS.quests.design=M.defaults(GAMEPLAY_SETTINGS_DEFAULTS.quests);
   try{GAMEPLAY_SETTINGS.quests.design=M.validate(saved?.design??M.defaults(saved||GAMEPLAY_SETTINGS.quests),context());}

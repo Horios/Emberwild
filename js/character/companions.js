@@ -50,7 +50,7 @@
     return out;
   }
   let plans=DEFAULT_PLANS.map(p=>checkPlan(p)),config=Model.defaults(CLASSES,GAMEPLAY_SETTINGS),passiveDefinitions=Passive.normalize();
-  try{const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(saved?.companions)plans=parsePlans(saved.companions,saved);if(saved){config=Model.normalizeSettings(saved.companionSettings,saved.classes||CLASSES,saved.balanceSettings||GAMEPLAY_SETTINGS);passiveDefinitions=Passive.normalize(saved.passiveDefinitions);}}catch(e){console.warn('夥伴平衡設定無法載入，使用內建角色',e);}
+  try{const saved=JSON.parse(balanceSourceText()||'null');if(saved?.companions)plans=parsePlans(saved.companions,saved);if(saved){config=Model.normalizeSettings(saved.companionSettings,saved.classes||CLASSES,saved.balanceSettings||GAMEPLAY_SETTINGS);passiveDefinitions=Passive.normalize(saved.passiveDefinitions);}}catch(e){console.warn('夥伴平衡設定無法載入，使用內建角色',e);}
   const byId=()=>new Map(plans.map(p=>[p.id,p]));
   function companionPlan(h){const current=byId().get(h?.companionId);return current?.job===h?.job?current:party?.companionProfiles?.[h?.companionId]?.job===h?.job?party.companionProfiles[h.companionId]:null;}
   function allPassivesFor(h){return (companionPlan(h)?.passives||[]).map(id=>passiveDefinitions.find(d=>d.id===id)).filter(Boolean);}
@@ -339,7 +339,7 @@
   render=function(){syncCompanionLevels();return baseRender();};
   globalThis.__EMBERWILD_COMPANION_TEST_API={get plans(){return copy(plans);},get config(){return copy(config);},get passiveDefinitions(){return copy(passiveDefinitions);},parsePlans,ensureRoster,companionPlan,passivesFor,passiveEffectsFor,applyPlan};
   try{
-    const raw=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');
+    const raw=JSON.parse(balanceSourceText()||'null');
     // Later modules have not installed shop, token and team exports yet. Writing
     // here would replace those saved settings with an incomplete document.
     if(raw)applyBalanceConfig(raw,{persist:false});

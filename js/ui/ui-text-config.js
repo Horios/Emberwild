@@ -69,7 +69,7 @@ applyBalanceConfig=function(input,{persist=true}={}){
 const uiTextResetBase=resetBalanceJSON;
 resetBalanceJSON=function(){const out=uiTextResetBase();UI_TEXT=structuredClone(UI_TEXT_DEFAULTS);render();return out;};
 try{
-  const saved=localStorage.getItem(BALANCE_KEY);
+  const saved=balanceSourceText();
   if(saved){const parsed=JSON.parse(saved);UI_TEXT=normalizeUIText(parsed.uiText);}
 }catch(e){console.warn('介面文字載入失敗，改用預設文字',e);UI_TEXT=structuredClone(UI_TEXT_DEFAULTS);}
 

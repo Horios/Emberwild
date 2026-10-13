@@ -1,4 +1,11 @@
 'use strict';
+// Published data is supplied before any runtime module or player save loads.
+// Legacy browser balance caches never override a published build implicitly.
+function balanceSourceText(){
+  if(globalThis.__EMBERWILD_BALANCE_SOURCE)return JSON.stringify(globalThis.__EMBERWILD_BALANCE_SOURCE);
+  return localStorage.getItem(BALANCE_KEY); // test harness / old offline HTML only
+}
+
 function GS(path,fallback){
   let cur=globalThis.__EMBERWILD_GAMEPLAY_SETTINGS;
   if(!cur)return fallback;
@@ -1731,7 +1738,7 @@ function prepareBalanceForBootstrap(input){
   return copy;
 }
 try{
-  const savedBalance=localStorage.getItem(BALANCE_KEY);
+  const savedBalance=balanceSourceText();
   if(savedBalance)applyBalanceConfig(prepareBalanceForBootstrap(JSON.parse(savedBalance)),{persist:false});
 }catch(e){console.warn('早期測試設定載入失敗，保留原資料並等待後續模組重試',e);}
 

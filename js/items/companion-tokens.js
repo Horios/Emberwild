@@ -99,7 +99,7 @@
   for(const name of ['reroll','rerollGear','rerollAffix','autoReroll','rerollEquipmentPowerTier','setAffixLock','toggleAffixLock']){const base=globalThis[name];if(typeof base==='function')globalThis[name]=function(id,...args){if(M.isToken(findGear(id)))return toast('信物使用固定複合屬性');return base(id,...args);};}
   const baseEnhance=enhance;
   enhance=function(id){const h=gearWearer(id),out=baseEnhance(id);if(h)withHero(h,clampVitals);return out;};
-  try{const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(saved?.companionTokens)config=M.normalize(saved.companionTokens);}catch(e){console.warn('信物設定載入失敗',e);}
+  try{const saved=JSON.parse(balanceSourceText()||'null');if(saved?.companionTokens)config=M.normalize(saved.companionTokens);}catch(e){console.warn('信物設定載入失敗',e);}
   globalThis.__EMBERWILD_TOKEN_TEST={makeToken,rollTokens,trigger,ensureBattle,clear,item,ready,get config(){return copy(config);},get combat(){return combat;}};
   // UI is below so all controls use the same validated mutations above.
   function tokenStatsText(g){

@@ -1,7 +1,7 @@
 
 (()=>{
   const copy=value=>JSON.parse(JSON.stringify(value));
-  let savedClasses=null;try{const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(saved?.schema===BALANCE_SCHEMA)savedClasses=saved.classes;}catch{}
+  let savedClasses=null;try{const saved=JSON.parse(balanceSourceText()||'null');if(saved?.schema===BALANCE_SCHEMA)savedClasses=saved.classes;}catch{}
   CLASSES.forEach((cls,job)=>{const d=EmberwildProgression.defaults.classes[job],legacy=!!savedClasses?.[job];cls.initialStats??=legacy?classInitial(cls,job):copy(d.initialStats);cls.growthPerLevel??=legacy?classGrowth(cls):copy(d.growthPerLevel);cls.growthSteps??=legacy?[]:copy(d.growthSteps);});
   function classInitial(cls,job){
     const own=cls?.initialStats||{};
@@ -65,7 +65,7 @@
   globalThis.classGrowthPerLevel=classGrowth;
   // The early balance loader runs before this module installs its class fields.
   try{
-    const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');
+    const saved=JSON.parse(balanceSourceText()||'null');
     if(saved?.schema===BALANCE_SCHEMA){
       const checked=validateBalanceConfig(saved);
       checked.classes.forEach((cls,job)=>{for(const field of ['initialStats','growthPerLevel','growthSteps']){if(cls[field]!==undefined)CLASSES[job][field]=copy(cls[field]);else if(field==='growthSteps')CLASSES[job].growthSteps=[];}if(cls.initialStats)for(const key of ['hp','atk','def'])CLASSES[job][key]=cls.initialStats[key];});

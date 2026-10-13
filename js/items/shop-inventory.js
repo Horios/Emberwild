@@ -37,7 +37,7 @@
   };
   const baseReference=balanceReference;
   balanceReference=function(){const out=baseReference();out.balancePaths={...(out.balancePaths||{}),'shopSettings.randomOffers.entries':'隨機商品池：抽選規則、數量、單價與顯示說明。','shopSettings.fixedOffers.entries':'固定商品池：上架項目、數量、單價與顯示說明。'};return out;};
-  try{const raw=localStorage.getItem(BALANCE_KEY);if(raw){const parsed=JSON.parse(raw);SHOP_SETTINGS=catalog.validate(parsed.shopSettings,catalogOptions());publishSettings();}}catch(e){console.warn('商店設定載入失敗，使用內建預設值',e);}
+  try{const raw=balanceSourceText();if(raw){const parsed=JSON.parse(raw);SHOP_SETTINGS=catalog.validate(parsed.shopSettings,catalogOptions());publishSettings();}}catch(e){console.warn('商店設定載入失敗，使用內建預設值',e);}
 
   function localDayKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
   function syncMarketDay(){if(!party?.market)return false;const today=localDayKey();if(party.market.dayKey!==today){party.market.dayKey=today;party.market.refreshCount=0;return true;}if(!Number.isInteger(party.market.refreshCount)||party.market.refreshCount<0)party.market.refreshCount=0;return false;}

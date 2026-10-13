@@ -88,7 +88,7 @@
 
   // Re-normalize the in-memory settings now that the new economy fields exist.
   try{
-    const saved=localStorage.getItem(BALANCE_KEY);
+    const saved=balanceSourceText();
     if(saved){const parsed=JSON.parse(saved);if(parsed?.balanceSettings)GAMEPLAY_SETTINGS=normalizeGameplaySettings(parsed.balanceSettings);if(Array.isArray(parsed?.items)){const byId=new Map(parsed.items.map(x=>[x.id,x]));for(const item of SHOP){const src=byId.get(item.id);if(src&&Number.isFinite(src.sellPrice)&&src.sellPrice>=0)item.sellPrice=src.sellPrice;}}}
     else GAMEPLAY_SETTINGS=normalizeGameplaySettings(GAMEPLAY_SETTINGS);
   }catch(e){console.warn('販售／分解設定載入失敗，使用預設值',e);GAMEPLAY_SETTINGS=normalizeGameplaySettings(GAMEPLAY_SETTINGS);}

@@ -192,7 +192,7 @@
   // Startup imports persisted balance before this late module exists. Reapply once after
   // shared IDs/scopes are installed so monster assignments remain stable after reload.
   try{
-    const saved=localStorage.getItem(BALANCE_KEY);
+    const saved=balanceSourceText();
     if(saved)applyBalanceConfig(JSON.parse(saved),{persist:false});
     else if(party?.members)for(const h of party.members)cleanHeroSkillSlots(h);
   }catch(e){console.warn('共用技能池後段重載失敗',e);}

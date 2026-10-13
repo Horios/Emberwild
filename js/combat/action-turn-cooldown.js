@@ -13,7 +13,7 @@ function migrateActiveCooldownFloorDocument(input){
 }
 let actionTurnMigratedSaved=null;
 try{
-  const raw=localStorage.getItem(BALANCE_KEY);
+  const raw=balanceSourceText();
   if(raw){
     const parsed=JSON.parse(raw),migrated=migrateActiveCooldownFloorDocument(parsed);
     actionTurnMigratedSaved=migrated;

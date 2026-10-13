@@ -175,7 +175,7 @@
 
   let starterPacks=defaultStarterPacks();
   try{
-    const raw=localStorage.getItem(BALANCE_KEY);
+    const raw=balanceSourceText();
     if(raw){
       const saved=JSON.parse(raw);
       starterPacks=normalizeStarterPacks(saved.starterPacks,{

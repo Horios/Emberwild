@@ -201,7 +201,7 @@
   // rejected its extended item list before this module was installed.
   try{
     ensureHealingPotionState();
-    const raw=localStorage.getItem(BALANCE_KEY);
+    const raw=balanceSourceText();
     if(raw){const cfg=JSON.parse(raw);applyBalanceConfig(cfg,{persist:false});}
     ensureHealingPotionState();
     if(state)save();

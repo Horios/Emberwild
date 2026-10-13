@@ -138,5 +138,5 @@
     return text;
   };
   // Earlier import layers run before this optional module is installed.
-  try{const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(saved)applyBalanceConfig(saved,{persist:false});}catch(e){console.warn('共用技能效果還原失敗',e);}
+  try{const saved=JSON.parse(balanceSourceText()||'null');if(saved)applyBalanceConfig(saved,{persist:false});}catch(e){console.warn('共用技能效果還原失敗',e);}
 })();

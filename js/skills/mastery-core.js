@@ -494,7 +494,7 @@ const masteryResetBalanceBase=resetBalanceJSON;
 resetBalanceJSON=function(){customSkillIcons=[];const out=masteryResetBalanceBase();ensureMasterySettings(GAMEPLAY_SETTINGS);applyDefaultSkillPlan();migrateWeaponCatalog();migrateAllKnownWeapons();if(state)render();return out;};
 
 try{
-  const saved=localStorage.getItem(BALANCE_KEY);
+  const saved=balanceSourceText();
   if(saved)applyBalanceConfig(JSON.parse(saved),{persist:false});
 }catch(e){console.warn('精通大修設定載入失敗，沿用內建設定',e);}
 migrateWeaponCatalog();migrateAllKnownWeapons();

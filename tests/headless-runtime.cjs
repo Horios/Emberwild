@@ -25,8 +25,8 @@ function loadRuntime(root,entry='index.html',saved={},clockStart=Date.parse('202
   const ctx=vm.createContext(context),html=fs.readFileSync(path.join(root,entry),'utf8');
   const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
   for(let i=0;i<scripts.length;i++){
-    const src=scripts[i][1].match(/\bsrc="([^"]+)"/),filename=src?src[1]:entry+':script-'+i;
-    if(filename.includes('startup-guard'))continue;
+    const src=scripts[i][1].match(/(?:\bsrc|data-balance-src)="([^"]+)"/),filename=src?src[1]:entry+':script-'+i;
+    if(filename.includes('startup-guard')||filename.includes('published-loader'))continue;
     const code=src?fs.readFileSync(path.join(root,src[1].split('?')[0]),'utf8'):scripts[i][2];
     try{vm.runInContext(code,ctx,{filename,timeout:10000});}catch(e){throw new Error(filename+': '+e.stack);}
   }
