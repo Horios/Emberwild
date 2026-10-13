@@ -18,6 +18,8 @@ async function openRuntime(root,entry='index.html',storage={},options={}) {
   });
   await page.addInitScript(s=>{for(const [k,v] of Object.entries(s))localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));},storage);
   await page.goto('http://emberwild.test'+(options.pathname||'/'),{waitUntil:'load',timeout:30000});
+  if(entry==='index.html'&&fs.existsSync(path.join(root,'data/balance.json')))await page.waitForFunction(()=>globalThis.__EMBERWILD_BALANCE_READY===true||globalThis.__EMBERWILD_BALANCE_LOAD_ERROR);
+  const reload=page.reload.bind(page);page.reload=async(...args)=>{const result=await reload(...args);if(entry==='index.html'&&fs.existsSync(path.join(root,'data/balance.json')))await page.waitForFunction(()=>globalThis.__EMBERWILD_BALANCE_READY===true||globalThis.__EMBERWILD_BALANCE_LOAD_ERROR);return result;};
   return {browser,page,errors};
 }
 async function openEditorSection(page,id){
