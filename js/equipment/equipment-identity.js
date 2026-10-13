@@ -402,8 +402,6 @@
 
   bossPower=function(){return 1;};
   function rawTierStats(g){const tier=Math.max(1,Number(g?.tier)||1),atkPer=g.slot===2?GS('equipment.baseStats.offhandAttackPerTier',GS('equipment.baseStats.accessoryAttackPerTier',4)):GS('equipment.baseStats.accessoryAttackPerTier',4),hpPer=g.slot===2?GS('equipment.baseStats.offhandHpPerTier',GS('equipment.baseStats.accessoryHpPerTier',20)):GS('equipment.baseStats.accessoryHpPerTier',20);return {atk:g.slot===0?tier*GS('equipment.baseStats.weaponAttackPerTier',11):[2,3].includes(g.slot)?tier*atkPer:0,hp:g.slot===1?tier*GS('equipment.baseStats.armorHpPerTier',45):[2,3].includes(g.slot)?tier*hpPer:0,def:g.slot===1?tier*GS('equipment.baseStats.armorDefensePerTier',4):0};}
-  function statAdd(a,b){return {atk:(a.atk||0)+(b.atk||0),hp:(a.hp||0)+(b.hp||0),def:(a.def||0)+(b.def||0)};}
-  function statMul(a,m){return {atk:(a.atk||0)*m,hp:(a.hp||0)*m,def:(a.def||0)*m};}
   function baseStatPct(g,key){
     const effects=identityEffectEntriesForGear(g);
     return effects.filter(e=>e.key===key).reduce((n,e)=>n+(Number(e.value)||0),0);

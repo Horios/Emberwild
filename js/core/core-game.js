@@ -146,7 +146,6 @@ function equipSkill(i,slot){if(!Number.isInteger(i)||!CLASSES[state.job].skills[
   `;
   document.head.appendChild(style);
 })();
-function gearDesc(g){let f=(1+g.rar*.25)*(1+g.plus*.12);return (g.slot===0?`攻擊 +${Math.round(g.tier*11*f)}`:g.slot===1?`生命 +${Math.round(g.tier*45*f)} / 防禦 +${Math.round(g.tier*4*f)}`:`攻擊 +${Math.round(g.tier*4*f)} / 生命 +${Math.round(g.tier*20*f)}`);}
 function findGear(id){return state.bag.find(g=>g.id===id);}function equipGear(id){let g=findGear(id);if(!g||state.lv<gearRequiredLevelByTier(g.tier))return;state.equipped[g.slot]=id;clampVitals();save();render();}function enhanceCost(g){return g.tier*(g.plus+1)*2;}function enhance(id){let g=findGear(id);if(!g||g.plus>=RULES.enhanceMax)return;if(state.ore<enhanceCost(g))return toast('鍛鐵不足，狩獵或分解裝備可取得');state.ore-=enhanceCost(g);g.plus++;save();render();toast(`${esc(equipmentDisplayName(g))} 強化至 +${g.plus}`);}
 let pendingAffix=null;
 function acceptAffix(){if(pendingAffix){let g=findGear(pendingAffix.id);if(g)g.affix=pendingAffix.affix;}pendingAffix=null;clampVitals();save();closeModal();render();}function closeModal(){const m=$('modal');m.close();delete m.dataset.view;pendingAffix=null;}
