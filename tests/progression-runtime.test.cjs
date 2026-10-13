@@ -9,7 +9,7 @@ const root=path.resolve(__dirname,'..');
 const balanceRoot=process.env.EMBERWILD_BALANCE_ROOT||path.resolve(root,'../Emberwild-Balance');
 
 test('Real game, editor, EXP rewards, stages and old-save round trips',async t=>{
-  const game=await openRuntime(root),editor=await openRuntime(balanceRoot,'balance-editor.html');
+  const game=await openRuntime(root,'index.html',{}, {pathname:'/preview/'}),editor=await openRuntime(balanceRoot,'balance-editor.html');
   try{
     const defaults=await game.page.evaluate(()=>exportableBalance());
     const editable=await editor.page.evaluate(()=>({doc:__EMBERWILD_MASTERY_EDITOR.cleanExport(),issues:validateData()}));

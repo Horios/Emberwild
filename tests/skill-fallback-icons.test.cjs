@@ -8,7 +8,7 @@ async function startParty(page){
 }
 
 test('Chromium: every main class skill has a compact local SVG without changing selected companion or builds',async()=>{
-  const game=await openRuntime(root),page=game.page;
+  const game=await openRuntime(root,'index.html',{}, {pathname:'/preview/'}),page=game.page;
   try{
     await startParty(page);
     const before=await page.evaluate(()=>({selected:party.selected,state:memberKey(state),build:JSON.stringify(__EMBERWILD_TEAMS.build())}));
@@ -27,7 +27,7 @@ test('Chromium: every main class skill has a compact local SVG without changing 
 });
 
 test('Chromium: configured custom/Lucide icons and semantic fallback survive reload and compact loadout previews',async()=>{
-  const game=await openRuntime(root),page=game.page;
+  const game=await openRuntime(root,'index.html',{}, {pathname:'/preview/'}),page=game.page;
   try{
     await startParty(page);
     await page.evaluate(()=>{

@@ -95,11 +95,11 @@ test('Options, shop pools, transactions and editor JSON use the real loaded modu
         return {rollback,limits};
       });assert.deepEqual(result,{rollback:{gold:true,heals:true,sold:true},limits:{gold:true,heals:true,sold:true}});
     });
-    await t.test('Empty pools remain empty across persistence/reload and preserve existing inventory',async()=>{
-      const before=await game.page.evaluate(()=>{const cfg=exportableBalance();cfg.shopSettings.randomOffers.entries=[];cfg.shopSettings.fixedOffers.entries=[];const stock=state.consumables.ward_fire;applyBalanceConfig(cfg);setTab('shop');return {stock,offers:party.market.offers.length,rows:document.querySelectorAll('.shop-product-row').length};});
+    await t.test('Preview empty pools remain empty across persistence/reload and preserve existing inventory',async()=>{
+      const before=await preview.page.evaluate(()=>{const cfg=exportableBalance();cfg.shopSettings.randomOffers.entries=[];cfg.shopSettings.fixedOffers.entries=[];const stock=state.consumables.ward_fire;applyBalanceConfig(cfg);setTab('shop');return {stock,offers:party.market.offers.length,rows:document.querySelectorAll('.shop-product-row').length};});
       assert.equal(before.offers,0);assert.equal(before.rows,0);
-      await game.page.reload();await game.page.evaluate(()=>{continueFromTitle();setTab('shop');});
-      const after=await game.page.evaluate(()=>({stock:state.consumables.ward_fire,shop:exportableBalance().shopSettings,offers:party.market.offers.length,rows:document.querySelectorAll('.shop-product-row').length}));
+      await preview.page.reload();await preview.page.evaluate(()=>{continueFromTitle();setTab('shop');});
+      const after=await preview.page.evaluate(()=>({stock:state.consumables.ward_fire,shop:exportableBalance().shopSettings,offers:party.market.offers.length,rows:document.querySelectorAll('.shop-product-row').length}));
       assert.equal(after.stock,before.stock);assert.deepEqual(after.shop.randomOffers.entries,[]);assert.deepEqual(after.shop.fixedOffers.entries,[]);assert.equal(after.offers,0);assert.equal(after.rows,0);
     });
     await t.test('Refresh costs increase per purchase, reset at a new local day, and ignore legacy reroll sources',async()=>{

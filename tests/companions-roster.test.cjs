@@ -10,7 +10,7 @@ test('Shared rating budgets include distributed points, actual rounding and leve
  const custom=structuredClone(settings);custom.progression.starting={abilityPoints:1};custom.progression.levelRewards={abilityPoints:1};custom.progression.statsPerPoint={hp:3,attack:1,defense:1};const fractional={...d,initialStats:{hp:18.4},growthPerLevel:{hp:2.1},growthSteps:[],points:[0,1,2]},def=model.definition(fractional,classes,custom),first=progression.naturalStats(def,1),last=progression.naturalStats(def,60),actual=model.totals(fractional,classes,custom,c.ratings.weights);assert.equal(actual.baseStats.hp,first.hp);assert.equal(actual.effectiveGrowth.hp,(last.hp-first.hp+60)/59);
 });
 test('Full game: acquired roster, enlistment, UID ownership, equipment UI and persistence',async t=>{
- const game=await openRuntime(root),page=game.page;await installCompanionFixtures(page);
+ const game=await openRuntime(root,'index.html',{}, {pathname:'/preview/'}),page=game.page;await installCompanionFixtures(page);
  try{
   await page.evaluate(()=>{selectSaveSlot(1);start(0);});await page.waitForTimeout(30);
   await page.evaluate(()=>{clearInterval(timer);closeModal();globalThis.__rosterDefaults=exportableBalance();globalThis.__rosterReset=()=>{closeModal();applyBalanceConfig(structuredClone(__rosterDefaults),{persist:false});start(0);for(const id of [10,11,12,13,14]){closeModal();recruitCompanion(id);}closeModal();};globalThis.__rosterPersonal=h=>{const p=packParty().members.find(x=>memberKey(x)===memberKey(h)),out={...p};for(const key of ['bag','gold','ore','dust','gems','materials','consumables','potions'])delete out[key];if(h.companionId!==undefined)out.disabledCompanionSkills??={core:[],support:[],passive:[]};return structuredClone(out);};globalThis.__rosterOwnership=()=>{const doc=packParty(),ids=doc.members.flatMap(h=>h.bag.map(g=>g.id)),worn=doc.members.flatMap(h=>h.equipped.filter(Boolean));return {ids,worn,uniqueItems:new Set(ids).size,uniqueWorn:new Set(worn).size};};});
@@ -55,7 +55,7 @@ test('Full game: acquired roster, enlistment, UID ownership, equipment UI and pe
  }finally{await game.browser.close();}
 });
 test('Editor and runtime share ratings, dynamic definitions, exclusive skills and soft warnings',async t=>{
- const game=await openRuntime(root),editor=await openRuntime(balanceRoot,'balance-editor.html');await installCompanionFixtures(game.page);
+ const game=await openRuntime(root,'index.html',{}, {pathname:'/preview/'}),editor=await openRuntime(balanceRoot,'balance-editor.html');await installCompanionFixtures(game.page);
  try{
   await game.page.evaluate(()=>{selectSaveSlot(1);start(0);});await game.page.waitForTimeout(30);await game.page.evaluate(()=>{clearInterval(timer);closeModal();});const defaults=await game.page.evaluate(()=>exportableBalance());
   await t.test('Both applications contain exactly the same shared model and effective limits',async()=>{const html=fs.readFileSync(path.join(balanceRoot,'balance-editor.html'),'utf8'),embedded=html.split('<script id="companion-model-v1">\n')[1].split('\n</script>')[0];assert.equal(embedded,fs.readFileSync(path.join(root,'js/character/companion-model.js'),'utf8'));const r=await editor.page.evaluate(()=>({cfg:__EMBERWILD_MASTERY_EDITOR.cleanExport(),issues:validateData()}));assert.deepEqual(r.issues,[]);assert.deepEqual(r.cfg.companionSettings,defaults.companionSettings);});
@@ -83,7 +83,7 @@ test('Editor and runtime share ratings, dynamic definitions, exclusive skills an
    assert.equal(r.name,'洛恩');assert(r.owner);assert.equal(r.other,false);assert.equal(r.meta,10);assert.equal(r.otherEquipped,false);
   });
   await t.test('Legacy JSON without grades migrates independent owned skills and the D rating fallback',async()=>{
-   const r=await game.page.evaluate(d=>{delete d.companionSkillVersion;delete d.companionNameVersion;delete d.companionSettings;d.companions=structuredClone(EmberwildCompanions.defaultPlans);d.passiveDefinitions=structuredClone(EmberwildPassives.defaults);for(const c of d.classes)c.skills=c.skills.filter(s=>s.partnerId==null);d.supportSkills=d.supportSkills.map(list=>list.filter(s=>s.partnerId==null));applyBalanceConfig(d);const out=exportableBalance();return {grades:out.companions.map(p=>p.rating),owned:out.companions.every(p=>p.core.every(i=>out.classes[p.job].skills[i].partnerId===p.id)),limit:__EMBERWILD_COMPANION_TEST_API.config.activeLimit};},structuredClone(defaults));
+   const r=await game.page.evaluate(d=>{delete d.companionSkillVersion;delete d.companionNameVersion;delete d.schemaVersion;delete d.companionSettings;d.companions=structuredClone(EmberwildCompanions.defaultPlans);d.passiveDefinitions=structuredClone(EmberwildPassives.defaults);for(const c of d.classes)c.skills=c.skills.filter(s=>s.partnerId==null);d.supportSkills=d.supportSkills.map(list=>list.filter(s=>s.partnerId==null));applyBalanceConfig(d);const out=exportableBalance();return {grades:out.companions.map(p=>p.rating),owned:out.companions.every(p=>p.core.every(i=>out.classes[p.job].skills[i].partnerId===p.id)),limit:__EMBERWILD_COMPANION_TEST_API.config.activeLimit};},structuredClone(defaults));
    assert.deepEqual(r.grades,Array(20).fill('D'));assert(r.owned);assert.equal(r.limit,6);
   });
   await t.test('Thirty owned heroes scroll in roster while ordinary equipment lists one player and tokens remain available',async()=>{

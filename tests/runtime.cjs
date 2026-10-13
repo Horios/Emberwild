@@ -18,8 +18,14 @@ async function openRuntime(root,entry='index.html',storage={},options={}) {
   });
   await page.addInitScript(s=>{for(const [k,v] of Object.entries(s))localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));},storage);
   await page.goto('http://emberwild.test'+(options.pathname||'/'),{waitUntil:'load',timeout:30000});
-  if(entry==='index.html'&&fs.existsSync(path.join(root,'data/balance.json')))await page.waitForFunction(()=>globalThis.__EMBERWILD_BALANCE_READY===true||globalThis.__EMBERWILD_BALANCE_LOAD_ERROR);
-  const reload=page.reload.bind(page);page.reload=async(...args)=>{const result=await reload(...args);if(entry==='index.html'&&fs.existsSync(path.join(root,'data/balance.json')))await page.waitForFunction(()=>globalThis.__EMBERWILD_BALANCE_READY===true||globalThis.__EMBERWILD_BALANCE_LOAD_ERROR);return result;};
+  async function waitForBoot(){
+    if(entry!=='index.html'||!fs.existsSync(path.join(root,'data/balance.json')))return;
+    const deadline=Date.now()+30000;
+    while(Date.now()<deadline){if(await page.evaluate(()=>globalThis.__EMBERWILD_BALANCE_READY===true||globalThis.__EMBERWILD_BALANCE_LOAD_ERROR))return;await new Promise(resolve=>setTimeout(resolve,25));}
+    throw Error('Published balance bootstrap timed out');
+  }
+  try{await waitForBoot();}catch(e){await browser.close();throw e;}
+  for(const method of ['reload','goto']){const original=page[method].bind(page);page[method]=async(...args)=>{const result=await original(...args);await waitForBoot();return result;};}
   return {browser,page,errors};
 }
 async function openEditorSection(page,id){

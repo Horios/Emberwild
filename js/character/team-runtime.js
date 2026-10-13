@@ -172,13 +172,13 @@
     }
   };
   const resetBalanceBase=resetBalanceJSON;
-  resetBalanceJSON=function(){
+  resetBalanceJSON=function(publishedDefaults){
     if(party&&!safe())return false;capture();
     const before=exportableBalance(),oldBuild=build()?copy(build()):null,cache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
     const previousMarket=party?.market===undefined?undefined:copy(party.market);
     const vitals=party?.members.map(h=>({hp:h.hp,shield:h.shield,potion:h.healPotionCooldownRemaining||0})),actors=copy(actorCooldowns),supports=copy(supportCooldowns),clock=partyClock;
     try{
-      suppressSave=true;resettingBalance=true;const out=resetBalanceBase(),d=M.normalizeDocument(exportableBalance());
+      suppressSave=true;resettingBalance=true;const out=publishedDefaults?(applyBalanceConfig(publishedDefaults,{persist:false}),localStorage.removeItem(BALANCE_KEY),true):resetBalanceBase(),d=M.normalizeDocument(exportableBalance());
       if(oldBuild){party.buildSystem=oldBuild;apply(plan());}
       resettingBalance=false;suppressSave=previousSuppress;applyBalanceConfig(d,{persist:false});return out;
     }catch(e){

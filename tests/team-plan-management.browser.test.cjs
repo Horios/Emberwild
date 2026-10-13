@@ -24,6 +24,7 @@ test('Chromium: removed copy, native plan warnings, first-plan protection, class
   await p.getByLabel('本隊主角職業',{exact:true}).selectOption('1');
   p.once('dialog',d=>d.dismiss());await card(1).getByRole('button',{name:'刪除方案',exact:true}).click();assert.equal(await card(1).count(),1);
   p.once('dialog',d=>d.accept());await card(1).getByRole('button',{name:'刪除方案',exact:true}).click();
+  await p.waitForFunction(()=>document.querySelectorAll('.team-plan-card').length===1);
   assert.equal(await p.locator('.team-plan-card').count(),1);assert.equal(await p.evaluate(()=>party.buildSystem.activeId),'team-1');
   await start.click();await p.evaluate(()=>setTab('roster'));
   assert(await card(0).getByRole('button',{name:'清空配置',exact:true}).isDisabled());

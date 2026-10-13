@@ -7,7 +7,7 @@ const legacy=require('./fixtures/legacy-progression.json');
 const root=path.resolve(__dirname,'..');
 
 test('Equipment ratings, source contributions and existing equipment flows',async t=>{
-  const r=await openRuntime(root);
+  const r=await openRuntime(root,'index.html',{}, {pathname:'/preview/'});
   try{
     await r.page.evaluate(()=>{
       clearInterval(timer);
@@ -262,7 +262,7 @@ test('Equipment ratings, source contributions and existing equipment flows',asyn
       assert.ok(out.unchanged&&out.worn);assert.ok(out.after.atk>out.before.atk);
       assert.equal(out.enhanced,15);assert.equal(out.baseRating,'SSS');
       for(const key of ['rerolled','saveResult','gearEqual','statsEqual','summaryEqual'])assert.equal(out[key],true,key);
-      const reopened=await openRuntime(root,'index.html',out.storage);
+      const reopened=await openRuntime(root,'index.html',out.storage,{pathname:'/preview/'});
       try{
         const restored=await reopened.page.evaluate(id=>{continueFromTitle();const g=state.bag.find(x=>x.id===id);return {gear:JSON.stringify(g),summary:equipmentTotalSummaryText(g),stats:stats(state)};},out.gearId);
         assert.equal(restored.gear,out.gearJSON);assert.equal(restored.summary,out.summary);assert.deepEqual(restored.stats,out.stats);assert.deepEqual(reopened.errors,[]);
