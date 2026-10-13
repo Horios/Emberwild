@@ -137,7 +137,7 @@
   globalThis.companionTokenAbilityText=abilityText;
   function tokenIcon(g){
     const key=({berserk:'swords',guardian:'shield',pursuit:'crosshair',arcane:'wand-sparkles',echo:'audio-lines',hunt:'bow-arrow',prayer:'hand-heart',revival:'heart-pulse',plunder:'droplets',endurance:'hourglass'})[g.tokenId]||'medal';
-    return `<span class="inventory-item-icon effect-quality-${g.rar}" aria-hidden="true">${__EMBERWILD_SKILL_ICONS.svgFor('lucide:'+key,[],{size:26})}</span>`;
+    return `<span class="inventory-item-icon effect-quality-${g.rar}" aria-hidden="true">${globalThis.__EMBERWILD_INVENTORY_ICON?.('token',g.tokenId,'lucide:'+key,{size:26})||__EMBERWILD_SKILL_ICONS.svgFor('lucide:'+key,[],{size:26})}</span>`;
   }
   function tokenIdentity(g){return `<div class="token-identity">${tokenIcon(g)}<b>${equipmentNameHTML(g)}</b></div>`;}
   function detail(g){const description=tokenDescription(g);return `${tokenIdentity(g)}${description?`<p>${esc(description)}</p>`:''}<p class="small">${esc(gearDesc(g))}</p><p class="token-special">${esc(abilityText(g))}</p>`;}

@@ -170,7 +170,7 @@
   globalThis.inventoryMaterialIcon=function(name){
     const glyphs={'鍛鐵':['anvil','#a9c98b'],'粉塵':['sparkles','#dfbe70'],'以太鍛鐵':['anvil','#9c9df2'],'光輝碎塊':['sparkles','#dfbe70'],'紅色草':['leaf','#ed7774'],'紅色草泥':['flask-conical','#ed7774'],'小蟲':['bug','#a9c98b'],'清水':['droplet','#87c5e7'],'藥水瓶':['flask-round','#c6d5df'],'升級卷軸':['scroll-text','#dfbe70']};
     const [key,tone]=glyphs[name]||[/牙|骨/.test(name)?'bone':/翼|羽/.test(name)?'feather':/晶|石/.test(name)?'gem':/齒輪/.test(name)?'cog':'package','#a9c98b'];
-    return `<span class="inventory-item-icon" style="color:${tone}" aria-hidden="true">${__EMBERWILD_SKILL_ICONS.svgFor('lucide:'+key,[],{size:26})}</span>`;
+    return `<span class="inventory-item-icon" style="color:${tone}" aria-hidden="true">${globalThis.__EMBERWILD_INVENTORY_ICON?.('material',name,'lucide:'+key,{size:26})||__EMBERWILD_SKILL_ICONS.svgFor('lucide:'+key,[],{size:26})}</span>`;
   };
   globalThis.inventoryMaterialDescription=function(name){
     const descriptions={'鍛鐵':'裝備強化與洗鍊材料。','粉塵':'裝備洗鍊與寶石合成材料。','以太鍛鐵':'高階裝備強化材料。','光輝碎塊':'洗鍊時用於保留指定詞條。','升級卷軸':'使用後提升角色 1 級。'};
@@ -180,7 +180,7 @@
     const ticket=item.type==='levelScroll'||EmberwildTimedBoosts.isItem(item),bottle=['healPotion','imbue','ward','elementTonic'].includes(item.type);
     const key=ticket?'ticket':bottle?'flask-round':item.type==='gearTierReroll'?'sparkles':'package';
     const tone=ticket?'#dfbe70':item.type==='healPotion'?'#ed7774':({fire:'#ed7774',ice:'#87c5e7',wind:'#7acfab',light:'#dfbe70',shadow:'#b29adc'})[item.element]||'#a9c98b';
-    return `<span class="inventory-item-icon" style="color:${tone}" aria-hidden="true">${__EMBERWILD_SKILL_ICONS.svgFor('lucide:'+key,[],{size:26})}</span>`;
+    return `<span class="inventory-item-icon" style="color:${tone}" aria-hidden="true">${globalThis.__EMBERWILD_INVENTORY_ICON?.('item',item.id||'','lucide:'+key,{size:26})||__EMBERWILD_SKILL_ICONS.svgFor('lucide:'+key,[],{size:26})}</span>`;
   }
   globalThis.inventoryItemIcon=inventoryItemIcon;
   globalThis.inventoryShopOfferIcon=function(offer){

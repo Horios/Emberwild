@@ -44,7 +44,7 @@
   };
   function gemIcon(type){
     const color=['#ed7774','#7acfab','#9c9df2'][type];
-    return `<span class="skill-gem-icon" style="color:${color}" aria-hidden="true">${__EMBERWILD_SKILL_ICONS.svgFor('lucide:gem',[],{size:26})}</span>`;
+    return `<span class="skill-gem-icon" style="color:${color}" aria-hidden="true">${globalThis.__EMBERWILD_INVENTORY_ICON?.('gem',String(type),'lucide:gem',{size:26})||__EMBERWILD_SKILL_ICONS.svgFor('lucide:gem',[],{size:26})}</span>`;
   }
   globalThis.inventoryGemIcon=gemIcon;
   function skillGemSockets(i,h,current,learned){

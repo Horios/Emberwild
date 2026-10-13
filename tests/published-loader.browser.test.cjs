@@ -20,7 +20,7 @@ test('all modules download ahead of the first execution; execution order and pub
     await Promise.race([downloadsStarted,new Promise((_,reject)=>setTimeout(()=>reject(Error('downloads did not overlap')),10000))]);
     assert.deepEqual(await r.page.evaluate(()=>globalThis.__bootOrder),[]);
     assert.equal(await r.page.getByRole('progressbar',{name:'遊戲載入進度'}).isVisible(),true);
-    assert.match(await r.page.locator('[data-boot-count]').innerText(),/已下載.*已初始化 0／80/);
+    assert.match(await r.page.locator('[data-boot-count]').innerText(),new RegExp('已下載.*已初始化 0／'+modules.length));
     releaseFirst();await reload;
     assert.deepEqual(await r.page.evaluate(()=>globalThis.__bootOrder),modules);
     assert.equal(D.diff(published,await r.page.evaluate(()=>exportableBalance())).total,0);
