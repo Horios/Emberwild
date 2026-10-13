@@ -145,7 +145,7 @@
     // Validate the completed reset once the full existing reset chain returns.
     if(resettingBalance){balanceBase(d,{persist:false});applyRules(d);return d;}
     capture();
-    const next=stageBalanceBuild(d),before=exportableBalance(),previousBuild=build()?copy(build()):null,previousCache=balanceSourceText(),previousSuppress=suppressSave;
+    const next=stageBalanceBuild(d),before=exportableBalance(),previousBuild=build()?copy(build()):null,previousCache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
     const previousMarket=party?.market===undefined?undefined:copy(party.market);
     const battle=party?{heroes:party.members.map(h=>({hp:h.hp,shield:h.shield,potion:h.healPotionCooldownRemaining||0})),actors:copy(actorCooldowns),supports:copy(supportCooldowns),clock:partyClock}:null;
     try{
@@ -174,7 +174,7 @@
   const resetBalanceBase=resetBalanceJSON;
   resetBalanceJSON=function(){
     if(party&&!safe())return false;capture();
-    const before=exportableBalance(),oldBuild=build()?copy(build()):null,cache=balanceSourceText(),previousSuppress=suppressSave;
+    const before=exportableBalance(),oldBuild=build()?copy(build()):null,cache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
     const previousMarket=party?.market===undefined?undefined:copy(party.market);
     const vitals=party?.members.map(h=>({hp:h.hp,shield:h.shield,potion:h.healPotionCooldownRemaining||0})),actors=copy(actorCooldowns),supports=copy(supportCooldowns),clock=partyClock;
     try{

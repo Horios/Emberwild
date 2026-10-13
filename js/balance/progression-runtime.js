@@ -3,7 +3,7 @@
   const copy=v=>JSON.parse(JSON.stringify(v));
   const sameBuiltinCurve=()=>JSON.stringify(GAMEPLAY_SETTINGS.progression.xpCurve)===JSON.stringify(EmberwildProgression.defaults.settings.progression.xpCurve)&&GS('skills.mastery.characterXpMultiplier',1)===1;
   const legacyNeed=l=>Math.max(1,Math.round(Math.round((45+l*18+l*l*2)*(2.2+l*.16))*1.35));
-  const builtinLegacy=data=>data?.progressionXpRequirements===undefined&&data?.progressionCurveVersion===undefined&&sameBuiltinCurve()&&!balanceSourceText();
+  const builtinLegacy=data=>data?.progressionXpRequirements===undefined&&data?.progressionCurveVersion===undefined&&sameBuiltinCurve()&&!localStorage.getItem(BALANCE_KEY);
   function migrateProgress(data){
     const out=copy(data);if(!Array.isArray(out?.members))return out;
     const snapshot=out.progressionXpRequirements;

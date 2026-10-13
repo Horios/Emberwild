@@ -20,7 +20,6 @@
     const importBase=importBalanceJSON;
     importBalanceJSON=async ev=>{const result=await importBase(ev);if(result){globalThis.__EMBERWILD_BALANCE_SOURCE=exportableBalance();if(preview)localStorage.setItem(key+'-published-base',version);}return result;};
     resetBalanceJSON=()=>{globalThis.__EMBERWILD_BALANCE_SOURCE=published;localStorage.removeItem(key);localStorage.removeItem(key+'-published-base');applyBalanceConfig(published,{persist:false});toast('已恢復目前發布版本的平衡資料');};
-    const exportBase=exportableBalance;exportableBalance=()=>({...exportBase(),schemaVersion:1,lifeSkills:structuredClone(globalThis.__EMBERWILD_BALANCE_SOURCE.lifeSkills)});
     globalThis.__EMBERWILD_BALANCE_READY=true;
     app.style.visibility='';window.dispatchEvent(new Event('emberwild-balance-ready'));
   }catch(e){
