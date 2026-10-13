@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh-Hant"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>餘燼荒野 · Emberwild</title><link rel="stylesheet" href="css/base.css"><body><header><a class="brand" href="#"> <span>餘燼荒野<small>EMBERWILD / IDLE RPG · 4.0</small></span></a><span class="chapter">遠征者手札 <b>純文字遠征手札</b></span><div id="utilityNavigation" class="utility-navigation" hidden></div><div id="wallet"></div><button onclick="save(true)">儲存</button><button onclick="exportSave()">匯出存檔 JSON</button><label class="button">匯入存檔<input type="file" accept=".json" onchange="importSave(event)" hidden></label></header><div id="app" style="visibility:hidden"><section class="panel" style="margin:32px"><h1>正在啟動餘燼荒野…</h1><p>若這段文字一直沒有消失，請將 HTML 下載到電腦，再使用 Chrome 或 Edge 開啟；部分檔案預覽不執行遊戲程式。</p></section></div><noscript><p style="padding:24px">目前環境未允許 JavaScript。請下載 HTML 後使用瀏覽器開啟。</p></noscript><div id="toast" role="status"></div><dialog id="modal"></dialog><script data-startup-guard src="js/core/startup-guard.js"></script>
+<!doctype html><html lang="zh-Hant"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>餘燼荒野 · Emberwild</title><link rel="stylesheet" href="css/base.css"><body><header><a class="brand" href="#"> <span>餘燼荒野<small>EMBERWILD / IDLE RPG · 4.0</small></span></a><div id="utilityNavigation" class="utility-navigation" hidden></div><div id="wallet"></div><button onclick="save(true)">儲存</button><button onclick="exportSave()">匯出存檔 JSON</button><label class="button">匯入存檔<input type="file" accept=".json" onchange="importSave(event)" hidden></label></header><div id="app" style="visibility:hidden"><section class="panel" style="margin:32px"><h1>正在啟動餘燼荒野…</h1><p>若這段文字一直沒有消失，請將 HTML 下載到電腦，再使用 Chrome 或 Edge 開啟；部分檔案預覽不執行遊戲程式。</p></section></div><noscript><p style="padding:24px">目前環境未允許 JavaScript。請下載 HTML 後使用瀏覽器開啟。</p></noscript><div id="toast" role="status"></div><dialog id="modal"></dialog><script data-startup-guard src="js/core/startup-guard.js"></script>
 <script src="js/balance/progression-model.js"></script>
 <script src="js/items/companion-token-model.js"></script>
 <script src="js/character/companion-model.js"></script>
@@ -10,7 +10,7 @@
 <script src="js/skills/skill-effect-schema.js"></script>
 <script src="js/world/quest-design-model.js?v=20261012-quests2"></script>
 <script src="js/world/commission-model.js?v=20261012-quests2"></script>
-<script src="js/core/core-game.js?v=20261013-material-groups3"></script>
+<script src="js/core/core-game.js?v=20261013-team-actions1"></script>
 <link rel="stylesheet" href="css/text-rarity.css">
 <script src="js/ui/text-rarity-style.js"></script>
 <link id="ally-row-readability-fix" rel="stylesheet" href="css/ally-row.css">
@@ -32,7 +32,7 @@
 <script src="js/balance/balance-schema.js"></script>
 <script src="js/balance/balance-runtime.js"></script>
 
-<script id="ui-text-config-extension" src="js/ui/ui-text-config.js?v=20261013-inventory-rows2"></script>
+<script id="ui-text-config-extension" src="js/ui/ui-text-config.js?v=20261013-team-actions1"></script>
 <link id="economy-inventory-style" rel="stylesheet" href="css/economy-inventory.css">
 <script id="economy-and-salvage-system" src="js/equipment/economy-salvage.js?v=20261013-material-groups3"></script>
 
@@ -136,7 +136,7 @@
 <script id="status-maker-runtime-v1" src="js/skills/status-maker.js"></script>
 <script id="shared-core-skill-runtime-v1" src="js/combat/shared-skill-runtime.js"></script>
 <link rel="stylesheet" href="css/title-screen.css">
-<script src="js/ui/title-screen.js?v=20261012-utility1"></script>
+<script src="js/ui/title-screen.js?v=20261013-team-actions1"></script>
 <script src="js/ui/interaction-guard.js?v=20261012-utility1"></script>
 <script id="initial-class-starter-pack-v1" src="js/character/starter-pack.js"></script>
 <script src="js/ui/text-rarity-runtime.js"></script>
@@ -155,9 +155,9 @@
 <link rel="stylesheet" href="css/companion-tokens.css?v=20261013-inventory-rows2">
 <script src="js/items/companion-tokens.js?v=20261013-inventory-rows2"></script>
 <link rel="stylesheet" href="css/team-builds.css?v=20261012-skills1">
-<script src="js/character/team-runtime.js"></script>
+<script src="js/character/team-runtime.js?v=20261013-team-actions1"></script>
 <script src="js/equipment/team-references.js?v=20261013-battle-ops1"></script>
-<script src="js/ui/team-builds.js?v=20261013-inventory-ui1"></script>
+<script src="js/ui/team-builds.js?v=20261013-team-actions1"></script>
 <script src="js/equipment/boss-crafting.js"></script>
 <link rel="stylesheet" href="css/page-readability.css?v=20261013-inventory-ui1">
 <script src="js/ui/page-readability.js?v=20261013-inventory-ui1"></script>

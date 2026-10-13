@@ -92,6 +92,17 @@
   globalThis.renameTeamPlan=function(id,name){if(!safe())return false;if(name===undefined)name=prompt('隊伍名稱（最多 24 字）',build().plans.find(p=>p.id===id)?.name||'');if(typeof name!=='string'||!name.trim()||Array.from(name.trim()).length>24||/[\u0000-\u001f]/.test(name))return false;return transaction(()=>{const p=build().plans.find(p=>p.id===id);if(!p)throw Error('找不到隊伍');p.name=name.trim();});};
   globalThis.switchTeamPlan=function(id){if(!safe()||id===build().activeId||!build().plans.some(p=>p.id===id))return false;return transaction(()=>{build().activeId=id;apply(plan());refreshUnlocks();});};
   function releaseSockets(p){const ids=p.sockets.filter(Boolean);p.sockets=p.sockets.map(()=>null);for(const id of ids)if(!build().plans.some(other=>other.sockets.includes(id))){const type=build().permanent.gemInstances[id];player().gems[type]++;delete build().permanent.gemInstances[id];}}
+  globalThis.clearTeamPlan=function(id=build()?.activeId){
+    if(!safe())return false;const p=build().plans.find(p=>p.id===id);if(!p)return false;
+    if(!confirm('清空「'+p.name+'」的整體配置？主角職業、配點、技能、裝備、寶石及夥伴配置將全部清空，無法復原。永久養成與背包物品保留；未被其他方案使用的寶石會返還。'))return false;
+    return transaction(()=>{releaseSockets(p);Object.assign(p,M.blank(p.id,p.name));if(id===build().activeId)apply(p);});
+  };
+  globalThis.deleteTeamPlan=function(id){
+    if(!safe())return false;const b=build(),index=b.plans.findIndex(p=>p.id===id);if(index<0)return false;
+    if(index===0){toast('第一個隊伍方案不可刪除，可使用清空配置');return false;}
+    const p=b.plans[index];if(!confirm('刪除隊伍方案「'+p.name+'」？整個方案及其配置將永久移除，無法復原。永久養成與背包物品保留；未被其他方案使用的寶石會返還。'+(id===b.activeId?'刪除後切換至第一個方案「'+b.plans[0].name+'」。':'')))return false;
+    return transaction(()=>{releaseSockets(p);b.plans.splice(index,1);if(id===b.activeId){b.activeId=b.plans[0].id;apply(plan());}});
+  };
   globalThis.resetSkills=function(){if(state!==player()||!safe()||!confirm('免費重置本隊所有技能學習與裝配？永久解鎖與精通保留。'))return false;return transaction(()=>{const p=plan();releaseSockets(p);p.skills.fill(0);p.supportLevels.fill(0);p.active.fill(null);p.procSlots.fill(null);p.supportSlots.fill(null);apply(p);});};
   const resetBase=resetStats;resetStats=function(){if(state!==player())return resetBase();if(!safe()||!confirm('免費重置本隊能力點？其他隊伍與永久成長保留。'))return false;return transaction(()=>{plan().stats=[0,0,0];apply(plan());});};
   function learnTeam(kind,i){if(state!==player()||!safe()||plan().job===null)return false;capture();const p=plan(),j=p.job,list=kind==='core'?player().skills:player().supportLevels,k=M.key(j,kind,i),r=kind==='core'?coreRule(j,i):supportRule(j,i);if(!Number.isInteger(i)||i<0||i>=list.length||list[i])return false;if(!build().permanent.unlocks[k]){toast('尚未永久解鎖：'+unlockMissing(j,kind,i).join('、'));return false;}return transaction(()=>{list[i]=1;});}
@@ -186,7 +197,10 @@
     const fn=globalThis[name];if(typeof fn!=='function')continue;globalThis[name]=function(...args){if(!safe())return false;if(state===player()&&plan()?.job===null&&['allocate','equipSkill','slotProcSkill','slotSupport','equipGear','equipSharedGear'].includes(name)){toast('請先為本隊選擇主角職業');return false;}if(suppressSave)return fn(...args);let out;const ok=transaction(()=>{out=fn(...args);});return ok?out:false;};
   }
   const battleBase=toggleBattle;toggleBattle=function(...args){if(!running&&!valid()){toast('請先選擇主角職業，並完成符合地圖門檻的隊伍編成');return false;}return battleBase(...args);};
-  const bossBase=globalThis.startBossChallenge;if(typeof bossBase==='function')globalThis.startBossChallenge=function(...args){if(!valid())return false;return bossBase(...args);};
+  for(const name of ['startBossChallenge','restartExploration','devMasterySimulate']){
+    const fn=globalThis[name];if(typeof fn!=='function')continue;
+    globalThis[name]=function(...args){if(!valid()){toast('請先選擇主角職業，並完成符合地圖門檻的隊伍編成');return false;}return fn(...args);};
+  }
   function resetBattleState(){
     running=false;if(roundIterator?.return)roundIterator.return();roundIterator=null;party.bossChallenge=null;resetEncounter();refillParty();mastery.resetBattleGain?.();
   }
