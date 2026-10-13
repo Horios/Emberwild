@@ -94,18 +94,48 @@
   filteredGear=function(){return baseFilter().filter(g=>!M.isToken(g));};
   const baseNameHTML=equipmentNameHTML,baseDisplay=equipmentDisplayName,baseDesc=gearDesc;
   equipmentDisplayName=function(g){return M.isToken(g)?`+${g.plus} ${g.snapshot.name}`:baseDisplay(g);};
-  equipmentNameHTML=function(g){return M.isToken(g)?`<span class="effect-quality-${g.rar}">${esc(equipmentDisplayName(g))} · ${esc(AFFIX_RANK[g.rar])}信物</span>`:baseNameHTML(g);};
-  gearDesc=function(g){return M.isToken(g)?M.effectsFor(g,GS('equipment.enhance.statPerLevel',.05)).map(equipmentIdentityEffectText).join(' / '):baseDesc(g);};
+  equipmentNameHTML=function(g){return M.isToken(g)?`<span class="effect-quality-${g.rar}">${esc(equipmentDisplayName(g))}</span>`:baseNameHTML(g);};
+  gearDesc=function(g){return M.isToken(g)?tokenStatsText(g):baseDesc(g);};
   for(const name of ['reroll','rerollGear','rerollAffix','autoReroll','rerollEquipmentPowerTier','setAffixLock','toggleAffixLock']){const base=globalThis[name];if(typeof base==='function')globalThis[name]=function(id,...args){if(M.isToken(findGear(id)))return toast('信物使用固定複合屬性');return base(id,...args);};}
   const baseEnhance=enhance;
   enhance=function(id){const h=gearWearer(id),out=baseEnhance(id);if(h)withHero(h,clampVitals);return out;};
   try{const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(saved?.companionTokens)config=M.normalize(saved.companionTokens);}catch(e){console.warn('信物設定載入失敗',e);}
   globalThis.__EMBERWILD_TOKEN_TEST={makeToken,rollTokens,trigger,ensureBattle,clear,item,ready,get config(){return copy(config);},get combat(){return combat;}};
   // UI is below so all controls use the same validated mutations above.
-  const eventNames={battleStart:'戰鬥開始',kill:'擊殺',receivedHit:'受到傷害',basicHit:'普攻命中',activeSkill:'主動技能',procSkill:'觸發技能',skillCast:'施放技能後',sameTarget:'連續普攻同一目標',lowHealth:'低血量受擊',damage:'造成傷害',round:'戰鬥回合'};
-  const actionNames={attack:'攻擊增益',guard:'減傷增益',critical:'暴擊增益',power:'技能威力增益',heal:'回復生命上限比例',shield:'生命上限比例護盾',extraDamage:'攻擊倍率追擊',damageBonus:'傷害增幅',healingBonus:'治療／護盾增幅'};
-  function abilityText(g){const a=g.snapshot.ability;return `${eventNames[a.event]}${a.threshold?`（門檻 ${a.threshold}）`:''} → ${actionNames[a.action]} ${Number((a.value*100).toFixed(2))}% · 機率 ${a.chance*100}%${a.duration?' · '+a.duration+' 回合':''} · 冷卻 ${a.cooldown} 回合${a.maxTriggers?' · 每場最多 '+a.maxTriggers+' 次':''}`;}
-  function detail(g){return `<b>${equipmentNameHTML(g)}</b><p>${esc(g.snapshot.description)}</p><p class="small">${esc(gearDesc(g))}</p><p class="token-special">${esc(abilityText(g))}</p>`;}
+  function tokenStatsText(g){
+    // Merge identical stat targets after quality and enhancement scaling.
+    const totals=new Map();
+    for(const e of M.effectsFor(g,GS('equipment.enhance.statPerLevel',.05))){
+      const key=JSON.stringify([e.key,e.element,e.race,e.skill]);
+      if(totals.has(key)&&typeof e.value==='number')totals.get(key).value+=e.value;
+      else totals.set(key,{...e});
+    }
+    return [...totals.values()].map(e=>equipmentIdentityEffectText({...e,value:typeof e.value==='number'?Number(e.value.toFixed(6)):e.value})
+      .replace(/此裝備攻擊力/g,'攻擊力').replace(/此裝備最大生命/g,'生命上限').replace(/此裝備防禦/g,'防禦力')
+      .replace(/角色總攻擊力/g,'攻擊力').replace(/角色最大生命/g,'生命上限').replace(/角色總防禦/g,'防禦力')
+      .replace(/此武器攻擊屬性/g,'普攻屬性').replace('（固定屬性 basicElement）','')).join(' / ');
+  }
+  function abilityText(g){
+    const a=g.snapshot.ability,percent=Number((a.value*100).toFixed(2)),chance=Number((a.chance*100).toFixed(2));
+    const action={attack:`攻擊力提升 ${percent}%`,guard:`受到的傷害減少 ${percent}%`,critical:`暴擊率提升 ${percent}%`,power:`技能威力提升 ${percent}%`,heal:`回復生命上限 ${percent}% 的生命`,shield:`獲得生命上限 ${percent}% 的護盾`,extraDamage:`追加攻擊力 ${percent}% 的傷害`,damageBonus:`傷害增幅 ${percent}%`,healingBonus:`治療與護盾效果增幅 ${percent}%`}[a.action];
+    const event={battleStart:'戰鬥開始時',kill:'擊殺敵人時',receivedHit:'受到傷害時',basicHit:'普攻命中時',skillCast:'施放技能後',damage:'造成傷害時',sameTarget:`連續普攻同一目標達 ${a.threshold} 次後`,lowHealth:`受到傷害且生命不高於 ${Number((a.threshold*100).toFixed(2))}% 時`,round:`戰鬥第 ${a.threshold} 回合起，每回合`}[a.event];
+    const skill=a.event==='activeSkill'?'主動技能':a.event==='procSkill'?'觸發技能':null;
+    const text=skill?`${skill}${action}`:`${event}${action}`;
+    const extras=[];
+    if(a.chance<1)extras.push(`觸發機率 ${chance}%`);
+    if(a.duration)extras.push(`持續 ${a.duration} 回合`);
+    if(a.cooldown)extras.push(`冷卻 ${a.cooldown} 回合`);
+    if(a.maxTriggers)extras.push(`每場最多 ${a.maxTriggers} 次`);
+    return [text,...extras].join(' · ');
+  }
+  function tokenDescription(g){
+    const description=g.snapshot.description.trim();
+    // Old saves and imported balance files retain this stock boilerplate.
+    return description===g.snapshot.name+'：所有夥伴通用的單一信物。'?'':description.replace(/所有夥伴通用的單一信物。?/g,'').trim();
+  }
+  globalThis.companionTokenDescription=tokenDescription;
+  globalThis.companionTokenAbilityText=abilityText;
+  function detail(g){const description=tokenDescription(g);return `<b>${equipmentNameHTML(g)}</b>${description?`<p>${esc(description)}</p>`:''}<p class="small">${esc(gearDesc(g))}</p><p class="token-special">${esc(abilityText(g))}</p>`;}
   function companionCards(){return `<section class="panel companion-token-panel"><h2>夥伴信物</h2><p class="small">夥伴依自身等級成長，只使用一件信物；後備與名冊夥伴保留穿戴。更換或卸下信物會放棄目前遭遇。</p><div class="token-grid">${party.members.filter(companion).map(h=>{const g=item(h);return `<article class="card token-slot" data-token-owner="${memberKey(h)}"><h3>${esc(characterName(h))} · ${esc(CLASSES[h.job].name)}</h3>${g?detail(g):'<p class="empty">未穿戴信物</p>'}<div class="actions"><button onclick="showCompanionTokens(${memberKey(h)})">更換信物</button>${g?`<button onclick="unequipCompanionToken(${memberKey(h)})">卸下</button><button onclick="openForge('${g.id}')">強化</button>`:''}</div></article>`;}).join('')||'<p>招募夥伴後即可使用信物。</p>'}</div></section>`;}
   globalThis.showCompanionTokens=function(key){const h=partyMember(key);if(!companion(h))return;const current=item(h);$('modal').innerHTML=`<h2>${esc(characterName(h))} · 信物管理</h2>${current?detail(current):'<p>目前未穿戴信物</p>'}<div class="token-grid">${state.bag.filter(g=>M.isToken(g)&&(!gearWearer(g.id)||gearWearer(g.id)===h)).map(g=>`<article class="card">${detail(g)}${comparison(h,g)}<button data-token-id="${g.id}" onclick="equipCompanionToken('${g.id}',${key});closeModal()" ${g===current?'disabled':''}>${g===current?'已穿戴':'穿戴'}</button></article>`).join('')||'<p>背包目前沒有可穿戴的信物。</p>'}</div><button onclick="closeModal()">關閉</button>`;$('modal').showModal();};
   function comparison(h,g){const before=stats(h),after=stats({...h,tokenId:g.id});return `<p class="small">換裝比較：${['hp','atk','def','crit','critDamage','speed','pierce','defenseIgnore','lifesteal','evasion'].filter(k=>before[k]!==after[k]).map(k=>`${({hp:'HP',atk:'攻擊',def:'防禦',crit:'暴擊',critDamage:'暴傷',speed:'速度',pierce:'穿透',defenseIgnore:'無視',lifesteal:'竊取',evasion:'閃避'})[k]} ${Number(before[k].toFixed(3))} → ${Number(after[k].toFixed(3))}`).join(' / ')||'面板相同，請比較特殊效果'}</p>`;}

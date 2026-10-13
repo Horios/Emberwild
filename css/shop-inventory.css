@@ -30,3 +30,12 @@
 
 .shop-category-tabs button{border:1px solid var(--line);padding:7px 12px;text-align:center}
 .shop-product-row>.actions>button{width:auto!important;max-width:100%;flex:0 1 auto!important}
+
+.account-item-main{display:flex;align-items:center;gap:10px;min-width:0}
+.inventory-item-icon{display:grid;place-items:center;flex:0 0 32px;width:32px;height:36px}
+.account-gem-main{display:flex;align-items:center;gap:10px;min-width:0}
+.account-gem-row{gap:12px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.account-gem-row:last-of-type{border-bottom:0}
+.layout>main:has(.account-item-list){overflow-y:auto;scrollbar-gutter:stable}
+.layout>main:has(.account-item-list)>.panel{flex:0 0 auto;overflow:visible;min-height:0}
+.account-item-desc .detail{white-space:normal;overflow:visible;text-overflow:clip}

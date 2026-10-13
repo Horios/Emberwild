@@ -11,3 +11,8 @@
 .inventory-control-fold-body>.small:first-child{margin-top:0}
 .inventory-control-fold-body>.ui-help:last-child{margin-bottom:0}
 .inventory-control-fold-body>.bulk-sell-actions:last-child{margin-bottom:0}
+
+.inventory-hide-equipped{display:flex;align-items:center;gap:6px;margin-left:auto;padding:7px 10px;border:1px solid var(--gold);border-radius:4px;color:var(--gold);background:rgba(223,190,112,.06);font-weight:600;cursor:pointer}
+.inventory-hide-equipped:has(input:checked){background:rgba(223,190,112,.15)}
+.inventory-hide-equipped input{accent-color:var(--gold)}
+@media(max-width:780px){.inventory-hide-equipped{margin-left:0}}

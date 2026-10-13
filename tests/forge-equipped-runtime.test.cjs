@@ -76,7 +76,7 @@ test('Equipped tokens remain visible on non-enlisted roster companions with thei
   })()`);
   assert.equal(out.enlisted,false);assert.equal(out.owner,10);
   assert(listIds(out.html).includes(out.id));assert.match(out.html,/已穿戴 6/);
-  assert.match(out.html,/夥伴通用 · 信物/);assert.match(out.html,/目前能力<\/h3><p>此裝備攻擊力/);
+  assert.match(out.html,/夥伴通用 · 信物/);assert.match(out.html,/目前能力<\/h3><p>攻擊力/);
   assert.match(out.html,/信物無法洗鍊或重鑄基底/);
   assert.doesNotMatch(out.html,/undefined|forge-power-reroll|onclick="(?:reroll|autoReroll|rerollEquipmentPowerTier)\(/);
   assert.match(out.modal,/信物強化/);assert.equal(out.plus,1);

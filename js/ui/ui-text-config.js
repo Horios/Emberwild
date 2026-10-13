@@ -116,7 +116,7 @@ function inventorySortControls(){
   return '<div class="inventory-sortbar"><div class="inventory-sort-row"><label>排序 <select onchange="setInventorySort(this.value)">'+
     options.map(([value,label])=>'<option value="'+value+'" '+(inventorySortKey===value?'selected':'')+'>'+label+'</option>').join('')+
     '</select></label><button type="button" onclick="toggleInventorySortDirection()">'+(inventorySortDirection==='desc'?'高 → 低':'低 → 高')+'</button></div>'+
-    '<div class="inventory-visibility-filters">'+checks('slot',slotOptions,inventoryVisibleSlots)+checks('job',jobOptions,inventoryVisibleJobs)+'</div></div>';
+    '<div class="inventory-visibility-filters">'+checks('slot',slotOptions,inventoryVisibleSlots)+checks('job',jobOptions,inventoryVisibleJobs)+'<label class="inventory-hide-equipped"><input type="checkbox" '+(filters.hideEquipped?'checked':'')+' onchange="setFilter(\'hideEquipped\',this.checked)"> 隱藏已穿戴裝備</label></div></div>';
 }
 globalThis.setInventorySort=function(key){
   if(!['quality','plus','job'].includes(key))return;

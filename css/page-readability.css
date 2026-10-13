@@ -69,3 +69,28 @@
   .readability-page .heading{flex-wrap:wrap}
   .boss-reading-page .boss-recipes{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Character stats, allocation, advancement and mastery share one page scroll. */
+.character-reading-page{display:grid;gap:16px;container-type:inline-size}
+.character-reading-page>.heading{margin:0}
+.character-reading-page .page-owner-panel{display:block;height:auto!important;min-height:0!important;overflow:visible;padding:16px}
+.character-reading-page .page-owner-content{overflow:visible;min-height:0;padding-top:12px}
+.character-reading-page .page-owner-content>.grid{height:auto;max-height:none;align-items:start;gap:16px;margin:12px 0}
+.character-reading-page .page-owner-content>.grid>.panel{min-width:0;padding:14px}
+.character-reading-page .page-owner-content>.panel{margin-top:16px;padding:14px}
+.character-reading-page h2{font-size:17px;margin:0 0 10px}
+.character-reading-page h3{margin:16px 0 10px}
+.character-reading-page .stat-grid{gap:8px;margin:12px 0}
+.character-reading-page .stat-grid>span{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:36px;border:1px solid var(--line);background:rgba(255,255,255,.025);border-radius:4px}
+.character-reading-page .mobdrop{padding:10px 0;gap:12px}
+.character-reading-page .class-mastery-grid>div{padding:10px 12px;border:1px solid var(--line);border-radius:4px}
+.character-reading-page .class-mastery-grid p{margin:4px 0 0}
+.character-reading-page .page-owner-summary{align-items:center;justify-content:space-between;gap:10px;padding-bottom:12px}
+@media(max-width:780px){.character-reading-page .page-owner-content>.grid{grid-template-columns:minmax(0,1fr)}.character-reading-page .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@container(max-width:620px){.character-reading-page .page-owner-content>.grid{grid-template-columns:minmax(0,1fr)}}
+@container(max-width:420px){
+  .character-reading-page .stat-grid{grid-template-columns:minmax(0,1fr)}
+  .character-reading-page .stat-allocate{display:grid;gap:6px;width:100%;min-width:0}
+  .character-reading-page .stat-allocate input,.character-reading-page .stat-allocate button{width:100%!important;min-width:0}
+}
+.character-reading-page .class-mastery-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}

@@ -197,7 +197,7 @@
   function accountItemsView(){const rows=[{id:'__potion__',name:'治療藥水'},...SHOP.map(x=>({id:x.id,name:x.name}))];return heading('ITEMS / 帳號共用','道具庫存')+`<section class="panel"><div class="account-sell-list">${rows.map(x=>{const n=itemCount(x.id);return `<div class="account-sell-row"><b>${esc(x.name)}</b><span>× ${n.toLocaleString()}</span><span class="small">${itemSellPrice(x.id)} 金幣／件</span><div class="sell-controls" data-item-sell="${esc(x.id)}"><input type="number" min="1" max="${n}" value="1" ${n<1?'disabled':''}><button onclick="sellItemFromControl(this)" ${n<1?'disabled':''}>賣出</button><button onclick="sellAllItemFromControl(this)" ${n<1?'disabled':''}>全部</button></div></div>`;}).join('')}</div></section>`;}
   globalThis.accountItemsView=accountItemsView;
 
-  inventoryTabs=function(){return `<div class="actions inventory-category-tabs">${[['equipment','裝備'],['materials','材料'],['items','道具'],['gems','寶石']].map(([id,name])=>`<button class="${inventoryCategory===id?'primary':''}" onclick="setInventoryCategory('${id}')">${name}</button>`).join('')}<button onclick="showTestCodes()">兌換碼</button></div>`;};
+  inventoryTabs=function(){return `<div class="actions inventory-category-tabs">${[['equipment','裝備'],['materials','材料'],['items','道具']].map(([id,name])=>`<button class="${inventoryCategory===id?'primary':''}" onclick="setInventoryCategory('${id}')">${name}</button>`).join('')}<button onclick="showTestCodes()">兌換碼</button></div>`;};
   const economyEquipmentViewBase=equipmentView;
   equipmentView=function(){if(inventoryCategory==='items')return inventoryTabs()+accountItemsView();return economyEquipmentViewBase();};
 
