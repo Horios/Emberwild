@@ -58,8 +58,16 @@ jobs:
           cp preview-source/index.html _site/preview/index.html
           cp -R production/css production/js production/data _site/
           cp -R preview-source/css preview-source/js preview-source/data _site/preview/
-          python3 - <<'PY'
+          PRODUCTION_COMMIT=$(git -C production rev-parse HEAD)
+          PREVIEW_COMMIT=$(git -C preview-source rev-parse HEAD)
+          PRODUCTION_BALANCE=$(git -C production rev-parse HEAD:data/balance.json)
+          PREVIEW_BALANCE=$(git -C preview-source rev-parse HEAD:data/balance.json)
+          export PRODUCTION_COMMIT PREVIEW_COMMIT PRODUCTION_BALANCE PREVIEW_BALANCE
+          python3 - <<'PY' 
           from pathlib import Path
+          import json, os
+          for prefix, branch, env in [("", "main", "PRODUCTION"), ("preview/", "chatgpt-dev", "PREVIEW")]:
+              Path("_site/" + prefix + "data/build.json").write_text(json.dumps({"branch": branch, "commit": os.environ[env + "_COMMIT"], "balanceBlob": os.environ[env + "_BALANCE"]}), encoding="utf-8")
 
           path = Path("_site/preview/index.html")
           html = path.read_text(encoding="utf-8")

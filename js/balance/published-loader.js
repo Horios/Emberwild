@@ -14,7 +14,7 @@
     const key=preview?'emberwild-preview-balance-test-v1':'emberwild-balance-test-v1';
     if(preview){try{if(localStorage.getItem(key+'-published-base')===version){const raw=localStorage.getItem(key);if(raw)globalThis.__EMBERWILD_BALANCE_SOURCE=JSON.parse(raw);}}catch{}}
     for(const node of document.querySelectorAll('script[data-balance-src]')){
-      await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=node.getAttribute('data-balance-src');script.onload=resolve;script.onerror=()=>reject(Error('模組載入失敗：'+script.src));document.body.appendChild(script);});
+      await new Promise((resolve,reject)=>{const script=document.createElement('script');const url=new URL(node.getAttribute('data-balance-src'),location.href);url.searchParams.set('balance-build',String(Date.now()));script.src=url.href;script.onload=resolve;script.onerror=()=>reject(Error('模組載入失敗：'+script.src));document.body.appendChild(script);});
     }
     applyBalanceConfig(globalThis.__EMBERWILD_BALANCE_SOURCE,{persist:false});
     const importBase=importBalanceJSON;
