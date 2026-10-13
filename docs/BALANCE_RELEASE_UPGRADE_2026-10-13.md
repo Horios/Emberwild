@@ -64,7 +64,16 @@ Commit 完成只顯示「資料已提交，等待部署」。Pages 成功必須�
 
 完整回歸實際執行 419 項：418 項通過，1 項無效存檔救援失敗已修正；修正後含該失敗案例的 6 項來源／發布／存檔專項全部通過。沒有尚未修正的測試失敗。App API 授權／rate limit／網路等 9 項安全專項也全部通過。真正網路發布仍待 App 安裝，不能視為已驗收。
 
-待補入 GitHub Pages 的實際部署結果。
+GitHub Actions 的 main push、chatgpt-dev request 及 main dispatch 工作均 completed／success，最終部署工作為 https://github.com/Horios/Emberwild/actions/runs/38356601369 。實際從正式版與 `/preview/` 下載 build.json、balance.json、HTML 與 published-loader.js；兩份 JSON 的 Git blob SHA 都與部署 metadata、對應分支檔案一致，loader 也完全一致。
+
+| 線上版本 | 部署來源 commit | 平衡 JSON blob |
+|---|---|---|
+| main | 0402f4b2b1437a791b30eb0991fd479f77f9b5cf | a40ce39ad28d5dada3a908cce48c756073703c0b |
+| chatgpt-dev | 67897a83a470e4491b874b59497e956f7e1ea05e | 6237267f3fa901fb789b9eba287a5a47da4542a5 |
+
+另以 Chromium 實際開啟上述正式版與 `/preview/` 網址；兩頁 BALANCE_READY 為 true、LOAD_ERROR 為空、published JSON 與遊戲最終 exportableBalance() 語意差異皆為 0，pageerror 也皆為空。測試瀏覽器透過執行環境代理連線，僅針對公開網站在測試 context 忽略代理憑證錯誤，未修改產品的 TLS／認證設定。
+
+上述驗證確認程式整合部署；不代表專用 App 的發布、還原及正式版升級已完成真實網路驗收。
 
 實際測試包括：原有全部設定頁；六輪 30 欄位往返；三輪真實表單／下載／匯入／重載；語意新增／修改／刪除與陣列順序；非法 schema／NaN／Infinity／負值／機率／ID／reference；RSA JWT 與 token 權限；401／403／404／409／422／429／網路錯誤；ticket、空 diff、SHA conflict、non-force commit；歷史還原、新 commit 與正式來源固定；真实瀏覽器＋本機 HTTP UI 流程（GitHub API 使用記憶體 Git fixture）；兩分支資料零差異；正式版讀取測試設計零遺失；舊 cache／玩家設計快照隔離；新 JSON 後 override 失效；未知版本停止啟動；無效存檔復原下載；所有原有玩法回歸。
 
@@ -79,6 +88,16 @@ Commit 完成只顯示「資料已提交，等待部署」。Pages 成功必須�
 | 5 測試版／歷史 | f5b0699f425cdffc3757a5e1d6da3d1291932809 | 273cc820fbf1acde2e009967b87e549aae4667bb |
 | 6 還原 | f4801bccdca29bf4baddbc88b09fe9144432c5a7 | 93fd9d742f6f2b69faa1057a8cbc1d8501e79447 |
 | 7 正式版升級 | e1d6b31a7af2a965f90045436366868293616a27 | fa4e9632111d25a68d7b5aaceef1ec49b8708f4c |
-| 8 回歸修正／資料相容／部署 | 待提交 | 待提交 |
+| 8 回歸修正／資料相容／部署 | 67897a83a470e4491b874b59497e956f7e1ea05e | 481d28f3150db6604658560553471a14b60e05a2 |
 
-這些階段先保存在兩個 `balance-release-upgrade` 分支，避免半完成的 loader／部署配套影響線上遊戲。最終驗證完成後才整合到既有開發分支；正式版只提交必要資料流與部署配套，保留其原數值與其他遊戲差異。
+八階段 checkpoint 保留在兩個 `balance-release-upgrade` 分支。公開遊戲已整合到 chatgpt-dev（67897a83a470e4491b874b59497e956f7e1ea05e）；正式版僅整合必要資料流與部署配套（0402f4b2b1437a791b30eb0991fd479f77f9b5cf），保留其原數值与其他遊戲差異。私有平衡器 main／chatgpt-dev 都已整合到 481d28f3150db6604658560553471a14b60e05a2。本報告後續文件提交不改變上述階段 checkpoint。
+
+## GitHub 授權核對（2026-10-13）
+
+即時 connector 檢查登入帳號為 Horios；公開 Emberwild 與私有 Emberwild-Balance 都能讀取，Repository metadata 回報帳號 pull／push／admin 等權限，Emberwild collaborator permission 為 admin。這是帳號權限資訊，不代表 connector 具備所有 administration API 能力。既有提交成功也已確認 connector 的程式提交可用。
+
+ChatGPT GitHub App 安裝目前 repository_selection 為 all；未擅自調整使用者的安裝範圍。專用平衡發布 App 的目標範圍仍只限 Horios/Emberwild，服務要求 Contents write 與 Actions read。
+
+本機服務目前沒有設定檔，也没有設定 App ID、Installation ID 或私鑰路徑。不能從這個結果判定使用者帳號下完全沒有其他 GitHub App；只能確認本服務尚未配置其授權。ChatGPT connector 的登入無法交付給本機服務使用，也不把 connector 憑證寫入前端或 repository。
+
+啟用與驗收剩餘發布操作需依私有平衡器 PUBLISHING.md 完成一次性 App 安裝與本機設定。私鑰存放於 repository 以外，勿透過聊天或前端傳送。此後才能實測 App 建立 commit、preview 讀取該次發布、歷史還原產生新 commit、將該測試版來源升級至 main 等完整真實流程。
