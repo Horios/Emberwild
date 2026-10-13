@@ -147,12 +147,12 @@ function inventoryGearDetail(g){
   const wearer=gearWearer(g.id),worn=!!wearer,draft=inlineAffixDrafts.has(affixDraftKey(g)),locked=!!g.locked;
   return `<div class="inventory-detail-pane">
     <div class="inventory-detail-heading">
-      <div><div class="eyebrow">EQUIPMENT DETAIL / 裝備詳細</div><h2>${equipmentNameHTML(g)}</h2></div>
+      <div><h2>${equipmentNameHTML(g)}</h2></div>
       <span class="tag">${qualityTag(g)}${locked?' · 已鎖定':''}</span>
     </div>
     <div class="inventory-detail-meta">${gearWearableJobsText(g)} · ${CLASS_GEAR[g.job][g.slot]} · LV ${gearRequiredLevelByTier(g.tier)}${worn?' · 目前由 '+esc(characterName(wearer))+' 穿戴':''}</div>
     <section class="inventory-detail-section"><h3>裝備能力</h3><p class="inventory-detail-stats equipment-total-summary">${globalThis.equipmentTotalSummaryHTML(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g)}</section>
-    <section class="inventory-detail-section"><h3>操作</h3><div class="actions inventory-detail-actions"><button onclick="enhance('${g.id}')" ${g.plus>=RULES.enhanceMax||!canEnhance(g)?'disabled':''}>${g.plus>=RULES.enhanceMax?'已達 +'+RULES.enhanceMax:'強化 +'+(g.plus+1)+'／'+upgradeCostText(g)}</button><button onclick="reroll('${g.id}')" ${(()=>{const c=rerollCostFor(g);return draft||state.gold<c.gold||state.ore<c.ore;})()?'disabled':''}>洗鍊／${rerollCostFor(g).gold} 金幣＋${rerollCostFor(g).ore} 鍛鐵</button><button onclick="toggleGearLock('${g.id}')">${locked?'解除鎖定':'鎖定'}</button><button class="danger" onclick="salvage('${g.id}')" ${worn||draft||locked?'disabled':''}>分解</button></div></section>
+    <section class="inventory-detail-section"><div class="actions inventory-detail-actions"><button onclick="enhance('${g.id}')" ${g.plus>=RULES.enhanceMax||!canEnhance(g)?'disabled':''}>${g.plus>=RULES.enhanceMax?'已達 +'+RULES.enhanceMax:'強化 +'+(g.plus+1)+'／'+upgradeCostText(g)}</button><button onclick="reroll('${g.id}')" ${(()=>{const c=rerollCostFor(g);return draft||state.gold<c.gold||state.ore<c.ore;})()?'disabled':''}>洗鍊／${rerollCostFor(g).gold} 金幣＋${rerollCostFor(g).ore} 鍛鐵</button><button onclick="toggleGearLock('${g.id}')">${locked?'解除鎖定':'鎖定'}</button><button class="danger" onclick="salvage('${g.id}')" ${worn||draft||locked?'disabled':''}>分解</button></div></section>
     ${inlineAffixComparison(g)}
   </div>`;
 }
@@ -161,7 +161,7 @@ inlineInventoryView=function(){
   if(items.length && !items.some(g=>g.id===inventorySelectedGearId))inventorySelectedGearId=items[0].id;
   if(!items.length)inventorySelectedGearId=null;
   const selected=items.find(g=>g.id===inventorySelectedGearId)||null;
-  return `<section class="panel compact-inventory-panel">${resourceLine()}${gearFilters()}${inventorySortControls()}${bulkSalvageControls()}
+  return `<section class="panel compact-inventory-panel">${resourceLine()}${inventorySortControls()}<div class="inventory-advanced-controls">${gearFilters()}${bulkSalvageControls()}${uiHelp('裝備規則','背包與資源共用。主角可穿戴武器、護甲、副手各一件與兩件飾品；裝備須符合職業限制，武器固定屬性決定普攻屬性。')}</div>
     <div class="inventory-master-detail">
       <section class="inventory-master-pane">
         <div class="inventory-master-heading"><b>裝備列表</b><span class="small">顯示 ${items.length} 件</span></div>

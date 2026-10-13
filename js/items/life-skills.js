@@ -10,6 +10,7 @@
     [MATERIALS.water]:'製作簡易治療藥水的煉金材料，每份配方消耗 1 份。',
     [MATERIALS.bottle]:'製作簡易治療藥水的空瓶，每份配方消耗 1 個。'
   };
+  globalThis.lifeMaterialDescription=name=>DESCRIPTIONS[name]||'';
   const GATHER_TARGETS=[{id:'herb',name:MATERIALS.herb,output:MATERIALS.herb}];
   let gatherTarget='herb';
   const PRODUCTS=[

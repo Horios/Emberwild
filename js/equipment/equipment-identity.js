@@ -360,7 +360,7 @@
   function effectText(effect){
     if(!effect)return '無效果';
     const key=effect.key,value=effect.value,label=EFFECT_LABELS[key]||key;
-    if(key==='basicElement')return '此武器攻擊屬性：'+(ELEMENTS[value]||value)+'（固定屬性 basicElement）';
+    if(key==='basicElement')return '此武器攻擊屬性：'+(ELEMENTS[value]||value);
     if(key==='basicAdvanceNextRound')return '普攻後，下回合行動往前 '+Math.round(Number(value)||0)+' 格';
     if(key==='allCooldownReduction'||key==='skillCooldownReduction')return (key==='skillCooldownReduction'?'核心技能 '+((effect.skill??0)+1)+' ':'')+label+' −'+Number(value)+' 回合';
     if(['flatAttack','flatHp','flatDefense','pierce','speed'].includes(key))return label+' '+(Number(value)>=0?'+':'')+Number(value);

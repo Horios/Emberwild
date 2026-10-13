@@ -163,6 +163,15 @@
   globalThis.useInventoryItem=function(id,key){const item=SHOP.find(x=>x.id===id),h=partyMember(key);if(!item||!h)return;if(id==='power_tier_reroll'){setTab('forge');toast('請選擇裝備後使用'+item.name);return;}if(typeof isHealPotion==='function'&&isHealPotion(item)){openHealingSettings();return;}if(inventoryItemCount(item)<1)return toast('道具數量不足');pageHeroSelection.set('equipment',key);withHero(h,()=>useSupply(id));render();};
   globalThis.sellInventoryItem=function(id,qty){const item=SHOP.find(x=>x.id===id);if(!item)return;const have=inventoryItemCount(item),n=Math.max(0,Math.min(have,Math.floor(Number(qty)||0)));if(n<1)return toast('請輸入要販售的數量');const price=itemSellPrice(id),gold=state.gold;setInventoryItemCount(item,have-n);state.gold+=price*n;if(!save()){setInventoryItemCount(item,have);state.gold=gold;return;}render();toast(`已販售 ${item.name} ×${n}，獲得 ${price*n} 金幣`);};
   globalThis.sellInventoryItemFromButton=function(btn,id,all=false){const item=SHOP.find(x=>x.id===id);if(!item)return;const row=btn.closest('[data-inventory-item]'),input=row?.querySelector('input[data-sell-qty]'),qty=all?inventoryItemCount(item):input?.value;sellInventoryItem(id,qty);};
+  globalThis.inventoryMaterialIcon=function(name){
+    const glyphs={'鍛鐵':['anvil','#a9c98b'],'粉塵':['sparkles','#dfbe70'],'以太鍛鐵':['anvil','#9c9df2'],'紅色草':['leaf','#ed7774'],'紅色草泥':['flask-conical','#ed7774'],'小蟲':['bug','#a9c98b'],'清水':['droplet','#87c5e7'],'藥水瓶':['flask-round','#c6d5df'],'升級卷軸':['scroll-text','#dfbe70']};
+    const [key,tone]=glyphs[name]||[/牙|骨/.test(name)?'bone':/翼|羽/.test(name)?'feather':/晶|石/.test(name)?'gem':/齒輪/.test(name)?'cog':'package','#a9c98b'];
+    return `<span class="inventory-item-icon" style="color:${tone}" aria-hidden="true">${__EMBERWILD_SKILL_ICONS.svgFor('lucide:'+key,[],{size:26})}</span>`;
+  };
+  globalThis.inventoryMaterialDescription=function(name){
+    const descriptions={'鍛鐵':'裝備強化與洗鍊材料。','粉塵':'裝備洗鍊與寶石合成材料。','以太鍛鐵':'高階裝備強化材料。','升級卷軸':'使用後提升角色 1 級。'};
+    return globalThis.lifeMaterialDescription?.(name)||descriptions[name]||'共用材料。';
+  };
   function inventoryItemIcon(item){
     const ticket=EmberwildTimedBoosts.isItem(item),bottle=['healPotion','imbue','ward','elementTonic'].includes(item.type);
     const key=ticket?'ticket':bottle?'flask-round':item.type==='gearTierReroll'?'sparkles':'package';

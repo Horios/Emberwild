@@ -39,3 +39,12 @@
 .layout>main:has(.account-item-list){overflow-y:auto;scrollbar-gutter:stable}
 .layout>main:has(.account-item-list)>.panel{flex:0 0 auto;overflow:visible;min-height:0}
 .account-item-desc .detail{white-space:normal;overflow:visible;text-overflow:clip}
+
+.account-material-row{grid-template-columns:minmax(180px,1.3fr) minmax(180px,2fr) 78px minmax(190px,1.4fr);padding:8px 9px;border:1px solid var(--line);background:rgba(255,255,255,.015);border-radius:4px;min-height:70px;gap:10px}
+.account-material-row .sell-controls{display:grid;grid-template-columns:minmax(56px,70px) auto auto;gap:5px}
+.account-material-row .sell-controls input{width:100%;min-width:0;height:28px;font-size:11px}
+.account-material-row .sell-controls button{padding:3px 7px;height:28px;font-size:11px}
+.layout>main:has(.account-material-row){overflow-y:auto;scrollbar-gutter:stable}
+.layout>main:has(.account-material-row)>.panel{flex:0 0 auto;overflow:visible;min-height:0}
+@media(max-width:1050px){.account-material-row{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 68px}.account-material-row .sell-controls{grid-column:1/-1;justify-content:end}}
+@media(max-width:680px){.account-material-row{grid-template-columns:minmax(0,1fr) auto}.account-material-row .account-item-desc{grid-column:1/-1}.account-material-row .account-item-count{grid-column:2;grid-row:1}.account-material-row .sell-controls{justify-content:stretch}}
