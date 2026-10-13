@@ -28,9 +28,9 @@
   salvageAll=()=>dispose(state.bag.filter(g=>!MToken(g)&&gearQualityRank(g)===0&&(g.plus||0)===0&&!g.affix.length&&g.boss===undefined).map(g=>g.id),'salvage',false);
   const MToken=g=>EmberwildTokens.isToken(g);
   globalThis.quickDisposeJournalGear=function(q,mode){
-    if(!party||![0,1].includes(q)||!['salvage','sell'].includes(mode))return false;
-    const ok=dispose(state.bag.filter(g=>gearQualityRank(g)===q).map(g=>g.id),mode,true,true);
-    if(!ok)toast('沒有可快速整理的'+AFFIX_RANK[q]+'裝備，或操作未保存');return ok;
+    if(!party||![0,1].includes(q)||!['salvage','sell'].includes(mode)||typeof globalThis.quickDisposePendingQuality!=='function')return false;
+    const ok=globalThis.quickDisposePendingQuality(q,mode);
+    if(!ok)toast('沒有可快速整理的'+AFFIX_RANK[q]+'待領取裝備，或操作未保存');return ok;
   };
   massSalvageTargets=ids=>state.bag.filter(g=>ids.includes(g.id)&&disposable(g));
   requestMassSalvage=q=>Number.isInteger(q)&&q>=0&&q<=3&&dispose(state.bag.filter(g=>!MToken(g)&&gearQualityRank(g)===q).map(g=>g.id),'salvage');
