@@ -98,7 +98,7 @@ test('Produced materials/potions survive JSON round-trip and cold reload; tasks 
 
 test('Zero-stock potion rows hide, appear after acquisition, and hide again after consumption or selling',()=>{
   const r=game();r.run('for(const item of SHOP){if(isHealPotion(item))setHealPotionCount(item.id,0);else state.consumables[item.id]=0;}');
-  assert.doesNotMatch(r.run('accountItemsView()'),/data-inventory-item="(?:heal_|imbue_|ward_|elementTonic_)/);assert.match(r.run('accountItemsView()'),/data-inventory-item="power_tier_reroll"/);
+  assert.doesNotMatch(r.run('accountItemsView()'),/data-inventory-item="(?:heal_|imbue_|ward_|elementTonic_)/);assert.doesNotMatch(r.run('accountItemsView()'),/data-inventory-item="power_tier_reroll"/);
   r.run('setHealPotionCount("heal_small",1);state.consumables.imbue_fire=1;');
   assert.match(r.run('accountItemsView()'),/data-inventory-item="heal_small"/);assert.match(r.run('accountItemsView()'),/data-inventory-item="imbue_fire"/);
   r.run('sellInventoryItem("heal_small",1);useInventoryItem("imbue_fire",memberKey(playerHero()));');assert.doesNotMatch(r.run('accountItemsView()'),/data-inventory-item="(?:heal_|imbue_|ward_|elementTonic_)/);
@@ -140,7 +140,7 @@ test('Life stock shows uses and quantities and sells through the shared inventor
   assert.equal(r.run('state.gold'),gold+9);assert.equal(r.run('materialCount("紅色草")'),1);assert.equal(r.run('materialCount("小蟲")'),0);
   const savedGold=r.run('state.gold');r.run('globalThis.originalSave=save;save=()=>false;sellMaterial("紅色草",1);save=originalSave;');
   assert.equal(r.run('state.gold'),savedGold);assert.equal(r.run('materialCount("紅色草")'),1);
-  const gatherPanel=view.split('<h2>採集</h2>')[1].split('<h2>煉金</h2>')[0];
+  const gatherPanel=view.split('<div class="life-skill-grid">')[1].split('</section>')[0];
   assert.doesNotMatch(gatherPanel,/賣價|尚無用途|後續再新增/);assert.deepEqual(r.errors,[]);
 });
 

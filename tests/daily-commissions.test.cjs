@@ -45,7 +45,7 @@ test('All page renderers remain valid with a companion selected; only actual ite
  const r=game();r.run('party.selected=memberKey(party.members[1]);state=party.members[1];for(const page of ["character","quests","forge","bossCraft","equipment","shop"])pageHeroSelection.set(page,party.selected)');
  for(const v of ['questView','characterView','skillsView','equipmentView','forgeView','bossCraftView','shopView','lifeSkillsView','wornEquipmentView','rosterView','partnerRosterView','guideView','optionsView','mailboxView','achievementsView'])assert.doesNotMatch(r.run(v+'()'),/undefined|NaN/,v);
  for(const v of ['questView','characterView','skillsView','equipmentView','forgeView','bossCraftView','shopView','lifeSkillsView'])assert.doesNotMatch(r.run(v+'()'),/本頁操作角色|selectPageHero\('quests'/,v);
- assert.match(r.run('accountItemsView()'),/使用角色/);assert.match(r.run('bossCraftView()'),/BOSS 裝備職業/);assert.deepEqual(r.errors,[]);
+ assert.doesNotMatch(r.run('accountItemsView()'),/<label>使用角色/);r.run('state.consumables.imbue_fire=1');assert.match(r.run('accountItemsView()'),/<label>使用角色/);assert.match(r.run('bossCraftView()'),/BOSS 裝備職業/);assert.deepEqual(r.errors,[]);
 });
 test('Daily generation covers exploration, gathering, paste and healing potions across dates',()=>{
  const r=game(),sources=new Set();r.run('globalThis.seed=123456;Math.random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}');for(let i=0;i<80;i++){sources.add(r.run('state.board.tasks[0].source'));assert.equal(r.run('validateParty(packParty()).members[0].board.tasks.length'),1);r.advance(86400000);r.run('ensureBoard()');}

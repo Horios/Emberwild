@@ -183,9 +183,43 @@
   function sellMaterialFromControl(btn){const box=btn.closest('[data-material]'),input=box.querySelector('input');sellMaterial(box.dataset.material,input.value);}
   function sellAllMaterialFromControl(btn){const box=btn.closest('[data-material]');sellMaterial(box.dataset.material,materialCount(box.dataset.material));}
   globalThis.sellMaterial=sellMaterial;globalThis.sellMaterialFromControl=sellMaterialFromControl;globalThis.sellAllMaterialFromControl=sellAllMaterialFromControl;
+  const ALCHEMY_MATERIALS=new Set(['紅色草','紅色草泥','藥水瓶','清水']);
+  const ENHANCE_MATERIALS=new Set(['鍛鐵','粉塵','以太鍛鐵','光輝碎塊']);
+  let commonMaterialRegion='all',commonMaterialSort='region';
+  function materialRegions(){
+    const out=new Map(),catalog=new Map(monsterCatalog().map(m=>[m.id,m]));
+    const add=(name,map)=>{if(!out.has(name))out.set(name,new Set());out.get(name).add(map);};
+    for(const rule of GAMEPLAY_SETTINGS.drops?.entries||[]){
+      if(!rule.enabled||!['material','sourceMaterial'].includes(rule.type))continue;
+      for(const id of rule.sources){
+        const m=catalog.get(id);if(!m||m.maxDrops===0||!rule.kinds.some(k=>k===m.kind||m.kind==='normal'&&k==='elite'))continue;
+        rule.chanceByDifficulty.forEach((chance,mode)=>{
+          if(chance<=0)return;
+          add(rule.type==='material'?rule.key:m.kind==='boss'?bossMaterial(m.mapIndex,mode):m.material,m.mapIndex);
+        });
+      }
+    }
+    return out;
+  }
+  globalThis.setCommonMaterialRegion=value=>{if(!['all','other','multiple'].includes(value)&&!MAPS[Number(value)])return;commonMaterialRegion=String(value);render();};
+  globalThis.setCommonMaterialSort=value=>{if(!['region','name','quantity'].includes(value))return;commonMaterialSort=value;render();};
+  globalThis.inventoryMaterialRegions=materialRegions;
   accountMaterialsView=function(){
-    const names=['鍛鐵','粉塵','以太鍛鐵',...Object.keys(state.materials).filter(k=>k!=='以太鍛鐵')],seen=new Set(),entries=[];for(const name of names){if(seen.has(name))continue;seen.add(name);const n=materialCount(name);if(n>0||['鍛鐵','粉塵','以太鍛鐵'].includes(name))entries.push([name,n]);}
-    return heading('MATERIALS / 帳號共用','材料庫存')+`<section class="panel"><div class="account-sell-list">${entries.map(([name,n])=>`<div class="account-sell-row account-material-row"><div class="account-item-main">${globalThis.inventoryMaterialIcon?.(name)||''}<div><b>${esc(name)}</b><span class="small">材料</span></div></div><div class="account-item-desc">${esc(globalThis.inventoryMaterialDescription?.(name)||'')}</div><div class="account-item-count">× ${Number(n).toLocaleString()}<br><span class="small">賣 ${materialSellPrice(name)}</span></div><div class="sell-controls" data-material="${esc(name)}"><input aria-label="${esc(name)}賣出數量" type="number" min="1" max="${n}" value="1" ${n<1?'disabled':''}><button onclick="sellMaterialFromControl(this)" ${n<1?'disabled':''}>賣出</button><button onclick="sellAllMaterialFromControl(this)" ${n<1?'disabled':''}>全部</button></div></div>`).join('')}</div><p class="small">升級卷軸：每個升1級；目前上限30級，通關後60級。請先結束當前遭遇。</p><div class="actions">${party.members.map(h=>`<button onclick="useLevelScroll(${memberKey(h)})" ${!(state.materials['升級卷軸']>0)||h.lv>=levelCap(h)?'disabled':''}>對${esc(characterName(h))}使用 · LV${h.lv}</button>`).join('')}</div></section>`;
+    const names=[...ENHANCE_MATERIALS,...Object.keys(state.materials)],seen=new Set(),entries=[];
+    for(const name of names){if(name==='升級卷軸'||seen.has(name))continue;seen.add(name);const n=materialCount(name);if(n>0||['鍛鐵','粉塵','以太鍛鐵'].includes(name))entries.push({name,n});}
+    const sources=materialRegions(),regions=name=>[...(sources.get(name)||[])].sort((a,b)=>a-b);
+    const sourceText=name=>{const maps=regions(name);return maps.length?maps.map(i=>MAPS[i].name).join('、'):name==='小蟲'?'採集取得':'非地區來源／未指定';};
+    function row({name,n},group){const maps=regions(name),source=sourceText(name);return `<div class="account-sell-row account-material-row"><div class="account-item-main">${globalThis.inventoryMaterialIcon?.(name)||''}<div><b>${esc(name)}</b><span class="small">${group==='common'?(maps.length>1?'多地區掉落':maps.length?'地區材料':'其他材料'):group==='alchemy'?'煉金材料':'強化材料'}</span></div></div><div class="account-item-desc">${esc(globalThis.inventoryMaterialDescription?.(name)||'')}${group==='common'?`<span class="detail material-source" title="${esc(source)}">取得地區：${maps.length>2?'多地區（'+maps.length+' 處）':esc(source)}</span>`:''}</div><div class="account-item-count">× ${Number(n).toLocaleString()}<br><span class="small">賣價 1 個 ${materialSellPrice(name)} 金幣</span></div><div class="sell-controls" data-material="${esc(name)}"><input aria-label="${esc(name)}賣出數量" type="number" min="1" max="${n}" value="1" ${n<1?'disabled':''}><button onclick="sellMaterialFromControl(this)" ${n<1?'disabled':''}>賣出</button><button onclick="sellAllMaterialFromControl(this)" ${n<1?'disabled':''}>全部</button></div></div>`;}
+    const controls=`<div class="material-region-controls"><label>取得地區 <select aria-label="共用材料取得地區" onchange="setCommonMaterialRegion(this.value)"><option value="all" ${commonMaterialRegion==='all'?'selected':''}>全部地區</option><option value="multiple" ${commonMaterialRegion==='multiple'?'selected':''}>跨地區掉落</option><option value="other" ${commonMaterialRegion==='other'?'selected':''}>非地區來源／未指定</option>${MAPS.map((m,i)=>`<option value="${i}" ${commonMaterialRegion===String(i)?'selected':''}>${esc(m.name)}</option>`).join('')}</select></label><label>排序 <select aria-label="共用材料排序" onchange="setCommonMaterialSort(this.value)">${[['region','取得地區'],['name','名稱'],['quantity','數量']].map(([key,label])=>`<option value="${key}" ${commonMaterialSort===key?'selected':''}>${label}</option>`).join('')}</select></label></div>`;
+    const groups=[['common','共用材料'],['alchemy','煉金材料'],['enhance','強化材料']];
+    return heading('MATERIALS / 帳號共用','材料庫存')+`<div class="account-material-groups">${groups.map(([group,title])=>{
+      let list=entries.filter(({name})=>group==='alchemy'?ALCHEMY_MATERIALS.has(name):group==='enhance'?ENHANCE_MATERIALS.has(name):!ALCHEMY_MATERIALS.has(name)&&!ENHANCE_MATERIALS.has(name));
+      if(group==='common'){
+        list=list.filter(({name})=>commonMaterialRegion==='all'||commonMaterialRegion==='other'&&!regions(name).length||commonMaterialRegion==='multiple'&&regions(name).length>1||regions(name).includes(Number(commonMaterialRegion)));
+        list.sort((a,b)=>(commonMaterialSort==='region'?(regions(a.name)[0]??Infinity)-(regions(b.name)[0]??Infinity):commonMaterialSort==='quantity'?b.n-a.n:0)||a.name.localeCompare(b.name,'zh-Hant'));
+      }
+      return `<section class="panel material-group" data-material-group="${group}"><div class="row"><h2>${title}</h2><span class="small">${list.length} 種</span></div>${group==='common'?controls:''}<div class="account-sell-list">${list.map(item=>row(item,group)).join('')||'<p class="empty">沒有符合條件的材料。</p>'}</div></section>`;
+    }).join('')}</div>`;
   };
 
   function itemCount(id){return id==='__potion__'?state.potions:(state.consumables[id]||0);}

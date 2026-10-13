@@ -48,3 +48,37 @@
 .layout>main:has(.account-material-row)>.panel{flex:0 0 auto;overflow:visible;min-height:0}
 @media(max-width:1050px){.account-material-row{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 68px}.account-material-row .sell-controls{grid-column:1/-1;justify-content:end}}
 @media(max-width:680px){.account-material-row{grid-template-columns:minmax(0,1fr) auto}.account-material-row .account-item-desc{grid-column:1/-1}.account-material-row .account-item-count{grid-column:2;grid-row:1}.account-material-row .sell-controls{justify-content:stretch}}
+
+.account-material-groups{flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable;display:grid;align-content:start;grid-auto-rows:max-content;gap:12px}
+.material-group{min-width:0;height:auto;max-height:none;overflow:visible;padding:12px}
+.material-group h2{font-size:16px;margin:0}
+.material-group>.row{margin-bottom:8px}
+.material-region-controls{display:flex;flex-wrap:wrap;gap:8px 16px;margin:8px 0 12px}
+.material-region-controls label{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;font-size:12px;color:var(--muted)}
+.material-region-controls select{font-size:12px;padding:5px 8px;max-width:100%;min-width:0}
+.material-source{color:var(--muted)!important}
+.account-item-count .small{white-space:normal;display:block;line-height:1.5}
+.shop-product-name.account-item-main{display:flex;align-items:center;gap:10px}
+.shop-product-name.account-item-main>div{min-width:0}
+.shop-product-name.account-item-main b{display:block;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.shop-product-name.account-item-main .small{display:block;margin-top:3px;font-size:11px}
+.shop-product-row .inventory-item-icon,.shop-product-row .skill-gem-icon{flex:0 0 32px}
+@media(max-width:680px){.material-group{padding:10px}.material-region-controls{gap:8px}.material-region-controls label{width:100%}.shop-product-name.account-item-main{gap:6px}}
+
+.account-material-row{grid-template-columns:minmax(170px,1.2fr) minmax(170px,2fr) 112px minmax(190px,1.4fr)}
+.account-item-row{grid-template-columns:minmax(170px,1.2fr) minmax(170px,2fr) 112px minmax(250px,1.4fr)}
+@media(max-width:1050px){.account-material-row,.account-item-row{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 112px}}
+@media(max-width:680px){.account-material-row,.account-item-row{grid-template-columns:minmax(0,1fr) 112px}}
+
+.account-material-groups,.shop-catalog-scroll{container-type:inline-size}
+.layout>main:has(.account-item-list)>.panel{container-type:inline-size}
+@container(max-width:400px){
+  .account-material-row,.account-item-row{grid-template-columns:minmax(0,1fr)}
+  .account-material-row .account-item-count,.account-item-row .account-item-count{grid-column:1;grid-row:auto;text-align:left}
+  .account-material-row .account-item-desc,.account-item-row .account-item-desc{grid-column:1}
+  .account-material-row .sell-controls,.account-item-row .account-item-actions{grid-column:1;display:flex;flex-wrap:wrap;justify-content:flex-start}
+  .account-material-row .sell-controls input,.account-item-row .account-item-actions input{width:60px;min-width:0}
+  .account-material-row .sell-controls button,.account-item-row .account-item-actions button{max-width:100%;width:auto!important;white-space:normal;height:auto}
+  .shop-product-row{grid-template-columns:minmax(0,1fr)}
+  .shop-product-row .shop-product-meta,.shop-product-row .shop-product-copy,.shop-product-row>button,.shop-product-row>.actions{grid-column:1;grid-row:auto;text-align:left}
+}
