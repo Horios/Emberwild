@@ -1,4 +1,5 @@
 name: Deploy production and preview
+run-name: 'Pages · ${{ github.event.inputs.preview_commit || github.sha }}'
 
 on:
   push:
@@ -6,6 +7,11 @@ on:
       - main
       - chatgpt-dev
   workflow_dispatch:
+    inputs:
+      preview_commit:
+        description: Preview commit requesting this deployment
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -25,7 +31,7 @@ jobs:
       - name: Request Pages deployment from main context
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run deploy-preview.yml --ref main --repo "$GITHUB_REPOSITORY"
+        run: gh workflow run deploy-preview.yml --ref main --repo "$GITHUB_REPOSITORY" --field preview_commit="$GITHUB_SHA"
 
   deploy:
     if: github.ref == 'refs/heads/main'
@@ -56,10 +62,18 @@ jobs:
           mkdir -p _site/preview
           cp production/index.html _site/index.html
           cp preview-source/index.html _site/preview/index.html
-          cp -R production/css production/js _site/
-          cp -R preview-source/css preview-source/js _site/preview/
+          cp -R production/css production/js production/data _site/
+          cp -R preview-source/css preview-source/js preview-source/data _site/preview/
+          PRODUCTION_COMMIT=$(git -C production rev-parse HEAD)
+          PREVIEW_COMMIT=$(git -C preview-source rev-parse HEAD)
+          PRODUCTION_BALANCE=$(git -C production rev-parse HEAD:data/balance.json)
+          PREVIEW_BALANCE=$(git -C preview-source rev-parse HEAD:data/balance.json)
+          export PRODUCTION_COMMIT PREVIEW_COMMIT PRODUCTION_BALANCE PREVIEW_BALANCE
           python3 - <<'PY'
           from pathlib import Path
+          import json, os
+          for prefix, branch, env in [("", "main", "PRODUCTION"), ("preview/", "chatgpt-dev", "PREVIEW")]:
+              Path("_site/" + prefix + "data/build.json").write_text(json.dumps({"branch": branch, "commit": os.environ[env + "_COMMIT"], "balanceBlob": os.environ[env + "_BALANCE"]}), encoding="utf-8")
 
           path = Path("_site/preview/index.html")
           html = path.read_text(encoding="utf-8")

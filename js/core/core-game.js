@@ -1,4 +1,12 @@
 'use strict';
+// Published data is supplied before any runtime module or player save loads.
+// Legacy browser balance caches never override a published build implicitly.
+function balanceSourceText(){
+  if(globalThis.__EMBERWILD_BALANCE_SOURCE)return JSON.stringify(globalThis.__EMBERWILD_BALANCE_SOURCE);
+  return localStorage.getItem(BALANCE_KEY); // test harness / old offline HTML only
+}
+
+
 function GS(path,fallback){
   let cur=globalThis.__EMBERWILD_GAMEPLAY_SETTINGS;
   if(!cur)return fallback;
@@ -1719,7 +1727,7 @@ function prepareBalanceForBootstrap(input){
   return copy;
 }
 try{
-  const savedBalance=localStorage.getItem(BALANCE_KEY);
+  const savedBalance=balanceSourceText();
   if(savedBalance)applyBalanceConfig(prepareBalanceForBootstrap(JSON.parse(savedBalance)),{persist:false});
 }catch(e){console.warn('早期測試設定載入失敗，保留原資料並等待後續模組重試',e);}
 
@@ -1739,7 +1747,7 @@ try{
     console.warn('存檔使用尚未載入的測試裝備類型，等待完整模組或測試 JSON 後重試',e);
   }else toast('存檔未能載入：'+message+'；將在完整模組載入後再重試。');
 }
-render();window.emberwildBootComplete=true;timer=setInterval(()=>tick(),50);setInterval(()=>save(),5000);window.addEventListener('beforeunload',()=>save());
+render();window.emberwildBootComplete=true;timer=setInterval(()=>{if(!globalThis.__EMBERWILD_BALANCE_SOURCE||globalThis.__EMBERWILD_BALANCE_READY)tick();},50);setInterval(()=>{if(!globalThis.__EMBERWILD_BALANCE_SOURCE||globalThis.__EMBERWILD_BALANCE_READY)save();},5000);window.addEventListener('beforeunload',()=>{if(!globalThis.__EMBERWILD_BALANCE_SOURCE||globalThis.__EMBERWILD_BALANCE_READY)save();});
 
 /* Unified equipment quality: equipment itself has no rarity; quality comes from highest affix rank. */
 function gearQualityRank(g){return Array.isArray(g.affix)&&g.affix.length?Math.max(...g.affix.map(a=>Math.max(0,Math.min(3,Number(a.rank)||0)))):0;}

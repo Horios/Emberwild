@@ -180,7 +180,7 @@
     return out;
   }
 
-  let EQUIPMENT_POWER=normalizePower((()=>{try{return JSON.parse(localStorage.getItem(BALANCE_KEY)||'null')?.equipmentPowerSystem;}catch{return null;}})());
+  let EQUIPMENT_POWER=normalizePower((()=>{try{return JSON.parse(balanceSourceText()||'null')?.equipmentPowerSystem;}catch{return null;}})());
   globalThis.__EMBERWILD_EQUIPMENT_POWER=EQUIPMENT_POWER;
 
   function normalizeBaseFormsV2(){
@@ -710,7 +710,7 @@
   }
 
   try{
-    const raw=localStorage.getItem(BALANCE_KEY);
+    const raw=balanceSourceText();
     if(raw){const saved=JSON.parse(raw);if(saved?.equipmentPowerSystem)applyBalanceConfig(saved,{persist:false});}
   }catch(e){console.warn('裝備前綴／後綴設定載入失敗，使用內建設定',e);}
 

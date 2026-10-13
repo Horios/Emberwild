@@ -89,6 +89,7 @@
     lastPlayTick=now;
   }
   save=function(show=false){
+    if(globalThis.__EMBERWILD_BALANCE_SOURCE&&!globalThis.__EMBERWILD_BALANCE_READY)return true;
     if(titleOpen&&!allowTitleSave){if(show)toast('請先選擇存檔欄位');return;}
     tallyPlayTime();
     const result=gameSave(show);

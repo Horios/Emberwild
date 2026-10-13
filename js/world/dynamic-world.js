@@ -233,7 +233,7 @@
   exportableBalance=function(){const out=worldExportBase();out.balanceSettings=cloneGameplaySettings(GAMEPLAY_SETTINGS);out.notes=[...(out.notes||[]),'maps.catalog.mapType 可為 normal / final；final 地圖為固定關卡編成，必須有 1 名 final 首領，並可配置 normal 小怪。','maps.catalog.progressionGate 決定哪一張 final 地圖負責解除通關前等級上限；必須恰好一張。','普通怪以 monsters.catalog.mapIndex 分配；final 地圖使用 stageCount / stageElite / stageOrder 決定小怪數量、型態與集火隊列。'];return out;};
 
   try{
-    const saved=localStorage.getItem(BALANCE_KEY);if(saved){const parsed=JSON.parse(saved);if(parsed?.balanceSettings)GAMEPLAY_SETTINGS=normalizeGameplaySettings(parsed.balanceSettings);}else GAMEPLAY_SETTINGS=normalizeGameplaySettings(GAMEPLAY_SETTINGS);
+    const saved=balanceSourceText();if(saved){const parsed=JSON.parse(saved);if(parsed?.balanceSettings)GAMEPLAY_SETTINGS=normalizeGameplaySettings(parsed.balanceSettings);}else GAMEPLAY_SETTINGS=normalizeGameplaySettings(GAMEPLAY_SETTINGS);
     globalThis.__EMBERWILD_GAMEPLAY_SETTINGS=GAMEPLAY_SETTINGS;applyGameplaySettingsSideEffects();
   }catch(e){console.warn('地圖／怪物動態設定初始化失敗，使用目前可用設定',e);GAMEPLAY_SETTINGS=normalizeGameplaySettings(GAMEPLAY_SETTINGS_DEFAULTS);globalThis.__EMBERWILD_GAMEPLAY_SETTINGS=GAMEPLAY_SETTINGS;applyGameplaySettingsSideEffects();}
   if(state)render();

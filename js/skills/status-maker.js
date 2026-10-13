@@ -329,7 +329,7 @@ if(typeof resetBalanceJSON==='function'){
 }
 
 // A saved balance file may have been loaded by earlier compatibility layers before this extension installed.
-try{const saved=JSON.parse(localStorage.getItem(BALANCE_KEY)||'null');if(saved?.schema===BALANCE_SCHEMA){statusDefinitions=normalizeStatusList(saved.statusDefinitions);attachStatusSkillExtras(saved);}}catch(e){console.warn('自訂狀態資料還原失敗',e);}
+try{const saved=JSON.parse(balanceSourceText()||'null');if(saved?.schema===BALANCE_SCHEMA){statusDefinitions=normalizeStatusList(saved.statusDefinitions);attachStatusSkillExtras(saved);}}catch(e){console.warn('自訂狀態資料還原失敗',e);}
 
 
 /* ADVANCED_COUNTED_STATUS_EXTENSION */

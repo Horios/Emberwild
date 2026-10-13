@@ -161,13 +161,13 @@
     }
   };
   const resetBalanceBase=resetBalanceJSON;
-  resetBalanceJSON=function(){
+  resetBalanceJSON=function(publishedDefaults){
     if(party&&!safe())return false;capture();
     const before=exportableBalance(),oldBuild=build()?copy(build()):null,cache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
     const previousMarket=party?.market===undefined?undefined:copy(party.market);
     const vitals=party?.members.map(h=>({hp:h.hp,shield:h.shield,potion:h.healPotionCooldownRemaining||0})),actors=copy(actorCooldowns),supports=copy(supportCooldowns),clock=partyClock;
     try{
-      suppressSave=true;resettingBalance=true;const out=resetBalanceBase(),d=M.normalizeDocument(exportableBalance());
+      suppressSave=true;resettingBalance=true;const out=publishedDefaults?(applyBalanceConfig(publishedDefaults,{persist:false}),localStorage.removeItem(BALANCE_KEY),true):resetBalanceBase(),d=M.normalizeDocument(exportableBalance());
       if(oldBuild){party.buildSystem=oldBuild;apply(plan());}
       resettingBalance=false;suppressSave=previousSuppress;applyBalanceConfig(d,{persist:false});return out;
     }catch(e){
@@ -197,7 +197,7 @@
   globalThis.__EMBERWILD_TEAMS={build,plan,player,capture,apply,budgets,costs,busy,safe,valid,refreshUnlocks,unlockMissing,unlockSummary,coreRule,supportRule,settings:()=>copy(cfg),validateBuild,resetBattleState};
   // Read the exact boot bytes after all late validators are installed.
   const boot=globalThis.__EMBERWILD_TEAM_BOOT_RAW;
-  try{const d=M.normalizeDocument(JSON.parse(localStorage.getItem(BALANCE_KEY)||'null')||baseExport());applyRules(d);Object.assign(GAMEPLAY_SETTINGS.progression.starting,d.balanceSettings.progression.starting);Object.assign(GAMEPLAY_SETTINGS.progression.levelRewards,d.balanceSettings.progression.levelRewards);GAMEPLAY_SETTINGS.meta.teamBuildVersion=M.VERSION;
+  try{const d=M.normalizeDocument(JSON.parse(balanceSourceText()||'null')||baseExport());applyRules(d);Object.assign(GAMEPLAY_SETTINGS.progression.starting,d.balanceSettings.progression.starting);Object.assign(GAMEPLAY_SETTINGS.progression.levelRewards,d.balanceSettings.progression.levelRewards);GAMEPLAY_SETTINGS.meta.teamBuildVersion=M.VERSION;
     if(boot)loadParty(JSON.parse(boot));else if(party){migrate();apply(plan());}
     globalThis.__EMBERWILD_TEAM_READY=true;delete globalThis.__EMBERWILD_TEAM_BOOT_RAW;if(party)render();
   }catch(e){globalThis.__EMBERWILD_TEAM_READY=true;globalThis.__EMBERWILD_BOOT_SAVE_ERROR=e.message;console.warn('隊伍方案載入失敗；原始存檔保留',e);if(boot){state=null;party=null;globalThis.__EMBERWILD_BOOT_SAVE_RAW=boot;}render();}

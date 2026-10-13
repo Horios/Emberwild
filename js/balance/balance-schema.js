@@ -9,7 +9,7 @@ function validateMonsterDropDynamicInput(input){
     const ids=new Set(),elements=new Set(Object.keys(ELEMENTS)),races=new Set(Object.keys(RACES)),kinds=new Set(['normal','boss','final']);
     for(const [i,m] of cat.entries()){
       if(!m||typeof m.id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(m.id)||ids.has(m.id))throw Error('怪物 ID 無效或重複：'+i);ids.add(m.id);
-      if(typeof m.name!=='string'||!m.name.trim()||!Number.isInteger(m.mapIndex)||m.mapIndex<0||m.mapIndex>=MAPS.length||!kinds.has(m.kind)||typeof m.material!=='string'||!m.material.trim()||!elements.has(m.element)||!races.has(m.race)||!Number.isInteger(m.maxDrops)||m.maxDrops<0||m.maxDrops>100)throw Error('怪物設計資料無效：'+m.id);
+      if(typeof m.name!=='string'||!m.name.trim()||!Number.isInteger(m.mapIndex)||m.mapIndex<0||m.mapIndex>=(bs.maps?.catalog?.length??MAPS.length)||!kinds.has(m.kind)||typeof m.material!=='string'||!m.material.trim()||!elements.has(m.element)||!races.has(m.race)||!Number.isInteger(m.maxDrops)||m.maxDrops<0||m.maxDrops>100)throw Error('怪物設計資料無效：'+m.id);
       const expected=(bs.maps?.catalog?.[m.mapIndex]?.mapType==='final'||(!bs.maps?.catalog&&m.mapIndex===6))?'final':'boss';
       if(m.kind!=='normal'&&m.kind!==expected)throw Error('怪物類型與地圖不相容：'+m.id);
     }
@@ -24,7 +24,7 @@ function validateMonsterDropDynamicInput(input){
       if(typeof d.name!=='string'||!d.name.trim()||typeof d.enabled!=='boolean'||!types.has(d.type)||!Array.isArray(d.kinds)||!d.kinds.length||d.kinds.some(k=>!encKinds.has(k))||!Array.isArray(d.chanceByDifficulty)||d.chanceByDifficulty.length!==3||d.chanceByDifficulty.some(v=>!Number.isFinite(v)||v<0||v>1)||!Number.isInteger(d.quantityMin)||!Number.isInteger(d.quantityMax)||d.quantityMin<1||d.quantityMax<d.quantityMin||d.quantityMax>999||!Array.isArray(d.sources)||!d.sources.length||d.sources.some(id=>!monsterById.has(id)))throw Error('掉落規則資料無效：'+d.id);
       if(d.type==='material'&&(typeof d.key!=='string'||!d.key.trim()))throw Error('材料掉落需要材料名稱：'+d.id);
       if(d.type==='gem'&&d.key!=='random'&&![0,1,2,'0','1','2'].includes(d.key))throw Error('寶石掉落 key 需為 random/0/1/2：'+d.id);
-      if(d.type==='item'&&!SHOP.some(x=>x.id===d.key))throw Error('商店道具掉落 key 無效：'+d.id);
+      if(d.type==='item'&&Array.isArray(input.items)&&!input.items.some(x=>x.id===d.key))throw Error('商店道具掉落 key 無效：'+d.id);
       const ruleKinds=new Set(d.kinds);
       for(const id of d.sources){
         const m=monsterById.get(id),compatible=m.kind==='normal'?['normal','elite']:[m.kind];

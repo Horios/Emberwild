@@ -1,72 +1,73 @@
 <!doctype html><html lang="zh-Hant"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>餘燼荒野 · Emberwild</title><link rel="stylesheet" href="css/base.css"><body><header><a class="brand" href="#"> <span>餘燼荒野<small>EMBERWILD / IDLE RPG · 4.0</small></span></a><span class="chapter">遠征者手札 <b>純文字遠征手札</b></span><div id="utilityNavigation" class="utility-navigation" hidden></div><div id="wallet"></div><button onclick="save(true)">儲存</button><button onclick="exportSave()">匯出存檔 JSON</button><label class="button">匯入存檔<input type="file" accept=".json" onchange="importSave(event)" hidden></label></header><div id="app" style="visibility:hidden"><section class="panel" style="margin:32px"><h1>正在啟動餘燼荒野…</h1><p>若這段文字一直沒有消失，請將 HTML 下載到電腦，再使用 Chrome 或 Edge 開啟；部分檔案預覽不執行遊戲程式。</p></section></div><noscript><p style="padding:24px">目前環境未允許 JavaScript。請下載 HTML 後使用瀏覽器開啟。</p></noscript><div id="toast" role="status"></div><dialog id="modal"></dialog><script data-startup-guard src="js/core/startup-guard.js"></script>
-<script src="js/balance/progression-model.js"></script>
-<script src="js/items/companion-token-model.js"></script>
-<script src="js/character/companion-model.js"></script>
-<script src="js/skills/passive-model.js"></script>
-<script src="js/character/achievement-model.js?v=20261012-utility1"></script>
-<script src="js/skills/companion-skill-model.js"></script>
-<script src="js/character/team-model.js"></script>
-<script src="js/items/timed-boosts.js"></script>
-<script src="js/skills/skill-effect-schema.js"></script>
-<script src="js/world/commission-model.js?v=20261012-daily1"></script>
-<script src="js/core/core-game.js?v=20261012-skills1"></script>
+<script data-balance-src="js/balance/progression-model.js"></script>
+<script data-balance-src="js/items/companion-token-model.js"></script>
+<script data-balance-src="js/character/companion-model.js"></script>
+<script data-balance-src="js/skills/passive-model.js"></script>
+<script data-balance-src="js/character/achievement-model.js?v=20261012-utility1"></script>
+<script data-balance-src="js/skills/companion-skill-model.js"></script>
+<script data-balance-src="js/character/team-model.js"></script>
+<script data-balance-src="js/items/timed-boosts.js"></script>
+<script data-balance-src="js/skills/skill-effect-schema.js"></script>
+<script data-balance-src="js/world/commission-model.js?v=20261012-daily1"></script>
+<script data-balance-src="js/world/quest-design-model.js"></script>
+<script data-balance-src="js/core/core-game.js?v=20261012-skills1"></script>
 <link rel="stylesheet" href="css/text-rarity.css">
-<script src="js/ui/text-rarity-style.js"></script>
+<script data-balance-src="js/ui/text-rarity-style.js"></script>
 <link id="ally-row-readability-fix" rel="stylesheet" href="css/ally-row.css">
 
 <link id="json-description-layout" rel="stylesheet" href="css/json-description.css">
 
 <link id="pending-gear-loot-style" rel="stylesheet" href="css/pending-gear-loot.css">
-<script id="pending-gear-loot-system" src="js/equipment/pending-gear-loot.js"></script>
+<script id="pending-gear-loot-system" data-balance-src="js/equipment/pending-gear-loot.js"></script>
 
-<script id="equipment-stat-source-cleanup" src="js/equipment/equipment-stat-source.js"></script>
+<script id="equipment-stat-source-cleanup" data-balance-src="js/equipment/equipment-stat-source.js"></script>
 
 
 <link id="battle-statistics-style" rel="stylesheet" href="css/battle-statistics.css">
-<script id="battle-statistics-system" src="js/combat/battle-statistics.js"></script>
+<script id="battle-statistics-system" data-balance-src="js/combat/battle-statistics.js"></script>
 
-<script id="action-turn-cooldown-enemy-skills" src="js/combat/action-turn-cooldown.js"></script>
+<script id="action-turn-cooldown-enemy-skills" data-balance-src="js/combat/action-turn-cooldown.js"></script>
 
-<script id="monster-drop-table-system" src="js/world/monster-drop-tables.js"></script>
-<script src="js/balance/balance-schema.js"></script>
-<script src="js/balance/balance-runtime.js"></script>
+<script id="monster-drop-table-system" data-balance-src="js/world/monster-drop-tables.js"></script>
+<script data-balance-src="js/balance/balance-schema.js"></script>
+<script data-balance-src="js/balance/balance-runtime.js"></script>
 
-<script id="ui-text-config-extension" src="js/ui/ui-text-config.js"></script>
+<script id="ui-text-config-extension" data-balance-src="js/ui/ui-text-config.js"></script>
 <link id="economy-inventory-style" rel="stylesheet" href="css/economy-inventory.css">
-<script id="economy-and-salvage-system" src="js/equipment/economy-salvage.js"></script>
+<script id="economy-and-salvage-system" data-balance-src="js/equipment/economy-salvage.js"></script>
 
 
-<script id="dynamic-world-map-monster-system" src="js/world/dynamic-world.js"></script>
+<script id="dynamic-world-map-monster-system" data-balance-src="js/world/dynamic-world.js"></script>
 
-<script id="world-runtime-followup-fixes" src="js/world/world-followup.js"></script>
+<script id="world-runtime-followup-fixes" data-balance-src="js/world/world-followup.js"></script>
 
-<script id="final-map-type-runtime" src="js/world/final-map.js"></script>
+<script id="final-map-type-runtime" data-balance-src="js/world/final-map.js"></script>
 
-<script id="custom-final-stage-runtime" src="js/world/custom-final-stage.js"></script>
+<script id="custom-final-stage-runtime" data-balance-src="js/world/custom-final-stage.js"></script>
 
 
-<script id="manual-boss-challenge-system" src="js/combat/manual-boss.js"></script>
+<script id="manual-boss-challenge-system" data-balance-src="js/combat/manual-boss.js"></script>
 
 
 
 
 <link id="combat-contribution-meter-style" rel="stylesheet" href="css/combat-contribution.css">
-<script id="combat-contribution-meter-system" src="js/combat/combat-contribution.js"></script>
+<script id="combat-contribution-meter-system" data-balance-src="js/combat/combat-contribution.js"></script>
 
-<script id="expedition-ui-tidy-patch" src="js/ui/expedition-ui.js"></script>
-
-
-<script id="expedition-ui-density-followup" src="js/ui/expedition-density.js"></script>
+<script id="expedition-ui-tidy-patch" data-balance-src="js/ui/expedition-ui.js"></script>
 
 
-<script id="expedition-layout-stability-fix" src="js/ui/expedition-layout.js"></script>
+<script id="expedition-ui-density-followup" data-balance-src="js/ui/expedition-density.js"></script>
 
 
-<script id="turn-duration-system" src="js/combat/turn-duration.js"></script>
+<script id="expedition-layout-stability-fix" data-balance-src="js/ui/expedition-layout.js"></script>
+
+
+<script id="turn-duration-system" data-balance-src="js/combat/turn-duration.js"></script>
 
 
 <link id="healing-potion-system-style" rel="stylesheet" href="css/healing-potions.css">
-<script id="healing-potion-system" src="js/items/healing-potions.js"></script>
+<script id="healing-potion-system" data-balance-src="js/items/healing-potions.js"></script>
 
 
 <link id="shop-inventory-overhaul-style" rel="stylesheet" href="css/shop-inventory.css">
@@ -74,100 +75,106 @@
 
 
 <link id="pending-gear-bottom-compact-style" rel="stylesheet" href="css/pending-gear-compact.css">
-<script id="pending-gear-bottom-compact-system" src="js/equipment/pending-gear-compact.js"></script>
+<script id="pending-gear-bottom-compact-system" data-balance-src="js/equipment/pending-gear-compact.js"></script>
 
 
 <link id="skill-tooltip-autoreroll-style" rel="stylesheet" href="css/skill-tooltip-reroll.css">
-<script id="skill-tooltip-autoreroll-system" src="js/skills/skill-tooltip-reroll.js"></script>
+<script id="skill-tooltip-autoreroll-system" data-balance-src="js/skills/skill-tooltip-reroll.js"></script>
 
 
 
 <link id="forge-list-navigation-style" rel="stylesheet" href="css/forge-navigation.css">
-<script id="forge-list-navigation-system" src="js/equipment/forge-navigation.js"></script>
+<script id="forge-list-navigation-system" data-balance-src="js/equipment/forge-navigation.js"></script>
 
 
-<script id="support-debuff-mechanics-v2" src="js/skills/support-debuff.js"></script>
+<script id="support-debuff-mechanics-v2" data-balance-src="js/skills/support-debuff.js"></script>
 <link id="equipment-identity-style" rel="stylesheet" href="css/equipment-identity.css">
-<script id="equipment-identity-system-v2" src="js/equipment/equipment-identity.js"></script>
+<script id="equipment-identity-system-v2" data-balance-src="js/equipment/equipment-identity.js"></script>
 
 
-<script id="journal-resizable-split-fix" src="js/ui/journal-split.js"></script>
+<script id="journal-resizable-split-fix" data-balance-src="js/ui/journal-split.js"></script>
 
 
 <link id="inventory-control-fold-style" rel="stylesheet" href="css/inventory-controls.css">
-<script id="inventory-control-fold-system" src="js/ui/inventory-controls.js"></script>
+<script id="inventory-control-fold-system" data-balance-src="js/ui/inventory-controls.js"></script>
 
 
 <link id="pending-gear-detailed-list-style" rel="stylesheet" href="css/pending-gear-detail.css">
-<script id="pending-gear-detailed-list-system" src="js/equipment/pending-gear-detail.js"></script>
+<script id="pending-gear-detailed-list-system" data-balance-src="js/equipment/pending-gear-detail.js"></script>
 
 
 
 
 
-<script id="numeric-compression-and-combat-formula-v1" src="js/balance/numeric-compression-formula.js"></script>
+<script id="numeric-compression-and-combat-formula-v1" data-balance-src="js/balance/numeric-compression-formula.js"></script>
 
 
 <link id="skill-rules-help-style" rel="stylesheet" href="css/skill-rules-help.css">
 
 
-<script id="lucide-catalog-v1" src="js/ui/lucide-catalog.js"></script>
+<script id="lucide-catalog-v1" data-balance-src="js/ui/lucide-catalog.js"></script>
 <link rel="stylesheet" href="css/skill-icons.css">
-<script id="skill-icon-library-v1" src="js/ui/skill-icon-library.js"></script>
-<script id="mastery-overhaul-core-v1" src="js/skills/mastery-core.js"></script>
+<script id="skill-icon-library-v1" data-balance-src="js/ui/skill-icon-library.js"></script>
+<script id="mastery-overhaul-core-v1" data-balance-src="js/skills/mastery-core.js"></script>
 
 
 <link id="mastery-overhaul-ui-style" rel="stylesheet" href="css/mastery-ui.css">
-<script id="mastery-overhaul-ui-dev-v1" src="js/ui/mastery-ui.js"></script>
+<script id="mastery-overhaul-ui-dev-v1" data-balance-src="js/ui/mastery-ui.js"></script>
 
 
-<script id="mastery-overhaul-cleanup-v1" src="js/skills/mastery-cleanup.js"></script>
+<script id="mastery-overhaul-cleanup-v1" data-balance-src="js/skills/mastery-cleanup.js"></script>
 
-<script id="affix-pool-by-slot-rank-v1" src="js/equipment/affix-pool.js"></script>
+<script id="affix-pool-by-slot-rank-v1" data-balance-src="js/equipment/affix-pool.js"></script>
 
-<script id="per-class-growth-runtime-v1" src="js/character/class-growth.js"></script>
+<script id="per-class-growth-runtime-v1" data-balance-src="js/character/class-growth.js"></script>
 
 
-<script id="control-status-summon-system" src="js/combat/control-status-summon.js"></script>
-<script id="enemy-combat-stats-system" src="js/combat/enemy-combat-stats.js"></script>
+<script id="control-status-summon-system" data-balance-src="js/combat/control-status-summon.js"></script>
+<script id="enemy-combat-stats-system" data-balance-src="js/combat/enemy-combat-stats.js"></script>
 
 <link id="status-maker-runtime-style" rel="stylesheet" href="css/status-maker.css">
-<script id="status-maker-runtime-v1" src="js/skills/status-maker.js"></script>
-<script id="shared-core-skill-runtime-v1" src="js/combat/shared-skill-runtime.js"></script>
+<script id="status-maker-runtime-v1" data-balance-src="js/skills/status-maker.js"></script>
+<script id="shared-core-skill-runtime-v1" data-balance-src="js/combat/shared-skill-runtime.js"></script>
 <link rel="stylesheet" href="css/title-screen.css">
-<script src="js/ui/title-screen.js?v=20261012-utility1"></script>
-<script src="js/ui/interaction-guard.js?v=20261012-utility1"></script>
-<script id="initial-class-starter-pack-v1" src="js/character/starter-pack.js"></script>
-<script src="js/ui/text-rarity-runtime.js"></script>
+<script data-balance-src="js/ui/title-screen.js?v=20261012-utility1"></script>
+<script data-balance-src="js/ui/interaction-guard.js?v=20261012-utility1"></script>
+<script id="initial-class-starter-pack-v1" data-balance-src="js/character/starter-pack.js"></script>
+<script data-balance-src="js/ui/text-rarity-runtime.js"></script>
 <link rel="stylesheet" href="css/companions.css">
-<script src="js/character/companions.js"></script>
-<script src="js/balance/progression-runtime.js"></script>
-<script src="js/items/shop-catalog.js"></script>
-<script id="shop-inventory-overhaul-system" src="js/items/shop-inventory.js"></script>
+<script data-balance-src="js/character/companions.js"></script>
+<script data-balance-src="js/balance/progression-runtime.js"></script>
+<script data-balance-src="js/items/shop-catalog.js"></script>
+<script id="shop-inventory-overhaul-system" data-balance-src="js/items/shop-inventory.js"></script>
 <link rel="stylesheet" href="css/options.css">
-<script src="js/ui/options.js?v=20261012-utility1"></script>
+<script data-balance-src="js/ui/options.js?v=20261012-utility1"></script>
 <link rel="stylesheet" href="css/battle-journal-controls.css">
-<script src="js/items/timed-boost-runtime.js"></script>
-<script src="js/combat/skill-effect-runtime.js"></script>
-<script src="js/skills/induction-schema.js"></script>
-<script src="js/skills/induction-runtime.js"></script>
+<script data-balance-src="js/items/timed-boost-runtime.js"></script>
+<script data-balance-src="js/combat/skill-effect-runtime.js"></script>
+<script data-balance-src="js/skills/induction-schema.js"></script>
+<script data-balance-src="js/skills/induction-runtime.js"></script>
 <link rel="stylesheet" href="css/companion-tokens.css">
-<script src="js/items/companion-tokens.js"></script>
+<script data-balance-src="js/items/companion-tokens.js"></script>
 <link rel="stylesheet" href="css/team-builds.css?v=20261012-skills1">
-<script src="js/character/team-runtime.js"></script>
-<script src="js/equipment/team-references.js"></script>
-<script src="js/ui/team-builds.js?v=20261012-skills1"></script>
-<script src="js/equipment/boss-crafting.js"></script>
+<script data-balance-src="js/character/team-runtime.js"></script>
+<script data-balance-src="js/equipment/team-references.js"></script>
+<script data-balance-src="js/ui/team-builds.js?v=20261012-skills1"></script>
+<script data-balance-src="js/equipment/boss-crafting.js"></script>
 <link rel="stylesheet" href="css/page-readability.css">
-<script src="js/ui/page-readability.js"></script>
+<script data-balance-src="js/ui/page-readability.js"></script>
 <link rel="stylesheet" href="css/character-avatars.css">
-<script src="js/ui/character-avatars.js"></script>
-<script src="js/skills/companion-skill-runtime.js"></script>
+<script data-balance-src="js/ui/character-avatars.js"></script>
+<script data-balance-src="js/skills/companion-skill-runtime.js"></script>
 <link rel="stylesheet" href="css/life-skills.css">
-<script src="js/items/life-skills.js"></script>
+<script data-balance-src="js/items/life-skills.js"></script>
 <link rel="stylesheet" href="css/achievements.css">
-<script src="js/character/companion-unlocks.js?v=20261012-utility1"></script>
+<script data-balance-src="js/character/companion-unlocks.js?v=20261012-utility1"></script>
 <link rel="stylesheet" href="css/utility-navigation.css?v=20261012-utility3">
-<script src="js/world/daily-commissions.js?v=20261012-daily1"></script>
-<script src="js/ui/utility-navigation.js?v=20261012-utility1"></script>
+<script data-balance-src="js/world/daily-commissions.js?v=20261012-daily1"></script>
+<script data-balance-src="js/ui/utility-navigation.js?v=20261012-utility1"></script>
+<script data-balance-src="js/world/quest-design-published.js"></script>
+<script data-balance-src="js/world/daily-commissions-designed.js"></script>
+<script src="js/balance/balance-document.js?v=release-v1"></script><!-- shared preflight -->
+<script data-balance-skip="js/balance/balance-document.js"></script>
+<script data-balance-src="js/balance/published-runtime.js"></script>
+<script src="js/balance/published-loader.js"></script>
 </body></html>

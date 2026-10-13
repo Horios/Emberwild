@@ -101,7 +101,7 @@
   /* Migrate an already loaded old balance/save once. Support duration numbers are
      preserved because the old runtime already advanced them by partyClock rounds. */
   try{
-    const raw=localStorage.getItem(BALANCE_KEY);let legacyBalance=null;
+    const raw=balanceSourceText();let legacyBalance=null;
     if(raw){try{legacyBalance=JSON.parse(raw);}catch{}}
     if(!raw || legacyBalance?.timeUnits?.itemDuration!=='battleRounds'){
       const ref=legacyBalance||{balanceSettings:GAMEPLAY_SETTINGS};

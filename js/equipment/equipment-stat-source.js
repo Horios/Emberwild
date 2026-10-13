@@ -314,7 +314,7 @@ UPDATE12_DEFAULT_BALANCE.balanceSettings=cloneGameplaySettings(GAMEPLAY_SETTINGS
 resetBalanceJSON=function(){localStorage.removeItem(BALANCE_KEY);applyBalanceConfig(UPDATE12_DEFAULT_BALANCE,{persist:false});toast('已恢復 HTML 內建預設設定');};
 
 // Re-apply the saved balance once after all compatibility layers exist, so balanceSettings also controls this session.
-try{const raw=localStorage.getItem(BALANCE_KEY);if(raw)applyBalanceConfig(JSON.parse(raw),{persist:false});else{GAMEPLAY_SETTINGS=normalizeGameplaySettings();globalThis.__EMBERWILD_GAMEPLAY_SETTINGS=GAMEPLAY_SETTINGS;applyGameplaySettingsSideEffects();}}catch(e){console.warn('擴充平衡設定載入失敗，使用預設值',e);GAMEPLAY_SETTINGS=normalizeGameplaySettings();globalThis.__EMBERWILD_GAMEPLAY_SETTINGS=GAMEPLAY_SETTINGS;applyGameplaySettingsSideEffects();}
+try{const raw=balanceSourceText();if(raw)applyBalanceConfig(JSON.parse(raw),{persist:false});else{GAMEPLAY_SETTINGS=normalizeGameplaySettings();globalThis.__EMBERWILD_GAMEPLAY_SETTINGS=GAMEPLAY_SETTINGS;applyGameplaySettingsSideEffects();}}catch(e){console.warn('擴充平衡設定載入失敗，使用預設值',e);GAMEPLAY_SETTINGS=normalizeGameplaySettings();globalThis.__EMBERWILD_GAMEPLAY_SETTINGS=GAMEPLAY_SETTINGS;applyGameplaySettingsSideEffects();}
 if(state){for(const h of party?.members||[state])withHero(h,clampVitals);render();}
 
 
