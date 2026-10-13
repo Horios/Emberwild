@@ -29,7 +29,8 @@
   document.head.appendChild(style);
   function applyHeight(){
     const journal=document.querySelector('.global-battle-journal');
-    if(journal) journal.style.setProperty('--journal-loot-height',globalThis.journalLootHeight+'px');
+    const height=globalThis.journalLootHeight+'px';
+    if(journal&&journal.style.getPropertyValue('--journal-loot-height')!==height)journal.style.setProperty('--journal-loot-height',height);
   }
   globalThis.startJournalResize=function(ev){
     ev.preventDefault();

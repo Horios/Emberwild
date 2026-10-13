@@ -35,3 +35,23 @@ test('Each reminder switch persists by player save, hides only badges, and rolls
 test('Legacy achieved records begin as read, new schema validates read markers and preference types atomically',()=>{
  const old={version:2,eliteKills:{},bossKills:{},completed:['region-0-open'],rewardCompanions:[],tickets:{}};assert.deepEqual(A.validateState(old).readCompleted,['region-0-open']);const r=game();const before=r.run('JSON.stringify(packParty())');r.run('globalThis.bad=structuredClone(packParty());bad.achievements.readCompleted=["region-0-boss-1000"]');assert.throws(()=>r.run('loadParty(bad)'),/成就與招募券/);assert.equal(r.run('JSON.stringify(packParty())'),before);r.run('bad=structuredClone(packParty());bad.numberReminders.mailbox="false"');assert.throws(()=>r.run('loadParty(bad)'),/數字提醒設定無效/);assert.equal(r.run('JSON.stringify(packParty())'),before);
 });
+test('Navigation shares one scan while building page HTML and reads live state outside the render',()=>{
+ const r=game();
+ r.run('let scans=0;const readyBase=questReadyCount;questReadyCount=function(){scans++;return readyBase();};scans=0;render();');
+ assert.equal(r.run('scans'),2);
+ r.run('pendingGearLoot.push(gear(1,0,0,0))');
+ assert.match(r.run('numberBadgeHTML("equipment")'),/>1<\/span>/);
+ r.run('pendingGearLoot=[]');
+ assert.match(r.run('numberBadgeHTML("equipment")'),/ hidden /);
+ assert.deepEqual(r.errors,[]);
+});
+test('Repeated badge refreshes skip identical DOM attributes',()=>{
+ const r=game();
+ r.run('let attributeWrites=0;');
+ for(const [id,node] of r.elements)if(/^(navReminder-|utilityReminder-|utilityButton-)/.test(id)){
+  const original=node.setAttribute.bind(node);node.setAttribute=(...args)=>{r.run('attributeWrites++');return original(...args);};
+ }
+ r.run('render();');assert.equal(r.run('attributeWrites'),0);
+ r.run('render();render();');
+ assert.equal(r.run('attributeWrites'),0);assert.deepEqual(r.errors,[]);
+});

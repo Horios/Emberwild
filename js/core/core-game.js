@@ -820,7 +820,7 @@ const expansionLoadParty=loadParty;
 loadParty=function(data){expansionLoadParty(data);if(!living().length)refillParty();};
 
 
-setInterval(()=>{if(!state||!party)return;refreshBattleBuffTimers();const label=$('supply-status');if(label)label.textContent=supplyStatus(state)||'目前沒有道具增益';if(document.querySelectorAll)for(const el of document.querySelectorAll('.supply-countdown')){const hero=partyMember(Number(el.dataset.job));if(hero)el.textContent=supplyStatus(hero);}},1000);
+setInterval(()=>{if(state&&party)refreshBattleBuffTimers();},1000);
 
 
 // Refresh every prebuilt bestiary icon after region/species registration is complete.
@@ -853,7 +853,12 @@ function battleBuffRows(){
  return rows.join('')||'<tr><td colspan="5" class="no-buffs">目前沒有生效中的 BUFF、DEBUFF 或消耗品效果。</td></tr>';
 }
 function battleBuffPanel(){return `<section class="panel battle-buffs"><div class="row"><h2>生效效果與持續時間</h2><span class="small">剩餘／總回合</span></div><div class="buff-table-scroll"><table class="buff-table"><thead><tr><th>對象</th><th>效果</th><th>能力變化</th><th>持續時間</th><th>計時方式</th></tr></thead><tbody id="battle-buff-rows">${battleBuffRows()}</tbody></table></div></section>`;}
-function refreshBattleBuffTimers(){if(!party)return;const body=$('battle-buff-rows');if(body)body.innerHTML=battleBuffRows();}
+function refreshSupplyStatus(){
+  if(!state||!party)return;
+  const label=$('supply-status');if(label)label.textContent=supplyStatus(state)||'目前沒有道具增益';
+  if(document.querySelectorAll)for(const el of document.querySelectorAll('.supply-countdown')){const hero=partyMember(Number(el.dataset.job));if(hero)el.textContent=supplyStatus(hero);}
+}
+function refreshBattleBuffTimers(){if(!party)return;const body=$('battle-buff-rows');if(body)body.innerHTML=battleBuffRows();refreshSupplyStatus();}
 
 // Keep each generated control bound to its owner without changing global selection.
 function ownerControls(html,job){return html.replace(/on(click|change)="([^"]*)"/g,(all,event,code)=>code.startsWith('heroMenuAction(')?all:`on${event}="heroMenuAction(${job},()=>{${code}})"`);}
