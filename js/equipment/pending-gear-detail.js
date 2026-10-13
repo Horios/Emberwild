@@ -123,9 +123,9 @@
     toast('已領取 '+take.length+' 件'+label+(take.length<list.length?'；背包已滿':''));
   }
 
-  function disposePendingList(list,mode,label){
-    if(!list.length)return toast('沒有可處理的'+label);
-    if(!confirmPendingDispose(list,mode,label))return;
+  function disposePendingList(list,mode,label,skipConfirm){
+    if(!list.length){toast('沒有可處理的'+label);return false;}
+    if(!skipConfirm&&!confirmPendingDispose(list,mode,label))return false;
     var oldPending=pendingGearLoot.slice(),snap=economySnapshot();
     try{
       if(mode==='sell'){
@@ -139,10 +139,12 @@
       if(!save())throw Error('儲存失敗');
       render();
       toast('已'+(mode==='sell'?'販售 ':'分解 ')+list.length+' 件'+label+(mode==='sell'?'，獲得 '+total+' 金幣':''));
+      return true;
     }catch(e){
       pendingGearLoot=oldPending;
       restoreEconomy(snap);
       toast('操作失敗：'+e.message);
+      return false;
     }
   }
 
@@ -176,6 +178,15 @@
     var row=pendingQualityRows().find(function(x){return x.q===Number(q);});
     if(!row)return toast('沒有'+qualityName(Number(q))+'待領取裝備');
     disposePendingList(row.list,'salvage',qualityName(row.q)+'裝備');
+  };
+  globalThis.quickDisposePendingQuality=function(q,mode){
+    q=Number(q);
+    if(![0,1].includes(q)||!['salvage','sell'].includes(mode))return false;
+    var row=pendingQualityRows().find(function(x){return x.q===q;});
+    if(!row)return false;
+    var list=row.list.filter(function(g){return g.boss===undefined;});
+    if(!list.length)return false;
+    return disposePendingList(list,mode,qualityName(q)+'待領取裝備',true);
   };
 
   function groupHtml(group){
