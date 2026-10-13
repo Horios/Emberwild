@@ -9,8 +9,14 @@ test('production ignores old browser balance and player-save design snapshots; p
   const updated=structuredClone(published);updated.items[0].cost+=9;await preview.page.route('http://emberwild.test/preview/data/balance.json?*',r=>r.fulfill({contentType:'application/json',body:JSON.stringify(updated)}));await preview.page.reload();assert.equal(await preview.page.evaluate(()=>exportableBalance().items[0].cost),updated.items[0].cost);assert.deepEqual(preview.errors,[]);
  }finally{await preview.browser.close();}
 });
-test('production can interpret a committed preview design without discarding any effective fields',async()=>{
- const r=await openRuntime('../Emberwild-main');try{await r.page.route('http://emberwild.test/data/balance.json?*',route=>route.fulfill({contentType:'application/json',body:JSON.stringify(published)}));await r.page.reload();const actual=await r.page.evaluate(()=>exportableBalance());assert.equal(D.diff(published,actual).total,0);assert.equal(await r.page.evaluate(()=>!!GAMEPLAY_SETTINGS.quests.design),true);assert.deepEqual(r.errors,[]);}finally{await r.browser.close();}
+test('older production fails closed on expanded life data; upgraded runtime retains every effective field',async()=>{
+ const r=await openRuntime('../Emberwild-main');try{await r.page.route('http://emberwild.test/data/balance.json?*',route=>route.fulfill({contentType:'application/json',body:JSON.stringify(published)}));await r.page.reload();
+  const version=await r.page.evaluate(()=>EmberwildBalanceDocument.lifeProductsVersion||0);
+  if(version<1){assert.match(await r.page.locator('#app').innerText(),/資料載入失敗.*lifeSkills/);assert.equal(await r.page.evaluate(()=>typeof exportableBalance),'undefined');}
+  else{const actual=await r.page.evaluate(()=>exportableBalance());assert.equal(D.diff(published,actual).total,0);}
+  assert.deepEqual(r.errors,[]);
+ }finally{await r.browser.close();}
+ const updated=await openRuntime(root);try{assert.equal(D.diff(published,await updated.page.evaluate(()=>exportableBalance())).total,0);assert.equal(await updated.page.evaluate(()=>!!GAMEPLAY_SETTINGS.quests.design),true);assert.deepEqual(updated.errors,[]);}finally{await updated.browser.close();}
 });
 test('unsupported published schema stops before game scripts and keeps saved bytes intact',async()=>{
  const r=await openRuntime(root);try{const before=await r.page.evaluate(()=>{localStorage.setItem('emberwild-save-probe','unchanged');return localStorage.getItem('emberwild-save-probe');});await r.page.route('http://emberwild.test/data/balance.json?*',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({...published,schemaVersion:999})}));await r.page.reload();assert.match(await r.page.locator('#app').innerText(),/資料載入失敗/);assert.equal(await r.page.evaluate(()=>typeof selectSaveSlot),'undefined');assert.equal(await r.page.evaluate(()=>localStorage.getItem('emberwild-save-probe')),before);}finally{await r.browser.close();}

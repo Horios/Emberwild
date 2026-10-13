@@ -25653,12 +25653,29 @@
   },
   "schemaVersion": 1,
   "lifeSkills": {
-    "periodMs": 5000,
-    "bugChance": 0.05,
     "materialBuyPrices": {
       "清水": 1,
       "藥水瓶": 1
     },
+    "gathering": [
+      {
+        "id": "herb",
+        "name": "紅色草",
+        "periodMs": 5000,
+        "chance": 1,
+        "quantity": 1,
+        "output": "紅色草",
+        "outputType": "material",
+        "bonusDrops": [
+          {
+            "output": "小蟲",
+            "outputType": "material",
+            "quantity": 1,
+            "chance": 0.05
+          }
+        ]
+      }
+    ],
     "recipes": {
       "process": {
         "name": "加工紅色草",
@@ -25668,7 +25685,11 @@
             1
           ]
         ],
-        "output": "紅色草泥"
+        "output": "紅色草泥",
+        "outputType": "material",
+        "periodMs": 5000,
+        "chance": 1,
+        "quantity": 1
       },
       "alchemy": {
         "name": "煉製簡易治療藥水",
@@ -25686,7 +25707,11 @@
             1
           ]
         ],
-        "output": "heal_small"
+        "output": "heal_small",
+        "outputType": "item",
+        "periodMs": 5000,
+        "chance": 1,
+        "quantity": 1
       }
     }
   }

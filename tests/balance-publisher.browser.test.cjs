@@ -6,6 +6,7 @@ function gitFixture(){
  const hashDoc=d=>sha(JSON.stringify(d));for(const [head,d] of docs)docBlobs.set(head,hashDoc(d));
  async function api(p,o={}){
   if(p.includes('/git/ref/heads/'))return {object:{sha:refs[p.split('/').at(-1)]}};
+  if(p.includes('/contents/js/balance/balance-document.js'))return {type:'file',encoding:'base64',content:fs.readFileSync('js/balance/balance-document.js').toString('base64')};
   if(p.includes('/contents/')){const ref=new URL('https://mock'+p).searchParams.get('ref'),d=docs.get(ref);assert(d,'document '+ref);return {type:'file',encoding:'base64',sha:docBlobs.get(ref),content:Buffer.from(JSON.stringify(d)).toString('base64')};}
   if(p.includes('/compare/')){const [base,head]=p.split('/compare/')[1].split('...');let cursor=head;while(cursor&&cursor!==base)cursor=commits.get(cursor)?.parents[0]?.sha;return {status:head===base?'identical':cursor===base?'ahead':'diverged'};}
   if(p.includes('/commits?')){const branch=new URL('https://mock'+p).searchParams.get('sha'),rows=[];let cursor=refs[branch];while(cursor){rows.push(commits.get(cursor));cursor=commits.get(cursor).parents[0]?.sha;}return rows;}
