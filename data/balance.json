@@ -312,6 +312,9 @@
     "BOSS 專屬裝備沒有前後綴與隨機洗鍊詞條；bossAffixes 三條可使用前綴／後綴／基底效果及 bossDamagePct。",
     "randomOffers.entries：selection=weighted 使用抽選權重；selection=extra 使用每批出現率，重鑄石也由此控制。",
     "商品 type=item 的 key 引用 items[].id；unitPrice=null 沿用道具基本單價。名稱、說明留空時沿用道具資料。",
+    "mastery / requiredMastery / requiredMasteryLevel / weaponTypes 為技能培養、學習與武器條件；requiredMasteryLevel 限制為 0～100。",
+    "iconType 控制技能頁小圖示；auto 會依效果、元素與精通自動判斷。",
+    "武器使用穩定 weaponType；weaponType 與 mastery 為獨立概念。",
     "shopSettings.schemaVersion=3；randomOffers.entries 與 fixedOffers.entries 為商店有效商品池。舊版抗性／屬性增幅商品會自動下架。空陣列表示不上架，移除商品不刪除道具庫存。",
     "randomOffers.entries：selection=weighted 使用抽選權重；selection=extra 使用每批出現率，重鑄石也由此控制。",
     "商品 type=item 的 key 引用 items[].id；unitPrice=null 沿用道具基本單價。名稱、說明留空時沿用道具資料。",
@@ -25590,5 +25593,13 @@
         "quantity": 1
       }
     }
-  }
+  },
+  "inventoryIcons": [
+    {
+      "id": "material:藍色草",
+      "kind": "material",
+      "key": "藍色草",
+      "iconType": "lucide:leaf"
+    }
+  ]
 }
