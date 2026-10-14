@@ -17,6 +17,8 @@
   if(!life||typeof life!=='object'||Array.isArray(life)){add('','必須為物件');return errors;}
   if(life.periodMs!==undefined&&(!Number.isSafeInteger(life.periodMs)||life.periodMs<50))add('periodMs','必須為至少 50 毫秒的安全整數');
   if(life.bugChance!==undefined&&(!Number.isFinite(life.bugChance)||life.bugChance<0||life.bugChance>1))add('bugChance','必須介於 0～1');
+  if(!life.materialBuyPrices||typeof life.materialBuyPrices!=='object'||Array.isArray(life.materialBuyPrices))add('materialBuyPrices','商店材料價格必須為物件');
+  else for(const [k,v]of Object.entries(life.materialBuyPrices))if(!name(k)||!Number.isSafeInteger(v)||v<0||v>1e9)add('materialBuyPrices.'+k,'材料名稱無效或價格必須為 0～1000000000 的整數');
   for(const k of ['清水','藥水瓶'])if(!Number.isFinite(life.materialBuyPrices?.[k])||life.materialBuyPrices[k]<0)add('materialBuyPrices.'+k,'購買價格必須為非負數');
   function product(r,p,legacy=false,bonus=false){
    if(!r||typeof r!=='object'||Array.isArray(r)){add(p,'必須為物件');return;}
@@ -122,5 +124,5 @@
   function types(v,b,p){if(b===null||b===undefined||v===undefined)return;if(v===null){if(['mastery','requiredMastery','partnerId','unitPrice','control'].includes(p.split('.').at(-1)))return;typeErrors.push(issue(p,'此欄位不可為 null'));return;}if(Array.isArray(b)){if(!Array.isArray(v)){typeErrors.push(issue(p,'必須為陣列'));return;}for(let i=0;i<v.length;i++)types(v[i],b[i]??b[0],p+'.'+i);return;}if(typeof b==='object'){if(!v||typeof v!=='object'||Array.isArray(v)){typeErrors.push(issue(p,'必須為物件'));return;}for(const k of Object.keys(v))types(v[k],b[k],p+'.'+k);return;}if(!/\.(key|value)$/.test(p)&&typeof v!==typeof b)typeErrors.push(issue(p,'型別必須為 '+typeof b));}
   if(defaults)types(d,defaults,'$');if(typeErrors.length)throw Object.assign(Error(typeErrors.map(x=>x.system+' '+x.object+' '+x.field+'：'+x.reason).join('\n')),{issues:typeErrors});
 if(domainValidate){try{domainValidate(copy(d));}catch(e){throw Object.assign(Error(e.message),{issues:e.issues||[issue('domain',e.message)]});}}return d;}
- const api={iconColorTemplatesVersion:1,inventoryIconsVersion:2,VERSION,SCHEMA,REQUIRED,copy,inspect,migrate,validate,lifeDefaults,normalizeLife,lifeIssues,lifeProductsVersion:1};root.EmberwildBalanceDocument=api;if(typeof module==='object'&&module.exports)module.exports=api;
+ const api={iconColorTemplatesVersion:1,inventoryIconsVersion:2,VERSION,SCHEMA,REQUIRED,copy,inspect,migrate,validate,lifeDefaults,normalizeLife,lifeIssues,itemDetailsVersion:2,lifeShopMaterialsVersion:1,lifeProductsVersion:1};root.EmberwildBalanceDocument=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);

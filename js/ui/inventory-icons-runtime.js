@@ -1,13 +1,15 @@
 /* Optional presentation data shares the published balance document and icon library. */
 (()=>{
   const M=EmberwildInventoryIcons,baseExport=exportableBalance,baseValidate=validateBalanceConfig,baseApply=applyBalanceConfig;
+  const defaultGemLabels=GEMS.map(g=>({name:g.name,desc:g.desc}));
+  function applyGemLabels(){for(const [i,g]of GEMS.entries()){g.name=lookup.get('gem:'+i)?.displayName||defaultGemLabels[i].name;g.desc=lookup.get('gem:'+i)?.description??defaultGemLabels[i].desc;}}
   let templates,definitions,customIcons=baseExport().skillIcons||[],lookup=new Map();
   const saved=balanceSourceText();if(saved){templates=EmberwildIconColors.validate(JSON.parse(saved));EmberwildIconColors.use(templates);definitions=M.validate(JSON.parse(saved),__EMBERWILD_SKILL_ICONS);lookup=new Map((definitions||[]).map(r=>[r.kind+':'+r.key,r]));}
   exportableBalance=()=>{const out=baseExport();if(templates!==undefined)out.iconColorTemplates=structuredClone(templates);if(definitions!==undefined)out.inventoryIcons=structuredClone(definitions);return out;};
   validateBalanceConfig=input=>{M.validate(input,__EMBERWILD_SKILL_ICONS);return baseValidate(input);};
   applyBalanceConfig=(input,options={})=>{
     const next=M.validate(input,__EMBERWILD_SKILL_ICONS),out=baseApply(input,options);
-    templates=EmberwildIconColors.validate(input);EmberwildIconColors.use(templates);definitions=next;customIcons=structuredClone(input.skillIcons||[]);lookup=new Map((next||[]).map(r=>[r.kind+':'+r.key,r]));
+    templates=EmberwildIconColors.validate(input);EmberwildIconColors.use(templates);definitions=next;customIcons=structuredClone(input.skillIcons||[]);lookup=new Map((next||[]).map(r=>[r.kind+':'+r.key,r]));applyGemLabels();
     if(options.persist!==false){const doc=exportableBalance();localStorage.setItem(BALANCE_KEY,JSON.stringify(doc));if(globalThis.__EMBERWILD_PUBLISHED_BALANCE&&IS_PREVIEW){globalThis.__EMBERWILD_BALANCE_SOURCE=doc;localStorage.setItem(BALANCE_KEY+'-published-base',JSON.stringify(globalThis.__EMBERWILD_PUBLISHED_BALANCE));}}
     if(party)render();return out;
   };
@@ -17,6 +19,34 @@
     return color?'<span style="display:inline-flex;color:'+color+'">'+svg+'</span>':svg;
   };
   globalThis.__EMBERWILD_ICON_COLOR=(kind,key)=>EmberwildIconColors.resolve(lookup.get(kind+':'+String(key)));
+  globalThis.__EMBERWILD_ITEM_DETAILS=(kind,key)=>lookup.get(kind+':'+String(key));
+  globalThis.__EMBERWILD_GEAR_CATALOGUE_KEY=g=>globalThis.EmberwildTokens?.isToken(g)?{kind:'token',key:g.tokenId}:{kind:'equipment',key:gearKey(g)};
+  globalThis.__EMBERWILD_ITEM_NAME=(kind,key,fallback)=>lookup.get(kind+':'+String(key))?.displayName||fallback;
+  globalThis.__EMBERWILD_CAN_SELL=(kind,key)=>lookup.get(kind+':'+String(key))?.saleEnabled??(!['gem','skill'].includes(kind)&&!String(key).startsWith('companion-ticket-'));
+  globalThis.__EMBERWILD_CAN_SELL_GEAR=g=>{const id=globalThis.__EMBERWILD_GEAR_CATALOGUE_KEY(g);return globalThis.__EMBERWILD_CAN_SELL(id.kind,id.key);};
+  const baseGearName=gearName,baseGearDisplay=equipmentDisplayName;
+  gearName=function(g){const out=baseGearName(g),id=globalThis.__EMBERWILD_GEAR_CATALOGUE_KEY(g);return globalThis.__EMBERWILD_ITEM_NAME(id.kind,id.key,out);};
+  equipmentDisplayName=function(g){const id=globalThis.__EMBERWILD_GEAR_CATALOGUE_KEY(g),name=lookup.get(id.kind+':'+id.key)?.displayName;return name?'+'+(g.plus||0)+' '+name:baseGearDisplay(g);};
+  globalThis.inventoryGemSellPrice=i=>lookup.get('gem:'+String(i))?.sellPrice??0;
+  globalThis.sellCatalogueGem=function(i,quantity=1){
+    if(!party||!state||!Number.isInteger(i)||i<0||i>2||!globalThis.__EMBERWILD_CAN_SELL('gem',i))return false;
+    const n=Number(quantity),gold=state.gold,held=state.gems[i],price=inventoryGemSellPrice(i);
+    if(!Number.isSafeInteger(n)||n<1||n>held||gold+n*price>1e12)return false;
+    state.gems[i]-=n;state.gold+=n*price;
+    if(save()!==true){state.gems[i]=held;state.gold=gold;return false;}render();return true;
+  };
+  const baseGemsView=accountGemsView;
+  accountGemsView=function(){let html=baseGemsView();for(const [i,g]of GEMS.entries()){if(state.gems[i]<1)continue;const r=lookup.get('gem:'+i),name=r?.displayName||g.name,desc=r?.description??g.desc,price=inventoryGemSellPrice(i),sell=globalThis.__EMBERWILD_CAN_SELL('gem',i);html=html.replace('<b>'+esc(g.name)+' ×'+state.gems[i]+'</b>','<b>'+esc(name)+' ×'+state.gems[i]+'</b>').replace('<span>'+esc(g.desc)+'</span>','<span>'+esc(desc)+' · 售價 '+price+' 金幣／個'+(sell?'':' · 不可販售')+'</span>'+ (sell?'<button onclick="sellCatalogueGem('+i+',1)">賣出 1 個</button><button onclick="sellCatalogueGem('+i+',state.gems['+i+'])">全部賣出</button>':''));}return html;};
+  globalThis.sellCatalogueRecruitTicket=function(id,quantity=1){
+    if(!party||!state||!globalThis.__EMBERWILD_CAN_SELL('item','companion-ticket-'+id))return false;
+    const held=companionTicketCount(id),n=Number(quantity),gold=state.gold,price=lookup.get('item:companion-ticket-'+id)?.sellPrice??0;
+    if(!Number.isSafeInteger(n)||n<1||n>held||gold+n*price>1e12)return false;
+    party.achievements.tickets[id]=held-n;state.gold+=price*n;
+    if(save()!==true){party.achievements.tickets[id]=held;state.gold=gold;return false;}render();return true;
+  };
+  applyGemLabels();
+  const baseItemsView=accountItemsView;
+  accountItemsView=function(){let html=baseItemsView();const scroll=lookup.get('item:level_scroll');if(scroll?.displayName)html=html.replaceAll(esc('升級卷軸'),esc(scroll.displayName));for(const p of exportableBalance().companions||[]){const key='companion-ticket-'+p.id,r=lookup.get('item:'+key);if(r?.saleEnabled&&companionTicketCount(p.id)>0)html+='<section class="panel"><b>'+esc(r.displayName||p.name+'招募券')+'</b><span>售價 '+(r.sellPrice??0)+' 金幣／張</span><button onclick="sellCatalogueRecruitTicket('+p.id+',1)">賣出 1 張</button></section>';}return html;};
   const description=(kind,key)=>lookup.get(kind+':'+key)?.description;
   const materialDescription=inventoryMaterialDescription;
   globalThis.inventoryMaterialDescription=name=>description('material',name)??materialDescription(name);

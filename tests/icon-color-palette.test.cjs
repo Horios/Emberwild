@@ -10,5 +10,5 @@ test('named template references recolor inventory, crafting, equipment, core/sup
 });
 test('invalid colors, duplicate IDs and dangling template references reject before overwriting data',()=>{
  const r=loadRuntime(root),before=r.run('JSON.stringify(exportableBalance())');for(const templates of [[{id:'x',name:'樣板',color:'red'}],[{id:'x',name:'樣板',color:'#123456'},{id:'x',name:'重複',color:'#abcdef'}],[{name:'沒有 ID',color:'#123456'}]]){r.ctx.bad={...published,iconColorTemplates:templates};assert.throws(()=>r.run('applyBalanceConfig(bad)'),/色彩模板/);assert.equal(r.run('JSON.stringify(exportableBalance())'),before);}
- r.ctx.bad={...published,inventoryIcons:[{kind:'material',key:'紅色草',iconType:'auto',colorTemplateId:'missing'}]};assert.throws(()=>r.run('applyBalanceConfig(bad)'),/引用不存在/);r.ctx.doc=published;r.run('applyBalanceConfig(doc,{persist:false})');assert.equal(r.run('exportableBalance().iconColorTemplates'),undefined);
+ r.ctx.bad={...published,inventoryIcons:[{kind:'material',key:'紅色草',iconType:'auto',colorTemplateId:'missing'}]};assert.throws(()=>r.run('applyBalanceConfig(bad)'),/引用不存在/);r.ctx.doc=published;r.run('applyBalanceConfig(doc,{persist:false})');assert.deepEqual(JSON.parse(r.run('JSON.stringify(exportableBalance().iconColorTemplates)')),published.iconColorTemplates);
 });
