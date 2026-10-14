@@ -20576,7 +20576,7 @@
         },
         {
           "key": "小蟲",
-          "sellPrice": 3
+          "sellPrice": 5
         },
         {
           "key": "藥水瓶",
@@ -21021,6 +21021,10 @@
         {
           "key": "上古冥視之瞳",
           "sellPrice": 5
+        },
+        {
+          "key": "藍色草",
+          "sellPrice": 1
         }
       ]
     }
@@ -22310,7 +22314,86 @@
       "textStyleId": ""
     }
   },
-  "skillIcons": [],
+  "skillIcons": [
+    {
+      "id": "icon_1",
+      "name": "leaf",
+      "layers": [
+        {
+          "kind": "icon",
+          "icon": "lucide:leaf",
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "rotation": 0
+        }
+      ],
+      "appearance": {
+        "color": "",
+        "size": 34,
+        "strokeWidth": 2,
+        "rotation": 0,
+        "opacity": 1,
+        "glowColor": "#ffd86f",
+        "glowStrength": 0,
+        "effect": "",
+        "effectDuration": 2,
+        "effectTiming": "ease-in-out"
+      }
+    },
+    {
+      "id": "icon_2",
+      "name": "藍色葉片",
+      "layers": [
+        {
+          "kind": "icon",
+          "icon": "lucide:leaf",
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "rotation": 0
+        }
+      ],
+      "appearance": {
+        "color": "#382cdd",
+        "size": 34,
+        "strokeWidth": 2,
+        "rotation": 0,
+        "opacity": 1,
+        "glowColor": "#ffd86f",
+        "glowStrength": 0,
+        "effect": "",
+        "effectDuration": 2,
+        "effectTiming": "ease-in-out"
+      }
+    },
+    {
+      "id": "icon_3",
+      "name": "紅色草泥",
+      "layers": [
+        {
+          "kind": "icon",
+          "icon": "lucide:flask-conical",
+          "x": 0,
+          "y": -2,
+          "scale": 1,
+          "rotation": 0
+        }
+      ],
+      "appearance": {
+        "color": "#c0303e",
+        "size": 34,
+        "strokeWidth": 2,
+        "rotation": 0,
+        "opacity": 1,
+        "glowColor": "#ffd86f",
+        "glowStrength": 0,
+        "effect": "",
+        "effectDuration": 2,
+        "effectTiming": "ease-in-out"
+      }
+    }
+  ],
   "masteryTypes": [
     {
       "job": 0,
@@ -25552,7 +25635,14 @@
         "output": "藍色草",
         "outputType": "material",
         "id": "gather_1",
-        "bonusDrops": []
+        "bonusDrops": [
+          {
+            "output": "小蟲",
+            "outputType": "material",
+            "chance": 0.05,
+            "quantity": 1
+          }
+        ]
       }
     ],
     "recipes": {
@@ -25596,10 +25686,48 @@
   },
   "inventoryIcons": [
     {
+      "id": "material:紅色草泥",
+      "kind": "material",
+      "key": "紅色草泥",
+      "iconType": "custom:icon_3"
+    },
+    {
+      "iconType": "auto",
+      "id": "material:紅色草",
+      "kind": "material",
+      "key": "紅色草",
+      "colorTemplateId": "color_1"
+    },
+    {
       "id": "material:藍色草",
       "kind": "material",
       "key": "藍色草",
-      "iconType": "lucide:leaf"
+      "iconType": "custom:icon_2",
+      "colorTemplateId": "color_3"
+    },
+    {
+      "iconType": "auto",
+      "id": "material:小蟲",
+      "kind": "material",
+      "key": "小蟲",
+      "colorTemplateId": "color_2"
+    }
+  ],
+  "iconColorTemplates": [
+    {
+      "id": "color_1",
+      "name": "鮮紅",
+      "color": "#fa2929"
+    },
+    {
+      "id": "color_3",
+      "name": "鮮藍",
+      "color": "#382cdd"
+    },
+    {
+      "id": "color_2",
+      "name": "灰暗",
+      "color": "#696c6d"
     }
   ]
 }
