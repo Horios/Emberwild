@@ -148,7 +148,7 @@
         if(typeof id!=='string'||!id.trim())throw Error('怪物技能引用缺少 skillId：'+(row?.id||'未知怪物'));
         if(seen.has(id))throw Error('怪物技能引用重複：'+(row?.id||'未知怪物')+' → '+id);seen.add(id);
         const sk=skillById.get(id);if(!sk)throw Error('怪物引用不存在的核心技能：'+(row?.id||'未知怪物')+' → '+id);
-        const kind=row?.kind,allowed=sk.usage==='shared'||(kind==='normal'&&(sk.usage==='monster'||sk.usage==='elite'))||((kind==='boss'||kind==='final')&&sk.usage==='boss');
+        const kind=row?.kind,allowed=sk.usage==='shared'||((kind==='normal'||kind==='elite')&&(sk.usage==='elite'||kind==='normal'&&sk.usage==='monster'))||((kind==='boss'||kind==='final')&&sk.usage==='boss');
         if(!allowed)throw Error('怪物技能用途分類不相容：'+(row?.id||'未知怪物')+' → '+sk.name);
         if(!BASIC_EFFECTS.has(sk.effect))throw Error('此核心技能效果目前不支援怪物施放：'+sk.name);
       }

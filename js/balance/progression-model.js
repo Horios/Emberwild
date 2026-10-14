@@ -275,9 +275,9 @@
   }
   function baseMonsterStats(settings,level,kind='normal',row={}){
     const n=settings.monsters.normal,k=settings.monsters.kindMultipliers,f=settings.monsters.finalBoss;
-    const hp=kind==='final'?f.hp:(n.hpBase+level*n.hpPerLevel+level*level*n.hpQuadratic)*(kind==='boss'?k.bossHp:kind==='elite'?k.eliteHp:1);
-    const atk=kind==='final'?f.attack:(n.attackBase+level*n.attackPerLevel)*(kind==='boss'?k.bossAttack:kind==='elite'?k.eliteAttack:1);
-    const def=kind==='final'?f.defense:level*n.defensePerLevel*(kind==='boss'?k.bossDefense:kind==='elite'?k.eliteDefense:1);
+    const hp=Number(row.baseStats?.hp)>0?row.baseStats.hp:kind==='final'?f.hp:(n.hpBase+level*n.hpPerLevel+level*level*n.hpQuadratic)*(kind==='boss'?k.bossHp:kind==='elite'?k.eliteHp:1);
+    const atk=Number(row.baseStats?.attack)>0?row.baseStats.attack:kind==='final'?f.attack:(n.attackBase+level*n.attackPerLevel)*(kind==='boss'?k.bossAttack:kind==='elite'?k.eliteAttack:1);
+    const def=Number(row.baseStats?.defense)>=0?row.baseStats.defense:kind==='final'?f.defense:level*n.defensePerLevel*(kind==='boss'?k.bossDefense:kind==='elite'?k.eliteDefense:1);
     return {hp:Math.max(1,Math.round(hp*(row.hpMultiplier??1))),atk:Math.max(1,Math.round(atk*(row.attackMultiplier??1))),def:Math.max(0,Math.round(def*(row.defenseMultiplier??1)))};
   }
   function scaleMonsterStats(settings,level,kind,mode,base){

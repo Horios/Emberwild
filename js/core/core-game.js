@@ -1620,11 +1620,11 @@ function validateDescriptionItems(items){
  // 治療藥水模組安裝前執行，因此啟動時就必須先接受並保留它們，
  // 否則自訂藥水的 balance JSON 會在讀取角色存檔前被當成無效設定清除。
  const boosts=items.filter(EmberwildTimedBoosts.isItem),fixed=items.filter(item=>item?.type!=='healPotion'&&!EmberwildTimedBoosts.isItem(item)),heals=items.filter(item=>item?.type==='healPotion');
- if(fixed.length!==update11DefaultItemShape.length)throw Error('道具資料無效');
+ if(update11DefaultItemShape.some(base=>!fixed.some(item=>item.id===base.id)))throw Error('內建元素道具缺少定義');
  const expected=new Map(update11DefaultItemShape.map(x=>[x.id,x])),seen=new Set();
  for(const item of fixed){
   const base=expected.get(item?.id);
-  if(!base||seen.has(item.id)||typeof item.name!=='string'||typeof item.description!=='string'||item.type!==base.type||(item.element??null)!==base.element||!Number.isFinite(item.cost)||item.cost<0||!Number.isFinite(item.duration??0)||(item.duration??0)<0)throw Error('道具資料無效：'+(item?.id||'未知'));
+  if(!item||!(/^[A-Za-z0-9_-]{1,100}$/.test(item.id))||seen.has(item.id)||typeof item.name!=='string'||!item.name.trim()||typeof item.description!=='string'||(base?(item.type!==base.type||(item.element??null)!==base.element):(!['imbue','ward','elementTonic'].includes(item.type)||!Object.hasOwn(ELEMENTS,item.element)||item.element==='physical'))||!Number.isFinite(item.cost)||item.cost<0||!Number.isInteger(item.duration??0)||(item.duration??0)<0)throw Error('道具資料無效：'+(item?.id||'未知'));
   seen.add(item.id);
   if(EmberwildTimedBoosts.isElementalItem(item))EmberwildTimedBoosts.validateElementalItem(item);
  }

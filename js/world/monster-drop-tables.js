@@ -21,21 +21,21 @@ mergeGameplayShape=function mergeGameplayShapeDrops(def,src,path=''){
 const dropTableValidateGameplayBase=validateGameplaySettings;
 validateGameplaySettings=function(cfg){
   cfg=dropTableValidateGameplayBase(cfg);
-  const elements=new Set(Object.keys(ELEMENTS)),races=new Set(Object.keys(RACES)),monsterKinds=new Set(['normal','boss','final']);
+  const elements=new Set(Object.keys(ELEMENTS)),races=new Set(Object.keys(RACES)),monsterKinds=new Set(['normal','elite','boss','final']);
   if(!Array.isArray(cfg.monsters.catalog)||!cfg.monsters.catalog.length)throw Error('怪物設計清單不可為空');
   const monsterIds=new Set();
   for(const [i,m] of cfg.monsters.catalog.entries()){
     if(!m||typeof m.id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(m.id)||monsterIds.has(m.id))throw Error('怪物 ID 無效或重複：'+i);monsterIds.add(m.id);
     if(typeof m.name!=='string'||!m.name.trim()||!Number.isInteger(m.mapIndex)||m.mapIndex<0||m.mapIndex>=MAPS.length||!monsterKinds.has(m.kind)||typeof m.material!=='string'||!m.material.trim()||!elements.has(m.element)||!races.has(m.race)||!Number.isInteger(m.maxDrops)||m.maxDrops<0||m.maxDrops>100)throw Error('怪物設計資料無效：'+m.id);
   }
-  for(let mi=0;mi<MAPS.length;mi++){const finalMap=cfg.maps?.catalog?.[mi]?.mapType==='final'||(!cfg.maps?.catalog&&mi===6),bosses=cfg.monsters.catalog.filter(m=>m.mapIndex===mi&&(finalMap?m.kind==='final':m.kind==='boss'));if(bosses.length!==1)throw Error(`地圖 ${mi} 必須恰好有 1 個${finalMap?'最終首領':'地圖首領'}`);}
+  for(let mi=0;mi<MAPS.length;mi++){const finalMap=cfg.maps?.catalog?.[mi]?.mapType==='final'||(!cfg.maps?.catalog&&mi===6),bosses=cfg.monsters.catalog.filter(m=>m.mapIndex===mi&&(finalMap?m.kind==='final':m.kind==='boss'));if(finalMap?bosses.length!==1:cfg.maps?.catalog?.[mi]?.bossEnabled!==false&&!bosses.length)throw Error(`地圖 ${mi} 必須恰好有 1 個${finalMap?'最終首領':'地圖首領'}`);}
   if(!cfg.drops||!Array.isArray(cfg.drops.entries))throw Error('掉落表必須是陣列');
-  const types=new Set(['sourceMaterial','material','ore','dust','gem','potion','item','gear','gearLegendary','bossGear']),encKinds=new Set(['normal','elite','boss','final']),dropIds=new Set();
+  const types=new Set(['sourceMaterial','material','ore','dust','gem','potion','item','gear','gearLegendary','bossGear','equipment','token']),encKinds=new Set(['normal','elite','boss','final']),dropIds=new Set();
   for(const [i,d] of cfg.drops.entries.entries()){
     if(!d||typeof d.id!=='string'||!/^[a-zA-Z0-9_-]{1,120}$/.test(d.id)||dropIds.has(d.id))throw Error('掉落規則 ID 無效或重複：'+i);dropIds.add(d.id);
     if(typeof d.name!=='string'||!d.name.trim()||typeof d.enabled!=='boolean'||!types.has(d.type)||!Array.isArray(d.kinds)||!d.kinds.length||d.kinds.some(k=>!encKinds.has(k))||!Array.isArray(d.chanceByDifficulty)||d.chanceByDifficulty.length!==3||d.chanceByDifficulty.some(v=>!Number.isFinite(v)||v<0||v>1)||!Number.isInteger(d.quantityMin)||!Number.isInteger(d.quantityMax)||d.quantityMin<1||d.quantityMax<d.quantityMin||d.quantityMax>999||!Array.isArray(d.sources)||!d.sources.length||d.sources.some(id=>!monsterIds.has(id)))throw Error('掉落規則資料無效：'+d.id);
     if(d.type==='material'&&(typeof d.key!=='string'||!d.key.trim()))throw Error('材料掉落需要材料名稱：'+d.id);
-    if(d.type==='gem'&&d.key!=='random'&&![0,1,2,'0','1','2'].includes(d.key))throw Error('寶石掉落 key 需為 random/0/1/2：'+d.id);if(d.type==='item'&&!SHOP.some(x=>x.id===d.key))throw Error('商店道具掉落 key 無效：'+d.id);
+    if(d.type==='gem'&&d.key!=='random'&&![0,1,2,'0','1','2'].includes(d.key))throw Error('寶石掉落 key 需為 random/0/1/2：'+d.id);if(d.type==='item'&&!(globalThis.__EMBERWILD_VALIDATE_ITEM_IDS||new Set(SHOP.map(x=>x.id))).has(d.key))throw Error('商店道具掉落 key 無效：'+d.id);
   }
   return cfg;
 };
@@ -70,7 +70,7 @@ function configuredDropDescription(row,kind,mapIndex){
   const rules=configuredDropRules(e).filter(rule=>effectiveDropChance(rule,e,bonus)>0);
   if(!rules.length)return '掉落表：此難度無啟用中的物品掉落';
   const items=rules.map(rule=>{
-    const name=rule.type==='sourceMaterial'?(kind==='boss'?bossMaterial(mapIndex,e.difficulty):row.material):rule.type==='material'?rule.key:rule.name;
+    const name=rule.type==='sourceMaterial'?(kind==='boss'?(e.difficulty?'【'+['普通','困難','地獄'][e.difficulty]+'】':'')+row.material:row.material):rule.type==='material'?rule.key:rule.name;
     const chance=Number((effectiveDropChance(rule,e,bonus)*100).toFixed(2)),qty=rule.quantityMin===rule.quantityMax?rule.quantityMin:rule.quantityMin+'～'+rule.quantityMax;
     return esc(name)+' ×'+qty+'（'+chance+'%）';
   });
@@ -91,7 +91,7 @@ function ensureLegendaryDropAffix(g){
 }
 function grantConfiguredDrop(rule,e,rng=Math.random){
   const qty=randomQuantity(rule,rng),mode=e.difficulty||0,mi=e.region??state.map,tier=regionTier(mi),r=GAMEPLAY_SETTINGS.rewards;
-  if(rule.type==='sourceMaterial'||rule.type==='material'){const key=rule.type==='sourceMaterial'?(e.kind==='boss'?bossMaterial(mi,mode):e.mat):rule.key;state.materials[key]=(state.materials[key]||0)+qty;note('獲得 '+key+' ×'+qty,'item');return {name:key,count:qty};}
+  if(rule.type==='sourceMaterial'||rule.type==='material'){const key=rule.type==='sourceMaterial'?(e.kind==='boss'?(mode?'【'+['普通','困難','地獄'][mode]+'】':'')+e.mat:e.mat):rule.key;state.materials[key]=(state.materials[key]||0)+qty;note('獲得 '+key+' ×'+qty,'item');return {name:key,count:qty};}
   if(rule.type==='ore'){state.ore+=qty;note('獲得 鍛鐵 ×'+qty,'item');return {name:'鍛鐵',count:qty};}
   if(rule.type==='dust'){state.dust+=qty;note('獲得 寶石粉塵 ×'+qty,'item');return {name:'寶石粉塵',count:qty};}
   if(rule.type==='potion'){const item=typeof healPotionItems==='function'?(healPotionItems().find(x=>x.id==='heal_standard')||healPotionItems()[0]):null;if(item&&typeof healPotionCount==='function'&&typeof setHealPotionCount==='function')setHealPotionCount(item.id,healPotionCount(item.id)+qty);else state.potions+=qty;note('獲得 '+(item?.name||'治療藥水')+' ×'+qty,'item');return {name:item?.name||'治療藥水',count:qty};}

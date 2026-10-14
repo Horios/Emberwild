@@ -23,7 +23,7 @@
       if(!Number.isInteger(m.stageCount)||m.stageCount<1||m.stageCount>20||!Number.isInteger(m.stageOrder)||m.stageOrder<0||m.stageOrder>999||typeof m.stageElite!=='boolean')throw Error('終局關卡怪物設定無效：'+m.id);
     }
     for(let mi=0;mi<(cfg.maps?.catalog?.length||0);mi++)if(cfg.maps.catalog[mi]?.mapType==='final'){
-      const rows=cfg.monsters.catalog.filter(m=>m.mapIndex===mi),bosses=rows.filter(m=>m.kind==='final'),adds=rows.filter(m=>m.kind==='normal'&&m.enabled!==false);
+      const rows=cfg.monsters.catalog.filter(m=>m.mapIndex===mi),bosses=rows.filter(m=>m.kind==='final'),adds=rows.filter(m=>['normal','elite'].includes(m.kind)&&m.enabled!==false);
       if(bosses.length!==1)throw Error('終局地圖必須恰好有 1 名最終首領：'+cfg.maps.catalog[mi].name);
       const total=1+adds.reduce((n,m)=>n+m.stageCount,0);
       if(total<1||total>20)throw Error('終局關卡總敵人數必須為 1～20：'+cfg.maps.catalog[mi].name);
@@ -43,10 +43,10 @@
     return {name:row.name,icon:'',mat:row.material,lv,hp,maxhp:hp,atk,def,kind:'final',turn:0,monsterId:row.id,maxDrops:row.maxDrops,element:row.element,race:row.race,difficulty:mode,region:mi,stageOrder:row.stageOrder};
   }
   function configuredStageRows(mi){
-    const cat=monsterCatalog(),boss=cat.find(m=>m.mapIndex===mi&&m.kind==='final'),adds=cat.filter(m=>m.mapIndex===mi&&m.kind==='normal'&&m.enabled!==false);
+    const cat=monsterCatalog(),boss=cat.find(m=>m.mapIndex===mi&&m.kind==='final'),adds=cat.filter(m=>m.mapIndex===mi&&['normal','elite'].includes(m.kind)&&m.enabled!==false);
     if(!boss)throw Error('終局首領未設定');
     const rows=[{row:boss,kind:'final',count:1,order:boss.stageOrder??100}];
-    for(const row of adds)rows.push({row,kind:row.stageElite?'elite':'normal',count:row.stageCount??1,order:row.stageOrder??10});
+    for(const row of adds)rows.push({row,kind:row.kind==='elite'||row.stageElite?'elite':'normal',count:row.stageCount??1,order:row.stageOrder??10});
     return rows.sort((a,b)=>a.order-b.order||((a.kind==='final')-(b.kind==='final'))||a.row.id.localeCompare(b.row.id));
   }
   globalThis.configuredFinalStageRows=configuredStageRows;
