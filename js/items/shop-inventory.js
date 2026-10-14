@@ -90,13 +90,8 @@
   }
   marketOfferName=function(input){const offer=resolvedOffer(input);return offerName(offer,marketRule(offer));};
   function offerDescription(offer,rule){
-    const item=offerItem(offer);
-    if(rule?.description)return item?(globalThis.equipmentPlayerItemDescription?.({...item,description:rule.description})||rule.description):rule.description;
-    if(item)return globalThis.equipmentPlayerItemDescription?.(item)||item.description||item.desc||'冒險途中使用的補給道具。';
-    if(offer.kind==='ore')return '裝備強化常用的金屬素材。';
-    if(offer.kind==='dust')return '由裝備分解取得的細碎素材。';
-    if(offer.kind==='gem')return '可鑲嵌於技能插槽，強化技能的寶石。';
-    const source=GAMEPLAY_SETTINGS?.monsters?.catalog?.find(x=>x.material===offer.key);return source?'取自'+source.name+'的探索素材。':'探索途中收集的製作素材。';
+    const kind=['ore','dust'].includes(offer.kind)?'material':offer.kind,key=offer.kind==='ore'?'鍛鐵':offer.kind==='dust'?'粉塵':offer.key;
+    return globalThis.__EMBERWILD_ITEM_DESCRIPTION?.(kind,key)??'';
   }
   function offerEffect(offer){
     const item=offerItem(offer);
@@ -158,7 +153,7 @@
     return heading('SUPPLIES / 全隊共用','商店')+tabs+`<div class="shop-catalog-scroll" data-shop-category="${shopCategory}">${section}</div>`;
   };
 
-  const LEVEL_SCROLL={id:'level_scroll',name:'升級卷軸',type:'levelScroll',description:'提升全隊共用等級 1 級，後備與名冊夥伴同步成長。'};
+  const LEVEL_SCROLL={id:'level_scroll',name:'升級卷軸',type:'levelScroll',get description(){return globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('item','level_scroll')??'';}};
   const inventoryItemById=id=>id===LEVEL_SCROLL.id?LEVEL_SCROLL:SHOP.find(x=>x.id===id);
   function inventoryItemCount(item){return item.type==='levelScroll'?materialCount('升級卷軸'):(typeof isHealPotion==='function'&&isHealPotion(item))?healPotionCount(item.id):(state.consumables[item.id]||0);}
   function setInventoryItemCount(item,n){n=Math.max(0,Math.floor(Number(n)||0));if(item.type==='levelScroll')setMaterialCount('升級卷軸',n);else if(typeof isHealPotion==='function'&&isHealPotion(item))setHealPotionCount(item.id,n);else state.consumables[item.id]=n;}
@@ -172,10 +167,7 @@
     const [key,tone]=glyphs[name]||[/牙|骨/.test(name)?'bone':/翼|羽/.test(name)?'feather':/晶|石/.test(name)?'gem':/齒輪/.test(name)?'cog':'package','#a9c98b'];
     return `<span class="inventory-item-icon" style="color:${tone}" aria-hidden="true">${globalThis.__EMBERWILD_INVENTORY_ICON?.('material',name,'lucide:'+key,{size:26})||__EMBERWILD_SKILL_ICONS.svgFor('lucide:'+key,[],{size:26})}</span>`;
   };
-  globalThis.inventoryMaterialDescription=function(name){
-    const descriptions={'鍛鐵':'裝備強化與洗鍊材料。','粉塵':'裝備洗鍊與寶石合成材料。','以太鍛鐵':'高階裝備強化材料。','光輝碎塊':'洗鍊時用於保留指定詞條。','升級卷軸':'使用後提升角色 1 級。'};
-    return globalThis.lifeMaterialDescription?.(name)||descriptions[name]||'共用材料。';
-  };
+  globalThis.inventoryMaterialDescription=name=>globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('material',name)??'';
   function inventoryItemIcon(item){
     const ticket=item.type==='levelScroll'||EmberwildTimedBoosts.isItem(item),bottle=['healPotion','imbue','ward','elementTonic'].includes(item.type);
     const key=ticket?'ticket':bottle?'flask-round':item.type==='gearTierReroll'?'sparkles':'package';
@@ -190,7 +182,7 @@
   };
   accountItemsView=function(){
     ensureHealingPotionState();const target=pageHero('equipment')||party.members[0],rows=[...SHOP,LEVEL_SCROLL].filter(item=>inventoryItemCount(item)>0),needsTarget=rows.some(item=>!['levelScroll','gearTierReroll'].includes(item.type)&&!isHealPotion(item)&&!EmberwildTimedBoosts.isItem(item));
-    return heading('ITEMS / 帳號共用','道具庫存')+`<section class="panel"><div class="inventory-item-controls">${needsTarget?`<label>使用角色 <select onchange="selectPageHero('equipment',Number(this.value))">${(typeof enlistedHeroes==='function'?enlistedHeroes():party.members).map(h=>`<option value="${memberKey(h)}" ${h===target?'selected':''}>${esc(characterName(h))} · ${esc(CLASSES[h.job].name)} · Lv.${h.lv}</option>`).join('')}</select></label>`:''}<span class="small">治療藥水仍只由自動喝水使用；全隊道具直接使用；角色附魔等效果才需指定對象。</span></div><div class="inventory-supply-status">${esc(characterName(target))}目前效果：<span class="supply-countdown" data-job="${memberKey(target)}">${esc(supplyStatus(target)||'無')}</span></div><div class="account-item-list">${rows.map(item=>{const n=inventoryItemCount(item),scroll=item.type==='levelScroll',heal=typeof isHealPotion==='function'&&isHealPotion(item),detail=scroll?`共用等級 +1 · 目前 LV${playerHero().lv} / ${levelCap(playerHero())} · 使用前需結束遭遇`:heal?`恢復最大生命 ${pctText(item.healFraction)}% · 冷卻 ${item.cooldown} 回合`:supplyDetail(item);return `<div class="account-item-row" data-inventory-item="${esc(item.id)}"><div class="account-item-main">${inventoryItemIcon(item)}<div><b>${textRarityItemHTML(item)}</b><span class="small">${heal?'自動治療藥水':'可手動使用消耗品'}</span></div></div><div class="account-item-desc">${esc(scroll?item.description:globalThis.equipmentPlayerItemDescription?.(item)??(item.description||item.desc||''))}<span class="detail">${esc(detail)}</span></div><div class="account-item-count">× ${n.toLocaleString()}<br><span class="small">賣價 1 個 ${inventoryItemSellPrice(item)} 金幣</span></div><div class="account-item-actions">${scroll?`<button onclick="useLevelScroll()" ${canUseLevelScroll()?'':'disabled'}>使用（全隊）</button>`:heal?`<button onclick="openHealingSettings()">自動設定</button>`:`<button onclick="useInventoryItem('${item.id}',${memberKey(target)})" ${n<1?'disabled':''}>${EmberwildTimedBoosts.isItem(item)?'使用（全隊）':item.id==='power_tier_reroll'?'前往強化':'對'+esc(characterName(target))+'使用'}</button>`}<input data-sell-qty type="number" min="1" max="${n}" value="1" ${n<1?'disabled':''}><button onclick="sellInventoryItemFromButton(this,'${item.id}',false)" ${n<1||globalThis.__EMBERWILD_CAN_SELL?.('item',item.id)===false?'disabled':''}>賣出</button><button onclick="sellInventoryItemFromButton(this,'${item.id}',true)" ${n<1||globalThis.__EMBERWILD_CAN_SELL?.('item',item.id)===false?'disabled':''}>全部</button></div></div>`;}).join('')||'<p class="empty">尚未持有消耗道具。</p>'}</div></section>`+accountGemsView();
+    return heading('ITEMS / 帳號共用','道具庫存')+`<section class="panel"><div class="inventory-item-controls">${needsTarget?`<label>使用角色 <select onchange="selectPageHero('equipment',Number(this.value))">${(typeof enlistedHeroes==='function'?enlistedHeroes():party.members).map(h=>`<option value="${memberKey(h)}" ${h===target?'selected':''}>${esc(characterName(h))} · ${esc(CLASSES[h.job].name)} · Lv.${h.lv}</option>`).join('')}</select></label>`:''}<span class="small">治療藥水仍只由自動喝水使用；全隊道具直接使用；角色附魔等效果才需指定對象。</span></div><div class="inventory-supply-status">${esc(characterName(target))}目前效果：<span class="supply-countdown" data-job="${memberKey(target)}">${esc(supplyStatus(target)||'無')}</span></div><div class="account-item-list">${rows.map(item=>{const n=inventoryItemCount(item),scroll=item.type==='levelScroll',heal=typeof isHealPotion==='function'&&isHealPotion(item),detail=scroll?`共用等級 +1 · 目前 LV${playerHero().lv} / ${levelCap(playerHero())} · 使用前需結束遭遇`:heal?`恢復最大生命 ${pctText(item.healFraction)}% · 冷卻 ${item.cooldown} 回合`:supplyDetail(item);return `<div class="account-item-row" data-inventory-item="${esc(item.id)}"><div class="account-item-main">${inventoryItemIcon(item)}<div><b>${textRarityItemHTML(item)}</b><span class="small">${heal?'自動治療藥水':'可手動使用消耗品'}</span></div></div><div class="account-item-desc">${esc(globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('item',item.id)??'')}<span class="detail">${esc(detail)}</span></div><div class="account-item-count">× ${n.toLocaleString()}<br><span class="small">賣價 1 個 ${inventoryItemSellPrice(item)} 金幣</span></div><div class="account-item-actions">${scroll?`<button onclick="useLevelScroll()" ${canUseLevelScroll()?'':'disabled'}>使用（全隊）</button>`:heal?`<button onclick="openHealingSettings()">自動設定</button>`:`<button onclick="useInventoryItem('${item.id}',${memberKey(target)})" ${n<1?'disabled':''}>${EmberwildTimedBoosts.isItem(item)?'使用（全隊）':item.id==='power_tier_reroll'?'前往強化':'對'+esc(characterName(target))+'使用'}</button>`}<input data-sell-qty type="number" min="1" max="${n}" value="1" ${n<1?'disabled':''}><button onclick="sellInventoryItemFromButton(this,'${item.id}',false)" ${n<1||globalThis.__EMBERWILD_CAN_SELL?.('item',item.id)===false?'disabled':''}>賣出</button><button onclick="sellInventoryItemFromButton(this,'${item.id}',true)" ${n<1||globalThis.__EMBERWILD_CAN_SELL?.('item',item.id)===false?'disabled':''}>全部</button></div></div>`;}).join('')||'<p class="empty">尚未持有消耗道具。</p>'}</div></section>`+accountGemsView();
   };
   globalThis.accountItemsView=accountItemsView;
   const shopInventoryEquipmentBase=equipmentView;

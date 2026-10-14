@@ -4,20 +4,13 @@
   const M=EmberwildBalanceDocument,LIMIT=1e9;
   let design=M.normalizeLife(JSON.parse(balanceSourceText()||'null')?.lifeSkills||M.lifeDefaults(),SHOP);
   const MATERIALS={herb:'紅色草',bug:'小蟲',paste:'紅色草泥',water:'清水',bottle:'藥水瓶'};
-  const DESCRIPTIONS={
-    [MATERIALS.herb]:'可加工製作紅色草泥。',
-    [MATERIALS.paste]:'可搭配清水、藥水瓶製作簡易治療藥水。',
-    [MATERIALS.bug]:'尚無用途。',
-    [MATERIALS.water]:'製作簡易治療藥水的煉金材料，每份配方消耗 1 份。',
-    [MATERIALS.bottle]:'製作簡易治療藥水的空瓶，每份配方消耗 1 個。'
-  };
-  globalThis.lifeMaterialDescription=name=>DESCRIPTIONS[name]||'';
+  globalThis.lifeMaterialDescription=name=>globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('material',name)??'';
   let GATHER_TARGETS=design.gathering;
   let gatherTarget=GATHER_TARGETS[0]?.id||'',stockFilter='all',stockSort='default',stockOpen=true;
   globalThis.setLifeStockFilter=value=>{if(!['all','gather','alchemy','owned'].includes(value))return;stockFilter=value;render();};
   globalThis.setLifeStockSort=value=>{if(!['default','name','quantity','price'].includes(value))return;stockSort=value;render();};
   globalThis.setLifeStockOpen=open=>{stockOpen=!!open;};
-  const products=()=>Object.keys(design.materialBuyPrices||{}).map(name=>({name,description:globalThis.lifeMaterialDescription(name)||'可供煉金配方使用的材料。'}));
+  const products=()=>Object.keys(design.materialBuyPrices||{}).map(name=>({name,description:globalThis.lifeMaterialDescription(name)}));
   let RECIPES=design.recipes;
   let owner=null,gather=null,work=null,lastTick=Date.now();
   const copy=v=>JSON.parse(JSON.stringify(v));
@@ -139,7 +132,7 @@
     if(stockSort!=='default')stockNames.sort((a,b)=>(stockSort==='quantity'?count(b)-count(a):stockSort==='price'?materialSellPrice(b)-materialSellPrice(a):0)||a.localeCompare(b,'zh-Hant'));
     const stock=stockNames.map(name=>{
       const n=count(name);
-      return `<article class="life-stock-row"><div class="life-stock-info account-item-main">${inventoryMaterialIcon(name)}<div><b>${esc(globalThis.__EMBERWILD_ITEM_NAME?.('material',name,name)||name)}</b><p class="small">${esc(globalThis.lifeMaterialDescription(name)||'生活技能材料。')}</p></div></div><div class="life-stock-count"><b>×${n.toLocaleString()}</b><span class="small">賣價 1 個 ${materialSellPrice(name)} 金幣</span></div><div class="life-stock-actions" data-material="${esc(name)}"><input aria-label="${esc(name)}賣出數量" type="number" min="1" max="${n}" value="1" ${n<1||globalThis.__EMBERWILD_CAN_SELL?.('material',name)===false?'disabled':''}><button onclick="sellMaterialFromControl(this)" ${n<1||globalThis.__EMBERWILD_CAN_SELL?.('material',name)===false?'disabled':''}>賣出</button><button onclick="sellAllMaterialFromControl(this)" ${n<1||globalThis.__EMBERWILD_CAN_SELL?.('material',name)===false?'disabled':''}>全部賣出</button></div></article>`;
+      return `<article class="life-stock-row"><div class="life-stock-info account-item-main">${inventoryMaterialIcon(name)}<div><b>${esc(globalThis.__EMBERWILD_ITEM_NAME?.('material',name,name)||name)}</b><p class="small">${esc(globalThis.lifeMaterialDescription(name))}</p></div></div><div class="life-stock-count"><b>×${n.toLocaleString()}</b><span class="small">賣價 1 個 ${materialSellPrice(name)} 金幣</span></div><div class="life-stock-actions" data-material="${esc(name)}"><input aria-label="${esc(name)}賣出數量" type="number" min="1" max="${n}" value="1" ${n<1||globalThis.__EMBERWILD_CAN_SELL?.('material',name)===false?'disabled':''}><button onclick="sellMaterialFromControl(this)" ${n<1||globalThis.__EMBERWILD_CAN_SELL?.('material',name)===false?'disabled':''}>賣出</button><button onclick="sellAllMaterialFromControl(this)" ${n<1||globalThis.__EMBERWILD_CAN_SELL?.('material',name)===false?'disabled':''}>全部賣出</button></div></article>`;
     }).join('')||'<p class="empty">沒有符合條件的材料。</p>';
     const stockPanel=`<details class="panel life-stock" ${stockOpen?'open':''} ontoggle="setLifeStockOpen(this.open)"><summary>目前材料庫存 <span class="small">${stockNames.length} 種</span></summary><div class="life-stock-content"><div class="life-stock-controls"><label>篩選 <select aria-label="生活材料篩選" onchange="setLifeStockFilter(this.value)">${[['all','全部材料'],['gather','採集產物'],['alchemy','煉金材料'],['owned','只顯示持有']].map(([key,label])=>`<option value="${key}" ${stockFilter===key?'selected':''}>${label}</option>`).join('')}</select></label><label>排序 <select aria-label="生活材料排序" onchange="setLifeStockSort(this.value)">${[['default','材料類別'],['name','名稱'],['quantity','數量（多到少）'],['price','賣價（高到低）']].map(([key,label])=>`<option value="${key}" ${stockSort===key?'selected':''}>${label}</option>`).join('')}</select></label></div><div class="life-materials">${stock}</div><p class="small">${healPotionCount('heal_small')>0?'簡易治療藥水 ×'+healPotionCount('heal_small').toLocaleString()+' · ':''}材料全隊共用，藥水可在背包的道具頁查看。</p><button onclick="setShopCategory('life');setTab('shop')">購買商店材料</button></div></details>`;
     return heading('LIFE SKILLS / 生活技能測試','生活技能')+`<div class="life-skills-page">

@@ -117,6 +117,7 @@
   const errors=inspect(input,{complete:input?.schemaVersion!==undefined});if(errors.length)throw Object.assign(Error(errors.map(x=>x.system+' '+x.object+' '+x.field+'：'+x.reason).join('\n')),{issues:errors});
   const d=copy(input);if(d.schemaVersion===undefined){if(!defaults)throw Error('舊 JSON 需要有效的遷移基準');for(const k of REQUIRED)if(d[k]===undefined)d[k]=copy(defaults[k]);d.schemaVersion=VERSION;}
   d.lifeSkills=normalizeLife(d.lifeSkills,array(d.items));
+  if(root.EmberwildInventoryIcons)Object.assign(d, root.EmberwildInventoryIcons.migrateDescriptions(d,{hydrate:true}));
   const full=inspect(d);if(full.length)throw Object.assign(Error(full.map(x=>x.system+' '+x.object+' '+x.field+'：'+x.reason).join('\n')),{issues:full});return d;
  }
  function validate(input,domainValidate,defaults){const d=migrate(input,defaults);

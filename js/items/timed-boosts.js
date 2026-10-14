@@ -51,9 +51,9 @@
   }
   function itemName(kind,percent,minutes){return kind==='speed4'?'四倍速解鎖券'+minutes+'分鐘':LABELS[kind]+'＋'+percent+'％ '+minutes+'分鐘';}
   const DEFAULT_ITEMS=[
-    {id:'speed4_30m',type:TYPE,boostType:'speed4',bonusPercent:0,durationMinutes:30,duration:0,cost:1200,sellPrice:300,shopEnabled:false,name:itemName('speed4',0,30),description:'暫時開放四倍速探索，可自由切換戰鬥倍速。'},
-    {id:'exp_100_30m',type:TYPE,boostType:'exp',bonusPercent:100,durationMinutes:30,duration:0,cost:600,sellPrice:150,shopEnabled:false,name:itemName('exp',100,30),description:'暫時增加出戰角色取得的經驗值。'},
-    {id:'drop_50_30m',type:TYPE,boostType:'drop',bonusPercent:50,durationMinutes:30,duration:0,cost:600,sellPrice:150,shopEnabled:false,name:itemName('drop',50,30),description:'暫時提高物品掉落機率。'}
+    {id:'speed4_30m',type:TYPE,boostType:'speed4',bonusPercent:0,durationMinutes:30,duration:0,cost:1200,sellPrice:300,shopEnabled:false,name:itemName('speed4',0,30),description:''},
+    {id:'exp_100_30m',type:TYPE,boostType:'exp',bonusPercent:100,durationMinutes:30,duration:0,cost:600,sellPrice:150,shopEnabled:false,name:itemName('exp',100,30),description:''},
+    {id:'drop_50_30m',type:TYPE,boostType:'drop',bonusPercent:50,durationMinutes:30,duration:0,cost:600,sellPrice:150,shopEnabled:false,name:itemName('drop',50,30),description:''}
   ];
   const DEFAULT_RULES=DEFAULT_ITEMS.map((item,i)=>({id:item.id,enabled:true,type:'item',key:item.id,name:'',description:'',quantityMin:1,quantityMax:1,unitPrice:null,weight:i===0?.15:.35,selection:'weighted',chance:1,quantityScalesWithTier:false,priceScalesWithTier:false}));
   function migrateConfig(cfg){

@@ -132,11 +132,8 @@
     if(a.maxTriggers)extras.push(`每場最多 ${a.maxTriggers} 次`);
     return [text,...extras].join(' · ');
   }
-  function tokenDescription(g){
-    const description=g.snapshot.description.trim();
-    // Old saves and imported balance files retain this stock boilerplate.
-    return description===g.snapshot.name+'：所有夥伴通用的單一信物。'?'':description.replace(/所有夥伴通用的單一信物。?/g,'').trim();
-  }
+  function tokenDescription(g){return globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('token',g.tokenId)??'';}
+
   globalThis.companionTokenDescription=tokenDescription;
   globalThis.companionTokenAbilityText=abilityText;
   function tokenIcon(g){

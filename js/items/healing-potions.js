@@ -5,10 +5,10 @@
 (function installHealingPotionSystem(){
   const HEAL_POTION_TYPE='healPotion';
   const HEAL_POTION_DEFAULTS=[
-    {id:'heal_small',type:HEAL_POTION_TYPE,cost:8,sellPrice:2,duration:0,cooldown:2,healFraction:.25,name:'簡易治療藥水',description:'少量恢復生命，價格低廉，適合日常探索。'},
-    {id:'heal_standard',type:HEAL_POTION_TYPE,cost:15,sellPrice:4,duration:0,cooldown:3,healFraction:.45,name:'治療藥水',description:'標準遠征治療藥水，在恢復量與成本之間取得平衡。'},
-    {id:'heal_greater',type:HEAL_POTION_TYPE,cost:28,sellPrice:7,duration:0,cooldown:4,healFraction:.70,name:'強效治療藥水',description:'一次恢復較多生命，適合高壓戰鬥，但價格與冷卻較高。'},
-    {id:'heal_supreme',type:HEAL_POTION_TYPE,cost:50,sellPrice:12,duration:0,cooldown:5,healFraction:1.00,name:'特級治療藥水',description:'可將生命大幅拉回安全線，主要用於危急狀況。'}
+    {id:'heal_small',type:HEAL_POTION_TYPE,cost:8,sellPrice:2,duration:0,cooldown:2,healFraction:.25,name:'簡易治療藥水',description:''},
+    {id:'heal_standard',type:HEAL_POTION_TYPE,cost:15,sellPrice:4,duration:0,cooldown:3,healFraction:.45,name:'治療藥水',description:''},
+    {id:'heal_greater',type:HEAL_POTION_TYPE,cost:28,sellPrice:7,duration:0,cooldown:4,healFraction:.70,name:'強效治療藥水',description:''},
+    {id:'heal_supreme',type:HEAL_POTION_TYPE,cost:50,sellPrice:12,duration:0,cooldown:5,healFraction:1.00,name:'特級治療藥水',description:''}
   ];
   const clone=v=>JSON.parse(JSON.stringify(v));
   const isHealPotion=item=>item?.type===HEAL_POTION_TYPE;
@@ -179,8 +179,8 @@
   if(typeof shopView==='function'){
     shopView=function(){
       ensureHealingPotionState();if(typeof ensureMarket==='function')ensureMarket();const h=pageHero('shop'),inv=healingInventory();
-      const healCards=healPotionItems().map(item=>`<article class="card heal-shop-card"><h3>${esc(item.name)}</h3><p class="item-flavor"><b>說明：</b>${esc(item.description||item.desc||'')}</p><p class="heal-spec"><b>詳細：</b>恢復最大生命 ${pct(item.healFraction)}% · 冷卻 ${item.cooldown} 回合</p><div class="row"><span>共用 ${healPotionCount(item.id)} 瓶</span><span>${item.cost} 金幣／瓶</span></div><div class="actions">${ownerControls(`<button onclick="buyHealingPotion('${item.id}')" ${h.gold<item.cost?'disabled':''}>購買 1 瓶</button>`,h.job)}</div><p class="heal-no-manual">治療藥水沒有手動使用按鈕；由戰鬥頁的角色自動治療設定觸發。</p></article>`).join('');
-      const supplyCards=SHOP.filter(x=>!isHealPotion(x)).map(item=>`<article class="card"><h3>${esc(item.name)}</h3><p class="item-flavor"><b>說明：</b>${esc(item.description||item.desc||'')}</p><p class="item-detail small"><b>詳細：</b>${esc(supplyDetail(item))}</p><div class="row"><span>共用 ${h.consumables[item.id]||0} 瓶</span><span>${item.cost} 金幣</span></div><div class="actions">${ownerControls(`<button onclick="buySupply('${item.id}')" ${h.gold<item.cost?'disabled':''}>購買</button><button onclick="useSupply('${item.id}')" ${!h.consumables[item.id]?'disabled':''}>對${esc(characterName(h))}使用</button>`,h.job)}</div></article>`).join('');
+      const healCards=healPotionItems().map(item=>`<article class="card heal-shop-card"><h3>${esc(item.name)}</h3><p class="item-flavor"><b>說明：</b>${esc(globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('item',item.id)??'')}</p><p class="heal-spec"><b>詳細：</b>恢復最大生命 ${pct(item.healFraction)}% · 冷卻 ${item.cooldown} 回合</p><div class="row"><span>共用 ${healPotionCount(item.id)} 瓶</span><span>${item.cost} 金幣／瓶</span></div><div class="actions">${ownerControls(`<button onclick="buyHealingPotion('${item.id}')" ${h.gold<item.cost?'disabled':''}>購買 1 瓶</button>`,h.job)}</div><p class="heal-no-manual">治療藥水沒有手動使用按鈕；由戰鬥頁的角色自動治療設定觸發。</p></article>`).join('');
+      const supplyCards=SHOP.filter(x=>!isHealPotion(x)).map(item=>`<article class="card"><h3>${esc(item.name)}</h3><p class="item-flavor"><b>說明：</b>${esc(globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('item',item.id)??'')}</p><p class="item-detail small"><b>詳細：</b>${esc(supplyDetail(item))}</p><div class="row"><span>共用 ${h.consumables[item.id]||0} 瓶</span><span>${item.cost} 金幣</span></div><div class="actions">${ownerControls(`<button onclick="buySupply('${item.id}')" ${h.gold<item.cost?'disabled':''}>購買</button><button onclick="useSupply('${item.id}')" ${!h.consumables[item.id]?'disabled':''}>對${esc(characterName(h))}使用</button>`,h.job)}</div></article>`).join('');
       const market=typeof marketCards==='function'?marketCards():'';
       const marketHead=party?.market?`<div class="actions market-refresh"><span>素材商品 · 第 ${party.market.serial} 批</span><button onclick="refreshMarket()">刷新商店 · ${MARKET_REFRESH_COST} 金幣</button></div>`:'';
       return `<div class="actions"><button onclick="showTestCodes()">兌換碼</button></div>`+heading('SUPPLIES / 全隊共用','商店')+pageSelector('shop')+`<section class="panel shared-shop-info"><b>道具設定角色：${esc(characterName(h))} · ${h.gold} 金幣</b>${uiHelp('補給說明','治療藥水購買後進入全隊共用庫存，只能在角色回合開始時依自動治療設定使用；沒有手動喝藥。元素附魔、抗性與增幅藥水仍可手動使用，效果以角色出戰回合計時。')}<p class="supply-countdown" data-job="${h.job}">${supplyStatus(h)||'目前無持續型消耗品效果'}</p></section>${marketHead}<div class="shared-shop-grid">${healCards}${market}${supplyCards}</div>`;

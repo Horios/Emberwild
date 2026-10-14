@@ -1,14 +1,14 @@
 /* Optional presentation data shares the published balance document and icon library. */
 (()=>{
   const M=EmberwildInventoryIcons,baseExport=exportableBalance,baseValidate=validateBalanceConfig,baseApply=applyBalanceConfig;
-  const defaultGemLabels=GEMS.map(g=>({name:g.name,desc:g.desc}));
-  function applyGemLabels(){for(const [i,g]of GEMS.entries()){g.name=lookup.get('gem:'+i)?.displayName||defaultGemLabels[i].name;g.desc=lookup.get('gem:'+i)?.description??defaultGemLabels[i].desc;}}
-  let templates,definitions,customIcons=baseExport().skillIcons||[],lookup=new Map();
-  const saved=balanceSourceText();if(saved){templates=EmberwildIconColors.validate(JSON.parse(saved));EmberwildIconColors.use(templates);definitions=M.validate(JSON.parse(saved),__EMBERWILD_SKILL_ICONS);lookup=new Map((definitions||[]).map(r=>[r.kind+':'+r.key,r]));}
-  exportableBalance=()=>{const out=baseExport();if(templates!==undefined)out.iconColorTemplates=structuredClone(templates);if(definitions!==undefined)out.inventoryIcons=structuredClone(definitions);return out;};
+  const defaultGemLabels=GEMS.map(g=>({name:g.name}));
+  function applyGemLabels(){for(const [i,g]of GEMS.entries()){g.name=lookup.get('gem:'+i)?.displayName||defaultGemLabels[i].name;g.desc=lookup.get('gem:'+i)?.description??'';}}
+  let templates,definitions=M.migrateDescriptions(baseExport()).inventoryIcons,customIcons=baseExport().skillIcons||[],lookup=new Map(definitions.map(r=>[r.kind+':'+r.key,r]));
+  const saved=balanceSourceText();if(saved){templates=EmberwildIconColors.validate(JSON.parse(saved));EmberwildIconColors.use(templates);definitions=M.validate(M.migrateDescriptions(JSON.parse(saved)),__EMBERWILD_SKILL_ICONS);lookup=new Map((definitions||[]).map(r=>[r.kind+':'+r.key,r]));}
+  exportableBalance=()=>{const out=baseExport();if(templates!==undefined)out.iconColorTemplates=structuredClone(templates);if(definitions!==undefined)out.inventoryIcons=structuredClone(definitions);return M.migrateDescriptions(out);};
   validateBalanceConfig=input=>{M.validate(input,__EMBERWILD_SKILL_ICONS);return baseValidate(input);};
   applyBalanceConfig=(input,options={})=>{
-    const next=M.validate(input,__EMBERWILD_SKILL_ICONS),out=baseApply(input,options);
+    const canonical=M.migrateDescriptions(input,{hydrate:true}),next=M.validate(canonical,__EMBERWILD_SKILL_ICONS),out=baseApply(canonical,options);
     templates=EmberwildIconColors.validate(input);EmberwildIconColors.use(templates);definitions=next;customIcons=structuredClone(input.skillIcons||[]);lookup=new Map((next||[]).map(r=>[r.kind+':'+r.key,r]));applyGemLabels();
     if(options.persist!==false){const doc=exportableBalance();localStorage.setItem(BALANCE_KEY,JSON.stringify(doc));if(globalThis.__EMBERWILD_PUBLISHED_BALANCE&&IS_PREVIEW){globalThis.__EMBERWILD_BALANCE_SOURCE=doc;localStorage.setItem(BALANCE_KEY+'-published-base',JSON.stringify(globalThis.__EMBERWILD_PUBLISHED_BALANCE));}}
     if(party)render();return out;
@@ -47,15 +47,14 @@
   applyGemLabels();
   const baseItemsView=accountItemsView;
   accountItemsView=function(){let html=baseItemsView();const scroll=lookup.get('item:level_scroll');if(scroll?.displayName)html=html.replaceAll(esc('升級卷軸'),esc(scroll.displayName));for(const p of exportableBalance().companions||[]){const key='companion-ticket-'+p.id,r=lookup.get('item:'+key);if(r?.saleEnabled&&companionTicketCount(p.id)>0)html+='<section class="panel"><b>'+esc(r.displayName||p.name+'招募券')+'</b><span>售價 '+(r.sellPrice??0)+' 金幣／張</span><button onclick="sellCatalogueRecruitTicket('+p.id+',1)">賣出 1 張</button></section>';}return html;};
-  const description=(kind,key)=>lookup.get(kind+':'+key)?.description;
-  const materialDescription=inventoryMaterialDescription;
-  globalThis.inventoryMaterialDescription=name=>description('material',name)??materialDescription(name);
-  const lifeDescription=lifeMaterialDescription;
-  globalThis.lifeMaterialDescription=name=>description('material',name)??lifeDescription(name);
+  const description=(kind,key)=>lookup.get(kind+':'+String(key))?.description??'';
+  globalThis.__EMBERWILD_ITEM_DESCRIPTION=description;
+  globalThis.inventoryMaterialDescription=name=>description('material',name);
+  globalThis.lifeMaterialDescription=name=>description('material',name);
   function gearKey(g){return g.boss!==undefined?'boss:'+g.region+':'+g.job:'form:'+equipmentFormGroup(g)+':'+g.slot+':'+g.form;}
   const gearNameHTML=equipmentNameHTML;
   equipmentNameHTML=function(g){const key=gearKey(g),row=lookup.get('equipment:'+key);if(!row)return gearNameHTML(g);const glyph=globalThis.__EMBERWILD_INVENTORY_ICON('equipment',key,'lucide:'+(['sword','shirt','shield','gem'][g.slot]),{size:22});return '<span class="inventory-item-icon" style="display:inline-flex;vertical-align:middle;margin-right:6px">'+glyph+'</span>'+gearNameHTML(g);};
   const attributes=globalThis.equipmentAttributeDetailsHTML;
-  globalThis.equipmentAttributeDetailsHTML=function(g,...args){const text=description('equipment',gearKey(g));return (text?'<p class="small">'+esc(text)+'</p>':'')+attributes(g,...args);};
+  globalThis.equipmentAttributeDetailsHTML=function(g,...args){const id=globalThis.__EMBERWILD_GEAR_CATALOGUE_KEY(g),text=description(id.kind,id.key);return (text?'<p class="small">'+esc(text)+'</p>':'')+attributes(g,...args);};
   globalThis.__EMBERWILD_INVENTORY_ICONS={version:2,entries:()=>M.entries(exportableBalance())};
 })();

@@ -93,7 +93,7 @@
         [0,0,0,0,0,2,5,10,23,60]
       ]
     },
-    rerollItem:{id:POWER_ITEM_ID,name:'強度重鑄石',description:'重新抽選一件裝備的 T1～T10 強度階級；抽選分布依該裝備原始掉落難度決定。',cost:0,sellPrice:80,shopEnabled:false,shopChance:.06,shopPrice:650,dropRuleInitialized:false}
+    rerollItem:{id:POWER_ITEM_ID,name:'強度重鑄石',description:'',cost:0,sellPrice:80,shopEnabled:false,shopChance:.06,shopPrice:650,dropRuleInitialized:false}
   };
 
   function finite(v,d,min=-Infinity,max=Infinity){v=Number(v);return Number.isFinite(v)?Math.max(min,Math.min(max,v)):d;}
@@ -312,13 +312,7 @@
     const hint=g.starterPack?'此裝備不適用基底評級。':'僅代表裝備基底的能力層級；強化與詞綴效果另行計算。';
     return '<span class="equipment-base-rating" title="'+esc(hint)+'">基底評級：'+globalThis.equipmentBaseRating(g)+'</span>';
   };
-  // Balance JSON keeps numeric tiers. Translate legacy item descriptions only at the player UI boundary.
-  globalThis.equipmentPlayerItemDescription=function(item){
-    const text=String(item?.description||item?.desc||'');
-    if(item?.id!==POWER_ITEM_ID)return text;
-    return text.replace(/T1[～~]T10\s*(?:強度階級|強度)?/g,'基底評級（D～SSS）')
-      .replace(/強度階級/g,'基底評級').replace(/\bT(10|[1-9])\b/g,(_,tier)=>'基底評級：'+BASE_RATINGS[Number(tier)-1]);
-  };
+  globalThis.equipmentPlayerItemDescription=item=>globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('item',item?.id)??'';
 
   function ensureGearIdentityMeta(g,{freshNames=false,freshPower=false,mode=null}={}){
     if(EmberwildTokens.isToken(g))return g;
