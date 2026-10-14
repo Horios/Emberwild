@@ -1,6 +1,6 @@
 /* Shared display-only inventory icon contract. Uses the existing SVG library. */
 (function(root){
-  const kinds=['equipment','item','material','gem','token'],copy=x=>structuredClone(x);
+  const kinds=['equipment','item','material','gem','token','skill'],copy=x=>structuredClone(x);
   const materialGlyphs={'鍛鐵':'anvil','粉塵':'sparkles','以太鍛鐵':'anvil','光輝碎塊':'sparkles','紅色草':'leaf','紅色草泥':'flask-conical','小蟲':'bug','清水':'droplet','藥水瓶':'flask-round','升級卷軸':'scroll-text'};
   const tokenGlyphs={berserk:'swords',guardian:'shield',pursuit:'crosshair',arcane:'wand-sparkles',echo:'audio-lines',hunt:'bow-arrow',prayer:'hand-heart',revival:'heart-pulse',plunder:'droplets',endurance:'hourglass'};
   function fallback(kind,key,item){
@@ -14,6 +14,8 @@
     const out=[],seen=new Set(),add=(kind,key,name,item)=>{key=String(key);const id=kind+':'+key;if(!key||seen.has(id))return;seen.add(id);out.push({id,kind,key,name:name||key,fallback:fallback(kind,key,item)});};
     for(const [job,slots] of (doc.equipmentForms||[]).entries())for(const [slot,forms] of slots.entries())for(const [index,form] of forms.entries()){add('equipment','form:'+job+':'+slot+':'+index,form.name,{...form,slot});Object.assign(out.at(-1),{job,slot,index});}
     for(const [region,map] of (doc.balanceSettings?.maps?.catalog||[]).entries())if(map.mapType!=='final'&&region!==6)for(const [job,cls] of (doc.classes||[]).entries()){const slot=[0,1,2,0,1,3][Math.max(0,Math.min(5,map.family??0))];add('equipment','boss:'+region+':'+job,map.name+' BOSS・'+cls.name+'・'+['武器','護甲','副手','飾品'][slot],{slot});Object.assign(out.at(-1),{job,slot,region});}
+    for(const [job,cls] of (doc.classes||[]).entries())for(const [index,sk]of (cls.skills||[]).entries())add('skill','core:'+job+':'+index,sk.name);
+    for(const [job,list]of (doc.supportSkills||[]).entries())for(const [index,sk]of list.entries())add('skill','support:'+job+':'+index,sk.name);
     for(const item of doc.items||[])add('item',item.id,item.name,item);add('item','level_scroll','升級卷軸');
     for(const p of doc.companions||[])if(p.unlockCondition?.type==='ticket')add('item','companion-ticket-'+p.id,p.name+'招募券');
     for(const key of ['鍛鐵','粉塵','以太鍛鐵','光輝碎塊','紅色草','紅色草泥','小蟲','清水','藥水瓶'])add('material',key,key);
@@ -30,9 +32,10 @@
     return out;
   }
   function issues(doc,library=root.__EMBERWILD_SKILL_ICONS){
-    if(doc.inventoryIcons===undefined)return [];
+    const paletteErrors=root.EmberwildIconColors?.issues(doc)||[];
+    if(doc.inventoryIcons===undefined)return paletteErrors;
     if(!Array.isArray(doc.inventoryIcons)||doc.inventoryIcons.length>2000)return ['道具圖示必須是最多 2000 筆的陣列'];
-    const errors=[],seen=new Set(),custom=new Set((doc.skillIcons||[]).map(x=>x.id));
+    const errors=[...paletteErrors],seen=new Set(),custom=new Set((doc.skillIcons||[]).map(x=>x.id));
     const known=new Set(entries({...doc,inventoryIcons:[]}).map(x=>x.id));
     for(const [i,r] of doc.inventoryIcons.entries()){
       if(!r||!kinds.includes(r.kind)||typeof r.key!=='string'||!r.key.trim()||r.key.length>100||['__proto__','constructor','prototype'].includes(r.key)){errors.push('道具圖示第 '+(i+1)+' 筆種類或名稱無效');continue;}
