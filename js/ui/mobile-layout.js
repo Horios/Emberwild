@@ -2,8 +2,17 @@
 (()=>{
   const mobile=matchMedia('(max-width:900px)');
   const primary=['battle','roster','equipment','character'];
-  let menuOpen=false,journalOpen=false,journalScroll=0,menuScroll=0;
+  let menuOpen=false,journalOpen=false,journalScroll=0,menuScroll=0,settingsOpen=false,pendingSkill=null;
   function sync(){
+    const main=document.querySelector('#app>.layout>main');
+    if(main&&tab==='roster'){
+      const content=main.querySelector('.companion-management-page'),plan=main.querySelector('.team-plan-panel');
+      const heading=main.querySelector('.mobile-roster-heading')||content?.querySelector('.heading');
+      if(heading&&plan&&content){
+        if(mobile.matches){heading.classList.add('mobile-roster-heading');if(heading.parentElement!==main)main.insertBefore(heading,plan);}
+        else if(heading.parentElement===main){heading.classList.remove('mobile-roster-heading');content.prepend(heading);}
+      }
+    }
     const nav=document.querySelector('#app>.layout>aside nav');
     if(nav&&!nav.querySelector('.mobile-more-toggle')){
       nav.setAttribute('aria-label','遊戲分頁');
@@ -39,6 +48,26 @@
       body?.setAttribute('aria-hidden',String(mobile.matches&&!journalOpen));
       if(body&&journalOpen&&body.scrollTop!==journalScroll)body.scrollTop=journalScroll;
     }
+    const control=document.querySelector('.expedition-control-card');
+    if(control){
+      if(!control.querySelector('.mobile-settings-toggle')){
+        const body=document.createElement('div');body.id='mobileExpeditionSettings';body.className='mobile-settings-body';
+        body.append(...control.childNodes);
+        const button=document.createElement('button');button.type='button';button.className='mobile-settings-toggle';button.setAttribute('aria-controls',body.id);
+        button.innerHTML='<b>探索設定 · BOSS／補給</b><span></span>';
+        button.onclick=()=>{settingsOpen=!settingsOpen;sync();};control.append(button,body);
+      }
+      control.classList.toggle('mobile-settings-open',settingsOpen);
+      const button=control.querySelector('.mobile-settings-toggle'),body=control.querySelector('.mobile-settings-body');
+      button.setAttribute('aria-expanded',String(settingsOpen));
+      button.querySelector('span').textContent=`${MAPS[party.map].name} · ${MODES[party.difficulty||0].name} · ${battleRate}×　${settingsOpen?'收合 ▴':'展開 ▾'}`;
+      body.setAttribute('aria-hidden',String(mobile.matches&&!settingsOpen));
+    }
+    if(tab!=='skills')pendingSkill=null;
+    if(mobile.matches&&pendingSkill){
+      const detail=document.querySelector('[data-team-skill-detail="'+pendingSkill+'"]');
+      if(detail){pendingSkill=null;detail.scrollIntoView({block:'start'});}
+    }
   }
   globalThis.toggleMobileJournal=()=>{journalOpen=!journalOpen;sync();};
   const journalBase=sharedBattleJournal;
@@ -62,6 +91,10 @@
   document.getElementById('app').addEventListener('scroll',event=>{
     if(event.target.matches?.('.mobile-journal-body'))journalScroll=event.target.scrollTop;
     if(event.target.matches?.('.mobile-more-pages'))menuScroll=event.target.scrollTop;
+  },true);
+  document.addEventListener('click',event=>{
+    const skill=event.target.closest?.('[data-team-skill]');
+    if(mobile.matches&&skill)pendingSkill=skill.dataset.teamSkill;
   },true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&menuOpen){menuOpen=false;sync();document.querySelector('.mobile-more-toggle')?.focus();}});
   document.addEventListener('click',event=>{if(menuOpen&&!event.target.closest('#app>.layout>aside')){menuOpen=false;sync();}});

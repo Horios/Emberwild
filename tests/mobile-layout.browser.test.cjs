@@ -122,3 +122,49 @@ test('Responsive: title, creation, utility dialogs and desktop layout stay usabl
   assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
+
+test('Mobile: expedition settings, readable touch controls and skill details are within reach',async()=>{
+ const g=await openRuntime(root),p=g.page;
+ try{
+  await p.setViewportSize({width:390,height:844});await start(p);
+  await p.evaluate(()=>{const b=document.createElement('div');b.id='preview-build-banner';b.style.cssText='position:fixed;top:8px;right:8px;z-index:2147483647;padding:6px 10px;font:700 12px/1.2 system-ui';b.textContent='測試版本 · chatgpt-dev';document.body.prepend(b);});
+  const banner=await p.locator('#preview-build-banner').boundingBox(),utilities=await p.locator('#utilityNavigation').boundingBox();
+  assert(banner.y+banner.height<=utilities.y,'preview label does not cover utility buttons');
+  await p.evaluate(()=>setTab('battle'));
+  assert.equal(await p.locator('.mobile-settings-body').isVisible(),false);
+  const layout=await p.evaluate(()=>({settings:document.querySelector('.expedition-control-card').getBoundingClientRect().top,battle:document.querySelector('.party-combat').getBoundingClientRect().top,start:document.querySelector('.party-combat button[onclick="toggleBattle()"]').getBoundingClientRect().width,body:document.querySelector('.party-combat').clientWidth}));
+  assert(layout.settings<layout.battle,'settings precede the battle roster');assert(layout.start>layout.body*.85,'start fills the action row');
+  for(const viewport of [{width:320,height:640},{width:390,height:844},{width:844,height:390}]){
+   await p.setViewportSize(viewport);
+   await p.locator('.mobile-settings-toggle').click();
+   assert.equal(await p.locator('.mobile-settings-body').isVisible(),true);
+   await fits(p,'expanded settings '+viewport.width);
+   await p.locator('.control-row select[aria-label="探索難度"]').selectOption('1');
+   await p.waitForFunction(()=>party.difficulty===1&&!isEmberwildUIInteracting());
+   await p.evaluate(()=>render());
+   assert.equal(await p.locator('.mobile-settings-body').isVisible(),true);
+   for(const button of ['.heal-auto-settings-button','.battle-effects-bar button']){
+    assert(await p.locator(button).evaluate(e=>e.getBoundingClientRect().height>=40),button+' touch height');
+   }
+   await p.locator('.mobile-settings-toggle').click();
+  }
+  await p.setViewportSize({width:390,height:844});
+  await p.locator('.heal-auto-settings-button').click();
+  assert.equal(await p.locator('#modal').isVisible(),true);
+  const healing=await p.locator('#modal').boundingBox();assert(healing.x>=0&&healing.x+healing.width<=390);
+  await p.evaluate(()=>closeModal());
+  await p.evaluate(()=>setTab('roster'));
+  const heading=await p.evaluate(()=>({title:document.querySelector('.mobile-roster-heading').getBoundingClientRect().top,plan:document.querySelector('.team-plan-panel').getBoundingClientRect().top}));assert(heading.title<heading.plan);
+  await p.setViewportSize({width:1440,height:900});
+  assert.equal(await p.locator('.companion-management-page>.heading').count(),1,'desktop restores its original heading');
+  await p.setViewportSize({width:390,height:844});await p.evaluate(()=>setTab('skills'));
+  const skillsBefore=await p.evaluate(()=>playerHero().skills.slice());
+  await p.locator('[data-team-skill="0:core:0"]').click();
+  await p.waitForFunction(()=>{const e=document.querySelector('[data-team-skill-detail="0:core:0"]'),m=document.querySelector('main');if(!e)return false;const d=e.getBoundingClientRect(),r=m.getBoundingClientRect();return d.top>=r.top&&d.bottom<=r.bottom;});
+  assert.deepEqual(await p.evaluate(()=>playerHero().skills),skillsBefore,'viewing a skill does not learn it');
+  await p.setViewportSize({width:1440,height:900});await p.evaluate(()=>setTab('battle'));
+  assert.equal(await p.locator('.mobile-settings-toggle').isVisible(),false);
+  assert.equal(await p.locator('.mobile-settings-body').isVisible(),true,'desktop settings always visible');
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
