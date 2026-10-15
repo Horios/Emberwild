@@ -2,6 +2,15 @@
 (function(){
   globalThis.journalLootOpen = globalThis.journalLootOpen ?? false;
   globalThis.journalLootHeight = globalThis.journalLootHeight ?? 180;
+  globalThis.toggleJournalLoot=function(event){
+    const details=event.currentTarget,summary=event.target.closest?.('summary');
+    if(!summary||summary.parentElement!==details)return;
+    event.preventDefault();
+    // Commit before a refresh can replace this details node. Its queued toggle
+    // event may arrive after replacement, so it must not own the shared state.
+    globalThis.journalLootOpen=!details.open;
+    details.open=globalThis.journalLootOpen;
+  };
   const style=document.createElement('style');
   style.textContent=`
     .global-battle-journal{

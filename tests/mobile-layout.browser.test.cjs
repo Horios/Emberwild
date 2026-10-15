@@ -275,3 +275,46 @@ test('Mobile: messages and loot are sibling panels without shared or nested scro
   assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
+
+test('Journal: loot collapse survives immediate redraws, queued toggle events and repeated clicks',async()=>{
+ const g=await openRuntime(root),p=g.page;
+ try{
+  await p.setViewportSize({width:1440,height:900});await start(p);
+  await p.evaluate(()=>{for(let i=0;i<20;i++)expeditionLoot.items.set('摺疊測試素材 '+i,{count:i+1,rar:0});});
+  for(const open of [false,true,false,true]){
+   const immediate=await p.evaluate(open=>{
+    journalLootOpen=open;render();
+    document.querySelector('.journal-loot-compact summary').click();
+    const committed=journalLootOpen;refreshGlobalJournal();render();
+    return {committed,dom:document.querySelector('.journal-loot-compact').open};
+   },open);
+   assert.deepEqual(immediate,{committed:!open,dom:!open},'commit the click before redraw');
+   await p.waitForTimeout(40);
+   assert.deepEqual(await p.evaluate(()=>({saved:journalLootOpen,dom:document.querySelector('.journal-loot-compact').open})),{saved:!open,dom:!open},'detached toggle events cannot overwrite intent');
+  }
+  await p.locator('.journal-loot-compact summary').focus();await p.keyboard.press('Enter');
+  assert.equal(await p.evaluate(()=>journalLootOpen),true,'keyboard can expand');
+  await p.evaluate(()=>document.getElementById('journalLootList').click());assert.equal(await p.evaluate(()=>journalLootOpen),true,'loot content clicks do not toggle');
+  await p.locator('.journal-loot-compact summary').focus();await p.keyboard.press('Enter');
+  assert.equal(await p.evaluate(()=>journalLootOpen),false,'keyboard can collapse');
+  for(const width of [1440,390]){
+   await p.setViewportSize({width,height:900});
+   const selector=width===390?'.mobile-loot-toggle':'.journal-loot-compact summary';
+   for(let i=0;i<4;i++){
+    // A real pointer hits the current node even when every animation-frame
+    // stability check would see a replacement from the 30 ms refresh loop.
+    await p.evaluate(()=>clearInterval(globalThis.foldRefresh));
+    await p.waitForFunction(()=>!isEmberwildUIInteracting());
+    await p.locator(selector).waitFor({state:'visible'});
+    const box=await p.locator(selector).boundingBox();assert(box,width+' click '+i+' has a visible header');
+    await p.evaluate(()=>globalThis.foldRefresh=setInterval(()=>refreshGlobalJournal(),30));
+    await p.mouse.click(box.x+box.width/2,box.y+box.height/2,{delay:80});await p.waitForTimeout(60);
+    const expected=i%2===0;
+    if(width===390){assert.equal(await p.locator('#mobileLootBody').isVisible(),expected);assert.equal(await p.locator(selector).getAttribute('aria-expanded'),String(expected));}
+    else assert.deepEqual(await p.evaluate(()=>({saved:journalLootOpen,dom:document.querySelector('.journal-loot-compact').open})),{saved:expected,dom:expected});
+   }
+   await p.evaluate(()=>clearInterval(foldRefresh));
+  }
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
