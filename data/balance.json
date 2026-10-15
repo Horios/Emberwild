@@ -23037,8 +23037,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23057,8 +23065,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 1,
+            "rank": 1,
+            "value": 20
+          },
+          {
+            "type": 2,
+            "rank": 1,
+            "value": 10
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23077,8 +23093,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 2,
+            "rank": 1,
+            "value": 5
+          },
+          {
+            "type": 2,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23097,8 +23121,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 3
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 3
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23117,8 +23149,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 3
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 3
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23139,8 +23179,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 8
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 8
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23159,8 +23207,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 2,
+            "rank": 1,
+            "value": 8
+          },
+          {
+            "type": 9,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23179,8 +23235,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 3
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 3
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23199,8 +23263,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23219,8 +23291,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23241,8 +23321,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 8
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 8
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23261,8 +23349,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 2,
+            "rank": 1,
+            "value": 8
+          },
+          {
+            "type": 9,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23281,8 +23377,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 3
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 3
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23301,8 +23405,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23321,8 +23433,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23343,8 +23463,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          },
+          {
+            "type": 0,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23363,8 +23491,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 1,
+            "rank": 1,
+            "value": 20
+          },
+          {
+            "type": 2,
+            "rank": 1,
+            "value": 10
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23383,8 +23519,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 1,
+            "rank": 1,
+            "value": 10
+          },
+          {
+            "type": 2,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23403,8 +23547,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 1,
+            "rank": 1,
+            "value": 5
+          },
+          {
+            "type": 1,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
@@ -23423,8 +23575,16 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          null,
-          null
+          {
+            "type": 1,
+            "rank": 1,
+            "value": 5
+          },
+          {
+            "type": 1,
+            "rank": 1,
+            "value": 5
+          }
         ],
         "growth": {
           "enabled": false,
