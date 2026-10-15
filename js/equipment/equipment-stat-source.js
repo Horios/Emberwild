@@ -156,7 +156,8 @@ gearDesc=function(g){
 
 // Equipment comparison deliberately contains no MP / MP-regen rows.
 equipmentComparison=function(h,g,position=null){
-  const afterHero={...h,equipped:[...h.equipped]};while(afterHero.equipped.length<5)afterHero.equipped.push(null);const positions=gearEquipPositions(g);let target=Number.isInteger(position)&&positions.includes(position)?position:positions.find(p=>!afterHero.equipped[p]);if(target===undefined)target=positions[0];afterHero.equipped[target]=g.id;
+  const afterHero={...h,equipped:[...h.equipped]};while(afterHero.equipped.length<5)afterHero.equipped.push(null);const positions=gearEquipPositions(g);let target=Number.isInteger(position)&&positions.includes(position)?position:positions.find(p=>!afterHero.equipped[p]);if(target===undefined)target=positions[0];afterHero.equipped=afterHero.equipped.map(id=>id===g.id?null:id);afterHero.equipped[target]=g.id;
+  const compare=()=>{
   const before=stats(h),after=stats(afterHero),rows=[];
   const labels={hp:'生命上限',atk:'攻擊力',def:'防禦力',crit:'暴擊率',critDamage:'暴擊傷害',pierce:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避率',elementBonus:'全屬性增傷',bossDamage:'BOSS 增傷',speed:'速度'};
   const percent=new Set(['crit','critDamage','defenseIgnore','lifesteal','evasion','elementBonus','bossDamage']);
@@ -165,6 +166,9 @@ equipmentComparison=function(h,g,position=null){
   for(const key of ['elementDamage','raceDamage','resist'])for(const type of new Set([...Object.keys(before[key]||{}),...Object.keys(after[key]||{})]))add((key==='raceDamage'?RACES[type]:ELEMENTS[type])+' '+({elementDamage:'傷害',raceDamage:'種族增傷',resist:'抗性'}[key]),before[key]?.[type],after[key]?.[type],true);
   for(let i=0;i<CLASSES[h.job].skills.length;i++){const skill=CLASSES[h.job].skills[i];if(!h.skills[i])continue;add(skill[0]+' 威力倍率',skillPower(i,h),skillPower(i,afterHero));if(skill[1]==='active')add(skill[0]+' 冷卻',skillCooldown(i,h),skillCooldown(i,afterHero),false,true);else add(skill[0]+' 觸發率',procChance(i,h),procChance(i,afterHero),true);}
   return rows;
+  };
+  // Compare current inventory values, even while combat uses its encounter snapshot.
+  return globalThis.__EMBERWILD_TEAM_EQUIPMENT?.withLiveEquipment(compare)??compare();
 };
 
 // Test JSON accepts fixedEffects (1–5 rows) and transparently migrates legacy exclusive / mana / form fields.

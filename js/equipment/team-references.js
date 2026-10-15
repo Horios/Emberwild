@@ -9,7 +9,11 @@
   // strengthen/reroll during combat, but those live item changes are projected
   // into combat only when the next encounter is spawned.
   const liveEquipment=equipment;
-  let battleEquipmentSnapshot=null;
+  let battleEquipmentSnapshot=null,liveEquipmentReads=0;
+  function withLiveEquipment(read){
+    liveEquipmentReads++;
+    try{return read();}finally{liveEquipmentReads--;}
+  }
   function currentBattleGearIds(){
     const ids=new Set();
     if(!party||!T.busy())return ids;
@@ -24,7 +28,7 @@
   }
   equipment=function(s=state){
     const key=s?memberKey(s):null;
-    if(battleEquipmentSnapshot&&Array.isArray(foes)&&foes.some(e=>e.hp>0)&&battleEquipmentSnapshot.has(key))return battleEquipmentSnapshot.get(key);
+    if(!liveEquipmentReads&&battleEquipmentSnapshot&&Array.isArray(foes)&&foes.some(e=>e.hp>0)&&battleEquipmentSnapshot.has(key))return battleEquipmentSnapshot.get(key);
     return liveEquipment(s);
   };
   const spawnGroupBase=spawnGroup;
@@ -101,5 +105,5 @@
   const bulkBase=bulkSalvageControls;
   bulkSalvageControls=function(){return bulkBase().replace('已鎖定、已穿戴、待確認洗鍊的裝備不會分解。BOSS 專屬裝備會再次確認。','已鎖定與待確認洗鍊的裝備保留；目前戰鬥隊伍裝備不會分解，其他隊伍引用會先提醒。');};
   const equipmentBase=equipmentView;equipmentView=function(){let html=equipmentBase();const active=currentBattleGearIds();html=html.replace(/(<button\b[^>]*onclick="salvage\('([^']+)'\)"[^>]*)\sdisabled/g,(full,prefix,id)=>disposable(findGear(id))&&!active.has(id)?prefix:full);return html;};
-  globalThis.__EMBERWILD_TEAM_EQUIPMENT={dispose,references:id=>M.references(T.build(),id),currentBattleGearIds};
+  globalThis.__EMBERWILD_TEAM_EQUIPMENT={dispose,references:id=>M.references(T.build(),id),currentBattleGearIds,withLiveEquipment};
 })();

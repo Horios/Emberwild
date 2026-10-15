@@ -582,6 +582,35 @@
   };
   const CHARACTER_EFFECT_KEYS=new Set(['attackPct','hpPct','defensePct']);
   const AFFIX_EFFECT_KEYS={3:'crit',6:'critDamage',7:'pierce',8:'lifesteal',9:'evasion',12:'elementDamagePct',13:'raceDamagePct',14:'elementResistPct',16:'allCooldownReduction',17:'dropRateBonus',18:'defenseIgnore'};
+  // Compare random affixes by effect and target, independently of learned skills
+  // and character stat caps. Duplicate affixes contribute to the same total.
+  globalThis.equipmentAffixComparison=function(current,next){
+    const collect=g=>{
+      const effects=new Map();
+      for(const raw of g.affix||[]){
+        const a=convertLegacyManaAffix(raw,g),skill=CLASSES[g.job??0]?.skills?.[a.skill??0];
+        let key=AFFIX_EFFECT_KEYS[a.type]||({0:'flatAttack',1:'flatHp',2:'flatDefense',4:'skillEffectPct',5:'skillCooldownReduction',15:'attackPct'})[a.type];
+        if(!key)continue;
+        let value=Number(a.value)||0,label=({flatAttack:'攻擊',flatHp:'生命',flatDefense:'防禦'})[key]||EFFECT_LABELS[key];
+        if([4,5].includes(a.type)){
+          if(a.type===5&&skill?.[1]==='proc'){key='skillProcChance';value*=GAME_BALANCE.affixes.procChancePerPointPercent;}
+          label=CLASSES[g.job??0].name+' · '+(skill?.[0]||'核心技能 '+((a.skill??0)+1))+' '+(a.type===4?'效果':key==='skillProcChance'?'觸發率':'冷卻縮短');
+        }else if(a.type===16)label='全主動／輔助技能冷卻縮短';
+        if(a.element)label=(ELEMENTS[a.element]||a.element)+' '+label;
+        if(a.race)label='對'+(RACES[a.race]||a.race)+' '+label;
+        const id=[key,a.element||'',a.race||'',[4,5].includes(a.type)?g.job+':'+(a.skill??0):''].join(':');
+        if(!effects.has(id))effects.set(id,{label,value:0,percent:!['flatAttack','flatHp','flatDefense','pierce','allCooldownReduction','skillCooldownReduction'].includes(key),unit:['allCooldownReduction','skillCooldownReduction'].includes(key)?' 回合':''});
+        effects.get(id).value+=value;
+      }
+      return effects;
+    };
+    const before=collect(current),after=collect(next),rows=[];
+    for(const id of new Set([...before.keys(),...after.keys()])){
+      const effect=after.get(id)||before.get(id),a=Number((before.get(id)?.value||0).toFixed(2)),b=Number((after.get(id)?.value||0).toFixed(2)),delta=Number((b-a).toFixed(2));
+      if(delta)rows.push({...effect,before:a,after:b,delta,good:delta>0});
+    }
+    return rows;
+  };
   // Equipment-owned bonuses are totals in their own units, never an estimate of
   // character attack or combat power. Keep random-affix rules available above.
   globalThis.equipmentAbilitySummary=function(g){
