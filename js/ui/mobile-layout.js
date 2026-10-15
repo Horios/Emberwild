@@ -2,7 +2,12 @@
 (()=>{
   const mobile=matchMedia('(max-width:900px)');
   const primary=['battle','roster','equipment','character'];
-  let menuOpen=false,journalOpen=false,journalScroll=0,menuScroll=0,settingsOpen=false,pendingSkill=null;
+  let menuOpen=false,journalOpen=false,journalScroll=0,menuScroll=0,settingsOpen=false,pendingSkill=null,journalSeen=false,followFilteredLog=false;
+  function latestLogTop(body){
+    const stream=body?.querySelector('.battle-log-stream');
+    return stream?Math.max(0,body.scrollTop+stream.getBoundingClientRect().bottom-body.getBoundingClientRect().top-body.clientHeight):0;
+  }
+  function followMobileLog(body){if(body){body.scrollTop=latestLogTop(body);journalScroll=body.scrollTop;}}
   function sync(){
     const main=document.querySelector('#app>.layout>main');
     if(main&&tab==='roster'){
@@ -47,6 +52,7 @@
       const body=journal.querySelector('.mobile-journal-body');
       body?.setAttribute('aria-hidden',String(mobile.matches&&!journalOpen));
       if(body&&journalOpen&&body.scrollTop!==journalScroll)body.scrollTop=journalScroll;
+      if(body&&mobile.matches&&journalOpen&&followFilteredLog&&body.querySelector('#liveLog')?.dataset.logGeneration===String(battleLogGeneration)){followFilteredLog=false;followMobileLog(body);}
     }
     const control=document.querySelector('.expedition-control-card');
     if(control){
@@ -69,7 +75,17 @@
       if(detail){pendingSkill=null;detail.scrollIntoView({block:'start'});}
     }
   }
-  globalThis.toggleMobileJournal=()=>{journalOpen=!journalOpen;sync();};
+  globalThis.toggleMobileJournal=()=>{journalOpen=!journalOpen;sync();if(journalOpen&&!journalSeen){journalSeen=true;followMobileLog(document.getElementById('mobileJournalBody'));}};
+  const appendBase=appendBattleLogLine;
+  appendBattleLogLine=function(...args){
+    const body=mobile.matches&&journalOpen?document.getElementById('mobileJournalBody'):null;
+    const top=body?.scrollTop,follow=body&&Math.abs(top-latestLogTop(body))<=2;
+    const out=appendBase(...args);
+    if(body&&!battleReportPaused){if(follow)followMobileLog(body);else{body.scrollTop=top;journalScroll=body.scrollTop;}}
+    return out;
+  };
+  const filterBase=setBattleLogFilter;
+  setBattleLogFilter=function(...args){followFilteredLog=mobile.matches&&journalOpen;return filterBase(...args);};
   const journalBase=sharedBattleJournal;
   sharedBattleJournal=function(){
     const html=journalBase();if(!html)return html;

@@ -225,3 +225,33 @@ test('Mobile: equipment icons, full names and ratings do not become independentl
   assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
+
+test('Mobile: the journal uses one scroll area for messages, loot and actions while preserving log following',async()=>{
+ const g=await openRuntime(root),p=g.page;
+ try{
+  await p.setViewportSize({width:390,height:844});await start(p);
+  await p.evaluate(()=>{for(let i=0;i<45;i++)note('手機長戰報 '+i+' · 玩家造成傷害與狀態文字完整顯示','playerDamage');for(let i=0;i<30;i++)expeditionLoot.items.set('素材 '+i,{count:i+1,rar:0});journalLootOpen=true;render();});
+  await p.locator('.mobile-journal-toggle').click();
+  const scrollAreas=()=>[...document.querySelectorAll('#mobileJournalBody *')].filter(e=>e.clientHeight>0&&e.scrollHeight>e.clientHeight+1&&['auto','scroll'].includes(getComputedStyle(e).overflowY)).map(e=>e.className);
+  assert.deepEqual(await p.evaluate(scrollAreas),[],'no nested vertical scroll areas');
+  assert(await p.locator('#mobileJournalBody').evaluate(e=>e.scrollHeight>e.clientHeight));
+  const latestVisible=()=>{const body=document.getElementById('mobileJournalBody'),last=body.querySelector('.battle-log-stream').lastElementChild,b=body.getBoundingClientRect(),r=last.getBoundingClientRect();return r.bottom<=b.bottom+2&&r.bottom>=b.top;};
+  assert(await p.evaluate(latestVisible),'opening shows the latest log');
+  await p.evaluate(()=>note('新增最新訊息','playerDamage'));
+  assert(await p.evaluate(latestVisible),'new messages keep following');
+  await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop=0);await p.waitForTimeout(30);
+  await p.evaluate(()=>{note('回看時不得拉走畫面','playerDamage');refreshGlobalJournal();});
+  assert.equal(await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop),0);
+  await p.locator('.journal-filter select').selectOption('playerDamage');
+  await p.waitForFunction(()=>!isEmberwildUIInteracting());
+  assert(await p.evaluate(latestVisible),'filter changes show the latest matching log');
+  await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop=e.scrollHeight);await p.waitForTimeout(30);
+  const top=await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop);
+  await p.evaluate(()=>note('閱讀戰利品時不強制跳走','playerDamage'));
+  assert.equal(await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop),top);
+  assert(await p.locator('.journal-quick-dispose').isVisible());
+  assert.deepEqual(await p.evaluate(scrollAreas),[]);
+  await p.setViewportSize({width:844,height:390});await fits(p,'single journal landscape');
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});

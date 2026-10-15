@@ -130,14 +130,16 @@
   #app .global-battle-journal{grid-column:1;grid-row:2;display:block;height:auto;min-height:0;max-height:none;padding:0!important;border:0;border-top:1px solid var(--line);overflow:hidden}
   .mobile-journal-toggle{display:block;width:100%;min-height:44px;padding:10px 14px;text-align:left;border:0;border-radius:0;background:#23302d;color:var(--gold);font-size:14px}
   .mobile-journal-body{display:none}
-  .mobile-journal-open .mobile-journal-body{display:block;max-height:40dvh;max-height:min(48cqh,440px);overflow:auto;padding:12px;overscroll-behavior:contain}
+  .mobile-journal-open .mobile-journal-body{display:block;max-height:40dvh;max-height:min(48cqh,440px);overflow:auto;padding:12px;overscroll-behavior:contain;overflow-anchor:none}
+  #app .global-journal-head .journal-title-row{display:none}
   #app .global-battle-journal .journal-actions{flex-wrap:wrap}#app .global-battle-journal button:not(.mobile-journal-toggle){min-height:40px;height:auto;padding:7px 10px;font-size:12px}
   #app .global-battle-journal #liveLog{display:block;margin:12px 0;overflow:visible!important}
-  #app .global-battle-journal .battle-log-stream{height:220px!important;min-height:0!important;max-height:35dvh!important;display:block;overflow:auto}
+  #app .global-battle-journal .battle-log-stream{height:auto!important;min-height:0!important;max-height:none!important;display:block;overflow:visible;scrollbar-gutter:auto}
+  #app .global-battle-journal .battle-log-empty{display:none}
   #app .global-battle-journal .battle-log-line{height:auto;min-height:24px;max-height:none;line-height:1.7;white-space:normal;overflow-wrap:anywhere;width:auto}
   #app .global-battle-journal .journal-resizer{display:none}
   #app .global-battle-journal .journal-loot-compact[open]{height:auto;overflow:visible}
-  #app .global-battle-journal .journal-loot-compact[open] .journal-loot-list{max-height:180px!important;overflow:auto}
+  #app .global-battle-journal .journal-loot-compact[open] .journal-loot-list{height:auto;max-height:none!important;overflow:visible}
   #app .global-battle-journal summary{height:auto;min-height:40px;padding:8px 0;font-size:13px}
   #app .global-battle-journal .journal-loot-compact{margin:0}
   #toast{bottom:calc(var(--mobile-nav-height) + var(--mobile-safe-bottom) + 54px);width:max-content;max-width:calc(100vw - 24px);overflow-wrap:anywhere;padding:12px 16px;z-index:40}
