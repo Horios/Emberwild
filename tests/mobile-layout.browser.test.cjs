@@ -168,3 +168,60 @@ test('Mobile: expedition settings, readable touch controls and skill details are
   assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
+
+test('Mobile: long combat names, stats, skills and effects grow without overlapping adjacent units',async()=>{
+ const g=await openRuntime(root),p=g.page;
+ try{
+  await start(p);
+  await p.evaluate(()=>{toggleBattle();clearInterval(timer);for(const h of heroes())h.name='手機長名稱測試角色與職業';const f=structuredClone(foes[0]);foes=Array.from({length:6},(_,i)=>({...structuredClone(f),name:'菁英長名稱怪物與屬性測試'+i}));});
+  for(const viewport of [{width:320,height:740},{width:390,height:844},{width:600,height:800},{width:768,height:1024},{width:844,height:390}]){
+   await p.setViewportSize(viewport);
+   await p.evaluate(()=>{setTab('battle');document.querySelectorAll('.unit-skills').forEach(e=>e.insertAdjacentHTML('beforeend','<div>主動與觸發技能的長名稱狀態文字測試</div>'.repeat(3)));document.querySelectorAll('.unit-effects').forEach(e=>e.insertAdjacentHTML('beforeend','<span class="tag">持續增益與減益狀態的長名稱</span>'.repeat(6)));});
+   const issues=await p.evaluate(()=>{
+    const errors=[],box=e=>e.getBoundingClientRect(),allies=box(document.querySelector('.squad-allies')),enemies=box(document.querySelector('.squad-enemies'));
+    if(innerWidth<=600?allies.bottom>enemies.top+1:allies.right>enemies.left+1)errors.push('allies overlap enemies');
+    for(const unit of document.querySelectorAll('.squad-field .unit')){
+     const u=box(unit);let bottom=u.top;
+     for(const child of unit.children){
+      const r=box(child);if(!r.width||!r.height)continue;
+      if(r.top<bottom-1||r.bottom>u.bottom+1||r.right>u.right+1)errors.push(child.className+' overlaps or escapes unit');
+      if(child.matches('.unit-title,.unit-numbers,.unit-skills,.unit-effects,.enemy-action-status')&&(child.scrollHeight>child.clientHeight+1||child.scrollWidth>child.clientWidth+1))errors.push(child.className+' clips text');
+      bottom=r.bottom;
+     }
+    }
+    return errors;
+   });
+   assert.deepEqual(issues,[],viewport.width+' combat flow');
+   await fits(p,'combat content '+viewport.width);
+  }
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
+
+test('Mobile: equipment icons, full names and ratings do not become independently scrollable',async()=>{
+ const g=await openRuntime(root),p=g.page;
+ try{
+  await start(p);
+  for(const width of [320,390,768]){
+   await p.setViewportSize({width,height:844});
+   for(const id of ['equipment','forge','worn']){
+    await p.evaluate(t=>{setTab(t);document.querySelectorAll('main details').forEach(d=>d.open=true);document.querySelectorAll('main .enhanced-name').forEach(e=>e.textContent='+99 超長前綴與後綴裝備名稱完整顯示測試');},id);
+    const issues=await p.evaluate(()=>{
+     const errors=[];
+     for(const e of document.querySelectorAll('main .inventory-list-name,main .forge-gear-name,main .inventory-list-meta,main .forge-gear-meta,main .equipment-attribute-list,main .gear-detail-header h2,main .inventory-detail-heading h2,main .worn-slot-choice')){
+      if(!e.getBoundingClientRect().height)continue;
+      e.scrollTop=100;
+      if(e.scrollTop!==0||e.scrollHeight>e.clientHeight+1||e.scrollWidth>e.clientWidth+1)errors.push(e.className||e.tagName);
+     }
+     for(const row of document.querySelectorAll('.inventory-list-item,.forge-gear-item')){
+      const r=row.getBoundingClientRect();for(const c of row.children){const b=c.getBoundingClientRect();if(b.bottom>r.bottom+1||b.right>r.right+1)errors.push(c.className+' escapes row');}
+     }
+     return errors;
+    });
+    assert.deepEqual(issues,[],width+' '+id+' full equipment text');
+    await fits(p,'equipment content '+width+' '+id);
+   }
+  }
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});

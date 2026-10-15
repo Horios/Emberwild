@@ -71,6 +71,18 @@
   .layout>main .inventory-master-pane{height:280px}
   .layout>main .inventory-detail-wrap{min-height:0;max-height:none;overflow:visible;scrollbar-gutter:auto}
   .layout>main .inventory-detail-heading{flex-wrap:wrap;gap:10px}
+  /* Icons, names and ratings share natural rows; none is a tiny scroll pane. */
+  #app .inventory-list-item,#app .forge-gear-item{height:auto;min-height:72px;grid-template-rows:auto auto;align-items:start;gap:5px 8px;padding:8px;overflow:visible;white-space:normal}
+  #app .inventory-list-name,#app .forge-gear-name{display:grid;grid-template-columns:32px minmax(0,1fr);grid-template-rows:auto auto;align-items:start;gap:2px 6px;height:auto;max-height:none;overflow:visible;white-space:normal}
+  #app .inventory-list-name>.inventory-item-icon,#app .forge-gear-name>.inventory-item-icon{grid-column:1;grid-row:1/3;align-self:center;margin:0}
+  #app .inventory-list-name>.enhanced-name,#app .forge-gear-name>.enhanced-name{grid-column:2;grid-row:1;white-space:normal;overflow:visible;line-height:1.6;overflow-wrap:anywhere}
+  #app .inventory-list-name>.equipment-base-rating,#app .forge-gear-name>.equipment-base-rating{grid-column:2;grid-row:2;white-space:normal;overflow:visible;line-height:1.5}
+  #app .inventory-list-meta,#app .forge-gear-meta{height:auto;white-space:normal;overflow:visible;line-height:1.6;overflow-wrap:anywhere}
+  #app .inventory-list-quality,#app .forge-gear-quality{align-self:start}
+  #app .equipment-attribute-list,#modal .equipment-attribute-list{height:auto;max-height:none;overflow:visible;scrollbar-gutter:auto;padding-right:0}
+  #app .gear-detail-header h2,#app .inventory-detail-heading h2,#modal .gear-detail-header h2{height:auto;max-height:none;overflow:visible;white-space:normal;overflow-wrap:anywhere}
+  #app .worn-slot-choice,#app .worn-candidate{overflow:visible;white-space:normal}
+  #app .skill-loadout-slot>strong{white-space:normal;overflow:visible;line-height:1.5;overflow-wrap:anywhere}
   .layout>main .filters label{min-width:0;max-width:100%}.layout>main .filters select{width:100%;max-width:100%}
   .layout>main .bulk-salvage-actions{width:100%;flex-wrap:wrap;overflow:visible}
   /* Battle cards grow with the party rather than sharing a tiny viewport. */
@@ -87,17 +99,32 @@
   #app .party-combat>.actions>button{width:100%!important;height:44px!important}
   #app .party-combat>.actions>button[onclick="toggleBattle()"]{grid-column:1/-1}
   #app .party-combat>.actions>.icon-help{width:44px!important;height:44px!important;min-width:44px!important;flex-basis:44px!important}
-  #app .squad-field{display:grid;grid-template-columns:minmax(0,1fr);height:auto;overflow:visible;gap:16px}
+  #app .squad-field{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-rows:auto;align-items:start;height:auto;overflow:visible;gap:16px}
   #app .squad-allies,#app .squad-enemies{height:auto;overflow:visible;min-height:0;gap:8px}
   #app .squad-allies .unit-title:has(.character-avatar-control)>span{margin-left:0;flex-basis:100%}
-  #app .squad-field h3{height:auto;font-size:14px}.squad-field .unit,#app .squad-allies .unit{height:auto!important;min-height:110px;flex-basis:auto!important}
-  #app .squad-field .unit .unit-skills{height:auto;min-height:28px;flex-basis:auto}
+  #app .squad-field h3{height:auto;font-size:14px}
+  #app .squad-field .unit{height:auto!important;min-height:0;max-height:none;flex:0 0 auto!important;overflow:visible;gap:6px;padding:10px}
+  #app .squad-field .unit-title{display:flex;flex-wrap:wrap;align-items:center;height:auto;min-height:0;max-height:none;flex:0 0 auto;overflow:visible;white-space:normal;gap:6px}
+  #app .squad-field .unit-title>b{flex:1 1 120px;height:auto;overflow:visible;white-space:normal;overflow-wrap:anywhere;line-height:1.6}
+  #app .squad-field .unit-title>span{white-space:normal;overflow-wrap:anywhere}
+  #app .squad-field .unit-numbers{display:grid;grid-template-columns:minmax(0,1fr);height:auto;min-height:0;max-height:none;flex:0 0 auto;overflow:visible;white-space:normal;line-height:1.6;font-size:12px;gap:2px}
+  #app .squad-field .unit-numbers>span{display:block;margin:0;white-space:normal;overflow-wrap:anywhere}
+  #app .squad-field .unit .unit-skills,#app .squad-field .unit-effects,#app .squad-field .enemy-action-status{height:auto;min-height:0;max-height:none;flex:0 0 auto;overflow:visible;white-space:normal;line-height:1.6;overflow-wrap:anywhere}
   #app .party-combat>.small{height:auto;flex-basis:auto;overflow:visible;font-size:12px}
   #app .initiative-panel.compact-initiative{height:auto!important;max-height:none!important;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;margin-bottom:12px;padding:10px!important}
   #app .initiative-panel.compact-initiative>.row{display:flex}.initiative-panel.compact-initiative .initiative-token{font-size:12px;min-height:28px}
+  #app .initiative-panel.compact-initiative .initiative-token{max-width:none;height:auto;min-height:28px;overflow:visible}
+  #app .initiative-panel.compact-initiative .initiative-token b{overflow:visible;line-height:1.4}
   #app .battle-buffs.battle-effects-bar{height:auto!important;max-height:none!important;min-height:44px!important;margin:12px 0!important;overflow:visible!important}
   #app .effects-bar-inner{flex-wrap:wrap}#app .effects-bar-inner .effects-summary{white-space:normal;flex:1 1 180px;font-size:12px}
   #app .expedition-control-card .control-row{grid-template-columns:38px minmax(0,1fr) auto}#app .expedition-control-card .control-row select{height:auto;min-height:44px;font-size:16px}
+  #app .control-row:has(.battle-speed-buttons){grid-template-columns:38px minmax(0,1fr) 40px}
+  #app .control-row:has(.battle-speed-buttons)>span{grid-column:1/3;grid-row:1}
+  #app .control-row:has(.battle-speed-buttons)>.icon-help{grid-column:3;grid-row:1}
+  #app .expedition-control-card .battle-speed-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-column:1/-1;grid-row:2}
+  #app .expedition-control-card .battle-speed-buttons>button{height:auto;min-height:44px;white-space:normal;overflow-wrap:anywhere;line-height:1.5;padding:6px 3px!important}
+  #app .combat-contribution-row{grid-template-columns:minmax(0,1fr) auto;gap:5px}
+  #app .combat-contribution-name{grid-column:1/-1;white-space:normal;overflow:visible;overflow-wrap:anywhere}
   #app .expedition-control-card .journal-actions,#app .supply-actions{flex-wrap:wrap}
   /* The lower drawer stays available from every game page. */
   #app .global-battle-journal{grid-column:1;grid-row:2;display:block;height:auto;min-height:0;max-height:none;padding:0!important;border:0;border-top:1px solid var(--line);overflow:hidden}
