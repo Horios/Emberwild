@@ -1,0 +1,104 @@
+/* Loaded after legacy viewport rules; desktop keeps its existing three columns. */
+.mobile-more-pages,.mobile-journal-body{display:contents}
+.mobile-more-toggle,.mobile-journal-toggle{display:none}
+#app>.layout>aside nav>.mobile-more-toggle{display:none}
+#app>.layout>aside nav [data-page]{order:var(--page-order)}
+@media(max-width:900px){
+  :root{--mobile-nav-height:62px;--mobile-safe-bottom:env(safe-area-inset-bottom,0px)}
+  html,body{width:100%;height:100%;overflow:hidden;scrollbar-gutter:auto}
+  body{display:flex;flex-direction:column;height:100dvh}
+  body>header{height:auto;min-height:0;flex:0 0 auto;padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left));gap:6px 8px;flex-wrap:wrap}
+  header .brand{flex:1 1 auto;margin:0}header .brand span{font-size:18px}header .brand small{font-size:9px;letter-spacing:1px}
+  header .chapter{display:none}header #wallet{width:auto;order:3;flex:1 1 auto;white-space:normal;font-size:12px;min-width:0;overflow-wrap:anywhere}
+  header>button,header>label.button{order:4;width:auto;height:auto;min-height:36px;padding:6px 9px;font-size:12px}
+  header .utility-navigation{margin:0;gap:5px}.utility-icon-button{width:40px;height:40px}
+  #app{height:auto;scrollbar-gutter:auto;flex:1 1 0;min-height:0;width:100%;overflow:hidden!important}
+  #app>.layout{width:100%;min-width:0;height:100%;container-type:size;display:grid;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr) auto;padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-safe-bottom))}
+  #app>.layout>aside{position:fixed;inset:auto 0 0;z-index:30;height:calc(var(--mobile-nav-height) + var(--mobile-safe-bottom));padding:0 max(6px,env(safe-area-inset-right)) var(--mobile-safe-bottom) max(6px,env(safe-area-inset-left));border:0;border-top:1px solid var(--line);background:#181e22;overflow:visible}
+  #app>.layout>aside>.adventurer-summary,#app>.layout>aside>.aside-foot{display:none}
+  #app>.layout>aside nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;height:var(--mobile-nav-height);margin:0;align-items:stretch;overflow:visible}
+  #app>.layout>aside nav>button{display:flex;align-items:center;justify-content:center;gap:3px;min-width:0;width:100%;height:100%;min-height:44px;padding:6px 2px;font-size:12px;border:0;border-radius:0;white-space:normal;position:relative}
+  #app>.layout>aside nav>[data-page="battle"]{order:0}
+  #app>.layout>aside nav>[data-page="roster"]{order:1}
+  #app>.layout>aside nav>[data-page="equipment"]{order:2}
+  #app>.layout>aside nav>[data-page="character"]{order:3}
+  #app>.layout>aside nav>.mobile-more-toggle{display:flex;order:4}
+  #app>.layout>aside nav>button.active{border-top:3px solid var(--gold);background:#293631}
+  #app>.layout>aside nav>button .number-badge{position:absolute;top:3px;right:3px}
+  #app>.layout>aside nav .mobile-more-pages{display:none;position:absolute;bottom:100%;left:0;right:0;max-height:60dvh;overflow:auto;padding:12px;gap:8px;background:#19242a;border:1px solid var(--line);box-shadow:0 -12px 32px #0007;grid-template-columns:repeat(3,minmax(0,1fr))}
+  #app>.layout>aside nav.mobile-menu-open .mobile-more-pages{display:grid}
+  #app>.layout>aside nav .mobile-more-pages button{min-width:0;width:100%;height:auto;min-height:48px;padding:10px 6px;font-size:13px;white-space:normal;border:1px solid var(--line);justify-content:center;flex-wrap:wrap}
+  #app>.layout>main{grid-column:1;grid-row:1;display:block;scrollbar-gutter:auto;height:100%;max-width:none;width:100%;min-width:0;min-height:0;overflow:auto;padding:14px 12px 24px;scroll-padding:14px;overscroll-behavior-y:contain;overflow-wrap:anywhere}
+  .layout>main>*{min-width:0;max-width:100%}
+  #app>.layout>main>.heading,.layout>main .heading{height:auto;min-height:0;max-height:none;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+  .heading h1{font-size:22px}.heading .eyebrow{display:block}
+  #app>.layout>main>.tutorial{height:auto;max-height:none;margin-bottom:12px;padding:12px;overflow:visible;flex-wrap:wrap}.tutorial p{font-size:13px}
+  .layout>main .panel,.layout>main .card{min-width:0;padding:14px;scrollbar-gutter:auto;overflow:visible}
+  .layout>main .cards,#app>.start .cards{grid-auto-rows:auto}
+  .layout>main .cards>.card,#app>.start .cards>.card{height:auto;max-height:none;overflow:visible}
+  .layout>main .row{flex-wrap:wrap;gap:8px}.layout>main .row>div{min-width:0}
+  .layout>main .page-owner-panel,.layout>main .page-owner-content,.layout>main .roster-page,.layout>main .partner-owned-list,.layout>main .player-skill-page,.layout>main .companion-management-page,.layout>main .shared-quests,.layout>main .shared-shop-info,.layout>main .shared-shop-grid,.layout>main .shop-catalog,.layout>main .shop-catalog-scroll,.layout>main .account-material-list,.layout>main .account-gem-list,.layout>main .guide-scroll{height:auto!important;min-height:0!important;max-height:none;overflow:visible;flex:none;scrollbar-gutter:auto}
+  .layout>main .page-owner-content{padding-top:12px}
+  .layout>main .cards,.layout>main .shared-shop-grid,.layout>main .grid,.layout>main .forge-layout,.layout>main .worn-overview,.layout>main .worn-loadout-grid,.layout>main .player-skill-layout,.layout>main .life-skill-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+  .layout>main .worn-overview,.layout>main .worn-token-page>.worn-overview{height:auto;grid-template-rows:auto;overflow:visible}
+  .layout>main .worn-character-pane,.layout>main .worn-member,.layout>main .worn-character-list{height:auto;max-height:none;overflow:visible}
+  .layout>main .worn-candidate-pane,.layout>main .skill-detail-pane{position:static}
+  .layout>main .actions{gap:8px;margin-top:12px}
+  .layout>main .actions>button,.layout>main .page-hero-tabs>button,.layout>main .roster-member-actions>button,.layout>main .skill-list-controls>button{height:auto!important;min-height:44px;padding:8px!important;max-width:100%;font-size:13px}
+  .layout>main button,.layout>main select,.layout>main input:not([type=checkbox]):not([type=radio]),#modal button,#modal select{min-height:40px;max-width:100%}
+  .layout>main select,.layout>main input,#modal select,#modal input,#modal textarea{font-size:16px;min-width:0}
+  input[type=checkbox],input[type=radio]{width:18px;height:18px;flex:none}
+  .layout>main p,.layout>main .page-owner-content p{font-size:14px;line-height:1.7}
+  .layout>main .guide-reading-page p{font-size:15px}
+  .layout>main .player-skill-class-tabs{position:static}.layout>main .team-plan-list{grid-template-columns:minmax(0,1fr)}
+  .layout>main .roster-row{grid-template-columns:minmax(0,1fr);gap:10px;padding:14px 0}.layout>main .roster-member-actions{justify-content:flex-start}
+  .layout>main .forge-workbench{height:auto;min-height:0;max-height:none;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto}
+  .layout>main .forge-gear-pane{height:auto;max-height:300px}.layout>main .forge-gear-list{overflow:auto}.layout>main .forge-detail-pane{height:auto;min-height:0;max-height:none;overflow:visible;padding:12px}
+  .layout>main .inventory-row,.layout>main .page-owner-content .inventory-row{height:auto;min-height:68px;grid-template-columns:32px minmax(0,1fr) auto;gap:8px}
+  .layout>main .inventory-state{grid-column:2/-1;text-align:left}.layout>main .inventory-summary{display:block;grid-column:2/-1}.layout>main .inventory-quality{grid-column:3;grid-row:1}
+  .layout>main .account-item-desc .detail{white-space:normal;overflow:visible}.layout>main .account-item-actions{display:flex;flex-wrap:wrap;justify-content:flex-start}.account-item-actions input{width:70px}
+  .layout>main .filters{max-height:none;overflow:visible}
+  .layout>main .inventory-master-detail{grid-template-rows:auto auto;height:auto;min-height:0}
+  .layout>main .inventory-master-pane{height:280px}
+  .layout>main .inventory-detail-wrap{min-height:0;max-height:none;overflow:visible;scrollbar-gutter:auto}
+  .layout>main .inventory-detail-heading{flex-wrap:wrap;gap:10px}
+  .layout>main .filters label{min-width:0;max-width:100%}.layout>main .filters select{width:100%;max-width:100%}
+  .layout>main .bulk-salvage-actions{width:100%;flex-wrap:wrap;overflow:visible}
+  /* Battle cards grow with the party rather than sharing a tiny viewport. */
+  #app .text-battle-layout{display:flex;flex-direction:column;min-height:0!important;height:auto!important;overflow:visible!important;gap:14px!important}
+  #app .text-battle-layout>.party-combat{order:0;height:auto!important;overflow:visible;padding:12px;gap:10px}
+  #app .text-battle-layout>.expedition-control-card{order:1;height:auto!important;min-height:0!important;overflow:visible!important;max-height:none!important}
+  #app .squad-field{display:grid;grid-template-columns:minmax(0,1fr);height:auto;overflow:visible;gap:16px}
+  #app .squad-allies,#app .squad-enemies{height:auto;overflow:visible;min-height:0;gap:8px}
+  #app .squad-allies .unit-title:has(.character-avatar-control)>span{margin-left:0;flex-basis:100%}
+  #app .squad-field h3{height:auto;font-size:14px}.squad-field .unit,#app .squad-allies .unit{height:auto!important;min-height:110px;flex-basis:auto!important}
+  #app .squad-field .unit .unit-skills{height:auto;min-height:28px;flex-basis:auto}
+  #app .party-combat>.small{height:auto;flex-basis:auto;overflow:visible;font-size:12px}
+  #app .initiative-panel.compact-initiative{height:auto!important;max-height:none!important;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;margin-bottom:12px;padding:10px!important}
+  #app .initiative-panel.compact-initiative>.row{display:flex}.initiative-panel.compact-initiative .initiative-token{font-size:12px;min-height:28px}
+  #app .battle-buffs.battle-effects-bar{height:auto!important;max-height:none!important;min-height:44px!important;margin:12px 0!important;overflow:visible!important}
+  #app .effects-bar-inner{flex-wrap:wrap}#app .effects-bar-inner .effects-summary{white-space:normal;flex:1 1 180px;font-size:12px}
+  #app .expedition-control-card .control-row{grid-template-columns:38px minmax(0,1fr) auto}#app .expedition-control-card .control-row select{height:auto;min-height:44px;font-size:14px}
+  #app .expedition-control-card .journal-actions,#app .supply-actions{flex-wrap:wrap}
+  /* The lower drawer stays available from every game page. */
+  #app .global-battle-journal{grid-column:1;grid-row:2;display:block;height:auto;min-height:0;max-height:none;padding:0!important;border:0;border-top:1px solid var(--line);overflow:hidden}
+  .mobile-journal-toggle{display:block;width:100%;min-height:44px;padding:10px 14px;text-align:left;border:0;border-radius:0;background:#23302d;color:var(--gold);font-size:14px}
+  .mobile-journal-body{display:none}
+  .mobile-journal-open .mobile-journal-body{display:block;max-height:40dvh;max-height:min(48cqh,440px);overflow:auto;padding:12px;overscroll-behavior:contain}
+  #app .global-battle-journal .journal-actions{flex-wrap:wrap}#app .global-battle-journal button:not(.mobile-journal-toggle){min-height:40px;height:auto;padding:7px 10px;font-size:12px}
+  #app .global-battle-journal #liveLog{display:block;margin:12px 0;overflow:visible!important}
+  #app .global-battle-journal .battle-log-stream{height:220px!important;min-height:0!important;max-height:35dvh!important;display:block;overflow:auto}
+  #app .global-battle-journal .battle-log-line{height:auto;min-height:24px;max-height:none;line-height:1.7;white-space:normal;overflow-wrap:anywhere;width:auto}
+  #app .global-battle-journal .journal-resizer{display:none}
+  #app .global-battle-journal .journal-loot-compact[open]{height:auto;overflow:visible}
+  #app .global-battle-journal .journal-loot-compact[open] .journal-loot-list{max-height:180px!important;overflow:auto}
+  #app .global-battle-journal summary{height:auto;min-height:40px;padding:8px 0;font-size:13px}
+  #app .global-battle-journal .journal-loot-compact{margin:0}
+  #toast{bottom:calc(var(--mobile-nav-height) + var(--mobile-safe-bottom) + 54px);width:max-content;max-width:calc(100vw - 24px);overflow-wrap:anywhere;padding:12px 16px;z-index:40}
+  #modal{width:calc(100% - 20px);max-width:calc(100% - 20px);max-height:calc(100dvh - 24px);padding:16px;overflow:auto;overflow-wrap:anywhere}
+  #modal .equip-compare-grid{grid-template-columns:minmax(0,1fr)}#modal .option-row{flex-wrap:wrap}
+  #modal table{max-width:100%;font-size:12px}#modal th,#modal td{overflow-wrap:anywhere}
+  #app>.title-screen{padding:16px;display:block}#app .title-screen-card{margin:auto;padding:20px 14px}
+  #app>.start{padding:16px;margin:0;height:100%;overflow:auto}#app .start .cards{grid-template-columns:minmax(0,1fr)}
+}
+@media(min-width:601px) and (max-width:900px){#app .squad-field{grid-template-columns:repeat(2,minmax(0,1fr))}}
