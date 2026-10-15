@@ -23,7 +23,7 @@ function validateSkillIconDefinitions(input){
     if(icon.appearance!==undefined&&!globalThis.__EMBERWILD_SKILL_ICONS.validAppearance(icon.appearance))throw Error('自訂技能圖示外觀無效：'+icon.id);
     for(const layer of icon.layers){
       const kind=layer?.kind||'icon',range=(key,min,max,required=true)=>layer[key]===undefined&&!required||Number.isFinite(layer[key])&&layer[key]>=min&&layer[key]<=max;
-      let ok=!!layer&&kinds.has(kind)&&range('x',-24,24)&&range('y',-24,24)&&range('rotation',-180,180,false);
+      let ok=!!layer&&kinds.has(kind)&&range('x',-24,24)&&range('y',-24,24)&&range('rotation',-180,180,false)&&globalThis.__EMBERWILD_SKILL_ICONS.validEditing(layer);
       if(ok&&kind==='icon')ok=globalThis.__EMBERWILD_SKILL_ICONS.validReference(layer.icon)&&range('scale',.25,2.5);
       else if(ok){
         ok=range('strokeWidth',.4,10);
@@ -31,6 +31,7 @@ function validateSkillIconDefinitions(input){
         if(kind==='rect')ok=ok&&range('w',1,64)&&range('h',1,64)&&range('radius',0,24);
         if(kind==='ellipse')ok=ok&&range('rx',.5,32)&&range('ry',.5,32);
         if(kind==='arc')ok=ok&&range('r',.5,32)&&range('start',-360,360)&&range('end',-360,360);
+        if(kind==='curve')ok=ok&&['x1','y1','cx','cy','x2','y2'].every(key=>range(key,-48,48));
         if(kind==='polygon')ok=ok&&range('scale',.2,4)&&typeof layer.points==='string'&&/^\s*-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?){2,}\s*$/.test(layer.points);
         if(['rect','ellipse','polygon'].includes(kind))ok=ok&&typeof layer.filled==='boolean';
       }
