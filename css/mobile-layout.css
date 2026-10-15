@@ -1,6 +1,6 @@
 /* Loaded after legacy viewport rules; desktop keeps its existing three columns. */
-.mobile-more-pages,.mobile-journal-body,.mobile-settings-body{display:contents}
-.mobile-more-toggle,.mobile-journal-toggle,.mobile-settings-toggle{display:none}
+.mobile-more-pages,.mobile-journal-body,.mobile-loot-body,.mobile-journal-report,.mobile-journal-loot,.mobile-settings-body{display:contents}
+.mobile-more-toggle,.mobile-journal-toggle,.mobile-loot-toggle,.mobile-settings-toggle{display:none}
 #app>.layout>aside nav>.mobile-more-toggle{display:none}
 #app>.layout>aside nav [data-page]{order:var(--page-order)}
 @media(max-width:900px){
@@ -128,18 +128,22 @@
   #app .expedition-control-card .journal-actions,#app .supply-actions{flex-wrap:wrap}
   /* The lower drawer stays available from every game page. */
   #app .global-battle-journal{grid-column:1;grid-row:2;display:block;height:auto;min-height:0;max-height:none;padding:0!important;border:0;border-top:1px solid var(--line);overflow:hidden}
-  .mobile-journal-toggle{display:block;width:100%;min-height:44px;padding:10px 14px;text-align:left;border:0;border-radius:0;background:#23302d;color:var(--gold);font-size:14px}
-  .mobile-journal-body{display:none}
-  .mobile-journal-open .mobile-journal-body{display:block;max-height:40dvh;max-height:min(48cqh,440px);overflow:auto;padding:12px;overscroll-behavior:contain;overflow-anchor:none}
+  .mobile-journal-report,.mobile-journal-loot{display:block;min-width:0;border-bottom:1px solid var(--line)}
+  .mobile-journal-toggle,.mobile-loot-toggle{display:block;width:100%;min-height:44px;padding:10px 14px;text-align:left;border:0;border-radius:0;background:#23302d;color:var(--gold);font-size:13px}
+  .mobile-loot-toggle{background:#1c292c}
+  .mobile-journal-body,.mobile-loot-body{display:none}
+  .mobile-journal-open .mobile-journal-body,.mobile-loot-open .mobile-loot-body{display:block;max-height:30dvh;max-height:min(48cqh,max(0px,calc(100cqh - 184px)),440px);overflow:auto;padding:12px;overscroll-behavior:contain;overflow-anchor:none}
   #app .global-journal-head .journal-title-row{display:none}
-  #app .global-battle-journal .journal-actions{flex-wrap:wrap}#app .global-battle-journal button:not(.mobile-journal-toggle){min-height:40px;height:auto;padding:7px 10px;font-size:12px}
-  #app .global-battle-journal #liveLog{display:block;margin:12px 0;overflow:visible!important}
+  #app .global-battle-journal .journal-actions{flex-wrap:wrap}#app .global-battle-journal button:not(.mobile-journal-toggle):not(.mobile-loot-toggle){min-height:40px;height:auto;padding:7px 10px;font-size:12px}
+  #app .global-battle-journal #liveLog{display:block;height:auto!important;margin:12px 0;overflow:visible!important}
   #app .global-battle-journal .battle-log-stream{height:auto!important;min-height:0!important;max-height:none!important;display:block;overflow:visible;scrollbar-gutter:auto}
   #app .global-battle-journal .battle-log-empty{display:none}
   #app .global-battle-journal .battle-log-line{height:auto;min-height:24px;max-height:none;line-height:1.7;white-space:normal;overflow-wrap:anywhere;width:auto}
   #app .global-battle-journal .journal-resizer{display:none}
   #app .global-battle-journal .journal-loot-compact[open]{height:auto;overflow:visible}
   #app .global-battle-journal .journal-loot-compact[open] .journal-loot-list{height:auto;max-height:none!important;overflow:visible}
+  #app .mobile-loot-body .journal-loot-list{height:auto;max-height:none!important;overflow:visible}
+  #app .mobile-loot-content h3{margin:0 0 10px;font-size:14px}
   #app .global-battle-journal summary{height:auto;min-height:40px;padding:8px 0;font-size:13px}
   #app .global-battle-journal .journal-loot-compact{margin:0}
   #toast{bottom:calc(var(--mobile-nav-height) + var(--mobile-safe-bottom) + 54px);width:max-content;max-width:calc(100vw - 24px);overflow-wrap:anywhere;padding:12px 16px;z-index:40}

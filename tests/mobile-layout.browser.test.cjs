@@ -71,17 +71,19 @@ test('Mobile: folding the live journal preserves combat, filters, loot and page 
   assert.equal(await p.locator('.mobile-journal-toggle').getAttribute('aria-expanded'),'true');
   assert.equal(await p.locator('.journal-filter select').inputValue(),'item');
   assert.equal(await p.locator('main').evaluate(e=>e.scrollTop),220);
-  await p.locator('.journal-loot-compact summary').click();
-  await p.waitForFunction(()=>!isEmberwildUIInteracting()&&journalLootOpen);
+  await p.locator('.mobile-loot-toggle').click();
+  await p.waitForFunction(()=>!isEmberwildUIInteracting());
+  assert.equal(await p.locator('#mobileJournalBody').isVisible(),false);
+  assert.equal(await p.locator('#mobileLootBody').isVisible(),true);
   await p.evaluate(()=>{expeditionLoot.items.set('手機測試素材',{count:3,rar:1});refreshGlobalJournal();});
-  assert.equal(await p.locator('.journal-loot-compact').getAttribute('open'),'');
+  assert.equal(await p.locator('#mobileLootBody details').count(),0);
   await p.waitForFunction(()=>document.querySelector('#journalLootList').textContent.includes('手機測試素材'));
-  await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop=e.scrollHeight);
+  await p.locator('#mobileLootBody').evaluate(e=>e.scrollTop=e.scrollHeight);
   await p.waitForTimeout(30);
-  const journalScroll=await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop);
+  const lootScroll=await p.locator('#mobileLootBody').evaluate(e=>e.scrollTop);
   await p.evaluate(()=>refreshGlobalJournal());
-  assert.equal(await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop),journalScroll);
-  await p.locator('.mobile-journal-toggle').click();
+  assert.equal(await p.locator('#mobileLootBody').evaluate(e=>e.scrollTop),lootScroll);
+  await p.locator('.mobile-loot-toggle').click();
   assert.equal(await p.locator('#mobileJournalBody').isVisible(),false);
   await p.evaluate(()=>{toggleBattle();clearInterval(timer);render();});
   assert.equal(await p.evaluate(()=>running),true);
@@ -226,7 +228,7 @@ test('Mobile: equipment icons, full names and ratings do not become independentl
  }finally{await g.browser.close();}
 });
 
-test('Mobile: the journal uses one scroll area for messages, loot and actions while preserving log following',async()=>{
+test('Mobile: messages and loot are sibling panels without shared or nested scrolling',async()=>{
  const g=await openRuntime(root),p=g.page;
  try{
   await p.setViewportSize({width:390,height:844});await start(p);
@@ -245,13 +247,31 @@ test('Mobile: the journal uses one scroll area for messages, loot and actions wh
   await p.locator('.journal-filter select').selectOption('playerDamage');
   await p.waitForFunction(()=>!isEmberwildUIInteracting());
   assert(await p.evaluate(latestVisible),'filter changes show the latest matching log');
-  await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop=e.scrollHeight);await p.waitForTimeout(30);
-  const top=await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop);
-  await p.evaluate(()=>note('閱讀戰利品時不強制跳走','playerDamage'));
-  assert.equal(await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop),top);
+  assert.equal(await p.locator('#mobileJournalBody #journalLootList,#mobileJournalBody .journal-quick-dispose').count(),0);
+  assert.equal(await p.locator('#mobileLootBody #liveLog').count(),0);
+  const siblings=await p.evaluate(()=>document.getElementById('mobileJournalBody').parentElement.parentElement===document.getElementById('mobileLootBody').parentElement.parentElement);
+  assert(siblings,'panels are siblings');
+  await p.locator('.mobile-loot-toggle').click();
+  assert.equal(await p.locator('#mobileJournalBody').isVisible(),false);
+  assert.equal(await p.locator('#mobileLootBody').isVisible(),true);
+  assert.equal(await p.locator('#mobileLootBody details').count(),0,'loot has no second disclosure');
+  assert.deepEqual(await p.evaluate(()=>[...document.querySelectorAll('#mobileLootBody *')].filter(e=>e.clientHeight>0&&e.scrollHeight>e.clientHeight+1&&['auto','scroll'].includes(getComputedStyle(e).overflowY)).map(e=>e.className)),[]);
+  await p.locator('#mobileLootBody').evaluate(e=>e.scrollTop=e.scrollHeight);await p.waitForTimeout(30);
+  const top=await p.locator('#mobileLootBody').evaluate(e=>e.scrollTop);
+  await p.evaluate(()=>{note('閱讀戰利品時不強制跳走','playerDamage');refreshGlobalJournal();});
+  assert.equal(await p.locator('#mobileLootBody').evaluate(e=>e.scrollTop),top);
+  await p.locator('.journal-quick-dispose').scrollIntoViewIfNeeded();
   assert(await p.locator('.journal-quick-dispose').isVisible());
-  assert.deepEqual(await p.evaluate(scrollAreas),[]);
-  await p.setViewportSize({width:844,height:390});await fits(p,'single journal landscape');
+  for(const viewport of [{width:320,height:640},{width:844,height:390}]){
+   await p.setViewportSize(viewport);await fits(p,'separate loot '+viewport.width);
+   assert(await p.locator('#globalBattleJournal').evaluate(e=>e.scrollHeight<=e.clientHeight+1),'no shared outer scroll');
+  }
+  await p.locator('.mobile-journal-toggle').click();
+  assert.equal(await p.locator('#mobileLootBody').isVisible(),false);
+  await fits(p,'separate journal landscape');
+  await p.setViewportSize({width:1440,height:900});
+  assert.equal(await p.locator('.mobile-loot-toggle').isVisible(),false);
+  assert.equal(await p.locator('.journal-loot-compact').count(),1,'desktop keeps its loot disclosure');
   assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });

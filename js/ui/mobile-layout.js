@@ -2,7 +2,7 @@
 (()=>{
   const mobile=matchMedia('(max-width:900px)');
   const primary=['battle','roster','equipment','character'];
-  let menuOpen=false,journalOpen=false,journalScroll=0,menuScroll=0,settingsOpen=false,pendingSkill=null,journalSeen=false,followFilteredLog=false;
+  let menuOpen=false,journalOpen=false,lootOpen=false,journalScroll=0,lootScroll=0,menuScroll=0,settingsOpen=false,pendingSkill=null,journalSeen=false,followFilteredLog=false;
   function latestLogTop(body){
     const stream=body?.querySelector('.battle-log-stream');
     return stream?Math.max(0,body.scrollTop+stream.getBoundingClientRect().bottom-body.getBoundingClientRect().top-body.clientHeight):0;
@@ -47,12 +47,17 @@
     const journal=document.getElementById('globalBattleJournal');
     if(journal){
       journal.classList.toggle('mobile-journal-open',journalOpen);
+      journal.classList.toggle('mobile-loot-open',lootOpen);
       const button=journal.querySelector('.mobile-journal-toggle');
-      if(button){button.setAttribute('aria-expanded',String(journalOpen));button.textContent=`全隊戰報 · ${journal.querySelector('.journal-title-row .tag')?.textContent||''}　${journalOpen?'收合 ▾':'展開 ▴'}`;}
+      if(button){button.setAttribute('aria-expanded',String(journalOpen));button.textContent=`戰鬥紀錄 · ${journal.querySelector('.journal-title-row .tag')?.textContent||''}　${journalOpen?'收合 ▾':'展開 ▴'}`;}
       const body=journal.querySelector('.mobile-journal-body');
       body?.setAttribute('aria-hidden',String(mobile.matches&&!journalOpen));
       if(body&&journalOpen&&body.scrollTop!==journalScroll)body.scrollTop=journalScroll;
       if(body&&mobile.matches&&journalOpen&&followFilteredLog&&body.querySelector('#liveLog')?.dataset.logGeneration===String(battleLogGeneration)){followFilteredLog=false;followMobileLog(body);}
+      const lootButton=journal.querySelector('.mobile-loot-toggle'),lootBody=journal.querySelector('.mobile-loot-body');
+      if(lootButton){lootButton.setAttribute('aria-expanded',String(lootOpen));lootButton.textContent=`戰利品／整理　${lootOpen?'收合 ▾':'展開 ▴'}`;}
+      lootBody?.setAttribute('aria-hidden',String(mobile.matches&&!lootOpen));
+      if(lootBody&&lootOpen&&lootBody.scrollTop!==lootScroll)lootBody.scrollTop=lootScroll;
     }
     const control=document.querySelector('.expedition-control-card');
     if(control){
@@ -75,7 +80,8 @@
       if(detail){pendingSkill=null;detail.scrollIntoView({block:'start'});}
     }
   }
-  globalThis.toggleMobileJournal=()=>{journalOpen=!journalOpen;sync();if(journalOpen&&!journalSeen){journalSeen=true;followMobileLog(document.getElementById('mobileJournalBody'));}};
+  globalThis.toggleMobileJournal=()=>{journalOpen=!journalOpen;if(journalOpen)lootOpen=false;sync();if(journalOpen&&!journalSeen){journalSeen=true;followMobileLog(document.getElementById('mobileJournalBody'));}};
+  globalThis.toggleMobileLoot=()=>{lootOpen=!lootOpen;if(lootOpen)journalOpen=false;sync();};
   const appendBase=appendBattleLogLine;
   appendBattleLogLine=function(...args){
     const body=mobile.matches&&journalOpen?document.getElementById('mobileJournalBody'):null;
@@ -89,8 +95,11 @@
   const journalBase=sharedBattleJournal;
   sharedBattleJournal=function(){
     const html=journalBase();if(!html)return html;
-    const at=html.indexOf('>')+1;
-    return html.slice(0,at)+`<button type="button" class="mobile-journal-toggle" aria-controls="mobileJournalBody" aria-expanded="${journalOpen}" onclick="toggleMobileJournal()">全隊戰報</button><div id="mobileJournalBody" class="mobile-journal-body">`+html.slice(at,html.lastIndexOf('</section>'))+'</div></section>';
+    const at=html.indexOf('>')+1,resizer=html.indexOf('<div class="journal-resizer"'),loot=html.indexOf('<details class="journal-loot-compact"');
+    if(resizer<0||loot<0)return html;
+    let lootHTML=html.slice(loot,html.lastIndexOf('</section>'));
+    if(mobile.matches)lootHTML=lootHTML.replace(/<details class="journal-loot-compact"[^>]*>/,'<section class="mobile-loot-content">').replace('<summary>','<h3>').replace('</summary>','</h3>').replace('</details>','</section>');
+    return html.slice(0,at)+`<section class="mobile-journal-report"><button type="button" class="mobile-journal-toggle" aria-controls="mobileJournalBody" aria-expanded="${journalOpen}" onclick="toggleMobileJournal()">戰鬥紀錄</button><div id="mobileJournalBody" class="mobile-journal-body">`+html.slice(at,resizer)+'</div></section>'+html.slice(resizer,loot)+`<section class="mobile-journal-loot"><button type="button" class="mobile-loot-toggle" aria-controls="mobileLootBody" aria-expanded="${lootOpen}" onclick="toggleMobileLoot()">戰利品／整理</button><div id="mobileLootBody" class="mobile-loot-body">`+lootHTML+'</div></section></section>';
   };
   const renderBase=render;
   render=function(...args){const out=renderBase(...args);sync();return out;};
@@ -106,6 +115,7 @@
   };
   document.getElementById('app').addEventListener('scroll',event=>{
     if(event.target.matches?.('.mobile-journal-body'))journalScroll=event.target.scrollTop;
+    if(event.target.matches?.('.mobile-loot-body'))lootScroll=event.target.scrollTop;
     if(event.target.matches?.('.mobile-more-pages'))menuScroll=event.target.scrollTop;
   },true);
   document.addEventListener('click',event=>{
@@ -114,6 +124,6 @@
   },true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&menuOpen){menuOpen=false;sync();document.querySelector('.mobile-more-toggle')?.focus();}});
   document.addEventListener('click',event=>{if(menuOpen&&!event.target.closest('#app>.layout>aside')){menuOpen=false;sync();}});
-  mobile.addEventListener('change',()=>{menuOpen=false;sync();});
+  mobile.addEventListener('change',()=>{menuOpen=false;if(state)render();else sync();});
   if(state)render();else sync();
 })();
