@@ -46,7 +46,7 @@
   };
   applyGemLabels();
   const baseItemsView=accountItemsView;
-  accountItemsView=function(){let html=baseItemsView();const scroll=lookup.get('item:level_scroll');if(scroll?.displayName)html=html.replaceAll(esc('升級卷軸'),esc(scroll.displayName));for(const p of exportableBalance().companions||[]){const key='companion-ticket-'+p.id,r=lookup.get('item:'+key);if(r?.saleEnabled&&companionTicketCount(p.id)>0)html+='<section class="panel"><b>'+esc(r.displayName||p.name+'招募券')+'</b><span>售價 '+(r.sellPrice??0)+' 金幣／張</span><button onclick="sellCatalogueRecruitTicket('+p.id+',1)">賣出 1 張</button></section>';}return html;};
+  accountItemsView=function(){let html=baseItemsView();const scroll=lookup.get('item:level_scroll');if(scroll?.displayName)html=html.replaceAll(esc('升級卷軸'),esc(scroll.displayName));return html;};
   const description=(kind,key)=>lookup.get(kind+':'+String(key))?.description??'';
   globalThis.__EMBERWILD_ITEM_DESCRIPTION=description;
   globalThis.inventoryMaterialDescription=name=>description('material',name);

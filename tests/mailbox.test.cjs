@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path');
 const {loadRuntime}=require('./headless-runtime.cjs'),A=require('../js/character/achievement-model.js');
 const root=path.resolve(__dirname,'..'),editor=path.resolve(root,'../Emberwild-Balance'),json=(r,s)=>JSON.parse(r.run('JSON.stringify('+s+')'));
-function game(){const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);closeModal()');return r;}
+function game(){const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);closeModal();party.mailbox=EmberwildAchievements.mailboxDefaults();loadParty(packParty())');return r;}
 function bind(r,id,ids=['region-0-open']){r.ctx.ids=ids;r.run(`{const d=exportableBalance(),p=d.companions.find(p=>p.id===${id});p.availability='visible';p.unlockCondition={type:'achievement',achievementIds:ids};applyBalanceConfig(d);}`);}
 test('Achievements only record progress; unbound completion creates no mail or achievement popup',()=>{
  const r=game();r.run('setTab("achievements")');assert(!r.elements.get('modal').innerHTML.includes('成就與獎勵通知'));assert(!r.elements.get('modal').innerHTML.includes('achievement-notice'));assert(!r.elements.get('modal').innerHTML.includes('招募券獎勵'));assert(r.run('party.achievements.completed.length>0'));assert.equal(r.run('party.mailbox.messages.length'),0);assert.equal(r.run('party.achievements.notifications'),undefined);assert.equal(r.elements.get('modal').open,true);

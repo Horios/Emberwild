@@ -23,13 +23,17 @@ function loadRuntime(root,entry='index.html',saved={},clockStart=Date.parse('202
     performance:{now:()=>now},crypto:{randomUUID:()=>String(++seq)},innerWidth:1440,innerHeight:900,scrollX:0,scrollY:0,alert(){},confirm:()=>true,prompt:()=>null};
   context.window=context;context.self=context;context.globalThis=context;
   const ctx=vm.createContext(context),html=fs.readFileSync(path.join(root,entry),'utf8');
-  const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
+  // Eager src models execute during HTML parsing; the published loader runs
+  // data-balance-src scripts afterwards. Match that order for cold-save checks.
+  const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].sort((a,b)=>Number(a[1].includes('data-balance-src'))-Number(b[1].includes('data-balance-src')));
   for(let i=0;i<scripts.length;i++){
     const src=scripts[i][1].match(/(?:\bsrc|data-balance-src)="([^"]+)"/),filename=src?src[1]:entry+':script-'+i;
     if(filename.includes('startup-guard')||filename.includes('published-loader'))continue;
     const code=src?fs.readFileSync(path.join(root,src[1].split('?')[0]),'utf8'):scripts[i][2];
     try{vm.runInContext(code,ctx,{filename,timeout:10000});}catch(e){throw new Error(filename+': '+e.stack);}
   }
+  // Mirror the loader's final domain apply and late-validator save restoration.
+  vm.runInContext(`{const raw=typeof balanceSourceText==='function'?balanceSourceText():null;if(raw)applyBalanceConfig(JSON.parse(raw),{persist:false});const boot=globalThis.__EMBERWILD_TEAM_BOOT_RAW||globalThis.__EMBERWILD_BOOT_SAVE_RAW;if(boot)loadParty(JSON.parse(boot));}`,ctx,{filename:'headless-published-loader',timeout:10000});
   return {ctx,elements,errors,warnings,values,run:code=>vm.runInContext(code,ctx),advance:ms=>{now+=ms;},get now(){return now;}};
 }
 module.exports={loadRuntime};

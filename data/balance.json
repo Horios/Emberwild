@@ -292,9 +292,9 @@
     "自訂狀態最多 3 個增減益、1 個控制、3 個持續效果；duration 1～99。instant 會在套用時額外立即結算一次 periodic，後續持續結算不受影響。",
     "狀態 uses > 0 時代表可觸發次數；stackable 控制同一狀態能否在同一目標並存。damageSpread 於單體傷害技能成功施放時觸發並消耗 1 次。",
     "statusTarget=rankedAllies/rankedEnemies 時，以 statusTargetStat 排序；statusTargetOrder 可選 highest/lowest；statusTargetIncludeSelf 控制我方排序是否包含施術者。",
-    "starterPacks 只在建立第一名初始職業時發放；後續招募角色不會取得此禮包。",
+    "starterPacks 只在建立第一名初始職業時寄至信箱；後續招募角色不會取得此禮包。",
     "starterPacks 每件可設定固定 T 階、初始 plus、fixedEffects、prefixId、suffixId 與兩條固定 affixes。",
-    "新手裝備不可在遊戲內強化、洗鍊或重鑄 T 階；growth 只允許依角色等級增加固定屬性。",
+    "新手武器可強化，不可洗鍊或重鑄 T 階；growth 只允許依角色等級增加固定屬性。",
     "textStyles 以 id 定義顯示樣式；equipmentForms / equipmentPowerSystem.bossAffixes / items 的 textStyleId 選擇套用。省略或空字串時使用原有外觀，既有存檔不會儲存樣式副本。",
     "companions 每位角色使用單一 name 與獨立技能池；core/support 為夥伴專屬技能，達到需求角色等級後自動學會，不需要二轉與精通；active/proc 依順序配置，可個別啟用或禁用並保存。passives 引用該夥伴的 passiveDefinitions，達到 requiredLevel 且啟用後常駐生效、不占技能槽。",
     "randomOffers.entries 的 selection=weighted 依 weight 抽選；selection=extra 依 chance 每批額外判定一次。重鑄石也由這個商品池控制。",
@@ -23053,119 +23053,8 @@
           "startLevel": 1,
           "maxLevel": 60,
           "effects": []
-        }
-      },
-      {
-        "group": 0,
-        "slot": 1,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 1,
-            "rank": 1,
-            "value": 4
-          },
-          {
-            "type": 2,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 0,
-        "slot": 2,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 2,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 2,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 0,
-        "slot": 3,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 0,
-        "slot": 3,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
+        },
+        "baseAttack": 4
       }
     ],
     [
@@ -23195,119 +23084,8 @@
           "startLevel": 1,
           "maxLevel": 60,
           "effects": []
-        }
-      },
-      {
-        "group": 1,
-        "slot": 1,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 2,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 9,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 1,
-        "slot": 2,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 1,
-        "slot": 3,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 1,
-        "slot": 3,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
+        },
+        "baseAttack": 4
       }
     ],
     [
@@ -23337,119 +23115,8 @@
           "startLevel": 1,
           "maxLevel": 60,
           "effects": []
-        }
-      },
-      {
-        "group": 2,
-        "slot": 1,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 2,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 9,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 2,
-        "slot": 2,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 2,
-        "slot": 3,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 2,
-        "slot": 3,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
+        },
+        "baseAttack": 4
       }
     ],
     [
@@ -23479,119 +23146,8 @@
           "startLevel": 1,
           "maxLevel": 60,
           "effects": []
-        }
-      },
-      {
-        "group": 3,
-        "slot": 1,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 1,
-            "rank": 1,
-            "value": 4
-          },
-          {
-            "type": 2,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 3,
-        "slot": 2,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 1,
-            "rank": 1,
-            "value": 2
-          },
-          {
-            "type": 2,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 3,
-        "slot": 3,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 1,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 1,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
-      },
-      {
-        "group": 3,
-        "slot": 3,
-        "form": 0,
-        "powerTier": 1,
-        "plus": 0,
-        "fixedEffects": null,
-        "prefixId": "",
-        "suffixId": "",
-        "affixes": [
-          {
-            "type": 1,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 1,
-            "rank": 1,
-            "value": 1
-          }
-        ],
-        "growth": {
-          "enabled": false,
-          "startLevel": 1,
-          "maxLevel": 60,
-          "effects": []
-        }
+        },
+        "baseAttack": 4
       }
     ]
   ],
@@ -28378,5 +27934,11 @@
       "name": "灰暗",
       "color": "#696c6d"
     }
+  ],
+  "starterPackItems": [
+    [],
+    [],
+    [],
+    []
   ]
 }

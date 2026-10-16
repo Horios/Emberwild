@@ -38,7 +38,13 @@
     return c.type==='ticket'?`購買商店隨機刷出的「${p.name}招募券」，到背包使用後解鎖`:'初始開放';
   };
   const baseValidate=validateParty;
-  validateParty=function(raw){const progress=validateProgress(raw?.companionUnlocks),achievements=A.migrate(raw?.achievements,progress),out=baseValidate(raw);out.companionUnlocks=progress;out.achievements=achievements;out.mailbox=A.validateMailbox(raw?.mailbox);return out;};
+  validateParty=function(raw){const progress=validateProgress(raw?.companionUnlocks),achievements=A.migrate(raw?.achievements,progress),out=baseValidate(raw);out.companionUnlocks=progress;out.achievements=achievements;out.mailbox=A.validateMailbox(raw?.mailbox);
+    for(const m of out.mailbox.messages)for(const item of m.attachments)if(item.type==='gear'){
+      solo.validateSave({...copy(out.members[0]),bag:[copy(item.gear)],equipped:Array(5).fill(null)},{companion:true});
+      const meta=item.gear.starterPack;
+      if(meta&&(meta.baseAttack!==undefined&&(!Number.isFinite(meta.baseAttack)||meta.baseAttack<0||meta.baseAttack>10000)))throw Error('信箱武器基礎攻擊無效');
+    }
+    return out;};
   const basePack=packParty;
   packParty=function(){syncUnlocks();return {...basePack(),companionUnlocks:copy(party.companionUnlocks),achievements:copy(party.achievements),mailbox:copy(party.mailbox)};};
   const baseSave=save;
@@ -75,29 +81,83 @@
   generateMarket=function(){const market=baseGenerate();for(const p of candidates()){if(market.offers.length>=100)break;const c=p.unlockCondition;if(Math.random()<c.chance)market.offers.push({id:`${market.serial}-${market.offers.length}`,kind:'material',key:`夥伴招募券-${p.id}`,qty:1,price:c.price,sold:false,ruleId:`companion-recruit-${p.id}`});}return market;};
   function ticketPlan(o){return o?.ruleId?.startsWith('companion-recruit-')?plans().find(p=>p.id===Number(o.ruleId.slice(18))&&p.availability==='visible'&&p.unlockCondition.type==='ticket'&&o.kind==='material'&&o.key===`夥伴招募券-${p.id}`&&o.qty===1&&o.price===p.unlockCondition.price):null;}
   const baseCards=marketCards;
-  marketCards=function(){const extra=(party.market?.offers||[]).map(o=>{const p=ticketPlan(o);if(!p)return '';const done=o.sold||companionUnlocked(p.id)||companionTicketCount(p.id)||companionPendingMail(p.id);return `<article class="shop-product-row random-shop-row"><div class="shop-product-name account-item-main">${inventoryItemIcon({id:'companion-ticket-'+p.id,type:'levelScroll'})}<div><b>${esc(p.name)}招募券</b><span class="small">數量 1</span></div></div><div class="shop-product-copy"><p>${esc(globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('item','companion-ticket-'+p.id)??'')}</p></div><div class="shop-product-meta"><b>${o.price} 金幣</b></div><button onclick="buyMarketOffer('${esc(o.id)}')" ${done||state.gold<o.price?'disabled':''}>${done?'已取得':'購買'}</button></article>`;}).join('');const base=baseCards();return (extra&&base.includes('本批沒有隨機商品')?'':base)+extra;};
+  marketCards=function(){const extra=(party.market?.offers||[]).map(o=>{const p=ticketPlan(o);if(!p)return '';const done=o.sold||companionUnlocked(p.id)||companionTicketCount(p.id)||companionPendingMail(p.id);return `<article class="shop-product-row icon-product random-shop-row"><div class="shop-product-name account-item-main">${itemSlotHTML('item','companion-ticket-'+p.id,{count:1})}</div><div class="shop-product-copy"><p>${esc(globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('item','companion-ticket-'+p.id)??'')}</p></div><div class="shop-product-meta"><b>${o.price} 金幣</b></div><button onclick="buyMarketOffer('${esc(o.id)}')" ${done||state.gold<o.price?'disabled':''}>${done?'已取得':'購買'}</button></article>`;}).join('');const base=baseCards();return (extra&&base.includes('本批沒有隨機商品')?'':base)+extra;};
   const baseBuy=buyMarketOffer;
   buyMarketOffer=function(id){const o=party?.market?.offers.find(o=>o.id===id);if(!o?.ruleId?.startsWith('companion-recruit-'))return baseBuy(id);const p=ticketPlan(o);if(!p||o.sold||companionUnlocked(p.id)||companionTicketCount(p.id)||companionPendingMail(p.id))return;if(state.gold<o.price)return toast('金幣不足');const gold=state.gold,old=copy(party.achievements);state.gold-=o.price;o.sold=true;party.achievements.tickets[p.id]=1;if(!save()){state.gold=gold;o.sold=false;party.achievements=old;return;}render();toast(`${p.name}招募券已放入背包，使用後解鎖`);};
   const baseInventory=accountItemsView;
-  accountItemsView=function(){syncUnlocks();const items=Object.entries(party.achievements.tickets).filter(([,n])=>n>0);if(!items.length)return baseInventory();return baseInventory()+`<section class="panel"><h2>夥伴招募券</h2><div class="account-item-list">${items.map(([id,n])=>{const p=plans().find(p=>p.id===Number(id))||party.companionProfiles?.[id],duplicate=companionUnlocked(Number(id)),disabled=!p||p.availability==='hidden'&&!duplicate;return `<article class="account-item-row" data-companion-ticket="${id}"><div class="account-item-main">${inventoryItemIcon({id:'companion-ticket-'+id,type:'levelScroll'})}<div><b>${esc(p?.name||'夥伴 '+id)}招募券</b><span class="small">指定角色招募券</span></div></div><div class="account-item-desc">${esc(globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('item','companion-ticket-'+id)??'')}</div><div class="account-item-count">× ${n}</div><div class="account-item-actions"><button onclick="useCompanionRecruitmentTicket(${id})" ${disabled?'disabled':''}>${disabled?'目前不可使用':duplicate?'轉換金幣':'使用招募券'}</button></div></article>`;}).join('')}</div></section>`;};
+  accountItemsView=function(){syncUnlocks();const items=Object.entries(party.achievements.tickets).filter(([,n])=>n>0);if(!items.length)return baseInventory();return baseInventory()+`<section class="panel"><h2>夥伴招募券</h2><div class="account-item-list">${items.map(([id,n])=>`<article class="account-item-row icon-only-row" data-companion-ticket="${id}">${itemSlotHTML('item','companion-ticket-'+id,{count:n})}</article>`).join('')}</div></section>`;};
+
   globalThis.accountItemsView=accountItemsView;
   let selectedMail=null;
   const unclaimedMail=()=>party?.mailbox?.messages.filter(m=>!m.claimed)||[];
   globalThis.mailboxLabel=function(){const count=unclaimedMail().length;return count?'信箱 · '+count:'信箱';};
   globalThis.openMailboxMail=function(id){syncUnlocks();const m=party.mailbox.messages.find(m=>m.id===id);if(!m)return false;const before=m.read;m.read=true;if(!save()){m.read=before;return false;}selectedMail=id;render();return true;};
+  function catalogueAttachment(row,job,doc){
+    if(row.kind==='equipment'){
+      const ref=EmberwildMonsterDesign.equipmentRef(row.key,doc);if(!ref)throw Error('新手禮包裝備引用無效');
+      let g;
+      if(ref.region!==undefined)g=bossGear(ref.region,ref.job,0);
+      else {
+        const jobs=gearWearableJobs({job:ref.job,formJob:ref.job,slot:ref.slot,form:ref.index});
+        g=gear(1,ref.slot,0,jobs.includes(job)?job:jobs[0]??0);
+        Object.assign(g,{formJob:ref.job,form:ref.index,powerTier:1,prefixId:'',suffixId:'',affix:[],plus:0});
+        if(ref.form.weaponType)g.weaponType=ref.form.weaponType;
+        g.name=gearName(g);
+      }
+      return {type:'gear',gear:g,name:equipmentDisplayName(g),quantity:row.quantity};
+    }
+    if(row.kind==='token'){
+      const g=createCompanionToken(row.key);if(!g)throw Error('新手禮包信物引用無效');
+      return {type:'gear',gear:g,name:g.name,quantity:row.quantity};
+    }
+    if(row.kind==='item'&&row.key.startsWith('companion-ticket-'))return {type:'companionTicket',companionId:Number(row.key.slice(17)),quantity:row.quantity,name:row.name};
+    return copy(row);
+  }
+  globalThis.sendStarterPackMail=function(job,rows){
+    syncUnlocks();const mailbox=party.mailbox;
+    if(mailbox.messages.some(m=>m.rewardKey.startsWith('starter-')))return false;
+    const doc=exportableBalance(),attachments=rows.map(row=>row.type==='catalogue'?catalogueAttachment(row,job,doc):copy(row));
+    const parts=Math.ceil(attachments.length/6);
+    for(let i=0;i<parts;i++)mailbox.messages.push({id:++mailbox.serial,rewardKey:`starter-${job}-${i+1}`,subject:CLASSES[job].name+'新手禮包'+(parts>1?`（${i+1}/${parts}）`:''),body:'歡迎來到餘燼荒野！初始白板裝已穿戴；領取附件後，可到背包自行換上新手武器。新手武器可強化，不可洗鍊詞綴或重鑄基底。',at:Date.now(),read:false,claimed:false,attachments:attachments.slice(i*6,i*6+6)});
+    return true;
+  };
   function claimMail(ids){
-    syncUnlocks();const messages=party.mailbox.messages.filter(m=>ids.includes(m.id)&&!m.claimed);if(!messages.length)return false;
-    const beforeTickets=copy(party.achievements.tickets),beforeMailbox=copy(party.mailbox),next=copy(beforeTickets);
-    for(const m of messages)for(const item of m.attachments){const n=(next[item.companionId]||0)+item.quantity;if(!Number.isSafeInteger(n)||n>1e9){toast('招募券庫存已達上限，附件保留在信箱');return false;}next[item.companionId]=n;}
-    party.achievements.tickets=next;for(const m of messages){m.claimed=true;m.read=true;}
-    if(!save()){party.achievements.tickets=beforeTickets;party.mailbox=beforeMailbox;return false;}
-    render();toast('已領取 '+messages.length+' 封郵件的附件，招募券已放入背包');return true;
+    syncUnlocks();ensureSharedGear();ensureAccountResources();ensureSharedItems();ensureHealingPotionState();
+    const messages=party.mailbox.messages.filter(m=>ids.includes(m.id)&&!m.claimed);if(!messages.length)return false;
+    const tickets=copy(party.achievements.tickets),bag=[...state.bag],materials=copy(state.materials),consumables=copy(state.consumables),gems=[...state.gems],potions=copy(healingInventory());
+    let ore=state.ore,dust=state.dust;
+    const add=(object,key,n,limit=1e9)=>{const next=(object[key]||0)+n;if(!Number.isSafeInteger(next)||next>limit)throw Error('道具庫存已達上限，附件保留在信箱');object[key]=next;};
+    try{
+      for(const m of messages)for(const item of m.attachments){
+        if(item.type==='companionTicket')add(tickets,item.companionId,item.quantity);
+        else if(item.type==='gear'){
+          if(bag.length+item.quantity>RULES.bagCapacity)throw Error('背包空間不足，請整理後再領取附件');
+          for(let i=0;i<item.quantity;i++)bag.push({...copy(item.gear),id:uid()});
+        }else if(item.kind==='gem')add(gems,Number(item.key),item.quantity);
+        else if(item.kind==='material'){
+          if(item.key==='鍛鐵'){ore+=item.quantity;if(ore>1e12)throw Error('鍛鐵庫存已達上限');}
+          else if(item.key==='粉塵'){dust+=item.quantity;if(dust>1e12)throw Error('粉塵庫存已達上限');}
+          else add(materials,item.key,item.quantity);
+        }else if(item.kind==='item'){
+          const definition=__EMBERWILD_INVENTORY_STOCK.item(item.key);
+          if(!definition)throw Error('附件道具目前無法使用，已保留在信箱');
+          if(item.key==='level_scroll')add(materials,'升級卷軸',item.quantity);
+          else add(isHealPotion(definition)?potions:consumables,item.key,item.quantity);
+        }
+      }
+    }catch(error){toast(error.message);return false;}
+    const before={tickets:party.achievements.tickets,bag:state.bag,materials:state.materials,consumables:state.consumables,gems:state.gems,potions:party.members[0].healingPotions,ore:state.ore,dust:state.dust,mailbox:copy(party.mailbox)};
+    party.achievements.tickets=tickets;state.bag=bag;state.materials=materials;state.consumables=consumables;state.gems=gems;state.ore=ore;state.dust=dust;party.members[0].healingPotions=potions;
+    for(const m of messages){m.claimed=true;m.read=true;}
+    let saved=false;try{saved=save()===true;}catch(error){toast('儲存失敗，附件保留在信箱');}
+    if(!saved){party.achievements.tickets=before.tickets;state.bag=before.bag;state.materials=before.materials;state.consumables=before.consumables;state.gems=before.gems;state.ore=before.ore;state.dust=before.dust;party.members[0].healingPotions=before.potions;party.mailbox=before.mailbox;return false;}
+    render();toast('已領取 '+messages.length+' 封郵件的附件，道具已放入背包');return true;
   }
   globalThis.claimMailboxAttachments=id=>claimMail([id]);
   globalThis.claimAllMailboxAttachments=function(){syncUnlocks();return claimMail(unclaimedMail().map(m=>m.id));};
   globalThis.mailboxView=function(){
     syncUnlocks();const messages=[...party.mailbox.messages].reverse(),pending=unclaimedMail().length,m=messages.find(m=>m.id===selectedMail)||messages[0];
-    return heading('MAILBOX / 玩家信箱','信箱',`<span class="tag">未領取 ${pending}</span>`)+`<section class="panel"><div class="row"><p class="small">成就招募券獎勵會寄到此處。領取附件後存入背包，使用招募券才會解鎖夥伴。</p><button onclick="claimAllMailboxAttachments()" ${pending?'':'disabled'}>全部領取</button></div><div class="mailbox-layout"><div class="mailbox-list">${messages.map(mail=>`<button class="mailbox-list-item ${mail.id===m?.id?'selected':''}" data-mail-id="${mail.id}" aria-pressed="${mail.id===m?.id}" onclick="openMailboxMail(${mail.id})"><b>${esc(mail.subject)}</b><span class="small">${mail.claimed?'已領取':mail.read?'待領取':'未讀 · 待領取'}</span><time class="small">${esc(new Date(mail.at).toLocaleString('zh-TW'))}</time></button>`).join('')||'<p class="empty">尚無郵件。</p>'}</div>${m?`<article class="mailbox-detail" data-mail-detail="${m.id}"><h2>${esc(m.subject)}</h2><p class="small">${esc(new Date(m.at).toLocaleString('zh-TW'))} · ${m.claimed?'附件已領取':'附件待領取'}</p><p class="mailbox-body">${esc(m.body)}</p><h3>附件</h3><div class="mailbox-attachments">${m.attachments.map(item=>`<div class="mailbox-attachment"><b>${esc(item.name)}</b><span>× ${item.quantity}</span></div>`).join('')}</div><button class="primary" onclick="claimMailboxAttachments(${m.id})" ${m.claimed?'disabled':''}>${m.claimed?'已領取':'領取附件'}</button></article>`:'<div class="mailbox-detail"><p class="small">達成綁定夥伴的成就後，獎勵郵件會出現在這裡。</p></div>'}</div></section>`;
+    return heading('MAILBOX / 玩家信箱','信箱',`<span class="tag">未領取 ${pending}</span>`)+`<section class="panel"><div class="row"><p class="small">新手禮包與成就獎勵會寄到此處。每封最多六格附件；領取後存入背包。</p><button onclick="claimAllMailboxAttachments()" ${pending?'':'disabled'}>全部領取</button></div><div class="mailbox-layout"><div class="mailbox-list">${messages.map(mail=>`<button class="mailbox-list-item ${mail.id===m?.id?'selected':''}" data-mail-id="${mail.id}" aria-pressed="${mail.id===m?.id}" onclick="openMailboxMail(${mail.id})"><b>${esc(mail.subject)}</b><span class="small">${mail.claimed?'已領取':mail.read?'待領取':'未讀 · 待領取'}</span><time class="small">${esc(new Date(mail.at).toLocaleString('zh-TW'))}</time></button>`).join('')||'<p class="empty">尚無郵件。</p>'}</div>${m?`<article class="mailbox-detail" data-mail-detail="${m.id}"><h2>${esc(m.subject)}</h2><p class="small">${esc(new Date(m.at).toLocaleString('zh-TW'))} · ${m.claimed?'附件已領取':'附件待領取'}</p><p class="mailbox-body">${esc(m.body)}</p><h3>附件</h3><div class="mailbox-attachments">${Array.from({length:6},(_,i)=>m.attachments[i]?mailAttachmentSlot(m.id,i):'<span class="item-slot item-slot-empty" aria-hidden="true"></span>').join('')}</div><button class="primary" onclick="claimMailboxAttachments(${m.id})" ${m.claimed?'disabled':''}>${m.claimed?'已領取':'領取附件'}</button></article>`:'<div class="mailbox-detail"><p class="small">達成綁定夥伴的成就後，獎勵郵件會出現在這裡。</p></div>'}</div></section>`;
   };
   let regionFilter=String(party?.map??0),kindFilter='all',statusFilter='all';
   globalThis.setAchievementFilter=function(key,value){if(key==='region'&&(value==='all'||/^\d+$/.test(value)&&MAPS[Number(value)]))regionFilter=value;else if(key==='kind'&&['all','open','elite','boss'].includes(value))kindFilter=value;else if(key==='status'&&['all','done','pending'].includes(value))statusFilter=value;else return false;render();return true;};

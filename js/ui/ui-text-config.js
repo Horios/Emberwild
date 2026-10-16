@@ -133,14 +133,7 @@ globalThis.setInventoryVisibility=function(kind,value,checked){
   render();
 };
 function inventoryGearListItem(g,selected){
-  const wearer=gearWearer(g.id),worn=!!wearer,locked=!!g.locked;
-  const rarityRow=globalThis.textRarityEquipmentBlockPresentation?.(g);
-  const styledRow=rarityRow&&(rarityRow.bg||rarityRow.block);
-  return `<button type="button" class="inventory-list-item ${selected?'selected':''} ${styledRow?rarityRow.classes:''}"${styledRow?rarityRow.attrs:''} onclick="selectInventoryGear('${g.id}')" title="${esc(equipmentDisplayName(g))}">
-    <span class="inventory-list-name">${equipmentNameHTML(g)}</span>
-    <span class="inventory-list-meta">${gearWearableJobsText(g)} · ${CLASS_GEAR[g.job][g.slot]} · LV ${gearRequiredLevelByTier(g.tier)}${worn?' · '+esc(characterName(wearer))+'已穿戴':''}${locked?' · 已鎖定':''}</span>
-    <span class="inventory-list-quality effect-quality-${gearQualityRank(g)}">${qualityTag(g)}</span>
-  </button>`;
+  return gearSlotHTML(g,{selected,className:'inventory-list-item',onclick:`selectInventoryGear('${g.id}')`});
 }
 function inventoryGearDetail(g){
   if(!g)return `<div class="inventory-detail-empty"><b>沒有可顯示的裝備</b><p class="small">調整左側篩選條件後選擇裝備。</p></div>`;
