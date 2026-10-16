@@ -123,10 +123,9 @@
   buySupply=function(id){const rule=SHOP_SETTINGS.fixedOffers.entries.find(x=>x.enabled&&x.type==='item'&&x.key===id);if(!rule)return toast('此商品目前未上架');return buyFixedShopOffer(rule.id);};
   globalThis.buyHealingPotion=function(id){if(!isHealPotion(SHOP.find(x=>x.id===id)))return;return buySupply(id);};
   function productRow(input,rule,random){
-    const offer=resolvedOffer(input),item=offerItem(offer),name=offerName(offer,rule),description=offerDescription(offer,rule),effect=offerEffect(offer),slot=stockSlot(offer),count=Number(slot?.object?.[slot.key])||0;
-    const title=item&&!rule?.name?textRarityItemHTML(item):esc(name),disabled=input.sold||state.gold<offer.price;
+    const offer=resolvedOffer(input),description=offerDescription(offer,rule),effect=offerEffect(offer);
     const kind=['ore','dust'].includes(offer.kind)?'material':offer.kind,key=offer.kind==='ore'?'鍛鐵':offer.kind==='dust'?'粉塵':offer.key;
-    return `<article class="shop-product-row icon-product ${random?'random-shop-row':'fixed-shop-row'}">${itemSlotHTML(kind,key,{count:offer.qty,extra:description+' '+effect})}<div class="shop-product-meta"><b>${offer.price} 金幣</b><span class="small">共用 ${count.toLocaleString()}</span></div><button onclick="${random?`buyMarketOffer('${input.id}')`:`buyFixedShopOffer('${rule.id}')`}" ${disabled?'disabled':''}>${input.sold?'已售完':'購買'}</button></article>`;
+    return `<article class="shop-product-row icon-product ${random?'random-shop-row':'fixed-shop-row'}">${itemSlotHTML(kind,key,{count:offer.qty,extra:description+' '+effect,context:'shop',detailLabel:'商品數量',price:offer.price,shopType:random?'market':'fixed',shopId:random?input.id:rule.id,sold:!!input.sold})}</article>`;
   }
   marketCards=function(){const offers=party.market?.offers?.filter(marketOfferIsListed)||[];return offers.length?offers.map(o=>productRow(o,marketRule(resolvedOffer(o)),true)).join(''):'<div class="shop-empty">本批沒有隨機商品。</div>';};
   const baseValidateParty=validateParty;
@@ -183,7 +182,7 @@
   };
   accountItemsView=function(){
     ensureHealingPotionState();const target=pageHero('equipment')||party.members[0],rows=[...SHOP,LEVEL_SCROLL].filter(item=>inventoryItemCount(item)>0),needsTarget=rows.some(item=>!['levelScroll','gearTierReroll'].includes(item.type)&&!isHealPotion(item)&&!EmberwildTimedBoosts.isItem(item));
-    return heading('ITEMS / 帳號共用','道具庫存')+`<section class="panel"><div class="inventory-item-controls">${needsTarget?`<label>使用角色 <select onchange="selectPageHero('equipment',Number(this.value))">${(typeof enlistedHeroes==='function'?enlistedHeroes():party.members).map(h=>`<option value="${memberKey(h)}" ${h===target?'selected':''}>${esc(characterName(h))}</option>`).join('')}</select></label>`:''}<span class="small">點擊圖示查看詳細資料及使用／販售。</span></div><div class="inventory-supply-status">${esc(characterName(target))}目前效果：<span class="supply-countdown" data-job="${memberKey(target)}">${esc(supplyStatus(target)||'無')}</span></div><div class="account-item-list">${rows.map(item=>`<div class="account-item-row icon-only-row" data-inventory-item="${esc(item.id)}">${itemSlotHTML('item',item.id,{count:inventoryItemCount(item)})}</div>`).join('')||'<p class="empty">尚未持有消耗道具。</p>'}</div></section>`+accountGemsView();
+    return heading('ITEMS / 帳號共用','道具庫存')+`<section class="panel"><div class="inventory-item-controls">${needsTarget?`<label>使用角色 <select onchange="selectPageHero('equipment',Number(this.value))">${(typeof enlistedHeroes==='function'?enlistedHeroes():party.members).map(h=>`<option value="${memberKey(h)}" ${h===target?'selected':''}>${esc(characterName(h))}</option>`).join('')}</select></label>`:''}<span class="small">點擊圖示查看詳細資料及使用／販售。</span></div><div class="inventory-supply-status">${esc(characterName(target))}目前效果：<span class="supply-countdown" data-job="${memberKey(target)}">${esc(supplyStatus(target)||'無')}</span></div><div class="account-item-list">${rows.map(item=>`<div class="account-item-row icon-only-row" data-inventory-item="${esc(item.id)}">${itemSlotHTML('item',item.id,{count:inventoryItemCount(item),context:'inventory'})}</div>`).join('')||'<p class="empty">尚未持有消耗道具。</p>'}</div></section>`+accountGemsView();
   };
   globalThis.accountItemsView=accountItemsView;
   const shopInventoryEquipmentBase=equipmentView;

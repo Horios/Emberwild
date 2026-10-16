@@ -209,7 +209,7 @@
     for(const name of names){if(name==='升級卷軸'||seen.has(name))continue;seen.add(name);const n=materialCount(name);if(n>0||['鍛鐵','粉塵','以太鍛鐵'].includes(name))entries.push({name,n});}
     const sources=materialRegions(),regions=name=>[...(sources.get(name)||[])].sort((a,b)=>a-b);
     const sourceText=name=>{const maps=regions(name);return maps.length?maps.map(i=>MAPS[i].name).join('、'):name==='小蟲'?'採集取得':'非地區來源／未指定';};
-    function row({name,n},group){return `<div class="account-sell-row account-material-row icon-only-row">${itemSlotHTML('material',name,{count:n,extra:sourceText(name)})}</div>`;}
+    function row({name,n},group){return `<div class="account-sell-row account-material-row icon-only-row">${itemSlotHTML('material',name,{count:n,extra:sourceText(name),context:'inventory'})}</div>`;}
 
     const controls=`<div class="material-region-controls"><label>取得地區 <select aria-label="共用材料取得地區" onchange="setCommonMaterialRegion(this.value)"><option value="all" ${commonMaterialRegion==='all'?'selected':''}>全部地區</option><option value="multiple" ${commonMaterialRegion==='multiple'?'selected':''}>跨地區掉落</option><option value="other" ${commonMaterialRegion==='other'?'selected':''}>非地區來源／未指定</option>${MAPS.map((m,i)=>`<option value="${i}" ${commonMaterialRegion===String(i)?'selected':''}>${esc(m.name)}</option>`).join('')}</select></label><label>排序 <select aria-label="共用材料排序" onchange="setCommonMaterialSort(this.value)">${[['region','取得地區'],['name','名稱'],['quantity','數量']].map(([key,label])=>`<option value="${key}" ${commonMaterialSort===key?'selected':''}>${label}</option>`).join('')}</select></label></div>`;
     const groups=[['common','共用材料'],['alchemy','煉金材料'],['enhance','強化材料']];

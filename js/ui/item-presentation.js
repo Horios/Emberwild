@@ -30,38 +30,55 @@
   }
   function refFromNode(node){
     const d=node.dataset,mail=d.itemMail?party?.mailbox?.messages.find(m=>m.id===Number(d.itemMail))?.attachments[Number(d.itemIndex)]:null;
-    if(mail){const g=mail.gear,id=g?gearIdentity(g):mail.type==='companionTicket'?{kind:'item',key:'companion-ticket-'+mail.companionId}:{kind:mail.kind,key:mail.key};return {...id,g,quantity:mail.quantity};}
-    return {kind:d.itemKind,key:d.itemKey,g:d.itemPreview?JSON.parse(d.itemPreview):d.itemGear?(findGear(d.itemGear)||(typeof pendingGearLoot!=='undefined'?pendingGearLoot.find(g=>g.id===d.itemGear):null)):null,extra:d.itemExtra};
+    if(mail){const g=mail.gear,id=g?gearIdentity(g):mail.type==='companionTicket'?{kind:'item',key:'companion-ticket-'+mail.companionId}:{kind:mail.kind,key:mail.key};return {...id,g,context:'mail',quantity:mail.quantity,quantityLabel:'附件數量'};}
+    const number=value=>value===undefined?undefined:Number(value);
+    return {kind:d.itemKind,key:d.itemKey,g:d.itemPreview?JSON.parse(d.itemPreview):d.itemGear?(findGear(d.itemGear)||(typeof pendingGearLoot!=='undefined'?pendingGearLoot.find(g=>g.id===d.itemGear):null)):null,extra:d.itemExtra,context:d.itemContext||'reference',quantity:number(d.itemQuantity),quantityLabel:d.itemQuantityLabel,price:number(d.itemPrice),priceLabel:d.itemPriceLabel,shopType:d.itemShopType,shopId:d.itemShopId,sold:d.itemSold==='true',soldLabel:d.itemSoldLabel};
   }
   globalThis.itemSlotHTML=function(kind,key,options={}){
     key=String(key);const g=options.gear;
     if(g)({kind,key}=gearIdentity(g));
     const n=name(kind,key,g),label=n+(options.count!==undefined?' ×'+options.count:'');
-    const data=`data-item-kind="${attr(kind)}" data-item-key="${attr(key)}"${g?.id?` data-item-gear="${attr(g.id)}"`:''}${options.preview?` data-item-preview="${attr(JSON.stringify(options.preview))}"`:''}${options.mailId?` data-item-mail="${options.mailId}" data-item-index="${options.mailIndex}"`:''}${options.extra?` data-item-extra="${attr(options.extra)}"`:''}`;
+    const context=options.context||(options.mailId?'mail':'reference'),quantity=options.detailQuantity??options.count;
+    const data=`data-item-kind="${attr(kind)}" data-item-key="${attr(key)}" data-item-context="${attr(context)}"${g?.id?` data-item-gear="${attr(g.id)}"`:''}${options.preview?` data-item-preview="${attr(JSON.stringify(options.preview))}"`:''}${options.mailId?` data-item-mail="${options.mailId}" data-item-index="${options.mailIndex}"`:''}${options.extra?` data-item-extra="${attr(options.extra)}"`:''}${quantity!==undefined?` data-item-quantity="${attr(quantity)}"`:''}${options.detailLabel?` data-item-quantity-label="${attr(options.detailLabel)}"`:''}${options.price!==undefined?` data-item-price="${attr(options.price)}"`:''}${options.priceLabel?` data-item-price-label="${attr(options.priceLabel)}"`:''}${options.shopType?` data-item-shop-type="${attr(options.shopType)}"`:''}${options.shopId!==undefined?` data-item-shop-id="${attr(options.shopId)}"`:''}${options.sold?` data-item-sold="true"`:''}${options.soldLabel?` data-item-sold-label="${attr(options.soldLabel)}"`:''}`;
     const content=`<span class="item-slot-art" aria-hidden="true">${icon(kind,key,g)}</span>${options.count!==undefined?`<span class="item-slot-count">${attr(options.count)}</span>`:''}${g?.plus?`<span class="item-slot-plus">+${g.plus}</span>`:''}${g&&typeof gearWearer==='function'&&gearWearer(g.id)?'<span class="item-slot-worn" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m3 8 3 3 7-7"/></svg></span>':''}`;
     const tag=options.contentOnly?'span':'button';
     return `<${tag} ${tag==='button'?'type="button" ':''}class="item-slot ${options.className||''}${options.selected?' selected':''}${g?' item-quality-'+gearQualityRank(g):''}" ${data} aria-label="${attr(label)}"${tag==='button'?` onclick="${options.onclick||'openItemSlotDetails(this)'}"`:''}${options.selected?' aria-pressed="true"':''}>${content}</${tag}>`;
   };
   globalThis.gearSlotHTML=(g,options={})=>itemSlotHTML('equipment','',{...options,gear:g});
-  globalThis.itemCostHTML=function(g){const c=upgradeMaterials(g);return '<span class="item-cost-line">'+[['鍛鐵',c.ore],['粉塵',c.dust],['以太鍛鐵',c.ether]].filter(([,n])=>n>0).map(([key,count])=>itemSlotHTML('material',key,{count})).join(' ＋ ')+'</span>';};
+  globalThis.itemCostHTML=function(g){const c=upgradeMaterials(g);return '<span class="item-cost-line">'+[['鍛鐵',c.ore],['粉塵',c.dust],['以太鍛鐵',c.ether]].filter(([,n])=>n>0).map(([key,count])=>itemSlotHTML('material',key,{count,detailLabel:'所需數量'})).join(' ＋ ')+'</span>';};
   globalThis.mailAttachmentSlot=function(mailId,index){
     const a=party.mailbox.messages.find(m=>m.id===mailId)?.attachments[index];if(!a)return '';
     const id=a.gear?gearIdentity(a.gear):a.type==='companionTicket'?{kind:'item',key:'companion-ticket-'+a.companionId}:{kind:a.kind,key:a.key};
-    return itemSlotHTML(id.kind,id.key,{gear:a.gear,count:a.quantity,mailId,mailIndex:index,className:'mailbox-attachment'});
+    return itemSlotHTML(id.kind,id.key,{gear:a.gear,count:a.quantity,mailId,mailIndex:index,className:'mailbox-attachment',detailLabel:'附件數量'});
   };
   function info(ref){
     const {kind,key,g}=ref,item=definition(kind,key),description=globalThis.__EMBERWILD_ITEM_DESCRIPTION?.(kind,key)||'';
     let detail='';
     if(g)detail=`<p>${globalThis.EmberwildTokens?.isToken(g)?esc(gearDesc(g)):esc(gearWearableJobsText(g)+' · LV '+gearRequiredLevelByTier(g.tier))}</p><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryHTML?.(g)||esc(gearDesc(g))}</p>${globalThis.equipmentAttributeDetailsHTML?.(g)||''}${g.starterPack?'<p>可強化；不可洗鍊詞綴或重鑄基底。</p>':''}`;
     else if(kind==='item'&&key.startsWith('companion-ticket-'))detail='<p>領取後存入背包，使用可解鎖指定夥伴；重複取得依原規則轉換。</p>';
-    else if(item)detail='<p>'+esc(key==='level_scroll'?'全隊共用等級 +1':supplyDetail(item))+'</p><p>持有 '+(state?__EMBERWILD_INVENTORY_STOCK.count(key):0)+' · 售價 '+(key==='level_scroll'?materialSellPrice('升級卷軸'):typeof itemSellPrice==='function'?itemSellPrice(key):0)+' 金幣／個</p>';
+    else if(item)detail='<p>'+esc(key==='level_scroll'?'全隊共用等級 +1':supplyDetail(item))+'</p>';
     else if(kind==='gem')detail='<p>'+esc(GEMS[Number(key)]?.desc||'技能鑲嵌寶石')+'</p>';
-    else if(kind==='material')detail='<p>材料庫存：'+(state?materialCount(key).toLocaleString():'0')+' · 售價 '+(typeof materialSellPrice==='function'?materialSellPrice(key):0)+' 金幣／個</p>';
+    if(ref.context==='inventory'){
+      if(item)detail+='<p>持有 '+(state?__EMBERWILD_INVENTORY_STOCK.count(key):0)+' · 售價 '+(key==='level_scroll'?materialSellPrice('升級卷軸'):typeof itemSellPrice==='function'?itemSellPrice(key):0)+' 金幣／個</p>';
+      else if(kind==='item'&&key.startsWith('companion-ticket-'))detail+='<p>持有 '+(Number.isFinite(ref.quantity)?ref.quantity.toLocaleString():'0')+'</p>';
+      else if(kind==='gem')detail+='<p>持有 '+(state?state.gems[Number(key)]||0:0)+' · 售價 '+(typeof inventoryGemSellPrice==='function'?inventoryGemSellPrice(Number(key)):0)+' 金幣／個</p>';
+      else if(kind==='material')detail+='<p>材料庫存：'+(state?materialCount(key).toLocaleString():'0')+' · 售價 '+(typeof materialSellPrice==='function'?materialSellPrice(key):0)+' 金幣／個</p>';
+    }
+    if(ref.context==='shop')detail+=`<p>${esc(ref.quantityLabel||'商品數量')}：${Number.isFinite(ref.quantity)?ref.quantity.toLocaleString():'1'} · ${esc(ref.priceLabel||'價格')}：${Number.isFinite(ref.price)?ref.price.toLocaleString():'0'} 金幣</p>`;
+    else if(ref.context!=='inventory'&&ref.quantity!==undefined&&Number.isFinite(ref.quantity))detail+=`<p>${esc(ref.quantityLabel||'數量')}：${ref.quantity.toLocaleString()}</p>`;
     if(g&&globalThis.EmberwildTokens?.isToken(g))detail+='<p>'+esc(globalThis.companionTokenAbilityText?.(g)||'')+'</p>';
-    return `<h3>${esc(name(kind,key,g))}</h3>${description?'<p>'+esc(description)+'</p>':''}${detail}${ref.extra?'<p>'+esc(ref.extra)+'</p>':''}${ref.quantity!==undefined?'<p>附件數量：'+ref.quantity+'</p>':''}`;
+    return `<h3>${esc(name(kind,key,g))}</h3>${description?'<p>'+esc(description)+'</p>':''}${detail}${ref.extra?'<p>'+esc(ref.extra)+'</p>':''}`;
   }
   function controls(ref){
-    const {kind,key,g}=ref;if(ref.quantity!==undefined)return '';
+    const {kind,key,g}=ref;
+    if(ref.context==='shop'){
+      const id=attr(JSON.stringify(ref.shopId)),price=Number(ref.price)||0,disabled=ref.sold||state.gold<price;
+      if(ref.shopType==='market')return `<button onclick="itemDetailsAction(()=>buyMarketOffer(${id}))" ${disabled?'disabled':''}>${ref.sold?esc(ref.soldLabel||'已售完'):'購買'}</button>`;
+      if(ref.shopType==='fixed')return `<button onclick="itemDetailsAction(()=>buyFixedShopOffer(${id}))" ${disabled?'disabled':''}>購買</button>`;
+      if(ref.shopType==='life')return `<div class="actions"><button onclick="itemDetailsAction(()=>buyLifeMaterial(${id},1))" ${state.gold<price?'disabled':''}>購買 1 份</button><button onclick="itemDetailsAction(()=>buyLifeMaterial(${id},10))" ${state.gold<price*10?'disabled':''}>購買 10 份</button></div>`;
+      return '';
+    }
+    if(!g&&ref.context!=='inventory')return '';
     if(g){
       if(!findGear(g.id))return '';
       if(globalThis.EmberwildTokens?.isToken(g)){
@@ -81,7 +98,7 @@
   function renderDetail(){const d=dialog();if(selection)d.innerHTML=`<div class="item-detail-top"><span class="item-detail-art">${icon(selection.kind,selection.key,selection.g)}</span><button onclick="closeItemDetails()" aria-label="關閉道具詳細資料">關閉</button></div>${info(selection)}${controls(selection)}`;}
   globalThis.openItemSlotDetails=function(node){selection=refFromNode(node);if(!selection.kind)return;hideTooltip();renderDetail();const d=dialog();if(!d.open)d.showModal();};
   globalThis.closeItemDetails=function(){dialog().close();selection=null;};
-  globalThis.itemDetailsAction=function(action){action();if(selection)renderDetail();};
+  globalThis.itemDetailsAction=function(action){action();if(selection?.context==='shop'&&selection.shopType==='market')selection.sold=selection.sold||!!party?.market?.offers?.find(o=>o.id===selection.shopId)?.sold;if(selection)renderDetail();};
   let tooltip;
   function hideTooltip(){if(tooltip){if(typeof tooltip.hidePopover==='function'&&tooltip.matches(':popover-open'))tooltip.hidePopover();tooltip.hidden=true;}hovered=null;}
   function showTooltip(node){

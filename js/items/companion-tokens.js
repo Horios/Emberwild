@@ -151,7 +151,7 @@
     const list=state.bag.filter(M.isToken).sort((a,b)=>tokenSort==='name'?a.snapshot.name.localeCompare(b.snapshot.name):tokenSort==='enhance'?b.plus-a.plus:b.rar-a.rar||b.plus-a.plus);
     return heading('COMPANION TOKENS / 共用背包','夥伴信物')+`<div class="actions token-inventory-toolbar"><label>排序 <select onchange="setTokenSort(this.value)"><option value="quality" ${tokenSort==='quality'?'selected':''}>品質</option><option value="enhance" ${tokenSort==='enhance'?'selected':''}>強化</option><option value="name" ${tokenSort==='name'?'selected':''}>名稱</option></select></label><span class="small">背包 ${state.bag.length} / ${RULES.bagCapacity}</span></div><div class="token-grid token-inventory-list">${list.map(g=>{
       const h=gearWearer(g.id),description=tokenDescription(g);
-      return gearSlotHTML(g,{className:'token-inventory-row'});
+      return gearSlotHTML(g,{className:'token-inventory-row',context:'inventory'});
     }).join('')||'<p class="empty">尚未取得信物；正常戰鬥有獨立掉落機會。</p>'}</div>`;
   }
   globalThis.setTokenSort=value=>{tokenSort=value;render();};
