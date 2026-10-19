@@ -45,7 +45,7 @@ test('Ordinary equipped gear retains enhancement costs and random-affix reroll c
   assert.match(out.html,new RegExp(`onclick="enhance\\('${out.id}'\\)"`));
   assert.match(out.html,new RegExp(`onclick="reroll\\('${out.id}'\\)"`));
   assert.equal(out.plus,1);assert.equal(out.worn,out.id);assert(out.draft);
-  assert.equal(out.ore-out.afterOre,out.cost.ore+out.rerollCost.ore);
+  assert.equal(out.ore-out.afterOre,out.cost.ore);
   assert.equal(out.gold-out.afterGold,out.rerollCost.gold);
   assert.deepEqual(r.errors,[]);
 });

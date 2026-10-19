@@ -1,6 +1,7 @@
+:root{--item-slot-width:240px;--item-slot-height:48px}
 .item-slot{
-  position:relative;display:flex;align-items:center;justify-content:flex-start;gap:10px;
-  width:100%;min-width:0;min-height:44px;padding:7px 10px;box-sizing:border-box;
+  position:relative;display:inline-flex;align-items:center;justify-content:flex-start;gap:10px;
+  width:var(--item-slot-width);max-width:100%;min-width:0;min-height:var(--item-slot-height);flex:0 1 auto;padding:7px 10px;box-sizing:border-box;
   border:1px solid var(--line);border-radius:6px;background:var(--panel,#17221c);
   color:var(--text,#dfe8de);text-align:left;vertical-align:middle;cursor:pointer;overflow:hidden
 }
@@ -20,40 +21,39 @@
 :root[data-item-display="name"] .item-detail-art{display:none!important}
 
 .inventory-list-scroll,.forge-gear-list,.account-item-list,.account-sell-list,.life-materials,.account-gem-slots,.token-inventory-list,.worn-candidate-list{
-  display:grid!important;grid-template-columns:minmax(0,1fr);align-content:start;gap:6px;padding:5px
+  display:grid!important;grid-template-columns:minmax(0,1fr);align-content:start;justify-items:start;gap:6px;padding:5px
 }
 .inventory-list-item.item-slot,.forge-gear-item.item-slot,.worn-candidate.item-slot,.token-inventory-row.item-slot{
-  display:flex;width:100%;height:auto;min-height:44px;padding:7px 10px;gap:10px
+  display:flex;width:var(--item-slot-width);max-width:100%;height:auto;min-height:var(--item-slot-height);padding:7px 10px;gap:10px
 }
 .account-item-row.icon-only-row,.account-material-row.icon-only-row,.life-stock-row.icon-only-row,.token-inventory-list .token-inventory-row{display:block;min-width:0}
 
 .mailbox-attachments{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;width:100%;max-width:480px;margin:12px 0 20px}
-.mailbox-attachment.item-slot{display:flex;width:100%;height:auto;min-height:44px;padding:7px 10px;aspect-ratio:auto;overflow:hidden}
+.mailbox-attachment.item-slot{display:flex;width:var(--item-slot-width);max-width:100%;height:auto;min-height:var(--item-slot-height);padding:7px 10px;aspect-ratio:auto;overflow:hidden}
 .mailbox-attachments .item-slot-empty{display:none}
 
 .shop-product-grid{display:grid;grid-template-columns:minmax(0,1fr);justify-content:stretch;align-content:start;gap:6px;padding:5px}
-.shop-product-row.icon-product{display:block;min-width:0;min-height:0;padding:6px;border-radius:8px;box-sizing:border-box}
+.shop-product-row.icon-product{display:block;width:304px;max-width:100%;min-width:0;min-height:0;padding:6px;border-radius:8px;box-sizing:border-box}
 .shop-product-row:has([data-item-sold="true"]){opacity:.5;filter:grayscale(1) brightness(.8)}
-.shop-product-visual{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;min-width:0}
+.shop-product-visual{display:grid;grid-template-columns:minmax(0,var(--item-slot-width)) auto;justify-content:start;align-items:center;gap:10px;min-width:0}
+.shop-product-visual>.item-slot{width:100%}
 .shop-product-stock{font-size:10px;line-height:1.35;color:var(--muted);white-space:nowrap;text-align:right}
 .shop-product-stock b{font-size:11px;color:var(--text);font-weight:600}
 .shop-product-label{display:none}
 .shop-product-grid>.shop-empty{grid-column:1/-1}
 
 .recipe-item-line{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
-.recipe-item-line>.item-slot,.recipe-input{flex:1 1 190px;min-width:0}
+.recipe-item-line>.item-slot,.recipe-input{flex:0 1 var(--item-slot-width);min-width:0}
 .recipe-input{display:grid;gap:3px;justify-items:stretch}
 .recipe-input small{font-size:11px;text-align:right}
 .gather-output-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.gather-output-line .item-slot{flex:1 1 190px}
+.gather-output-line .item-slot{flex:0 1 var(--item-slot-width)}
 .account-gem-list .actions{margin-top:14px}
 .forge-action .item-cost-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 
 .worn-slot-choice .item-slot{pointer-events:auto}
 .item-cost-line{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:100%}
-.item-cost-line .item-slot,.boss-recipe .recipe-cost .item-slot{width:auto;min-width:145px;min-height:38px;padding:4px 7px}
-.item-cost-line .item-slot-art,.item-cost-line .item-slot-art>span,.boss-recipe .recipe-cost .item-slot-art,.boss-recipe .recipe-cost .item-slot-art>span{flex-basis:26px;width:26px;height:26px}
-.item-cost-line .item-slot svg,.boss-recipe .recipe-cost .item-slot svg{width:22px;height:22px}
+.item-cost-line .item-slot,.boss-recipe .recipe-cost .item-slot{width:var(--item-slot-width);max-width:100%;min-width:0;min-height:var(--item-slot-height);padding:7px 10px}
 .boss-recipe>.item-slot{margin:12px 0}
 
 .item-hover-tooltip{position:fixed;inset:auto;margin:0;z-index:2147483647;width:min(340px,calc(100vw - 16px));max-height:min(520px,calc(100dvh - 16px));overflow:auto;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel,#17221c);color:var(--text,#e0e8df);box-shadow:0 8px 30px #0008;pointer-events:none;text-align:left;font-size:12px;line-height:1.5}
@@ -62,10 +62,9 @@
 
 @media(max-width:600px){
   .inventory-list-scroll,.forge-gear-list,.account-item-list,.account-sell-list,.life-materials,.account-gem-slots,.token-inventory-list,.worn-candidate-list,.shop-product-grid{gap:5px;padding:3px}
-  .item-slot,.inventory-list-item.item-slot,.forge-gear-item.item-slot,.worn-candidate.item-slot,.token-inventory-row.item-slot,.mailbox-attachment.item-slot{min-height:42px;padding:6px 8px;gap:8px}
-  .item-slot-art,.item-slot-art>span{flex-basis:30px;width:30px;height:30px}
-  .item-slot svg{width:26px;height:26px}
+  .item-slot,.inventory-list-item.item-slot,.forge-gear-item.item-slot,.worn-candidate.item-slot,.token-inventory-row.item-slot,.mailbox-attachment.item-slot{min-height:var(--item-slot-height);padding:7px 10px;gap:10px}
   .mailbox-attachments{max-width:none}
-  .recipe-item-line>.item-slot,.recipe-input,.gather-output-line .item-slot{flex-basis:100%}
-  .item-cost-line .item-slot,.boss-recipe .recipe-cost .item-slot{min-width:130px}
 }
+
+/* Mobile legacy list rules must not enlarge shared item slots. */
+@media(max-width:600px){#app .inventory-list-item.item-slot,#app .forge-gear-item.item-slot{min-height:var(--item-slot-height);padding:7px 10px;gap:10px;align-items:center}}

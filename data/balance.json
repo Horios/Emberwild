@@ -93,7 +93,7 @@
       "balance.affixes.skillEffectPercent": "各品質技能效果詞條 %",
       "balance.affixes.cooldownReduction": "各品質冷卻減少點數；proc 技能會把點數轉為觸發率",
       "balance.affixes.extendedValues.attackPercent": "新攻擊力 % 詞條；目前稀有 3%、傳說 5%",
-      "balance.affixes.rerollCost": "每次洗鍊費用 = 裝備階級 × 此數值；自動洗鍊逐次正常扣費",
+      "balance.affixes.rerollCost": "洗鍊金幣 = 裝備階級 × goldPerTier；粉塵 = dustPerRoll（固定每次，不乘階級）；自動洗鍊逐次正常扣費",
       "balance.affixes.extendedValues.allCooldownReduction": "新全技能冷卻詞條；只影響有冷卻的主動與輔助技能，單位為角色回合",
       "balance.affixes.extendedValues.dropRateBonus": "各品質「掉寶率」詞條數值，單位為百分比",
       "balanceSettings.drops.entries": "所有可配置物品掉落的唯一機率來源；各規則依來源怪物、遭遇種類與難度獨立判定，並受 maxDrops 與掉寶率加成影響。",
@@ -459,7 +459,7 @@
       },
       "rerollCost": {
         "goldPerTier": 80,
-        "orePerTier": 3
+        "dustPerRoll": 10
       },
       "poolBySlotRank": [
         [
@@ -27142,13 +27142,13 @@
       "kind": "material",
       "key": "鍛鐵",
       "iconType": "auto",
-      "description": "裝備強化與洗鍊材料。"
+      "description": "裝備強化材料。"
     },
     {
       "kind": "material",
       "key": "粉塵",
       "iconType": "auto",
-      "description": "裝備洗鍊與寶石合成材料。"
+      "description": "裝備強化、洗鍊與寶石合成材料。"
     },
     {
       "kind": "material",

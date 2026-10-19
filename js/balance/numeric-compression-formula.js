@@ -243,7 +243,7 @@
     const out=compressionValidateBase(clean);
     (out.classes||[]).forEach((cls,job)=>(cls.skills||[]).forEach((sk,i)=>Object.assign(sk,normalizeSkillExtras(full.classes?.[job]?.skills?.[i]||{},job,i))));
     for(const item of out.items||[]){const src=(full.items||[]).find(x=>x.id===item.id);item.statEffects=normalizeStatEffects(src?.statEffects);}
-    out.balanceSettings=clone(full.balanceSettings);out.balance=clone(full.balance);
+    out.balanceSettings=clone(full.balanceSettings);out.balance=normalizeRuntimeBalance(full.balance);
     if(full.equipmentPowerSystem)out.equipmentPowerSystem=clone(full.equipmentPowerSystem);
     return out;
   };

@@ -139,7 +139,8 @@
     tooltip.innerHTML=info(refFromNode(node));tooltip.hidden=false;
     if(typeof tooltip.showPopover==='function'&&!tooltip.matches(':popover-open')){tooltip.setAttribute('popover','manual');tooltip.showPopover();}
     const rect=node.getBoundingClientRect(),tip=tooltip.getBoundingClientRect();
-    tooltip.style.left=Math.max(8,Math.min(rect.right+10,innerWidth-tip.width-8))+'px';
+    const left=rect.right+10+tip.width<=innerWidth-8?rect.right+10:rect.left-tip.width-10;
+    tooltip.style.left=Math.max(8,Math.min(left,innerWidth-tip.width-8))+'px';
     tooltip.style.top=Math.max(8,Math.min(rect.top,innerHeight-tip.height-8))+'px';
   }
   document.addEventListener('pointerover',e=>{if(e.pointerType==='touch')return;const node=e.target.closest?.('[data-item-kind]');if(node&&node!==hovered)showTooltip(node);});
