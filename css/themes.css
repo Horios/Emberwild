@@ -82,9 +82,9 @@ dialog::backdrop{background:var(--backdrop)}
 
 /* Light-mode semantic colors keep rarity, element and skill categories distinct.
    Configured item text effects and artwork retain their own palettes. */
-:root[data-ui-theme="paper"] .skill-kind-active{--skill-bg:#e1ecf2;--skill-panel:#edf3f6;--skill-border:#6591ab;--skill-accent:#28536e}
-:root[data-ui-theme="paper"] .skill-kind-proc{--skill-bg:#f1e4d4;--skill-panel:#f7eee1;--skill-border:#ac8355;--skill-accent:#78512d}
-:root[data-ui-theme="paper"] .skill-kind-support{--skill-bg:#dfece0;--skill-panel:#ecf3e9;--skill-border:#6c9775;--skill-accent:#355f42}
+:root[data-ui-theme="paper"] .skill-kind-active{--skill-bg:#1c3042;--skill-panel:#edf3f6;--skill-border:#6591ab;--skill-accent:#28536e}
+:root[data-ui-theme="paper"] .skill-kind-proc{--skill-bg:#402b1c;--skill-panel:#f7eee1;--skill-border:#ac8355;--skill-accent:#78512d}
+:root[data-ui-theme="paper"] .skill-kind-support{--skill-bg:#19392b;--skill-panel:#ecf3e9;--skill-border:#6c9775;--skill-accent:#355f42}
 :root[data-ui-theme="paper"] :is(.effect-quality-0,.loot-rarity-0,.rank-0,.member-rating-c,.member-rating-d){color:var(--text-soft)}
 :root[data-ui-theme="paper"] :is(.effect-quality-1,.loot-rarity-1,.member-rating-b,.element-wind){color:var(--positive)}
 :root[data-ui-theme="paper"] :is(.effect-quality-2,.loot-rarity-2,.rank-1,.element-ice){color:var(--info)}
@@ -92,8 +92,8 @@ dialog::backdrop{background:var(--backdrop)}
 :root[data-ui-theme="paper"] :is(.effect-quality-3,.loot-rarity-3,.rank-3,.member-rating-s,.element-light){color:var(--gold)}
 :root[data-ui-theme="paper"] :is(.event-damage,.element-fire){color:#9b4a2b}
 :root[data-ui-theme="paper"] .starter-equipment-name{color:var(--positive)!important}
-/* SVG artwork can use pale designer colors, so its small tile stays dark. */
-:root[data-ui-theme="paper"] :is(.skill-icon-tile,.skill-selected-heading .skill-icon-glyph,.mastery-icon-box,.skill-gem-slot){background:#24322d}
+/* Keep pale SVG artwork legible while preserving each skill category color. */
+:root[data-ui-theme="paper"] :is(.skill-icon-tile,.skill-selected-heading .skill-icon-glyph,.mastery-icon-box,.skill-gem-slot){background:var(--skill-bg,#24322d)}
 
 /* Theme cards preview the palette they select, including in the other themes. */
 .theme-options h2{margin:0 0 5px;font-size:16px}
