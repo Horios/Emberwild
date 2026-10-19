@@ -23,8 +23,8 @@
   function expireBoosts(now=Date.now()){
     if(!party)return false;
     const prior=party.timedBoosts?.length||0;party.timedBoosts=api.active(party,now);
-    const invalid=battleRate===4&&!api.unlocked(party,now)||![1,2,4].includes(battleRate);
-    if(invalid)changeRate(2,now);
+    const invalid=battleRate===2&&!api.unlocked(party,now)||![1,2].includes(battleRate);
+    if(invalid)changeRate(1,now);
     let elementalExpired=false;
     for(const h of party.members){let changed=false;for(const key of api.ELEMENTAL_TYPES){const before=api.buffRows(h[key]),live=api.elementalActive(h[key],now);if(before.length!==live.length){h[key]=api.compactBuffs(live);changed=true;}}if(changed){withHero(h,clampVitals);elementalExpired=true;}}
     return prior!==party.timedBoosts.length||invalid||elementalExpired;
@@ -37,11 +37,11 @@
   }
   globalThis.setBattleSpeed=function(rate){
     syncCombatClock();expireBoosts();
-    if(![1,2,4].includes(rate)||rate===4&&!api.unlocked(party))return toast('4× 尚未解鎖，請先使用四倍速解鎖券');
+    if(![1,2].includes(rate)||rate===2&&!api.unlocked(party))return toast('2× 尚未解鎖，請先使用兩倍速解鎖券');
     changeRate(rate);save();render();return true;
   };
-  toggleBattleRate=function(){const rates=api.unlocked(party)?[1,2,4]:[1,2],index=rates.indexOf(battleRate);return setBattleSpeed(rates[(index+1)%rates.length]);};
-  globalThis.battleSpeedButtons=function(){return `<div class="battle-speed-buttons">${[1,2,4].map(rate=>{const locked=rate===4&&!api.unlocked(party);return `<button type="button" class="${battleRate===rate?'primary':''}" onclick="setBattleSpeed(${rate})" aria-pressed="${battleRate===rate}" ${locked?'disabled aria-label="4倍速（鎖定）" title="使用四倍速解鎖券後可選擇"':''}>${rate}×${locked?'（鎖定）':''}</button>`;}).join('')}</div>`;};
+  toggleBattleRate=function(){const rates=api.unlocked(party)?[1,2]:[1],index=rates.indexOf(battleRate);return setBattleSpeed(rates[(index+1)%rates.length]);};
+  globalThis.battleSpeedButtons=function(){return `<div class="battle-speed-buttons">${[1,2].map(rate=>{const locked=rate===2&&!api.unlocked(party);return `<button type="button" class="${battleRate===rate?'primary':''}" onclick="setBattleSpeed(${rate})" aria-pressed="${battleRate===rate}" ${locked?'disabled aria-label="2倍速（鎖定）" title="使用兩倍速解鎖券後可選擇"':''}>${rate}×${locked?'（鎖定）':''}</button>`;}).join('')}</div>`;};
   const useBase=useSupply;
   useSupply=function(id){
     const item=SHOP.find(x=>x.id===id);if(!api.isItem(item))return useBase(id);
@@ -55,7 +55,7 @@
     render();toast('已使用'+item.name+'；同名同效果累加時間，單一狀態上限 24 小時');
   };
   const detailBase=supplyDetail;
-  supplyDetail=function(item){if(!api.isItem(item))return detailBase(item);return (item.boostType==='speed4'?'解鎖 4× 戰鬥倍速':api.LABELS[item.boostType]+'＋'+item.bonusPercent+'%')+' · 持續 '+item.durationMinutes+' 分鐘（現實時間） · 同名同效果累加時間；不同倍率獨立計時；單一狀態上限 24 小時';};
+  supplyDetail=function(item){if(!api.isItem(item))return detailBase(item);return (item.boostType==='speed2'?'解鎖 2× 戰鬥倍速':api.LABELS[item.boostType]+'＋'+item.bonusPercent+'%')+' · 持續 '+item.durationMinutes+' 分鐘（現實時間） · 同名同效果累加時間；不同倍率獨立計時；單一狀態上限 24 小時';};
   const awardBase=awardXP;
   awardXP=function(amount,{applyExpBoost=true}={}){
     const h=playerHero(),capped=h.lv>=levelCap(h),earned=Math.max(0,Math.round(amount*(applyExpBoost?1+api.bonus(party,'exp')/100:1)));
@@ -81,7 +81,7 @@
   const timeText=api.timeText;
   function boostRow(kind,now){
     const rows=api.active(party,now).filter(b=>b.boostType===kind);if(!rows.length)return '';
-    const nearest=Math.min(...rows.map(b=>b.expiresAt)),summary=kind==='speed4'?timeText(Math.max(...rows.map(b=>b.expiresAt))-now):'＋'+api.bonus(party,kind,now)+'%｜'+timeText(nearest-now);
+    const nearest=Math.min(...rows.map(b=>b.expiresAt)),summary=kind==='speed2'?timeText(Math.max(...rows.map(b=>b.expiresAt))-now):'＋'+api.bonus(party,kind,now)+'%｜'+timeText(nearest-now);
     const sources=rows.map(b=>b.name+'：'+timeText(b.expiresAt-now)).join('；');
     return `<div class="journal-boost-row" title="${esc(sources)}"><span>${api.LABELS[kind]}：</span><b>${summary}</b>${rows.length>1?`<small>（下一筆到期）</small><details><summary>${rows.length} 個來源</summary>${rows.map(b=>`<div>${esc(b.name)}｜${timeText(b.expiresAt-now)}</div>`).join('')}</details>`:''}</div>`;
   }
@@ -95,11 +95,11 @@
     const node=$('journalRealtimeStatus');if(node){const fresh=document.createElement('template');fresh.innerHTML=battleJournalStatus();const next=fresh.content.firstElementChild;if(node.innerHTML!==next.innerHTML){const opened=[...node.querySelectorAll('details')].map(x=>x.open);node.innerHTML=next.innerHTML;node.querySelectorAll('details').forEach((d,i)=>{d.open=opened[i]||false;});}}
   }
   const referenceBase=balanceReference;
-  balanceReference=function(){const out=referenceBase();out.itemTypes={...(out.itemTypes||{}),timedBoost:'全隊現實時間增益；boostType=speed4/exp/drop，bonusPercent 為加算百分比，durationMinutes 為正整數分鐘；同名同效果累加時間；不同倍率獨立計時；單一狀態上限 24 小時。'};out.units={...(out.units||{}),timedBoostDuration:'現實分鐘；暫停與關閉頁面仍會到期'};out.balancePaths={...(out.balancePaths||{}),'items[].bonusPercent':'各限時來源的加算百分比，經驗與掉寶各自先相加。','items[].durationMinutes':'抗性／屬性增幅與限時增益的現實分鐘；元素藥水可輸入小數，不使用 duration 的戰鬥回合。','combat.pacing.rates':'固定 1/2/4；4× 需要有效解鎖效果。'};out.dropAlgorithm='掉落率 = 基礎機率 × (1 + 全隊裝備加成 + 各有效限時來源加成)，封頂 100%；首殺保底不變。';return out;};
+  balanceReference=function(){const out=referenceBase();out.itemTypes={...(out.itemTypes||{}),timedBoost:'全隊現實時間增益；boostType=speed2/exp/drop，bonusPercent 為加算百分比，durationMinutes 為正整數分鐘；同名同效果累加時間；不同倍率獨立計時；單一狀態上限 24 小時。'};out.units={...(out.units||{}),timedBoostDuration:'現實分鐘；暫停與關閉頁面仍會到期'};out.balancePaths={...(out.balancePaths||{}),'items[].bonusPercent':'各限時來源的加算百分比，經驗與掉寶各自先相加。','items[].durationMinutes':'抗性／屬性增幅與限時增益的現實分鐘；元素藥水可輸入小數，不使用 duration 的戰鬥回合。','combat.pacing.rates':'固定 1/2；2× 需要有效解鎖效果。'};out.dropAlgorithm='掉落率 = 基礎機率 × (1 + 全隊裝備加成 + 各有效限時來源加成)，封頂 100%；首殺保底不變。';return out;};
   const exportBase=exportableBalance;
   exportableBalance=function(){const out=exportBase();out.timeUnits={...(out.timeUnits||{}),timedBoostDuration:'realMinutes'};out.notes=[...(out.notes||[]),'type=timedBoost 使用 boostType / bonusPercent / durationMinutes；各類來源加算，同名同效果累加剩餘時間，不同倍率狀態各自計時；單一狀態上限 24 小時，超過時不消耗道具。'];return out;};
   const guideBase=guideView;
-  guideView=function(){return `<section class="panel"><h2>倍速與限時增益</h2><p>日常探索可使用 1×／2×；4× 需要解鎖券，效果到期時自動回到 2×。倍速只影響進行速度，單場獎勵不變。經驗與掉寶的百分比各自加算，不同類型可同時生效；同名同效果的道具重新使用會累加剩餘時間，不同倍率保留各自狀態並獨立計時；每個狀態最多累積 24 小時，若本次使用會超過上限則提醒且不消耗道具。</p><p>限時券按現實時間到期，暫停或關閉遊戲仍會扣時。已掛機時間只計實際探索時間；暫停戰鬥或對話框暫停時停止。戰報暫停與篩選只影響紀錄顯示。</p></section>`+guideBase();};
+  guideView=function(){return `<section class="panel"><h2>倍速與限時增益</h2><p>日常探索為 1×；2× 需要兩倍速券，效果到期時自動回到 1×。倍速只影響進行速度，單場獎勵不變。經驗與掉寶的百分比各自加算，不同類型可同時生效；同名同效果的道具重新使用會累加剩餘時間，不同倍率保留各自狀態並獨立計時；每個狀態最多累積 24 小時，若本次使用會超過上限則提醒且不消耗道具。</p><p>限時券按現實時間到期，暫停或關閉遊戲仍會扣時。已掛機時間只計實際探索時間；暫停戰鬥或對話框暫停時停止。戰報暫停與篩選只影響紀錄顯示。</p></section>`+guideBase();};
   restoreSession();if(state)render();
   globalThis.__EMBERWILD_TIMED_BOOST_TEST={syncCombatClock,expireBoosts,restoreSession,refreshJournalRealtime};
 })();

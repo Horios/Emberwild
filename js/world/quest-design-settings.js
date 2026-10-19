@@ -22,7 +22,7 @@
     quests.design=M.validate(candidate,{mapCount:out.balanceSettings.maps.catalog?.length??input.balanceSettings?.maps?.catalog?.length??MAPS.length,items:normalizeDescriptionBalance(out).items});return out;
   };
   const referenceBase=balanceReference;
-  balanceReference=function(){const out=referenceBase();out.balancePaths['balanceSettings.quests.design']='每日委託池與一次性支線的唯一有效設計來源。每日限一張，台灣午夜更新；當日委託保存需求／獎勵快照。進度型需求採累計紀錄。';for(const path of ['quests.board','quests.repeat','quests.side'])out.legacySettings['balanceSettings.'+path]={status:'deprecated',replacement:'balanceSettings.quests.design',note:'僅作舊 JSON 遷移，新設計器使用穩定任務 ID。'};return out;};
+  balanceReference=function(){const out=referenceBase();out.balancePaths['balanceSettings.quests.design']='每日委託池與一次性支線的唯一有效設計來源。每日隨機五項、完成上限四項；台灣午夜更新；當日委託保存需求／獎勵快照。進度型需求採累計紀錄。';for(const path of ['quests.board','quests.repeat','quests.side'])out.legacySettings['balanceSettings.'+path]={status:'deprecated',replacement:'balanceSettings.quests.design',note:'僅作舊 JSON 遷移，新設計器使用穩定任務 ID。'};return out;};
   const sideEffectsBase=applyGameplaySettingsSideEffects;
   applyGameplaySettingsSideEffects=function(){sideEffectsBase();syncQuestCatalog();};
   function syncQuestCatalog(){

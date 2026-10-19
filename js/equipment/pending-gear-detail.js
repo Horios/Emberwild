@@ -126,13 +126,13 @@
   function disposePendingList(list,mode,label,skipConfirm){
     if(!list.length){toast('沒有可處理的'+label);return false;}
     if(!skipConfirm&&!confirmPendingDispose(list,mode,label))return false;
-    var oldPending=pendingGearLoot.slice(),snap=economySnapshot();
+    ensureBoard();var oldPending=pendingGearLoot.slice(),snap=economySnapshot(),oldBoard=JSON.parse(JSON.stringify(playerHero().board));
     try{
       if(mode==='sell'){
         var total=list.reduce(function(n,g){return n+(typeof equipmentSellPrice==='function'?equipmentSellPrice(g):0);},0);
         state.gold+=total;
       }else{
-        for(const g of list)grantSalvageRewards(g,false);
+        for(const g of list)grantSalvageRewards(g,false);globalThis.recordDailyProgress?.('salvage','',list.length);
       }
       var ids=new Set(list.map(function(g){return g.id;}));
       pendingGearLoot=pendingGearLoot.filter(function(g){return !ids.has(g.id);});
@@ -141,7 +141,7 @@
       toast('已'+(mode==='sell'?'販售 ':'分解 ')+list.length+' 件'+label+(mode==='sell'?'，獲得 '+total+' 金幣':''));
       return true;
     }catch(e){
-      pendingGearLoot=oldPending;
+      pendingGearLoot=oldPending;playerHero().board=oldBoard;
       restoreEconomy(snap);
       toast('操作失敗：'+e.message);
       return false;

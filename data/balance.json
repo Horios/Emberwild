@@ -113,7 +113,7 @@
       "shopSettings.fixedOffers.entries": "固定商品池：上架項目、數量、單價與顯示說明。",
       "items[].bonusPercent": "各限時來源的加算百分比，經驗與掉寶各自先相加。",
       "items[].durationMinutes": "抗性／屬性增幅與限時增益的現實分鐘；元素藥水可輸入小數，不使用 duration 的戰鬥回合。",
-      "combat.pacing.rates": "固定 1/2/4；4× 需要有效解鎖效果。"
+      "combat.pacing.rates": "固定 1/2；2× 需要有效解鎖效果。"
     },
     "dropAlgorithm": "掉落率 = 基礎機率 × (1 + 全隊裝備加成 + 各有效限時來源加成)，封頂 100%；首殺保底不變。",
     "legacySettings": {
@@ -215,7 +215,7 @@
     },
     "itemTypes": {
       "healPotion": "治療藥水；healFraction=最大生命恢復比例，cooldown=使用後等待的回合數；只能由自動喝藥機制使用。",
-      "timedBoost": "全隊現實時間增益；boostType=speed4/exp/drop，bonusPercent 為加算百分比，durationMinutes 為正整數分鐘；同名刷新。"
+      "timedBoost": "全隊現實時間增益；boostType=speed2/exp/drop，bonusPercent 為加算百分比，durationMinutes 為正整數分鐘；同名同效果累加時間；不同倍率獨立計時；單一狀態上限 24 小時。"
     },
     "affixPoolRule": "詞條品質仍由 qualityChance 決定；決定品質後，只會從對應裝備種類＋詞條稀有度的 poolBySlotRank 抽取。每個池的 chance 合計必須固定為 100%；舊版 weight 會在匯入時按比例轉換為 chance。",
     "equipmentIdentity": {
@@ -7987,16 +7987,16 @@
       "shopEnabled": false
     },
     {
-      "id": "speed4_30m",
+      "id": "speed2_30m",
       "type": "timedBoost",
-      "boostType": "speed4",
+      "boostType": "speed2",
       "bonusPercent": 0,
       "durationMinutes": 30,
       "duration": 0,
       "cost": 1200,
       "sellPrice": 300,
       "shopEnabled": false,
-      "name": "四倍速解鎖券30分鐘",
+      "name": "兩倍速解鎖券30分鐘",
       "statEffects": {}
     },
     {
@@ -8082,6 +8082,19 @@
       "name": "強度重鑄石",
       "shopEnabled": false,
       "textStyleId": "",
+      "statEffects": {}
+    },
+    {
+      "id": "speed2_120m",
+      "type": "timedBoost",
+      "boostType": "speed2",
+      "bonusPercent": 0,
+      "durationMinutes": 120,
+      "duration": 0,
+      "cost": 0,
+      "sellPrice": 0,
+      "shopEnabled": false,
+      "name": "兩倍速券2小時",
       "statEffects": {}
     }
   ],
@@ -8210,7 +8223,8 @@
           3
         ],
         "craftGoldPerTier": 250,
-        "craftMaterialCount": 5
+        "craftMaterialCount": 5,
+        "baseLevelBonus": 7
       },
       "difficultyAffix": {
         "hardChance": 0.65,
@@ -15308,8 +15322,7 @@
         "roundMinimumMs": 6000,
         "rates": [
           1,
-          2,
-          4
+          2
         ]
       },
       "supply": {
@@ -15394,36 +15407,37 @@
       "design": {
         "version": 1,
         "daily": {
+          "version": 2,
           "enabled": true,
           "entries": [
             {
-              "id": "daily_explore",
-              "title": "探索物資募集",
-              "description": "準備物資，協助營地的日常補給。",
+              "id": "daily_hunt",
+              "title": "附近怪物討伐",
+              "description": "完成日常委託，協助營地補給。",
               "enabled": true,
-              "weight": 2,
+              "weight": 1,
               "minLevel": 1,
               "maxLevel": 0,
               "mapIndices": [],
               "prerequisites": [],
               "objectives": [
                 {
-                  "type": "material",
-                  "key": "@currentMap",
-                  "quantity": 8,
-                  "quantityMax": 16,
-                  "perTier": 2,
-                  "consume": true
+                  "type": "nearKill",
+                  "key": "@nearLevel",
+                  "quantity": 12,
+                  "quantityMax": 20,
+                  "perTier": 0,
+                  "consume": false
                 }
               ],
               "rewards": {
                 "gold": 0,
-                "goldPerTier": 180,
+                "goldPerTier": 0,
                 "ore": 0,
-                "orePerTier": 8,
+                "orePerTier": 0,
                 "dust": 0,
                 "xp": 0,
-                "randomGems": 2,
+                "randomGems": 0,
                 "gemCounts": [
                   0,
                   0,
@@ -15432,26 +15446,140 @@
                 "materials": [],
                 "potions": [],
                 "items": [],
-                "gear": [
-                  {
-                    "quantity": 1,
-                    "tier": 0,
-                    "slot": -1,
-                    "rar": 2,
-                    "job": -1,
-                    "legendaryChance": 0.2
-                  }
+                "gear": [],
+                "choice": "all",
+                "gearChance": 0.5
+              }
+            },
+            {
+              "id": "daily_salvage",
+              "title": "裝備回收作業",
+              "description": "開始任務後進行裝備作業，協助營地整備。",
+              "enabled": true,
+              "weight": 1,
+              "minLevel": 1,
+              "maxLevel": 0,
+              "mapIndices": [],
+              "prerequisites": [],
+              "objectives": [
+                {
+                  "type": "salvage",
+                  "key": "",
+                  "quantity": 3,
+                  "quantityMax": 5,
+                  "perTier": 0,
+                  "consume": false
+                }
+              ],
+              "rewards": {
+                "gold": 0,
+                "goldPerTier": 0,
+                "ore": 0,
+                "orePerTier": 0,
+                "dust": 0,
+                "xp": 0,
+                "randomGems": 0,
+                "gemCounts": [
+                  0,
+                  0,
+                  0
                 ],
-                "choice": "gearOrGems",
+                "materials": [],
+                "potions": [],
+                "items": [],
+                "gear": [],
+                "choice": "all",
+                "gearChance": 0.5
+              }
+            },
+            {
+              "id": "daily_enhance",
+              "title": "裝備強化作業",
+              "description": "開始任務後進行裝備作業，協助營地整備。",
+              "enabled": true,
+              "weight": 1,
+              "minLevel": 1,
+              "maxLevel": 0,
+              "mapIndices": [],
+              "prerequisites": [],
+              "objectives": [
+                {
+                  "type": "enhance",
+                  "key": "",
+                  "quantity": 1,
+                  "quantityMax": 2,
+                  "perTier": 0,
+                  "consume": false
+                }
+              ],
+              "rewards": {
+                "gold": 0,
+                "goldPerTier": 0,
+                "ore": 0,
+                "orePerTier": 0,
+                "dust": 0,
+                "xp": 0,
+                "randomGems": 0,
+                "gemCounts": [
+                  0,
+                  0,
+                  0
+                ],
+                "materials": [],
+                "potions": [],
+                "items": [],
+                "gear": [],
+                "choice": "all",
+                "gearChance": 0.5
+              }
+            },
+            {
+              "id": "daily_explore",
+              "title": "探索物資募集",
+              "description": "完成日常委託，協助營地補給。",
+              "enabled": true,
+              "weight": 1,
+              "minLevel": 1,
+              "maxLevel": 0,
+              "mapIndices": [],
+              "prerequisites": [],
+              "objectives": [
+                {
+                  "type": "material",
+                  "key": "@currentMap",
+                  "quantity": 6,
+                  "quantityMax": 10,
+                  "perTier": 0,
+                  "consume": true
+                }
+              ],
+              "rewards": {
+                "gold": 0,
+                "goldPerTier": 0,
+                "ore": 0,
+                "orePerTier": 0,
+                "dust": 0,
+                "xp": 0,
+                "randomGems": 0,
+                "gemCounts": [
+                  0,
+                  0,
+                  0
+                ],
+                "materials": [],
+                "potions": [],
+                "items": [],
+                "gear": [],
+                "choice": "all",
                 "gearChance": 0.5
               }
             },
             {
               "id": "daily_herb",
               "title": "紅色草募集",
-              "description": "準備物資，協助營地的日常補給。",
+              "description": "完成日常委託，協助營地補給。",
               "enabled": true,
-              "weight": 2,
+              "weight": 1,
               "minLevel": 1,
               "maxLevel": 0,
               "mapIndices": [],
@@ -15461,19 +15589,19 @@
                   "type": "material",
                   "key": "紅色草",
                   "quantity": 8,
-                  "quantityMax": 16,
-                  "perTier": 2,
+                  "quantityMax": 12,
+                  "perTier": 0,
                   "consume": true
                 }
               ],
               "rewards": {
                 "gold": 0,
-                "goldPerTier": 180,
+                "goldPerTier": 0,
                 "ore": 0,
-                "orePerTier": 8,
+                "orePerTier": 0,
                 "dust": 0,
                 "xp": 0,
-                "randomGems": 2,
+                "randomGems": 0,
                 "gemCounts": [
                   0,
                   0,
@@ -15482,24 +15610,15 @@
                 "materials": [],
                 "potions": [],
                 "items": [],
-                "gear": [
-                  {
-                    "quantity": 1,
-                    "tier": 0,
-                    "slot": -1,
-                    "rar": 2,
-                    "job": -1,
-                    "legendaryChance": 0.2
-                  }
-                ],
-                "choice": "gearOrGems",
+                "gear": [],
+                "choice": "all",
                 "gearChance": 0.5
               }
             },
             {
               "id": "daily_paste",
               "title": "紅色草泥募集",
-              "description": "準備物資，協助營地的日常補給。",
+              "description": "完成日常委託，協助營地補給。",
               "enabled": true,
               "weight": 1,
               "minLevel": 1,
@@ -15510,20 +15629,20 @@
                 {
                   "type": "material",
                   "key": "紅色草泥",
-                  "quantity": 4,
-                  "quantityMax": 8,
-                  "perTier": 1,
+                  "quantity": 3,
+                  "quantityMax": 5,
+                  "perTier": 0,
                   "consume": true
                 }
               ],
               "rewards": {
                 "gold": 0,
-                "goldPerTier": 180,
+                "goldPerTier": 0,
                 "ore": 0,
-                "orePerTier": 8,
+                "orePerTier": 0,
                 "dust": 0,
                 "xp": 0,
-                "randomGems": 2,
+                "randomGems": 0,
                 "gemCounts": [
                   0,
                   0,
@@ -15532,24 +15651,15 @@
                 "materials": [],
                 "potions": [],
                 "items": [],
-                "gear": [
-                  {
-                    "quantity": 1,
-                    "tier": 0,
-                    "slot": -1,
-                    "rar": 2,
-                    "job": -1,
-                    "legendaryChance": 0.2
-                  }
-                ],
-                "choice": "gearOrGems",
+                "gear": [],
+                "choice": "all",
                 "gearChance": 0.5
               }
             },
             {
               "id": "daily_potion",
               "title": "營地治療補給",
-              "description": "營地需要煉製的簡易治療藥水。",
+              "description": "完成日常委託，協助營地補給。",
               "enabled": true,
               "weight": 1,
               "minLevel": 1,
@@ -15561,19 +15671,19 @@
                   "type": "potion",
                   "key": "heal_small",
                   "quantity": 2,
-                  "quantityMax": 4,
+                  "quantityMax": 3,
                   "perTier": 0,
                   "consume": true
                 }
               ],
               "rewards": {
                 "gold": 0,
-                "goldPerTier": 180,
+                "goldPerTier": 0,
                 "ore": 0,
-                "orePerTier": 8,
+                "orePerTier": 0,
                 "dust": 0,
                 "xp": 0,
-                "randomGems": 2,
+                "randomGems": 0,
                 "gemCounts": [
                   0,
                   0,
@@ -15582,19 +15692,32 @@
                 "materials": [],
                 "potions": [],
                 "items": [],
-                "gear": [
-                  {
-                    "quantity": 1,
-                    "tier": 0,
-                    "slot": -1,
-                    "rar": 2,
-                    "job": -1,
-                    "legendaryChance": 0.2
-                  }
-                ],
-                "choice": "gearOrGems",
+                "gear": [],
+                "choice": "all",
                 "gearChance": 0.5
               }
+            }
+          ],
+          "materialRewards": [
+            {
+              "key": "鍛鐵",
+              "min": 4,
+              "max": 8
+            },
+            {
+              "key": "粉塵",
+              "min": 3,
+              "max": 6
+            },
+            {
+              "key": "紅色草",
+              "min": 4,
+              "max": 8
+            },
+            {
+              "key": "紅色草泥",
+              "min": 2,
+              "max": 4
             }
           ]
         },
@@ -25427,10 +25550,10 @@
           "priceScalesWithTier": true
         },
         {
-          "id": "speed4_30m",
+          "id": "speed2_30m",
           "enabled": true,
           "type": "item",
-          "key": "speed4_30m",
+          "key": "speed2_30m",
           "name": "",
           "unitPrice": null,
           "quantityMin": 1,
@@ -27086,9 +27209,9 @@
     },
     {
       "kind": "item",
-      "key": "speed4_30m",
+      "key": "speed2_30m",
       "iconType": "auto",
-      "description": "暫時開放四倍速探索，可自由切換戰鬥倍速。"
+      "description": "暫時開放兩倍速探索，可自由切換戰鬥倍速。"
     },
     {
       "kind": "item",

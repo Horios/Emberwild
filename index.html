@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh-Hant"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>餘燼荒野 · Emberwild</title><script src="js/ui/themes.js?v=20261016-themes1"></script><link rel="stylesheet" href="css/base.css"><link rel="stylesheet" href="css/navigation-tree.css?v=20261019-navtree1"><body><header><a class="brand" href="#"> <span>餘燼荒野<small>EMBERWILD / IDLE RPG · 4.0</small></span></a><div id="utilityNavigation" class="utility-navigation" hidden></div><div id="wallet"></div><button onclick="save(true)">儲存</button><button onclick="exportSave()">匯出存檔 JSON</button><label class="button">匯入存檔<input type="file" accept=".json" onchange="importSave(event)" hidden></label></header><div id="app"><section class="panel" style="margin:32px"><h1>正在啟動餘燼荒野…</h1><p>正在載入遊戲資料，請稍候。原有存檔保留。</p></section></div><noscript><p style="padding:24px">目前環境未允許 JavaScript。請下載 HTML 後使用瀏覽器開啟。</p></noscript><div id="toast" role="status"></div><dialog id="modal"></dialog><script data-startup-guard src="js/core/startup-guard.js"></script>
+<!doctype html><html lang="zh-Hant"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>餘燼荒野 · Emberwild</title><script src="js/ui/themes.js?v=20261016-themes1"></script><link rel="stylesheet" href="css/base.css"><link rel="stylesheet" href="css/navigation-tree.css?v=20261019-daily-speed2"><body><header><a class="brand" href="#"> <span>餘燼荒野<small>EMBERWILD / IDLE RPG · 4.0</small></span></a><div id="utilityNavigation" class="utility-navigation" hidden></div><div id="wallet"></div><button onclick="save(true)">儲存</button><button onclick="exportSave()">匯出存檔 JSON</button><label class="button">匯入存檔<input type="file" accept=".json" onchange="importSave(event)" hidden></label></header><div id="app"><section class="panel" style="margin:32px"><h1>正在啟動餘燼荒野…</h1><p>正在載入遊戲資料，請稍候。原有存檔保留。</p></section></div><noscript><p style="padding:24px">目前環境未允許 JavaScript。請下載 HTML 後使用瀏覽器開啟。</p></noscript><div id="toast" role="status"></div><dialog id="modal"></dialog><script data-startup-guard src="js/core/startup-guard.js"></script>
 <script data-balance-src="js/balance/progression-model.js"></script>
 <script data-balance-src="js/items/companion-token-model.js?v=20261019-token-jobs1"></script>
 <script data-balance-src="js/character/companion-model.js"></script>
@@ -6,11 +6,11 @@
 <script data-balance-src="js/character/achievement-model.js?v=20261012-utility1"></script>
 <script data-balance-src="js/skills/companion-skill-model.js"></script>
 <script data-balance-src="js/character/team-model.js"></script>
-<script data-balance-src="js/items/timed-boosts.js?v=20261014-descriptions1"></script>
+<script data-balance-src="js/items/timed-boosts.js?v=20261019-daily-speed2"></script>
 <script data-balance-src="js/skills/skill-effect-schema.js"></script>
-<script data-balance-src="js/world/quest-design-model.js?v=20261012-quests2"></script>
-<script data-balance-src="js/world/commission-model.js?v=20261012-quests2"></script>
-<script data-balance-src="js/core/core-game.js?v=20261019-compact-dust1"></script>
+<script data-balance-src="js/world/quest-design-model.js?v=20261019-daily-speed2"></script>
+<script data-balance-src="js/world/commission-model.js?v=20261019-daily-speed2"></script>
+<script data-balance-src="js/core/core-game.js?v=20261019-daily-speed2"></script>
 <link rel="stylesheet" href="css/text-rarity.css">
 <script data-balance-src="js/ui/text-rarity-style.js"></script>
 <link id="ally-row-readability-fix" rel="stylesheet" href="css/ally-row.css">
@@ -20,7 +20,7 @@
 <link id="pending-gear-loot-style" rel="stylesheet" href="css/pending-gear-loot.css">
 <script id="pending-gear-loot-system" data-balance-src="js/equipment/pending-gear-loot.js"></script>
 
-<script id="equipment-stat-source-cleanup" data-balance-src="js/equipment/equipment-stat-source.js?v=20261015-equipment-compare1"></script>
+<script id="equipment-stat-source-cleanup" data-balance-src="js/equipment/equipment-stat-source.js?v=20261019-daily-speed2"></script>
 
 
 <link id="battle-statistics-style" rel="stylesheet" href="css/battle-statistics.css">
@@ -41,7 +41,7 @@
 
 <script id="dynamic-world-map-monster-system" data-balance-src="js/world/dynamic-world.js"></script>
 
-<script id="world-runtime-followup-fixes" data-balance-src="js/world/world-followup.js"></script>
+<script id="world-runtime-followup-fixes" data-balance-src="js/world/world-followup.js?v=20261019-daily-speed2"></script>
 
 <script id="final-map-type-runtime" data-balance-src="js/world/final-map.js"></script>
 
@@ -91,7 +91,7 @@
 
 <script id="support-debuff-mechanics-v2" data-balance-src="js/skills/support-debuff.js"></script>
 <link id="equipment-identity-style" rel="stylesheet" href="css/equipment-identity.css">
-<script id="equipment-identity-system-v2" data-balance-src="js/equipment/equipment-identity.js?v=20261015-equipment-compare1"></script>
+<script id="equipment-identity-system-v2" data-balance-src="js/equipment/equipment-identity.js?v=20261019-daily-speed2"></script>
 
 
 <script id="journal-resizable-split-fix" data-balance-src="js/ui/journal-split.js?v=20261015-loot-fold1"></script>
@@ -102,7 +102,7 @@
 
 
 <link id="pending-gear-detailed-list-style" rel="stylesheet" href="css/pending-gear-detail.css">
-<script id="pending-gear-detailed-list-system" data-balance-src="js/equipment/pending-gear-detail.js?v=20261013-pending-dispose1"></script>
+<script id="pending-gear-detailed-list-system" data-balance-src="js/equipment/pending-gear-detail.js?v=20261019-daily-speed2"></script>
 
 
 
@@ -150,7 +150,7 @@
 <link rel="stylesheet" href="css/options.css">
 <script data-balance-src="js/ui/options.js?v=20261019-item-lists1"></script>
 <link rel="stylesheet" href="css/battle-journal-controls.css?v=20261012-stop-dispose1">
-<script data-balance-src="js/items/timed-boost-runtime.js?v=20261013-material-groups3"></script>
+<script data-balance-src="js/items/timed-boost-runtime.js?v=20261019-daily-speed2"></script>
 <script data-balance-src="js/combat/skill-effect-runtime.js"></script>
 <script data-balance-src="js/skills/induction-schema.js"></script>
 <script data-balance-src="js/skills/induction-runtime.js"></script>
@@ -158,7 +158,7 @@
 <script data-balance-src="js/items/companion-tokens.js?v=20261019-token-jobs1"></script>
 <link rel="stylesheet" href="css/team-builds.css?v=20261012-skills1">
 <script data-balance-src="js/character/team-runtime.js?v=20261019-token-jobs1"></script>
-<script data-balance-src="js/equipment/team-references.js?v=20261015-equipment-compare1"></script>
+<script data-balance-src="js/equipment/team-references.js?v=20261019-daily-speed2"></script>
 <script data-balance-src="js/ui/team-builds.js?v=20261013-team-actions1"></script>
 <script data-balance-src="js/equipment/boss-crafting.js"></script>
 <link rel="stylesheet" href="css/page-readability.css?v=20261013-inventory-ui1">
@@ -169,24 +169,24 @@
 <link rel="stylesheet" href="css/life-skills.css?v=20261013-material-groups3">
 <script src="js/ui/icon-color-palette.js?v=20261014-palette1"></script>
 
-<script src="js/ui/inventory-icon-model.js?v=20261019-compact-dust1"></script>
+<script src="js/ui/inventory-icon-model.js?v=20261019-daily-speed2"></script>
 <script src="js/story/story-model.js"></script>
 <script src="js/balance/balance-document.js?v=20261014-descriptions1"></script><!-- shared preflight -->
 <script data-balance-src="js/items/life-skills.js?v=20261019-shop-labels1"></script>
 <link rel="stylesheet" href="css/achievements.css">
 <script data-balance-src="js/character/companion-unlocks.js?v=20261014-descriptions1"></script>
 <link rel="stylesheet" href="css/utility-navigation.css?v=20261012-utility3">
-<script data-balance-src="js/world/quest-design-settings.js?v=20261012-quests2"></script>
+<script data-balance-src="js/world/quest-design-settings.js?v=20261019-daily-speed2"></script>
 <link rel="stylesheet" href="css/quest-design.css?v=20261012-quests2">
-<script data-balance-src="js/world/daily-commissions.js?v=20261012-quests2"></script>
+<script data-balance-src="js/world/daily-commissions.js?v=20261019-daily-speed2"></script>
 <script data-balance-src="js/ui/utility-navigation.js?v=20261013-cleanup1"></script>
 <script data-balance-skip="js/balance/balance-document.js?v=20261014-descriptions1"></script>
 <script data-balance-src="js/balance/published-runtime.js"></script>
-<script data-balance-src="js/ui/navigation-tree.js?v=20261019-navtree1"></script>
+<script data-balance-src="js/ui/navigation-tree.js?v=20261019-daily-speed2"></script>
 <script data-balance-src="js/ui/inventory-icons-runtime.js?v=20261014-descriptions1"></script>
 <script data-balance-src="js/world/monster-design-runtime.js"></script>
 <link rel="stylesheet" href="css/story.css">
-<script data-balance-src="js/story/story-runtime.js"></script>
+<script data-balance-src="js/story/story-runtime.js?v=20261019-daily-speed2"></script>
 <script data-balance-src="js/ui/mobile-layout.js?v=20261015-mobile5"></script>
 <link rel="stylesheet" href="css/mobile-layout.css?v=20261015-mobile5">
 <link rel="stylesheet" href="css/themes.css?v=20261019-skill-colors3">
