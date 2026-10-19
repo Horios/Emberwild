@@ -54,7 +54,8 @@ test('six attachment slots use SVG; inventory, forge, materials, shop and recipe
  r.run('openUtilityPanel("mailbox");globalThis.mailHTML=$("modal").innerHTML;openItemSlotDetails({dataset:{itemMail:"1",itemIndex:"0"}})');assert.equal(r.run('$("modal").innerHTML'),r.run('mailHTML'));assert.match(r.elements.get('item-detail-dialog').innerHTML,/基礎|基底/);assert.deepEqual(r.errors,[]);
 });
 test('shop uses an inventory-style slot grid and item details stay scoped to their source',()=>{
- const r=game(),shop=r.run('shopView()');assert.match(shop,/class="shop-product-grid"/);assert.match(shop,/data-item-context="shop"/);assert.doesNotMatch(shop,/class="shop-product-meta"/);
+ const r=game();r.run('state.materials["清水"]=3');let shop=r.run('shopView()');assert.match(shop,/class="shop-product-grid"/);assert.match(shop,/data-item-context="shop"/);assert.match(shop,/class="shop-product-stock">庫存<br><b>\d+/);assert.match(shop,/class="shop-product-label">[^<]+/);assert.doesNotMatch(shop,/class="shop-product-meta"/);
+ r.run('setShopCategory("life")');shop=r.run('shopView()');assert.match(shop,/class="shop-product-stock">庫存<br><b>3<\/b>/);assert.match(shop,/class="shop-product-label">清水<\/small>/);
  r.run('openItemSlotDetails({dataset:{itemKind:"item",itemKey:"heal_small",itemContext:"shop",itemQuantity:"3",itemQuantityLabel:"商品數量",itemPrice:"99",itemShopType:"fixed",itemShopId:"fixed-heal-small"}})');
  let detail=r.elements.get('item-detail-dialog').innerHTML;assert.match(detail,/商品數量：3/);assert.match(detail,/價格：99 金幣/);assert.match(detail,/>購買</);assert.doesNotMatch(detail,/持有|售價|賣出/);
  r.run('openItemSlotDetails({dataset:{itemKind:"material",itemKey:"紅色草",itemContext:"reference",itemQuantity:"2",itemQuantityLabel:"所需數量"}})');

@@ -123,9 +123,9 @@
   buySupply=function(id){const rule=SHOP_SETTINGS.fixedOffers.entries.find(x=>x.enabled&&x.type==='item'&&x.key===id);if(!rule)return toast('此商品目前未上架');return buyFixedShopOffer(rule.id);};
   globalThis.buyHealingPotion=function(id){if(!isHealPotion(SHOP.find(x=>x.id===id)))return;return buySupply(id);};
   function productRow(input,rule,random){
-    const offer=resolvedOffer(input),description=offerDescription(offer,rule),effect=offerEffect(offer);
+    const offer=resolvedOffer(input),name=offerName(offer,rule),description=offerDescription(offer,rule),effect=offerEffect(offer),slot=stockSlot(offer),stock=Number(slot?.object?.[slot.key])||0;
     const kind=['ore','dust'].includes(offer.kind)?'material':offer.kind,key=offer.kind==='ore'?'鍛鐵':offer.kind==='dust'?'粉塵':offer.key;
-    return `<article class="shop-product-row icon-product ${random?'random-shop-row':'fixed-shop-row'}">${itemSlotHTML(kind,key,{count:offer.qty,extra:description+' '+effect,context:'shop',detailLabel:'商品數量',price:offer.price,shopType:random?'market':'fixed',shopId:random?input.id:rule.id,sold:!!input.sold})}</article>`;
+    return `<article class="shop-product-row icon-product ${random?'random-shop-row':'fixed-shop-row'}"><div class="shop-product-visual">${itemSlotHTML(kind,key,{count:offer.qty,extra:description+' '+effect,context:'shop',detailLabel:'商品數量',price:offer.price,shopType:random?'market':'fixed',shopId:random?input.id:rule.id,sold:!!input.sold})}<span class="shop-product-stock">庫存<br><b>${stock.toLocaleString()}</b></span></div><small class="shop-product-label">${esc(name)}</small></article>`;
   }
   marketCards=function(){const offers=party.market?.offers?.filter(marketOfferIsListed)||[];return offers.length?offers.map(o=>productRow(o,marketRule(resolvedOffer(o)),true)).join(''):'<div class="shop-empty">本批沒有隨機商品。</div>';};
   const baseValidateParty=validateParty;
