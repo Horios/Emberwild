@@ -292,9 +292,9 @@
     "自訂狀態最多 3 個增減益、1 個控制、3 個持續效果；duration 1～99。instant 會在套用時額外立即結算一次 periodic，後續持續結算不受影響。",
     "狀態 uses > 0 時代表可觸發次數；stackable 控制同一狀態能否在同一目標並存。damageSpread 於單體傷害技能成功施放時觸發並消耗 1 次。",
     "statusTarget=rankedAllies/rankedEnemies 時，以 statusTargetStat 排序；statusTargetOrder 可選 highest/lowest；statusTargetIncludeSelf 控制我方排序是否包含施術者。",
-    "starterPacks 只在建立第一名初始職業時寄至信箱；後續招募角色不會取得此禮包。",
+    "starterPacks 只在建立第一名初始職業時發放；後續招募角色不會取得此禮包。",
     "starterPacks 每件可設定固定 T 階、初始 plus、fixedEffects、prefixId、suffixId 與兩條固定 affixes。",
-    "新手武器可強化，不可洗鍊或重鑄 T 階；growth 只允許依角色等級增加固定屬性。",
+    "新手裝備不可在遊戲內強化、洗鍊或重鑄 T 階；growth 只允許依角色等級增加固定屬性。",
     "textStyles 以 id 定義顯示樣式；equipmentForms / equipmentPowerSystem.bossAffixes / items 的 textStyleId 選擇套用。省略或空字串時使用原有外觀，既有存檔不會儲存樣式副本。",
     "companions 每位角色使用單一 name 與獨立技能池；core/support 為夥伴專屬技能，達到需求角色等級後自動學會，不需要二轉與精通；active/proc 依順序配置，可個別啟用或禁用並保存。passives 引用該夥伴的 passiveDefinitions，達到 requiredLevel 且啟用後常駐生效、不占技能槽。",
     "randomOffers.entries 的 selection=weighted 依 weight 抽選；selection=extra 依 chance 每批額外判定一次。重鑄石也由這個商品池控制。",
@@ -319,9 +319,6 @@
     "randomOffers.entries：selection=weighted 使用抽選權重；selection=extra 使用每批出現率，重鑄石也由此控制。",
     "商品 type=item 的 key 引用 items[].id；unitPrice=null 沿用道具基本單價。名稱、說明留空時沿用道具資料。",
     "items[].shopEnabled 與 equipmentPowerSystem.rerollItem.shopChance/shopPrice 僅供舊資料遷移，新版商店以 shopSettings 為準。",
-    "mastery / requiredMastery / requiredMasteryLevel / weaponTypes 為技能培養、學習與武器條件；requiredMasteryLevel 限制為 0～100。",
-    "iconType 控制技能頁小圖示；auto 會依效果、元素與精通自動判斷。",
-    "武器使用穩定 weaponType；weaponType 與 mastery 為獨立概念。",
     "mastery / requiredMastery / requiredMasteryLevel / weaponTypes 為技能培養、學習與武器條件；requiredMasteryLevel 限制為 0～100。",
     "iconType 控制技能頁小圖示；auto 會依效果、元素與精通自動判斷。",
     "武器使用穩定 weaponType；weaponType 與 mastery 為獨立概念。",
@@ -21596,10 +21593,6 @@
         {
           "key": "上古冥視之瞳",
           "sellPrice": 5
-        },
-        {
-          "key": "藍色草",
-          "sellPrice": 1
         }
       ]
     }
@@ -23037,24 +23030,95 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
+          null,
+          null
         ],
         "growth": {
           "enabled": false,
           "startLevel": 1,
           "maxLevel": 60,
           "effects": []
-        },
-        "baseAttack": 4
+        }
+      },
+      {
+        "group": 0,
+        "slot": 1,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 0,
+        "slot": 2,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 0,
+        "slot": 3,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 0,
+        "slot": 3,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
       }
     ],
     [
@@ -23068,24 +23132,95 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
+          null,
+          null
         ],
         "growth": {
           "enabled": false,
           "startLevel": 1,
           "maxLevel": 60,
           "effects": []
-        },
-        "baseAttack": 4
+        }
+      },
+      {
+        "group": 1,
+        "slot": 1,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 1,
+        "slot": 2,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 1,
+        "slot": 3,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 1,
+        "slot": 3,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
       }
     ],
     [
@@ -23099,24 +23234,95 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
+          null,
+          null
         ],
         "growth": {
           "enabled": false,
           "startLevel": 1,
           "maxLevel": 60,
           "effects": []
-        },
-        "baseAttack": 4
+        }
+      },
+      {
+        "group": 2,
+        "slot": 1,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 2,
+        "slot": 2,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 2,
+        "slot": 3,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 2,
+        "slot": 3,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
       }
     ],
     [
@@ -23130,24 +23336,95 @@
         "prefixId": "",
         "suffixId": "",
         "affixes": [
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          },
-          {
-            "type": 0,
-            "rank": 1,
-            "value": 1
-          }
+          null,
+          null
         ],
         "growth": {
           "enabled": false,
           "startLevel": 1,
           "maxLevel": 60,
           "effects": []
-        },
-        "baseAttack": 4
+        }
+      },
+      {
+        "group": 3,
+        "slot": 1,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 3,
+        "slot": 2,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 3,
+        "slot": 3,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
+      },
+      {
+        "group": 3,
+        "slot": 3,
+        "form": 0,
+        "powerTier": 1,
+        "plus": 0,
+        "fixedEffects": null,
+        "prefixId": "",
+        "suffixId": "",
+        "affixes": [
+          null,
+          null
+        ],
+        "growth": {
+          "enabled": false,
+          "startLevel": 1,
+          "maxLevel": 60,
+          "effects": []
+        }
       }
     ]
   ],
@@ -25423,7 +25700,6 @@
       {
         "id": "berserk",
         "name": "狂戰信物",
-        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25467,7 +25743,6 @@
       {
         "id": "guardian",
         "name": "守護信物",
-        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25512,7 +25787,6 @@
       {
         "id": "pursuit",
         "name": "追擊信物",
-        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25556,7 +25830,6 @@
       {
         "id": "arcane",
         "name": "魔導信物",
-        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25600,7 +25873,6 @@
       {
         "id": "echo",
         "name": "迴響信物",
-        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25644,7 +25916,6 @@
       {
         "id": "hunt",
         "name": "狩獵信物",
-        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25688,7 +25959,6 @@
       {
         "id": "prayer",
         "name": "祈禱信物",
-        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25732,7 +26002,6 @@
       {
         "id": "revival",
         "name": "復甦信物",
-        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25776,7 +26045,6 @@
       {
         "id": "plunder",
         "name": "掠奪信物",
-        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25820,7 +26088,6 @@
       {
         "id": "endurance",
         "name": "持久信物",
-        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -27583,61 +27850,61 @@
       "kind": "token",
       "key": "berserk",
       "iconType": "auto",
-      "description": ""
+      "description": "狂戰信物：所有夥伴通用的單一信物。"
     },
     {
       "kind": "token",
       "key": "guardian",
       "iconType": "auto",
-      "description": ""
+      "description": "守護信物：所有夥伴通用的單一信物。"
     },
     {
       "kind": "token",
       "key": "pursuit",
       "iconType": "auto",
-      "description": ""
+      "description": "追擊信物：所有夥伴通用的單一信物。"
     },
     {
       "kind": "token",
       "key": "arcane",
       "iconType": "auto",
-      "description": ""
+      "description": "魔導信物：所有夥伴通用的單一信物。"
     },
     {
       "kind": "token",
       "key": "echo",
       "iconType": "auto",
-      "description": ""
+      "description": "迴響信物：所有夥伴通用的單一信物。"
     },
     {
       "kind": "token",
       "key": "hunt",
       "iconType": "auto",
-      "description": ""
+      "description": "狩獵信物：所有夥伴通用的單一信物。"
     },
     {
       "kind": "token",
       "key": "prayer",
       "iconType": "auto",
-      "description": ""
+      "description": "祈禱信物：所有夥伴通用的單一信物。"
     },
     {
       "kind": "token",
       "key": "revival",
       "iconType": "auto",
-      "description": ""
+      "description": "復甦信物：所有夥伴通用的單一信物。"
     },
     {
       "kind": "token",
       "key": "plunder",
       "iconType": "auto",
-      "description": ""
+      "description": "掠奪信物：所有夥伴通用的單一信物。"
     },
     {
       "kind": "token",
       "key": "endurance",
       "iconType": "auto",
-      "description": ""
+      "description": "持久信物：所有夥伴通用的單一信物。"
     },
     {
       "kind": "material",
@@ -27945,70 +28212,6 @@
       "color": "#696c6d"
     }
   ],
-  "starterPackItems": [
-    [],
-    [],
-    [],
-    []
-  ],
-  "navigation": {
-    "version": 1,
-    "groups": [
-      {
-        "id": "adventure",
-        "label": "探索與冒險",
-        "expanded": true,
-        "pages": [
-          {"id": "battle", "label": "荒野探索"},
-          {"id": "statistics", "label": "戰鬥統計"},
-          {"id": "shop", "label": "商店"},
-          {"id": "guide", "label": "冒險指南"}
-        ]
-      },
-      {
-        "id": "party",
-        "label": "角色與隊伍",
-        "expanded": true,
-        "pages": [
-          {"id": "roster", "label": "隊伍編成"},
-          {"id": "partnerRoster", "label": "夥伴名冊"},
-          {"id": "character", "label": "角色能力"},
-          {"id": "skills", "label": "技能"}
-        ]
-      },
-      {
-        "id": "equipment",
-        "label": "裝備與製作",
-        "expanded": false,
-        "pages": [
-          {"id": "equipment", "label": "背包"},
-          {"id": "worn", "label": "裝備與信物"},
-          {"id": "forge", "label": "裝備強化"},
-          {"id": "bossCraft", "label": "BOSS 製作"}
-        ]
-      },
-      {
-        "id": "missions",
-        "label": "主要任務",
-        "expanded": true,
-        "pages": [
-          {"id": "story-main", "label": "主線"},
-          {"id": "story-side", "label": "支線"},
-          {"id": "story-npc", "label": "NPC 任務"},
-          {"id": "quests", "label": "委託"}
-        ]
-      },
-      {
-        "id": "life",
-        "label": "生活技能",
-        "expanded": true,
-        "pages": [
-          {"id": "gather", "label": "採集"},
-          {"id": "alchemy", "label": "煉金"}
-        ]
-      }
-    ]
-  },
   "story": {
     "version": 1,
     "quests": [
@@ -28839,6 +29042,118 @@
           }
         ],
         "nextQuests": []
+      }
+    ]
+  },
+  "navigation": {
+    "version": 1,
+    "groups": [
+      {
+        "id": "missions",
+        "label": "主要任務",
+        "expanded": true,
+        "pages": [
+          {
+            "id": "story-main",
+            "label": "主線"
+          },
+          {
+            "id": "story-side",
+            "label": "支線"
+          },
+          {
+            "id": "story-npc",
+            "label": "NPC 任務"
+          },
+          {
+            "id": "quests",
+            "label": "委託"
+          }
+        ]
+      },
+      {
+        "id": "adventure",
+        "label": "探索與冒險",
+        "expanded": true,
+        "pages": [
+          {
+            "id": "battle",
+            "label": "荒野探索"
+          },
+          {
+            "id": "statistics",
+            "label": "戰鬥統計"
+          },
+          {
+            "id": "shop",
+            "label": "商店"
+          },
+          {
+            "id": "guide",
+            "label": "冒險指南"
+          }
+        ]
+      },
+      {
+        "id": "party",
+        "label": "角色與隊伍",
+        "expanded": true,
+        "pages": [
+          {
+            "id": "roster",
+            "label": "隊伍編成"
+          },
+          {
+            "id": "partnerRoster",
+            "label": "夥伴名冊"
+          },
+          {
+            "id": "character",
+            "label": "角色能力"
+          },
+          {
+            "id": "skills",
+            "label": "技能"
+          }
+        ]
+      },
+      {
+        "id": "equipment",
+        "label": "裝備與製作",
+        "expanded": false,
+        "pages": [
+          {
+            "id": "equipment",
+            "label": "背包"
+          },
+          {
+            "id": "worn",
+            "label": "裝備與信物"
+          },
+          {
+            "id": "forge",
+            "label": "裝備強化"
+          },
+          {
+            "id": "bossCraft",
+            "label": "BOSS 製作"
+          }
+        ]
+      },
+      {
+        "id": "life",
+        "label": "生活技能",
+        "expanded": true,
+        "pages": [
+          {
+            "id": "gather",
+            "label": "採集"
+          },
+          {
+            "id": "alchemy",
+            "label": "煉金"
+          }
+        ]
       }
     ]
   }
