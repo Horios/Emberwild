@@ -1,7 +1,7 @@
 /* Shared real-time consumable contract. Percentages are source contributions, not multipliers. */
 (function(root){
   'use strict';
-  const TYPE='timedBoost',KINDS=['speed4','exp','drop'];
+  const TYPE='timedBoost',KINDS=['speed4','exp','drop'],MAX_STACK_MS=24*60*60*1000;
   const LABELS={speed4:'4× 解鎖',exp:'經驗值',drop:'掉寶率'};
   const copy=v=>JSON.parse(JSON.stringify(v));
   const isItem=item=>item?.type===TYPE;
@@ -13,6 +13,19 @@
     return expiresAt;
   }
   const remainingMs=(buff,now=Date.now())=>Math.max(0,(buff?.expiresAt||0)-now);
+  const buffRows=buff=>buff==null?[]:Array.isArray(buff)?buff:[buff];
+  const compactBuffs=rows=>rows.length>1?rows:rows[0]||null;
+  const elementalActive=(buff,now=Date.now())=>buffRows(buff).filter(b=>remainingMs(b,now)>0);
+  // A changed strength/element/stat payload remains an independent timed source,
+  // even if the designer gave both versions the same display name.
+  function sourceKey(b){return JSON.stringify([b.name??b.itemId,b.boostType??'',b.bonusPercent??b.effectPercent,b.element??'',Object.entries(b.statEffects||{}).filter(([,v])=>v!==0).sort(([a],[c])=>a.localeCompare(c))]);}
+  function stackBuff(rows,buff,now=Date.now()){
+    const live=rows.filter(b=>remainingMs(b,now)>0),index=live.findIndex(b=>sourceKey(b)===sourceKey(buff));
+    if(remainingMs(buff,now)+(index<0?0:remainingMs(live[index],now))>MAX_STACK_MS)throw Error('本次使用會超過單一狀態 24 小時上限，未消耗道具');
+    if(index<0){if(live.length>=200)throw Error('有效增益來源已達上限');return [...live,buff];}
+    const previous=live[index],expiresAt=expiryTime(buff.durationMinutes,previous.expiresAt);
+    live[index]={...previous,expiresAt};return live;
+  }
   function timeText(ms,hours=false){const sec=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(sec/3600),m=Math.floor(sec/60)%60,s=sec%60;return (hours||h?String(h).padStart(2,'0')+':':'')+(hours||h?String(m).padStart(2,'0'):String(Math.floor(sec/60)).padStart(2,'0'))+':'+String(s).padStart(2,'0');}
   const elementalPercent=(type,settings)=>100*(type==='ward'?(settings?.combat?.supply?.wardResistance??.25):(settings?.combat?.supply?.elementTonicDamage??.2));
   function validateElementalItem(item){
@@ -40,13 +53,13 @@
     if(!buff)return null;
     if(Object.prototype.hasOwnProperty.call(buff,'expiresAt')){
       if(!Number.isSafeInteger(buff.expiresAt)||buff.expiresAt<0||buff.expiresAt>8.64e15)throw Error('屬性藥水到期時間無效');
-      validateElementalItem({...buff,type,duration:0});return remainingMs(buff,now)>0?copy(buff):null;
+      validateElementalItem({...buff,type,duration:0});return remainingMs(buff,now)>0?{...copy(buff),name:buff.name??item?.name??type+'_'+buff.element}:null;
     }
     const roundMs=Math.max(1,Number(settings?.combat?.pacing?.roundMinimumMs)||6000);
     const left=Number.isFinite(buff.remainingTurns)?Math.max(0,Math.ceil(buff.remainingTurns))*roundMs:Math.max(0,(Number(buff.until)||0)-now);
     if(left<=0)return null;
     const total=Number.isFinite(buff.totalTurns)?Math.max(left,Math.ceil(buff.totalTurns)*roundMs):left;
-    const out={...copy(buff),durationMinutes:total/60000,effectPercent:item?.effectPercent??elementalPercent(type,settings),expiresAt:now+left,until:0};
+    const out={...copy(buff),name:buff.name??item?.name??type+'_'+buff.element,durationMinutes:total/60000,effectPercent:item?.effectPercent??elementalPercent(type,settings),expiresAt:now+left,until:0};
     delete out.remainingTurns;delete out.totalTurns;validateElementalItem({...out,type,duration:0});return out;
   }
   function itemName(kind,percent,minutes){return kind==='speed4'?'四倍速解鎖券'+minutes+'分鐘':LABELS[kind]+'＋'+percent+'％ '+minutes+'分鐘';}
@@ -93,13 +106,14 @@
     if(!Array.isArray(rows)||rows.length>200)throw Error('限時增益存檔無效');
     for(const b of rows){
       validateItem({id:b?.itemId,type:TYPE,name:b?.name,description:'',boostType:b?.boostType,bonusPercent:b?.bonusPercent,durationMinutes:b?.durationMinutes,duration:0,cost:0});
-      if(!Number.isSafeInteger(b.expiresAt)||b.expiresAt<0||names.has(b.name))throw Error('限時增益到期時間或同名來源無效');
-      names.add(b.name);
+      const key=sourceKey(b);
+      if(!Number.isSafeInteger(b.expiresAt)||b.expiresAt<0||b.expiresAt>8.64e15||names.has(key))throw Error('限時增益到期時間或同名來源無效');
+      names.add(key);
     }
     const raw=data?.combatSession??{},idleTimeMs=raw.idleTimeMs??0,speed=raw.speed??1,reportPaused=raw.reportPaused??false,filter=raw.filter??'all';
     if(!Number.isSafeInteger(idleTimeMs)||idleTimeMs<0||![1,2,4].includes(speed)||typeof reportPaused!=='boolean'||!['all','playerDamage','enemyDamage','exp','item'].includes(filter))throw Error('掛機時間／倍速／戰報存檔無效');
     const timedBoosts=copy(active({timedBoosts:rows}));
     return {timedBoosts,combatSession:{idleTimeMs,speed:speed===4&&!unlocked({timedBoosts})?2:speed,reportPaused,filter}};
   }
-  root.EmberwildTimedBoosts=Object.freeze({TYPE,KINDS,LABELS,DEFAULT_ITEMS,DEFAULT_RULES,isItem,itemName,migrateConfig,validateItem,active,bonus,unlocked,validateState,ELEMENTAL_TYPES,isElementalItem,expiryTime,remainingMs,timeText,validateElementalItem,createElementalBuff,migrateElementalConfig,migrateElementalBuff});
+  root.EmberwildTimedBoosts=Object.freeze({TYPE,KINDS,LABELS,MAX_STACK_MS,DEFAULT_ITEMS,DEFAULT_RULES,isItem,itemName,migrateConfig,validateItem,active,bonus,unlocked,validateState,ELEMENTAL_TYPES,isElementalItem,expiryTime,remainingMs,buffRows,compactBuffs,elementalActive,sourceKey,stackBuff,timeText,validateElementalItem,createElementalBuff,migrateElementalConfig,migrateElementalBuff});
 })(globalThis);

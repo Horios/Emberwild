@@ -94,7 +94,6 @@ dialog::backdrop{background:var(--backdrop)}
 :root[data-ui-theme="paper"] .starter-equipment-name{color:var(--positive)!important}
 /* SVG artwork can use pale designer colors, so its small tile stays dark. */
 :root[data-ui-theme="paper"] :is(.skill-icon-tile,.skill-selected-heading .skill-icon-glyph,.mastery-icon-box,.skill-gem-slot){background:#24322d}
-:root[data-ui-theme="paper"] .skill-icon-glyph{color:#d8ded5}
 
 /* Theme cards preview the palette they select, including in the other themes. */
 .theme-options h2{margin:0 0 5px;font-size:16px}

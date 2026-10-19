@@ -167,7 +167,7 @@
     }
     for(const h of party.members){
       const who=characterName(h)+(party.active.includes(memberKey(h))?'':'（候補）');
-      for(const key of ['imbue','ward','elementTonic']){const b=activeSupply(h,key);if(!b)continue;const d=supplyBuffDetails(b,key);rows.push(row(who,d.name,d.detail,d.time,d.clock));}
+      for(const key of ['imbue','ward','elementTonic'])for(const b of activeSupplies(h,key)){const d=supplyBuffDetails(b,key);rows.push(row(who,d.name,d.detail,d.time,d.clock));}
       if(h.shield>0)rows.push(row(who,'護盾','可抵擋所有來源傷害 · 剩餘 '+Math.round(h.shield),'無回合期限','耗盡或戰鬥結束'));
     }
     return rows.join('')||'<tr><td colspan="5" class="no-buffs">目前沒有生效中的 BUFF、DEBUFF 或消耗品效果。</td></tr>';

@@ -125,8 +125,7 @@
   const compressionStatsBase=stats;
   stats=function(h=state){
     const v=compressionStatsBase(h),effects={};let attackPct=0,speed=0;
-    for(const key of ['imbue','ward','elementTonic']){
-      const buff=activeSupply(h,key);if(!buff)continue;
+    for(const key of ['imbue','ward','elementTonic'])for(const buff of activeSupplies(h,key)){
       const src=normalizeStatEffects(buff.statEffects);
       for(const [k,n] of Object.entries(src))effects[k]=(effects[k]||0)+n;
     }
@@ -221,7 +220,9 @@
     const item=SHOP.find(x=>x.id===id);if(!item||(state.consumables[id]||0)<1)return;
     const previous=state[item.type],count=state.consumables[id],previousHp=state.hp;let buff;
     if(EmberwildTimedBoosts.isElementalItem(item)){
-      buff=EmberwildTimedBoosts.createElementalBuff({...item,statEffects:normalizeStatEffects(item.statEffects)});
+      const api=EmberwildTimedBoosts;
+      try{buff=api.compactBuffs(api.stackBuff(api.buffRows(previous),api.createElementalBuff({...item,statEffects:normalizeStatEffects(item.statEffects)})));}
+      catch(e){toast(e.message);return false;}
     }else{const turns=Math.max(1,Math.round(Number(item.duration)||1));buff={element:item.element,remainingTurns:turns,totalTurns:turns,until:0,statEffects:normalizeStatEffects(item.statEffects)};}
     state.consumables[id]--;state[item.type]=buff;withHero(state,clampVitals);
     if(save()===false){state.consumables[id]=count;state[item.type]=previous;state.hp=previousHp;return false;}

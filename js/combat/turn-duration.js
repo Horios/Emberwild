@@ -33,7 +33,7 @@
     }
     return null;
   }
-  function migrateHeroSupplyTurns(h){if(!h)return;for(const key of SUPPLY_KEYS)h[key]=key==='imbue'?migrateSupplyBuff(h[key]):api.migrateElementalBuff(h[key],key,{item:SHOP.find(x=>x.type===key&&x.element===h[key]?.element),settings:GAMEPLAY_SETTINGS});}
+  function migrateHeroSupplyTurns(h){if(!h)return;for(const key of SUPPLY_KEYS)h[key]=key==='imbue'?migrateSupplyBuff(h[key]):api.compactBuffs(api.buffRows(h[key]).map(b=>api.migrateElementalBuff(b,key,{item:SHOP.find(x=>x.id===b.itemId)||SHOP.find(x=>x.type===key&&x.element===b.element),settings:GAMEPLAY_SETTINGS})).filter(Boolean));}
   function migratePartySupplyTurns(){if(party?.members)for(const h of party.members)migrateHeroSupplyTurns(h);else if(state)migrateHeroSupplyTurns(state);}
   function decrementSupplyTurns(){
     if(!party)return;
@@ -41,11 +41,12 @@
   }
 
   EFFECT_NAMES.regen='每回合回復生命';
-  activeSupply=function(h,key){const b=h?.[key];return b&&(api.ELEMENTAL_TYPES.includes(key)?api.remainingMs(b)>0:Number.isFinite(b.remainingTurns)&&b.remainingTurns>0)?b:null;};
+  globalThis.activeSupplies=function(h,key){const b=h?.[key];return api.ELEMENTAL_TYPES.includes(key)?api.elementalActive(b):b&&Number.isFinite(b.remainingTurns)&&b.remainingTurns>0?[b]:[];};
+  activeSupply=function(h,key){return activeSupplies(h,key)[0]||null;};
   useSupply=function(id){const item=SHOP.find(x=>x.id===id);if(!item||(state.consumables[id]||0)<1)return;const turns=Math.max(1,Math.round(Number(item.duration)||1)),buff=api.isElementalItem(item)?api.createElementalBuff(item):{element:item.element,remainingTurns:turns,totalTurns:turns,until:0};state.consumables[id]--;state[item.type]=buff;save();render();toast('已使用'+item.name);};
-  supplyStatus=function(h){return SUPPLY_KEYS.map(key=>{const b=activeSupply(h,key);return b?ELEMENTS[b.element]+{imbue:'附魔',ward:'抗性',elementTonic:'增幅'}[key]+' '+(key==='imbue'?Math.ceil(b.remainingTurns)+' 回合':api.timeText(api.remainingMs(b))+'（現實時間）'):'';}).filter(Boolean).join(' ／ ');};
-  supplyDetail=function(item){const effect=item.type==='imbue'?`普通攻擊轉為${ELEMENTS[item.element]}屬性`:item.type==='ward'?`${ELEMENTS[item.element]}屬性傷害減少 ${item.effectPercent}%`:item.type==='elementTonic'?`${ELEMENTS[item.element]}屬性傷害增加 ${item.effectPercent}%`:'依道具效果生效',duration=api.isElementalItem(item)?`持續 ${item.durationMinutes} 分鐘（現實時間） · 同類覆蓋並刷新`:item.duration?`持續 ${Math.round(item.duration)} 戰鬥回合`:'立即生效';return `${effect} · ${duration} · 單價 ${item.cost} 金幣`;};
-  globalThis.supplyBuffDetails=function(b,key){const real=api.ELEMENTAL_TYPES.includes(key),labels={imbue:['附魔藥水','普攻改為'+ELEMENTS[b.element]+'屬性'],ward:['抗性藥水',ELEMENTS[b.element]+'傷害減免 '+b.effectPercent+'%'],elementTonic:['增幅藥水',ELEMENTS[b.element]+'傷害增加 '+b.effectPercent+'%']};return {name:b.name||ELEMENTS[b.element]+labels[key][0],detail:labels[key][1],time:real?api.timeText(api.remainingMs(b))+' / '+api.timeText(b.durationMinutes*60000):Math.ceil(b.remainingTurns)+' / '+Math.ceil(b.totalTurns||b.remainingTurns)+' 回合',clock:real?'現實時間':'出戰回合'};};
+  supplyStatus=function(h){return SUPPLY_KEYS.flatMap(key=>activeSupplies(h,key).map(b=>ELEMENTS[b.element]+{imbue:'附魔',ward:'抗性',elementTonic:'增幅'}[key]+' '+(key==='imbue'?Math.ceil(b.remainingTurns)+' 回合':api.timeText(api.remainingMs(b))+'（現實時間）'))).join(' ／ ');};
+  supplyDetail=function(item){const effect=item.type==='imbue'?`普通攻擊轉為${ELEMENTS[item.element]}屬性`:item.type==='ward'?`${ELEMENTS[item.element]}屬性傷害減少 ${item.effectPercent}%`:item.type==='elementTonic'?`${ELEMENTS[item.element]}屬性傷害增加 ${item.effectPercent}%`:'依道具效果生效',duration=api.isElementalItem(item)?`持續 ${item.durationMinutes} 分鐘（現實時間） · 同名同效果累加時間；不同倍率獨立計時；單一狀態上限 24 小時`:item.duration?`持續 ${Math.round(item.duration)} 戰鬥回合`:'立即生效';return `${effect} · ${duration} · 單價 ${item.cost} 金幣`;};
+  globalThis.supplyBuffDetails=function(b,key){const real=api.ELEMENTAL_TYPES.includes(key),labels={imbue:['附魔藥水','普攻改為'+ELEMENTS[b.element]+'屬性'],ward:['抗性藥水',ELEMENTS[b.element]+'傷害減免 '+b.effectPercent+'%'],elementTonic:['增幅藥水',ELEMENTS[b.element]+'傷害增加 '+b.effectPercent+'%']};return {name:b.name||ELEMENTS[b.element]+labels[key][0],detail:labels[key][1],time:real?api.timeText(api.remainingMs(b))+'（剩餘）':Math.ceil(b.remainingTurns)+' / '+Math.ceil(b.totalTurns||b.remainingTurns)+' 回合',clock:real?'現實時間':'出戰回合'};};
 
   castSupport=function(h,index){const sk=SUPPORT[h.job][index];let targets=sk.target==='allies'?living().map(heroKey):sk.target==='weakest'?[heroKey([...living()].sort((a,b)=>a.hp/solo.stats(a).hp-b.hp/solo.stats(b).hp)[0])]:sk.target==='enemies'?foes.filter(e=>e.hp>0).map(e=>e.id):[foes.find(enemyAvailableForSingleTarget)?.id];for(const target of targets.filter(Boolean)){effects=effects.filter(e=>!((e.sourceKey??e.source)===memberKey(h)&&e.skill===index&&e.target===target));effects.push({source:h.job,sourceKey:memberKey(h),skill:index,target,kind:sk.kind,value:supportAmount(h.job,index),until:partyClock+Math.max(0,Math.round(sk.duration)),name:sk.name});if(sk.kind==='regen'){const ally=party.members.find(a=>heroKey(a)===target);ally.hp=Math.min(solo.stats(ally).hp,ally.hp+solo.stats(ally).hp*supportAmount(h.job,index));}}note(characterName(h)+'施放 '+sk.name+' · '+Math.round(sk.duration)+' 回合');};
   supportSkillDetail=function(job,i,h=state){const sk=SUPPORT[job]?.[i];if(!sk)return '';const level=Math.max(1,h?.supportLevels?.[i]||1),value=+((sk.value+Math.max(0,level-1)*(Number.isFinite(sk.effectPerLevel)?sk.effectPerLevel:GS('skills.support.effectPerExtraLevel',.2)))*100).toFixed(1),cd=supportSkillCooldown(h,i);return `${actionTurnElementLabel(sk.element)} · 目標 ${TARGET_NAMES[sk.target]} · ${EFFECT_NAMES[sk.kind]} ${value}% · 持續 ${Math.round(sk.duration)} 戰鬥回合 · 冷卻 ${cd} 回合 · 需求 LV${sk.level}${i===2?'／二轉':''}`;};
@@ -58,7 +59,7 @@
     }
     for(const h of party.members){
       const who=characterName(h)+(party.active.includes(memberKey(h))?'':'（候補）');
-      for(const key of SUPPLY_KEYS){const b=activeSupply(h,key);if(!b)continue;const d=supplyBuffDetails(b,key);rows.push(row(who,d.name,d.detail,d.time,d.clock));}
+      for(const key of SUPPLY_KEYS)for(const b of activeSupplies(h,key)){const d=supplyBuffDetails(b,key);rows.push(row(who,d.name,d.detail,d.time,d.clock));}
       if(h.shield>0)rows.push(row(who,'護盾','可抵擋所有來源傷害 · 剩餘 '+Math.round(h.shield),'無回合期限','耗盡或戰鬥結束'));
     }
     return rows.join('')||'<tr><td colspan="5" class="no-buffs">目前沒有生效中的 BUFF、DEBUFF 或消耗品效果。</td></tr>';
@@ -78,12 +79,12 @@
   }
   if(typeof guideView==='function'){
     const turnDurationGuideBase=guideView;
-    guideView=function(){return `<section class="panel"><h2>BUFF／DEBUFF 與消耗品計時</h2><p>輔助技能的 BUFF／DEBUFF 使用戰鬥回合，回復效果每回合觸發一次。附魔藥水只扣該角色的出戰回合；抗性與屬性增幅藥水使用現實分鐘，暫停、候補或關閉頁面仍會到期。同類藥水覆蓋效果並刷新時間，不同類可同時生效。</p><p>技能冷卻使用施放者自己的行動回合；護盾在耗盡或戰鬥結束時消失。</p></section>`+turnDurationGuideBase();};
+    guideView=function(){return `<section class="panel"><h2>BUFF／DEBUFF 與消耗品計時</h2><p>輔助技能的 BUFF／DEBUFF 使用戰鬥回合，回復效果每回合觸發一次。附魔藥水只扣該角色的出戰回合；抗性與屬性增幅藥水使用現實分鐘，暫停、候補或關閉頁面仍會到期。同名且同效果的藥水累加剩餘時間；不同倍率、屬性或能力加成各自保留狀態並獨立計時。每個狀態最多累積 24 小時，超過時提醒且不消耗道具。</p><p>技能冷卻使用施放者自己的行動回合；護盾在耗盡或戰鬥結束時消失。</p></section>`+turnDurationGuideBase();};
   }
 
   if(typeof exportableBalance==='function'){
     const turnDurationExportBase=exportableBalance;
-    exportableBalance=function(){const out=turnDurationExportBase();out.timeUnits={...(out.timeUnits||{}),...TIME_UNITS,elementPotionDuration:'realMinutes'};out.notes=[...(out.notes||[]),'supportSkills[].duration 為戰鬥回合；附魔 items[].duration 為出戰回合。','ward / elementTonic 使用 items[].durationMinutes（現實分鐘）與 effectPercent（百分比）；duration=0。同類覆蓋，暫停、候補與離線仍會到期。'];return out;};
+    exportableBalance=function(){const out=turnDurationExportBase();out.timeUnits={...(out.timeUnits||{}),...TIME_UNITS,elementPotionDuration:'realMinutes'};out.notes=[...(out.notes||[]),'supportSkills[].duration 為戰鬥回合；附魔 items[].duration 為出戰回合。','ward / elementTonic 使用 items[].durationMinutes（現實分鐘）與 effectPercent（百分比）；duration=0。同名同效果累加時間，不同倍率狀態各自計時；單一狀態上限 24 小時，超過時不消耗道具；暫停、候補與離線仍會到期。'];return out;};
   }
   if(typeof validateBalanceConfig==='function'){
     const turnDurationValidateBase=validateBalanceConfig;
