@@ -25423,6 +25423,7 @@
       {
         "id": "berserk",
         "name": "狂戰信物",
+        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25466,6 +25467,7 @@
       {
         "id": "guardian",
         "name": "守護信物",
+        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25510,6 +25512,7 @@
       {
         "id": "pursuit",
         "name": "追擊信物",
+        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25553,6 +25556,7 @@
       {
         "id": "arcane",
         "name": "魔導信物",
+        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25596,6 +25600,7 @@
       {
         "id": "echo",
         "name": "迴響信物",
+        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25639,6 +25644,7 @@
       {
         "id": "hunt",
         "name": "狩獵信物",
+        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25682,6 +25688,7 @@
       {
         "id": "prayer",
         "name": "祈禱信物",
+        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25725,6 +25732,7 @@
       {
         "id": "revival",
         "name": "復甦信物",
+        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25768,6 +25776,7 @@
       {
         "id": "plunder",
         "name": "掠奪信物",
+        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -25811,6 +25820,7 @@
       {
         "id": "endurance",
         "name": "持久信物",
+        "job": "all",
         "quality": 1,
         "effects": [
           {
@@ -27573,61 +27583,61 @@
       "kind": "token",
       "key": "berserk",
       "iconType": "auto",
-      "description": "狂戰信物：所有夥伴通用的單一信物。"
+      "description": ""
     },
     {
       "kind": "token",
       "key": "guardian",
       "iconType": "auto",
-      "description": "守護信物：所有夥伴通用的單一信物。"
+      "description": ""
     },
     {
       "kind": "token",
       "key": "pursuit",
       "iconType": "auto",
-      "description": "追擊信物：所有夥伴通用的單一信物。"
+      "description": ""
     },
     {
       "kind": "token",
       "key": "arcane",
       "iconType": "auto",
-      "description": "魔導信物：所有夥伴通用的單一信物。"
+      "description": ""
     },
     {
       "kind": "token",
       "key": "echo",
       "iconType": "auto",
-      "description": "迴響信物：所有夥伴通用的單一信物。"
+      "description": ""
     },
     {
       "kind": "token",
       "key": "hunt",
       "iconType": "auto",
-      "description": "狩獵信物：所有夥伴通用的單一信物。"
+      "description": ""
     },
     {
       "kind": "token",
       "key": "prayer",
       "iconType": "auto",
-      "description": "祈禱信物：所有夥伴通用的單一信物。"
+      "description": ""
     },
     {
       "kind": "token",
       "key": "revival",
       "iconType": "auto",
-      "description": "復甦信物：所有夥伴通用的單一信物。"
+      "description": ""
     },
     {
       "kind": "token",
       "key": "plunder",
       "iconType": "auto",
-      "description": "掠奪信物：所有夥伴通用的單一信物。"
+      "description": ""
     },
     {
       "kind": "token",
       "key": "endurance",
       "iconType": "auto",
-      "description": "持久信物：所有夥伴通用的單一信物。"
+      "description": ""
     },
     {
       "kind": "material",

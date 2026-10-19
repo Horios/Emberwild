@@ -8,7 +8,7 @@
   const actions=['attack','guard','critical','power','heal','shield','extraDamage','damageBonus','healingBonus'];
   const elements=['physical','fire','ice','wind','light','shadow'],races=['beast','plant','undead','construct','demon','spirit'];
   const ability=(event,action,value,extra={})=>({event,action,value,chance:1,duration:2,cooldown:1,maxTriggers:0,threshold:0,...extra});
-  const token=(id,name,effects,ability)=>({id,name,description:'',quality:1,effects,ability,drop:{enabled:true,weight:1,minLevel:1,maxLevel:60,maps:[],monsters:[],kinds:['normal','elite','boss','final']}});
+  const token=(id,name,effects,ability)=>({id,name,description:'',job:'all',quality:1,effects,ability,drop:{enabled:true,weight:1,minLevel:1,maxLevel:60,maps:[],monsters:[],kinds:['normal','elite','boss','final']}});
   const fx=(key,value)=>({key,value});
   const defaults={schemaVersion:VERSION,qualityMultipliers:[1,1.12,1.25,1.4],drop:{enabled:true,chanceByDifficulty:[.008,.012,.016],qualityWeights:[65,25,9,1],minLevel:1,maxLevel:60,maps:[],monsters:[],kinds:['normal','elite','boss','final']},catalog:[
     token('berserk','狂戰信物',[fx('flatAttack',2),fx('critDamage',5),fx('flatHp',6)],ability('kill','attack',.12)),
@@ -48,7 +48,7 @@
     if(global){assert(Array.isArray(d.chanceByDifficulty)&&d.chanceByDifficulty.length===3&&d.chanceByDifficulty.every(x=>number(x,0,1))&&Array.isArray(d.qualityWeights)&&d.qualityWeights.length===4&&d.qualityWeights.every(x=>number(x))&&d.qualityWeights.some(x=>x>0),'信物掉落機率／品質權重無效');}else assert(number(d.weight),'信物掉落權重無效');
     return copy(d);
   }
-  function validateDefinition(d){assert(d&&ident(d.id)&&typeof d.name==='string'&&d.name.trim()&&d.name.length<=80&&!/[<>]/.test(d.name)&&typeof d.description==='string'&&d.description.length<=2000&&integer(d.quality,0,3)&&(d.qualityFixed===undefined||typeof d.qualityFixed==='boolean'),'信物定義無效');return {...copy(d),effects:validateEffects(d.effects),ability:validateAbility(d.ability),drop:validateDrop(d.drop)};}
+  function validateDefinition(d){assert(d&&ident(d.id)&&typeof d.name==='string'&&d.name.trim()&&d.name.length<=80&&!/[<>]/.test(d.name)&&typeof d.description==='string'&&d.description.length<=2000&&integer(d.quality,0,3)&&(d.qualityFixed===undefined||typeof d.qualityFixed==='boolean'),'信物定義無效');assert(d.job===undefined||['all','0','1','2','3'].includes(d.job),'信物職業無效');return {...copy(d),job:d.job??'all',effects:validateEffects(d.effects),ability:validateAbility(d.ability),drop:validateDrop(d.drop)};}
   function normalize(raw){
     if(raw===undefined)return copy(defaults);
     assert(raw&&raw.schemaVersion===VERSION&&Array.isArray(raw.catalog)&&raw.catalog.length<=512&&Array.isArray(raw.qualityMultipliers)&&raw.qualityMultipliers.length===4&&raw.qualityMultipliers.every(x=>number(x,.01,10)),'信物設定無效');
@@ -56,6 +56,7 @@
     assert(new Set(out.catalog.map(x=>x.id)).size===out.catalog.length,'信物定義 ID 重複');return out;
   }
   const isToken=g=>g?.type===TYPE;
+  const canEquip=(g,h)=>isToken(g)&&h?.companionId!==undefined&&(g.snapshot.job===undefined||g.snapshot.job==='all'||g.snapshot.job===String(h.job));
   function validateItem(g,maxPlus=10){assert(isToken(g)&&ident(g.id)&&ident(g.tokenId)&&g.slot===4&&integer(g.job,0,0)&&integer(g.tier,1,12)&&integer(g.rar,0,3)&&integer(g.plus,0,maxPlus)&&typeof g.name==='string'&&g.name.length<=80&&!/[<>]/.test(g.name)&&Array.isArray(g.affix)&&g.affix.length===0&&(g.locked===undefined||typeof g.locked==='boolean'),'存檔信物無效');validateDefinition(g.snapshot);assert(g.snapshot.id===g.tokenId,'信物快照 ID 不符');assert(Array.isArray(g.qualityMultipliers)&&g.qualityMultipliers.length===4&&g.qualityMultipliers.every(x=>number(x,.01,10)),'信物品質快照無效');return g;}
   function effectsFor(g,enhance=.05){const factor=g.qualityMultipliers[g.rar]*(1+g.plus*enhance);return g.snapshot.effects.map(e=>({...e,value:['basicElement','allCooldownReduction','skillCooldownReduction','basicAdvanceNextRound'].includes(e.key)?e.value:Number((e.value*factor).toFixed(6)),source:'token'}));}
   function eligible(d,e){return d.enabled&&e.lv>=d.minLevel&&e.lv<=d.maxLevel&&(!d.maps.length||d.maps.includes(e.region))&&(!d.monsters.length||d.monsters.includes(e.monsterId))&&d.kinds.includes(e.kind);}
@@ -72,5 +73,5 @@
     }
     data.companionEquipmentVersion=VERSION;return data;
   }
-  return {TYPE,VERSION,stats,effectKeys,events,actions,defaults,copy,isToken,normalize,validateEffects,validateAbility,validateItem,effectsFor,eligible,weighted,prepareSave};
+  return {TYPE,VERSION,stats,effectKeys,events,actions,defaults,copy,isToken,canEquip,normalize,validateEffects,validateAbility,validateItem,effectsFor,eligible,weighted,prepareSave};
 });

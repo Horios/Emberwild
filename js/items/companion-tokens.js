@@ -5,7 +5,7 @@
   let config=M.normalize(),context=null,extraDepth=0,preparingRound=false;
   const combat=new Map();
   const companion=h=>!!h&&h.companionId!==undefined;
-  const item=h=>companion(h)?h.bag.find(g=>M.isToken(g)&&g.id===h.tokenId):null;
+  const item=h=>companion(h)?h.bag.find(g=>M.isToken(g)&&g.id===h.tokenId&&M.canEquip(g,h)):null;
   function clear(h){if(h){combat.delete(memberKey(h));effects=effects.filter(e=>e.tokenOwner!==memberKey(h));}else{combat.clear();effects=effects.filter(e=>e.tokenOwner===undefined);}}
   function runtime(h){const key=memberKey(h);if(!combat.has(key))combat.set(key,{round:partyClock,started:false,count:0,used:0,next:0,target:null,hits:0});return combat.get(key);}
   const eventClock=()=>partyClock+(preparingRound?1:0);
@@ -75,7 +75,7 @@
   packParty=function(){const d=basePack();d.companionEquipmentVersion=M.VERSION;for(const h of d.members){h.tokenId??=null;if(h.companionId!==undefined)h.equipped=Array(5).fill(null);}return d;};
   const baseLoad=loadParty;
   loadParty=function(data){const out=baseLoad(M.prepareSave(data,RULES.bagCapacity));syncTokens();for(const h of party.members.filter(companion))withHero(h,clampVitals);return out;};
-  function syncTokens(){if(!party)return;for(const g of [...state.bag,...pendingGearLoot].filter(M.isToken)){const d=config.catalog.find(x=>x.id===g.tokenId);if(d){g.snapshot=copy(d);g.name=d.name;g.qualityMultipliers=copy(config.qualityMultipliers);}}}
+  function syncTokens(){if(!party)return;for(const g of [...state.bag,...pendingGearLoot].filter(M.isToken)){const d=config.catalog.find(x=>x.id===g.tokenId);if(d){g.snapshot=copy(d);g.name=d.name;g.qualityMultipliers=copy(config.qualityMultipliers);}}for(const h of party.members.filter(companion)){const g=findGear(h.tokenId);if(g&&!M.canEquip(g,h))h.tokenId=null;}}
   const baseValidate=validateBalanceConfig;
   validateBalanceConfig=function(input){const next=M.normalize(input?.companionTokens),out=baseValidate(input);for(const d of [next.drop,...next.catalog.map(x=>x.drop)])if(d.maps.some(i=>!out.balanceSettings.maps.catalog[i])||d.monsters.some(id=>!out.balanceSettings.monsters.catalog.some(m=>m.id===id)))throw Error('信物掉落指定了不存在的地圖或怪物');out.companionTokens=next;return out;};
   const baseExport=exportableBalance;
@@ -85,7 +85,7 @@
   const baseResetBalance=resetBalanceJSON;
   resetBalanceJSON=function(){const out=baseResetBalance();config=M.normalize();clear();if(state)render();return out;};
   function equipToken(id,key){
-    const h=partyMember(key),g=findGear(id);if(!companion(h)||!M.isToken(g)||gearWearer(id)&&gearWearer(id)!==h)return false;
+    const h=partyMember(key),g=findGear(id);if(!companion(h)||!M.canEquip(g,h)||gearWearer(id)&&gearWearer(id)!==h)return false;
     if(foes.some(e=>e.hp>0))resetEncounter();const previous=h.tokenId,previousHp=h.hp;h.tokenId=id;clear(h);withHero(h,clampVitals);
     if(save()===false){h.tokenId=previous;h.hp=previousHp;return false;}render();return true;
   }
@@ -133,7 +133,8 @@
     if(a.maxTriggers)extras.push(`每場最多 ${a.maxTriggers} 次`);
     return [text,...extras].join(' · ');
   }
-  function tokenDescription(g){return globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('token',g.tokenId)??'';}
+  function tokenDescription(g){return (globalThis.__EMBERWILD_ITEM_DESCRIPTION?.('token',g.tokenId)??'').replace(/(?:所有)?夥伴通用的?單一信物[。]?/g,'').replace(/^[^：]*：\s*$/,'').trim();}
+  globalThis.companionTokenJobLabel=g=>g.snapshot.job===undefined||g.snapshot.job==='all'?'通用':CLASSES[g.snapshot.job].name;
 
   globalThis.companionTokenDescription=tokenDescription;
   globalThis.companionTokenAbilityText=abilityText;
@@ -141,10 +142,10 @@
     const key=({berserk:'swords',guardian:'shield',pursuit:'crosshair',arcane:'wand-sparkles',echo:'audio-lines',hunt:'bow-arrow',prayer:'hand-heart',revival:'heart-pulse',plunder:'droplets',endurance:'hourglass'})[g.tokenId]||'medal';
     return `<span class="inventory-item-icon effect-quality-${g.rar}" aria-hidden="true">${globalThis.__EMBERWILD_INVENTORY_ICON?.('token',g.tokenId,'lucide:'+key,{size:26})||__EMBERWILD_SKILL_ICONS.svgFor('lucide:'+key,[],{size:26})}</span>`;
   }
-  function tokenIdentity(g){return `<div class="token-identity">${tokenIcon(g)}<b>${equipmentNameHTML(g)}</b></div>`;}
+  function tokenIdentity(g){return `<div class="token-identity">${tokenIcon(g)}<b>${equipmentNameHTML(g)}</b><span class="tag token-job-tag">${esc(companionTokenJobLabel(g))}</span>${gearWearer(g.id)?`<span class="small token-wearer">${esc(characterName(gearWearer(g.id)))} · 已裝備</span>`:''}</div>`;}
   function detail(g){const description=tokenDescription(g);return `${tokenIdentity(g)}${description?`<p>${esc(description)}</p>`:''}<p class="small">${esc(gearDesc(g))}</p><p class="token-special">${esc(abilityText(g))}</p>`;}
   function companionCards(){return `<section class="panel companion-token-panel"><h2>夥伴信物</h2><p class="small">夥伴依自身等級成長，只使用一件信物；後備與名冊夥伴保留穿戴。更換或卸下信物會放棄目前遭遇。</p><div class="token-grid">${party.members.filter(companion).map(h=>{const g=item(h);return `<article class="card token-slot" data-token-owner="${memberKey(h)}"><h3>${esc(characterName(h))} · ${esc(CLASSES[h.job].name)}</h3>${g?gearSlotHTML(g):'<p class="empty">未穿戴信物</p>'}<div class="actions"><button onclick="showCompanionTokens(${memberKey(h)})">更換信物</button>${g?`<button onclick="unequipCompanionToken(${memberKey(h)})">卸下</button><button onclick="openForge('${g.id}')">強化</button>`:''}</div></article>`;}).join('')||'<p>招募夥伴後即可使用信物。</p>'}</div></section>`;}
-  globalThis.showCompanionTokens=function(key){const h=partyMember(key);if(!companion(h))return;const current=item(h);$('modal').innerHTML=`<h2>${esc(characterName(h))} · 信物管理</h2>${current?detail(current):'<p>目前未穿戴信物</p>'}<div class="token-grid">${state.bag.filter(g=>M.isToken(g)&&(!gearWearer(g.id)||gearWearer(g.id)===h)).map(g=>`<article class="card">${detail(g)}${comparison(h,g)}<button data-token-id="${g.id}" onclick="equipCompanionToken('${g.id}',${key});closeModal()" ${g===current?'disabled':''}>${g===current?'已穿戴':'穿戴'}</button></article>`).join('')||'<p>背包目前沒有可穿戴的信物。</p>'}</div><button onclick="closeModal()">關閉</button>`;$('modal').showModal();};
+  globalThis.showCompanionTokens=function(key){const h=partyMember(key);if(!companion(h))return;const current=item(h);$('modal').innerHTML=`<div class="token-dialog-header"><h2>${esc(characterName(h))} · 信物管理</h2><button type="button" onclick="closeModal()">關閉</button></div>${current?detail(current):'<p>目前未穿戴信物</p>'}<div class="token-grid">${state.bag.filter(g=>M.canEquip(g,h)&&(!gearWearer(g.id)||gearWearer(g.id)===h)).map(g=>`<article class="card">${detail(g)}${comparison(h,g)}<button data-token-id="${g.id}" onclick="if(equipCompanionToken('${g.id}',${key}))closeModal()" ${g===current?'disabled':''}>${g===current?'已穿戴':'穿戴'}</button></article>`).join('')||'<p>背包目前沒有可穿戴的信物。</p>'}</div>`;$('modal').showModal();};
   function comparison(h,g){const before=stats(h),after=stats({...h,tokenId:g.id});return `<p class="small">換裝比較：${['hp','atk','def','crit','critDamage','speed','pierce','defenseIgnore','lifesteal','evasion'].filter(k=>before[k]!==after[k]).map(k=>`${({hp:'HP',atk:'攻擊',def:'防禦',crit:'暴擊',critDamage:'暴傷',speed:'速度',pierce:'穿透',defenseIgnore:'無視',lifesteal:'竊取',evasion:'閃避'})[k]} ${Number(before[k].toFixed(3))} → ${Number(after[k].toFixed(3))}`).join(' / ')||'面板相同，請比較特殊效果'}</p>`;}
   let tokenSort='quality';
   function tokenInventory(){

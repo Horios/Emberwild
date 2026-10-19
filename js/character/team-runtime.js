@@ -50,7 +50,7 @@
     if(p.job===null){h.skills=Array(CLASSES[0].skills.length).fill(0);h.supportLevels=SUPPORT[0].map(()=>0);}
     h.sockets=p.job===null?h.skills.map(()=>null):p.sockets.map(id=>id===null?null:build().permanent.gemInstances[id]);
     h.mastery=masteryView(h);party.active=[...(p.playerActive?[memberKey(h)]:[]),...p.companions];party.enlisted=[memberKey(h),...p.enlisted];party.selected=memberKey(h);state=h;
-    for(const x of party.members.slice(1))x.tokenId=p.tokens[memberKey(x)]??null;
+    for(const x of party.members.slice(1)){const key=memberKey(x),id=p.tokens[key]??null;x.tokenId=id&&EmberwildTokens.canEquip(findGear(id),x)?id:null;p.tokens[key]=x.tokenId;}
     pageHeroSelection.clear();forgeSelection=null;pendingAffix=null;
     for(const x of party.members){x.hp=Math.min(hp.get(memberKey(x))??0,stats(x).hp);if(x.hp<=0)x.hp=0;}
     syncPoints();
@@ -128,6 +128,7 @@
     if(!build())return null;
     const next=copy(build());
     for(const p of next.plans){
+      for(const [key,id] of Object.entries(p.tokens)){const h=partyMember(Number(key)),g=findGear(id),definition=g&&d.companionTokens.catalog.find(t=>t.id===g.tokenId);if(id&&!EmberwildTokens.canEquip(g&&{...g,snapshot:definition||g.snapshot},h))p.tokens[key]=null;}
       if(p.job===null)continue;
       for(const [field,count,empty] of [['skills',d.classes[p.job].skills.length,0],['sockets',d.classes[p.job].skills.length,null],['supportLevels',d.supportSkills[p.job].length,0]]){
         if(p[field].slice(count).some(v=>v!==empty))throw Error('平衡設定會刪除「'+p.name+'」的已學習技能或寶石；請先調整方案');

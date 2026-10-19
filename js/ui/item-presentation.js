@@ -70,7 +70,8 @@
     const n=name(kind,key,g),label=n+(options.count!==undefined?' ×'+options.count:'');
     const context=options.context||(options.mailId?'mail':'reference'),quantity=options.detailQuantity??options.count;
     const data=`data-item-kind="${attr(kind)}" data-item-key="${attr(key)}" data-item-context="${attr(context)}"${g?.id?` data-item-gear="${attr(g.id)}"`:''}${options.preview?` data-item-preview="${attr(JSON.stringify(options.preview))}"`:''}${options.mailId?` data-item-mail="${options.mailId}" data-item-index="${options.mailIndex}"`:''}${options.extra?` data-item-extra="${attr(options.extra)}"`:''}${quantity!==undefined?` data-item-quantity="${attr(quantity)}"`:''}${options.detailLabel?` data-item-quantity-label="${attr(options.detailLabel)}"`:''}${options.price!==undefined?` data-item-price="${attr(options.price)}"`:''}${options.priceLabel?` data-item-price-label="${attr(options.priceLabel)}"`:''}${options.shopType?` data-item-shop-type="${attr(options.shopType)}"`:''}${options.shopId!==undefined?` data-item-shop-id="${attr(options.shopId)}"`:''}${options.sold?` data-item-sold="true"`:''}${options.soldLabel?` data-item-sold-label="${attr(options.soldLabel)}"`:''}`;
-    const content=`<span class="item-slot-art" aria-hidden="true">${icon(kind,key,g)}</span><span class="item-slot-name">${attr(n)}</span>${options.count!==undefined?`<span class="item-slot-count" aria-label="數量 ${attr(options.count)}">×${attr(options.count)}</span>`:''}${g?.plus?`<span class="item-slot-plus" aria-hidden="true">+${g.plus}</span>`:''}${g&&typeof gearWearer==='function'&&gearWearer(g.id)?'<span class="item-slot-worn" aria-label="已穿戴"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7"/></svg></span>':''}`;
+    const token=globalThis.EmberwildTokens?.isToken(g),wearer=g&&typeof gearWearer==='function'?gearWearer(g.id):null;
+    const content=`<span class="item-slot-art" aria-hidden="true">${icon(kind,key,g)}</span><span class="item-slot-name">${attr(n)}${token?` <span class="tag token-job-tag">${attr(companionTokenJobLabel(g))}</span>${wearer?` <span class="token-wearer">${attr(characterName(wearer))} · 已裝備</span>`:''}`:''}</span>${options.count!==undefined?`<span class="item-slot-count" aria-label="數量 ${attr(options.count)}">×${attr(options.count)}</span>`:''}${g?.plus?`<span class="item-slot-plus" aria-hidden="true">+${g.plus}</span>`:''}${g&&typeof gearWearer==='function'&&gearWearer(g.id)?'<span class="item-slot-worn" aria-label="已穿戴"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7"/></svg></span>':''}`;
     const tag=options.contentOnly?'span':'button';
     return `<${tag} ${tag==='button'?'type="button" ':''}class="item-slot ${options.className||''}${options.selected?' selected':''}${g?' item-quality-'+gearQualityRank(g):''}" ${data} aria-label="${attr(label)}"${tag==='button'?` onclick="${options.onclick||'openItemSlotDetails(this)'}"`:''}${options.selected?' aria-pressed="true"':''}>${content}</${tag}>`;
   };
@@ -82,7 +83,7 @@
     return itemSlotHTML(id.kind,id.key,{gear:a.gear,count:a.quantity,mailId,mailIndex:index,className:'mailbox-attachment',detailLabel:'附件數量'});
   };
   function info(ref){
-    const {kind,key,g}=ref,item=definition(kind,key),description=globalThis.__EMBERWILD_ITEM_DESCRIPTION?.(kind,key)||'';
+    const {kind,key,g}=ref,item=definition(kind,key),description=globalThis.EmberwildTokens?.isToken(g)?companionTokenDescription(g):globalThis.__EMBERWILD_ITEM_DESCRIPTION?.(kind,key)||'';
     let detail='';
     if(g)detail=`<p>${globalThis.EmberwildTokens?.isToken(g)?esc(gearDesc(g)):esc(gearWearableJobsText(g)+' · LV '+gearRequiredLevelByTier(g.tier))}</p><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryHTML?.(g)||esc(gearDesc(g))}</p>${globalThis.equipmentAttributeDetailsHTML?.(g)||''}${g.starterPack?'<p>可強化；不可洗鍊詞綴或重鑄基底。</p>':''}`;
     else if(kind==='item'&&key.startsWith('companion-ticket-'))detail='<p>領取後存入背包，使用可解鎖指定夥伴；重複取得依原規則轉換。</p>';
@@ -96,6 +97,7 @@
     }
     if(ref.context==='shop')detail+=`<p>${esc(ref.quantityLabel||'商品數量')}：${Number.isFinite(ref.quantity)?ref.quantity.toLocaleString():'1'} · ${esc(ref.priceLabel||'價格')}：${Number.isFinite(ref.price)?ref.price.toLocaleString():'0'} 金幣</p>`;
     else if(ref.context!=='inventory'&&ref.quantity!==undefined&&Number.isFinite(ref.quantity))detail+=`<p>${esc(ref.quantityLabel||'數量')}：${ref.quantity.toLocaleString()}</p>`;
+    if(g&&globalThis.EmberwildTokens?.isToken(g)){const wearer=gearWearer(g.id);detail+='<p><span class="tag token-job-tag">'+esc(companionTokenJobLabel(g))+'</span>'+ (wearer?' '+esc(characterName(wearer))+' · 已裝備':'')+'</p>';}
     if(g&&globalThis.EmberwildTokens?.isToken(g))detail+='<p>'+esc(globalThis.companionTokenAbilityText?.(g)||'')+'</p>';
     return `<h3>${esc(name(kind,key,g))}</h3>${description?'<p>'+esc(description)+'</p>':''}${detail}${ref.extra?'<p>'+esc(ref.extra)+'</p>':''}`;
   }
@@ -112,7 +114,7 @@
     if(g){
       if(!findGear(g.id))return '';
       if(globalThis.EmberwildTokens?.isToken(g)){
-        const h=gearWearer(g.id),list=party.members.filter(x=>x.companionId!==undefined);
+        const h=gearWearer(g.id),list=party.members.filter(x=>EmberwildTokens.canEquip(g,x));
         return `<div class="actions"><select id="item-detail-token-target" aria-label="信物穿戴對象">${list.map(x=>`<option value="${memberKey(x)}" ${h===x?'selected':''}>${esc(characterName(x))}</option>`).join('')}</select><button onclick="itemDetailsAction(()=>equipCompanionToken('${g.id}',Number(document.getElementById('item-detail-token-target').value)))" ${list.length?'':'disabled'}>穿戴</button>${h?`<button onclick="itemDetailsAction(()=>unequipCompanionToken(${memberKey(h)}))">卸下</button>`:''}<button onclick="closeItemDetails();openForge('${g.id}')">強化</button><button onclick="itemDetailsAction(()=>toggleGearLock('${g.id}'))">${g.locked?'解除鎖定':'鎖定'}</button><button class="danger" onclick="closeItemDetails();salvage('${g.id}')" ${h||g.locked?'disabled':''}>分解</button></div>`;
       }
       return `<button onclick="closeItemDetails();openForge('${g.id}')">前往強化／洗鍊</button>`;

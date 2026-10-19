@@ -6,7 +6,7 @@
 
   function forgeIsToken(g){return globalThis.EmberwildTokens?.isToken(g)===true;}
   function forgeGearMeta(g){
-    return forgeIsToken(g)?['夥伴通用','信物']:[gearWearableJobsText(g),CLASS_GEAR[g.job][g.slot],`LV ${gearRequiredLevelByTier(g.tier)}`];
+    return forgeIsToken(g)?[companionTokenJobLabel(g),'信物']:[gearWearableJobsText(g),CLASS_GEAR[g.job][g.slot],`LV ${gearRequiredLevelByTier(g.tier)}`];
   }
 
   function forgeSortValue(g,key){
