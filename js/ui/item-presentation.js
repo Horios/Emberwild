@@ -3,6 +3,36 @@
 (()=>{
   let selection=null,hovered=null;
   const attr=value=>esc(String(value??''));
+  const displayStorageKey='emberwild-item-display';
+  const displayModes=[
+    {id:'icon-name',name:'圖示＋名稱',description:'左側顯示圖示，右側顯示完整名稱。'},
+    {id:'name',name:'僅顯示名稱',description:'隱藏道具圖示，使用純文字條列。'}
+  ];
+  const validDisplayMode=id=>displayModes.some(mode=>mode.id===id);
+  let displayMode='icon-name';
+  try{const saved=localStorage.getItem(displayStorageKey);if(validDisplayMode(saved))displayMode=saved;}catch{}
+  document.documentElement.dataset.itemDisplay=displayMode;
+  function refreshDisplayChoices(){
+    document.querySelectorAll('[data-item-display-choice]').forEach(button=>{
+      const active=button.dataset.itemDisplayChoice===displayMode;
+      button.setAttribute('aria-pressed',String(active));
+      const state=button.querySelector('.item-display-choice-state');if(state)state.textContent=active?'使用中':'選擇方式';
+    });
+  }
+  globalThis.setItemDisplayMode=function(id){
+    if(!validDisplayMode(id))return false;
+    displayMode=id;document.documentElement.dataset.itemDisplay=id;refreshDisplayChoices();
+    try{localStorage.setItem(displayStorageKey,id);}catch{globalThis.toast?.('顯示方式已套用，但瀏覽器無法保存，下次開啟需重新選擇。');}
+    return true;
+  };
+  globalThis.itemDisplayOptionsView=function(){
+    return `<section class="panel item-display-options"><h2>道具顯示</h2><p class="small">統一套用於背包、商店、信箱、強化、製作與生活技能等道具清單。</p><div class="item-display-choices" role="group" aria-label="道具顯示方式">${displayModes.map(mode=>`<button type="button" class="item-display-choice" data-item-display-choice="${mode.id}" aria-pressed="${displayMode===mode.id}" onclick="setItemDisplayMode('${mode.id}')"><strong>${mode.name}</strong><span>${mode.description}</span><span class="item-display-choice-state">${displayMode===mode.id?'使用中':'選擇方式'}</span></button>`).join('')}</div></section>`;
+  };
+  addEventListener('storage',event=>{
+    if(event.key!==displayStorageKey&&event.key!==null)return;
+    displayMode=validDisplayMode(event.newValue)?event.newValue:'icon-name';
+    document.documentElement.dataset.itemDisplay=displayMode;refreshDisplayChoices();
+  });
   const fallback='<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m3 7 9-4 9 4v10l-9 4-9-4Zm0 0 9 4 9-4M12 11v10"/></svg>';
   function gearIdentity(g){return globalThis.__EMBERWILD_GEAR_CATALOGUE_KEY?.(g)||(globalThis.EmberwildTokens?.isToken(g)?{kind:'token',key:g.tokenId}:{kind:'equipment',key:g.boss!==undefined?'boss:'+g.region+':'+g.job:'form:'+(g.formJob??g.job)+':'+g.slot+':'+(g.form||0)});}
   function definition(kind,key){
@@ -40,7 +70,7 @@
     const n=name(kind,key,g),label=n+(options.count!==undefined?' ×'+options.count:'');
     const context=options.context||(options.mailId?'mail':'reference'),quantity=options.detailQuantity??options.count;
     const data=`data-item-kind="${attr(kind)}" data-item-key="${attr(key)}" data-item-context="${attr(context)}"${g?.id?` data-item-gear="${attr(g.id)}"`:''}${options.preview?` data-item-preview="${attr(JSON.stringify(options.preview))}"`:''}${options.mailId?` data-item-mail="${options.mailId}" data-item-index="${options.mailIndex}"`:''}${options.extra?` data-item-extra="${attr(options.extra)}"`:''}${quantity!==undefined?` data-item-quantity="${attr(quantity)}"`:''}${options.detailLabel?` data-item-quantity-label="${attr(options.detailLabel)}"`:''}${options.price!==undefined?` data-item-price="${attr(options.price)}"`:''}${options.priceLabel?` data-item-price-label="${attr(options.priceLabel)}"`:''}${options.shopType?` data-item-shop-type="${attr(options.shopType)}"`:''}${options.shopId!==undefined?` data-item-shop-id="${attr(options.shopId)}"`:''}${options.sold?` data-item-sold="true"`:''}${options.soldLabel?` data-item-sold-label="${attr(options.soldLabel)}"`:''}`;
-    const content=`<span class="item-slot-art" aria-hidden="true">${icon(kind,key,g)}</span>${options.count!==undefined?`<span class="item-slot-count">${attr(options.count)}</span>`:''}${g?.plus?`<span class="item-slot-plus">+${g.plus}</span>`:''}${g&&typeof gearWearer==='function'&&gearWearer(g.id)?'<span class="item-slot-worn" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m3 8 3 3 7-7"/></svg></span>':''}`;
+    const content=`<span class="item-slot-art" aria-hidden="true">${icon(kind,key,g)}</span><span class="item-slot-name">${attr(n)}</span>${options.count!==undefined?`<span class="item-slot-count" aria-label="數量 ${attr(options.count)}">×${attr(options.count)}</span>`:''}${g?.plus?`<span class="item-slot-plus" aria-hidden="true">+${g.plus}</span>`:''}${g&&typeof gearWearer==='function'&&gearWearer(g.id)?'<span class="item-slot-worn" aria-label="已穿戴"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7"/></svg></span>':''}`;
     const tag=options.contentOnly?'span':'button';
     return `<${tag} ${tag==='button'?'type="button" ':''}class="item-slot ${options.className||''}${options.selected?' selected':''}${g?' item-quality-'+gearQualityRank(g):''}" ${data} aria-label="${attr(label)}"${tag==='button'?` onclick="${options.onclick||'openItemSlotDetails(this)'}"`:''}${options.selected?' aria-pressed="true"':''}>${content}</${tag}>`;
   };
