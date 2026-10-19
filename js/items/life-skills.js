@@ -30,11 +30,22 @@
   const outputCount=r=>stockCount(r.output,r.outputType);
   const succeeds=chance=>chance===1||chance>0&&Math.random()<chance;
   const outputReady=r=>(r.outputType!=='item'||!!itemFor(r.output,r.outputType))&&outputCount(r)+r.quantity<=LIMIT;
-  const canMake=mode=>Object.hasOwn(RECIPES,mode)&&outputReady(RECIPES[mode])&&RECIPES[mode].inputs.every(([key,n,type])=>stockCount(key,type)>=n);
+  const materialPrice=(name,n=1)=>globalThis.shopPayablePrice?.(n*(design.materialBuyPrices[name]??0))??n*(design.materialBuyPrices[name]??0);
+  globalThis.lifeMaterialPurchasePrice=materialPrice;
+  function refillQuote(mode){
+    const recipe=RECIPES[mode];if(!recipe||!outputReady(recipe))return {ok:false,items:[],cost:0};
+    const missing=recipe.inputs.map(([key,n,type='material'])=>({key,type,n:Math.max(0,n-stockCount(key,type))})).filter(x=>x.n);
+    if(!missing.length)return {ok:true,items:[],cost:0};
+    if(!globalThis.hasShopVIP?.()||!party.story.autoBuy||missing.some(x=>x.type!=='material'||!['清水','藥水瓶'].includes(x.key)||!Object.hasOwn(design.materialBuyPrices,x.key)))return {ok:false,items:[],cost:0};
+    const cost=missing.reduce((n,x)=>n+materialPrice(x.key,x.n),0);
+    return {ok:playerHero().gold>=cost,items:missing,cost};
+  }
+  const canMake=mode=>refillQuote(mode).ok;
   function stoppedReason(mode){
     const r=RECIPES[mode];
     if(r.outputType==='item'&&!itemFor(r.output,r.outputType))return '目前設定沒有此成品';
     if(!outputReady(r))return '成品庫存已達上限';
+    const quote=refillQuote(mode);if(quote.items.length&&!quote.ok)return '金幣不足：自動補充需要 '+quote.cost+' 金幣';
     return '材料不足：'+r.inputs.filter(([key,n,type])=>stockCount(key,type)<n).map(row=>inputName(row)+' ×'+row[1]).join('、');
   }
   function periodFor(kind,job){return (kind==='gather'?GATHER_TARGETS.find(x=>x.id===(job?.target||gatherTarget)):RECIPES[job?.mode])?.periodMs||5000;}
@@ -44,7 +55,7 @@
     if(!ready()||!products().some(p=>p.name===name))return false;
     const n=Number(quantity),h=playerHero();
     if(!Number.isSafeInteger(n)||n<1||n>10000)return false;
-    const cost=n*(design?.materialBuyPrices?.[name]??1);
+    const cost=materialPrice(name,n);
     if(h.gold<cost){toast('金幣不足');return false;}
     if(count(name)+n>LIMIT){toast('材料庫存已達上限');return false;}
     const old=count(name),had=Object.hasOwn(h.materials,name),gold=h.gold;
@@ -77,7 +88,7 @@
     if(!ready())return;
     const now=Date.now(),elapsed=Math.max(0,now-lastTick);lastTick=now;
     if(!gather&&!work)return;
-    const h=playerHero(),before={ore:h.ore,dust:h.dust,materials:{...h.materials},potions:{...healingInventory()},consumables:{...h.consumables}};
+    const h=playerHero(),before={gold:h.gold,progressStats:party.progressStats?copy(party.progressStats):null,ore:h.ore,dust:h.dust,materials:{...h.materials},potions:{...healingInventory()},consumables:{...h.consumables}};
     let changed=false,message='';
     if(gather){
       const target=GATHER_TARGETS.find(target=>target.id===gather.target);
@@ -85,9 +96,9 @@
       // A delayed background timer may cover multiple complete job cycles.
       for(let i=0;gather&&gather.elapsed>=target.periodMs&&i<1000;i++){
         if(!outputReady(target)){gather=null;message=productName(target)+'庫存已達上限，採集已停止';break;}
-        gather.elapsed-=target.periodMs;
-        if(succeeds(target.chance)){setStock(target.output,target.outputType,outputCount(target)+target.quantity);changed=true;}
-        for(const drop of target.bonusDrops||[])if(outputReady(drop)&&succeeds(drop.chance)){setStock(drop.output,drop.outputType,outputCount(drop)+drop.quantity);changed=true;}
+        gather.elapsed-=target.periodMs;globalThis.recordLifeProgress?.('gather',target.id,'',0);changed=true;
+        if(succeeds(target.chance)){setStock(target.output,target.outputType,outputCount(target)+target.quantity);globalThis.recordStoryAcquisition?.(target.outputType,target.output,target.quantity);globalThis.recordGatheredItem?.(target.outputType,target.output,target.quantity);changed=true;}
+        for(const drop of target.bonusDrops||[])if(outputReady(drop)&&succeeds(drop.chance)){setStock(drop.output,drop.outputType,outputCount(drop)+drop.quantity);globalThis.recordStoryAcquisition?.(drop.outputType,drop.output,drop.quantity);globalThis.recordGatheredItem?.(drop.outputType,drop.output,drop.quantity);changed=true;}
       }
     }
     if(work){
@@ -95,18 +106,20 @@
       for(let i=0;work&&work.elapsed>=RECIPES[work.mode].periodMs&&i<1000;i++){
         const mode=work.mode,recipe=RECIPES[mode];
         if(!canMake(mode)){message=stoppedReason(mode)+'，'+recipe.name+'已停止';work=null;break;}
+        const refill=refillQuote(mode);for(const x of refill.items){setStock(x.key,x.type,stockCount(x.key,x.type)+x.n);globalThis.recordStoryAcquisition?.(x.type,x.key,x.n);}h.gold-=refill.cost;
         for(const [key,n,type='material'] of recipe.inputs)setStock(key,type,stockCount(key,type)-n);
-        if(succeeds(recipe.chance))setStock(recipe.output,recipe.outputType,outputCount(recipe)+recipe.quantity);
+        globalThis.recordLifeProgress?.('alchemy',mode,'',0);
+        if(succeeds(recipe.chance)){globalThis.recordLifeProgress?.('recipe',mode,'',0);setStock(recipe.output,recipe.outputType,outputCount(recipe)+recipe.quantity);globalThis.recordStoryAcquisition?.(recipe.outputType,recipe.output,recipe.quantity);}
         work.elapsed-=recipe.periodMs;changed=true;
         if(!canMake(mode)){message=stoppedReason(mode)+'，'+recipe.name+'已停止';work=null;}
       }
     }
     if(changed&&save()!==true){
-      h.ore=before.ore;h.dust=before.dust;h.materials=before.materials;h.healingPotions=before.potions;h.consumables=before.consumables;
+      h.gold=before.gold;if(before.progressStats)party.progressStats=before.progressStats;h.ore=before.ore;h.dust=before.dust;h.materials=before.materials;h.healingPotions=before.potions;h.consumables=before.consumables;
       gather=null;work=null;message='生活技能產物未能儲存，已回復庫存並停止動作';
     }
     if(message)toast(message);
-    if(changed||message){if(tab==='lifeSkills'||tab==='equipment'||tab==='shop'||tab==='quests')render();}
+    if(changed||message){if(tab==='lifeSkills'||tab==='equipment'||tab==='shop'||tab==='quests'||tab==='story')render();}
     updateLifeProgress();
   }
   globalThis.tickLifeSkills=tickLifeSkills;
@@ -137,12 +150,12 @@
     const stockPanel=`<details class="panel life-stock" ${stockOpen?'open':''} ontoggle="setLifeStockOpen(this.open)"><summary>目前材料庫存 <span class="small">${stockNames.length} 種</span></summary><div class="life-stock-content"><div class="life-stock-controls"><label>篩選 <select aria-label="生活材料篩選" onchange="setLifeStockFilter(this.value)">${[['all','全部材料'],['gather','採集產物'],['alchemy','煉金材料'],['owned','只顯示持有']].map(([key,label])=>`<option value="${key}" ${stockFilter===key?'selected':''}>${label}</option>`).join('')}</select></label><label>排序 <select aria-label="生活材料排序" onchange="setLifeStockSort(this.value)">${[['default','材料類別'],['name','名稱'],['quantity','數量（多到少）'],['price','賣價（高到低）']].map(([key,label])=>`<option value="${key}" ${stockSort===key?'selected':''}>${label}</option>`).join('')}</select></label></div><div class="life-materials">${stock}</div><p class="small">${healPotionCount('heal_small')>0?'簡易治療藥水 ×'+healPotionCount('heal_small').toLocaleString()+' · ':''}材料全隊共用，藥水可在背包的道具頁查看。</p><button onclick="setShopCategory('life');setTab('shop')">購買商店材料</button></div></details>`;
     return heading('LIFE SKILLS / 生活技能測試','生活技能')+`<div class="life-skills-page">
       <section class="panel life-rules"><p>採集、煉金與探索可同時進行。加工與煉金共用製作動作，無法同時進行。</p><p class="small">各項動作依設定秒數進行，不受探索倍速影響；煉金每次完成消耗材料，成功才取得產物；開始後連續執行，材料不足時停止。切換頁面仍會繼續。停止動作會清除該次進度；返回標題或關閉遊戲後停止，不計算離線產物。</p></section>
-      <div class="life-skill-grid"><section class="panel"><div class="row"><h2 class="life-action-title">${inventoryMaterialIcon(MATERIALS.herb)}採集</h2><span class="tag">${gather?'採集中':'待命'}</span></div><label class="life-gather-selector">採集對象 <select aria-label="採集對象" onchange="selectLifeGatheringTarget(this.value)" ${gather?'disabled':''}>${GATHER_TARGETS.map(target=>`<option value="${target.id}" ${target.id===gatherTarget?'selected':''}>${esc(target.name)}</option>`).join('')}</select></label><p>${target?`每 ${target.periodMs/1000} 秒有 ${Number((target.chance*100).toFixed(6))}% 機率獲得 ${itemSlotHTML(target.outputType,target.output,{count:target.quantity,detailLabel:'產出數量'})}。${(target.bonusDrops||[]).map(r=>`另有 ${Number((r.chance*100).toFixed(6))}% 機率獲得 ${itemSlotHTML(r.outputType,r.output,{count:r.quantity,detailLabel:'產出數量'})}。`).join('')}`:'尚未設定採集產物。'}</p>${progress('gather',gather)}<div class="actions"><button class="primary" onclick="startLifeGathering()" ${gather||!target?'disabled':''}>開始採集</button><button onclick="stopLifeGathering()" ${!gather?'disabled':''}>停止採集</button></div></section>
-      <section class="panel"><div class="row"><h2 class="life-action-title">${inventoryMaterialIcon(MATERIALS.paste)}煉金</h2><span class="tag">${work?esc(workName):'待命'}</span></div>${progress('work',work)}
+      <div class="life-skill-grid"><section class="panel" id="life-gather"><div class="row"><h2 class="life-action-title">${inventoryMaterialIcon(MATERIALS.herb)}採集</h2><span class="tag">${gather?'採集中':'待命'}</span></div><label class="life-gather-selector">採集對象 <select aria-label="採集對象" onchange="selectLifeGatheringTarget(this.value)" ${gather?'disabled':''}>${GATHER_TARGETS.map(target=>`<option value="${target.id}" ${target.id===gatherTarget?'selected':''}>${esc(target.name)}</option>`).join('')}</select></label><p>${target?`每 ${target.periodMs/1000} 秒有 ${Number((target.chance*100).toFixed(6))}% 機率獲得 ${itemSlotHTML(target.outputType,target.output,{count:target.quantity,detailLabel:'產出數量'})}。${(target.bonusDrops||[]).map(r=>`另有 ${Number((r.chance*100).toFixed(6))}% 機率獲得 ${itemSlotHTML(r.outputType,r.output,{count:r.quantity,detailLabel:'產出數量'})}。`).join('')}`:'尚未設定採集產物。'}</p>${progress('gather',gather)}<div class="actions"><button class="primary" onclick="startLifeGathering()" ${gather||!target?'disabled':''}>開始採集</button><button onclick="stopLifeGathering()" ${!gather?'disabled':''}>停止採集</button></div></section>
+      <section class="panel" id="life-alchemy"><div class="row"><h2 class="life-action-title">${inventoryMaterialIcon(MATERIALS.paste)}煉金</h2><span class="tag">${work?esc(workName):'待命'}</span></div>${progress('work',work)}${globalThis.alchemyVIPView?.()||''}
       ${Object.entries(RECIPES).map(([id,r])=>`<article class="life-recipe"><h3 class="life-action-title">${esc(r.name)}</h3><p class="recipe-item-line">${r.inputs.map(row=>'<span class="recipe-input">'+itemSlotHTML(row[2]||'material',row[0],{count:row[1],detailLabel:'所需數量'})+'<small class="life-recipe-stock">持有 '+stockCount(row[0],row[2]).toLocaleString()+'</small></span>').join(' ＋ ')} → ${itemSlotHTML(r.outputType,r.output,{count:r.quantity,detailLabel:'產出數量'})} <span class="small life-recipe-stock">（庫存 ${outputCount(r).toLocaleString()}）</span></p><p class="small">${r.periodMs/1000} 秒／次 · 成功率 ${Number((r.chance*100).toFixed(6))}%${itemFor(r.output,r.outputType)&&isHealPotion(itemFor(r.output,r.outputType))?' · 恢復最大生命 '+Math.round(itemFor(r.output,r.outputType).healFraction*100)+'%，冷卻 '+itemFor(r.output,r.outputType).cooldown+' 回合。':''}</p><button onclick="startLifeWork('${id}')" ${work||!canMake(id)?'disabled':''}>${id==='process'?'開始加工':'開始煉金'}</button></article>`).join('')||'<p class="empty">尚未設定煉金配方。</p>'}<div class="actions"><button onclick="stopLifeWork()" ${!work?'disabled':''}>停止${work?esc(RECIPES[work.mode].name):'製作'}</button></div></section></div>${stockPanel}</div>`;
   };
   globalThis.lifeShopMaterialsView=function(){
-    const productRows=products().map(p=>{const price=design?.materialBuyPrices?.[p.name]??1;return `<article class="shop-product-row icon-product fixed-shop-row life-shop-row" data-life-material="${esc(p.name)}"><div class="shop-product-visual">${itemSlotHTML('material',p.name,{count:1,context:'shop',detailLabel:'商品數量',price,priceLabel:'單價',shopType:'life',shopId:p.name})}<span class="shop-product-stock">庫存<br><b>${count(p.name).toLocaleString()}</b></span></div><small class="shop-product-label">${esc(p.name)}</small></article>`;}).join('');
+    const productRows=products().map(p=>{const price=materialPrice(p.name);return `<article class="shop-product-row icon-product fixed-shop-row life-shop-row" data-life-material="${esc(p.name)}"><div class="shop-product-visual">${itemSlotHTML('material',p.name,{count:1,context:'shop',detailLabel:'商品數量',price,priceLabel:'單價',shopType:'life',shopId:p.name})}<span class="shop-product-stock">庫存<br><b>${count(p.name).toLocaleString()}</b></span></div><small class="shop-product-label">${esc(p.name)}</small></article>`;}).join('');
     const section=`<section class="shop-section life-shop-section"><div class="shop-section-head"><h2>生活技能材料</h2><span class="small">存入全隊共用材料庫。</span></div><div class="shop-product-grid">${productRows}</div></section>`;
     return section;
   };

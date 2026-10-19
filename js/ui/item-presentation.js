@@ -107,7 +107,7 @@
       const id=attr(JSON.stringify(ref.shopId)),price=Number(ref.price)||0,disabled=ref.sold||state.gold<price;
       if(ref.shopType==='market')return `<button onclick="itemDetailsAction(()=>buyMarketOffer(${id}))" ${disabled?'disabled':''}>${ref.sold?esc(ref.soldLabel||'已售完'):'購買'}</button>`;
       if(ref.shopType==='fixed')return `<button onclick="itemDetailsAction(()=>buyFixedShopOffer(${id}))" ${disabled?'disabled':''}>購買</button>`;
-      if(ref.shopType==='life')return `<div class="actions"><button onclick="itemDetailsAction(()=>buyLifeMaterial(${id},1))" ${state.gold<price?'disabled':''}>購買 1 份</button><button onclick="itemDetailsAction(()=>buyLifeMaterial(${id},10))" ${state.gold<price*10?'disabled':''}>購買 10 份</button></div>`;
+      if(ref.shopType==='life')return `<div class="actions"><button onclick="itemDetailsAction(()=>buyLifeMaterial(${id},1))" ${state.gold<price?'disabled':''}>購買 1 份</button><button onclick="itemDetailsAction(()=>buyLifeMaterial(${id},10))" ${state.gold<(globalThis.lifeMaterialPurchasePrice?.(ref.shopId,10)??price*10)?'disabled':''}>購買 10 份</button></div>`;
       return '';
     }
     if(!g&&ref.context!=='inventory')return '';

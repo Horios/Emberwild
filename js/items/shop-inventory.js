@@ -110,10 +110,11 @@
   }
   function purchase(offer,name,onSold){
     const slot=stockSlot(offer);if(!slot)return toast('找不到此商品對應的道具');
-    if(state.gold<offer.price)return toast('金幣不足');
+    const price=globalThis.shopPayablePrice?.(offer.price)??offer.price;
+    if(state.gold<price)return toast('金幣不足');
     const had=Object.prototype.hasOwnProperty.call(slot.object,slot.key),old=Number(slot.object[slot.key])||0,next=old+offer.qty,gold=state.gold;
     if(!Number.isSafeInteger(next)||next>slot.limit)return toast('庫存已達上限');
-    slot.object[slot.key]=next;state.gold-=offer.price;if(onSold)onSold(true);
+    slot.object[slot.key]=next;state.gold-=price;if(onSold)onSold(true);
     if(!save()){if(had)slot.object[slot.key]=old;else delete slot.object[slot.key];state.gold=gold;if(onSold)onSold(false);return;}
     render();toast('已購買 '+name+' ×'+offer.qty);
   }
@@ -125,7 +126,7 @@
   function productRow(input,rule,random){
     const offer=resolvedOffer(input),name=offerName(offer,rule),description=offerDescription(offer,rule),effect=offerEffect(offer),slot=stockSlot(offer),stock=Number(slot?.object?.[slot.key])||0;
     const kind=['ore','dust'].includes(offer.kind)?'material':offer.kind,key=offer.kind==='ore'?'鍛鐵':offer.kind==='dust'?'粉塵':offer.key;
-    return `<article class="shop-product-row icon-product ${random?'random-shop-row':'fixed-shop-row'}"><div class="shop-product-visual">${itemSlotHTML(kind,key,{count:offer.qty,extra:description+' '+effect,context:'shop',detailLabel:'商品數量',price:offer.price,shopType:random?'market':'fixed',shopId:random?input.id:rule.id,sold:!!input.sold})}<span class="shop-product-stock">庫存<br><b>${stock.toLocaleString()}</b></span></div><small class="shop-product-label">${esc(name)}</small></article>`;
+    return `<article class="shop-product-row icon-product ${random?'random-shop-row':'fixed-shop-row'}"><div class="shop-product-visual">${itemSlotHTML(kind,key,{count:offer.qty,extra:description+' '+effect,context:'shop',detailLabel:'商品數量',price:globalThis.shopPayablePrice?.(offer.price)??offer.price,shopType:random?'market':'fixed',shopId:random?input.id:rule.id,sold:!!input.sold})}<span class="shop-product-stock">庫存<br><b>${stock.toLocaleString()}</b></span></div><small class="shop-product-label">${esc(name)}</small></article>`;
   }
   marketCards=function(){const offers=party.market?.offers?.filter(marketOfferIsListed)||[];return offers.length?offers.map(o=>productRow(o,marketRule(resolvedOffer(o)),true)).join(''):'<div class="shop-empty">本批沒有隨機商品。</div>';};
   const baseValidateParty=validateParty;
