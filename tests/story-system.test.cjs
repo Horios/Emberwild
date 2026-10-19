@@ -25,7 +25,7 @@ test('shop NPC chain requires actual gathering, recipe, materials and permanentl
 });
 
 test('locked alchemy links to NPC story; VIP buys only exact deficits at shared discounted prices and respects toggle/funds',()=>{
- const r=game();assert.match(r.run('lifeSkillsView()'),/完成商店的特殊任務線/);r.run("openStory('shop_rescue','npc')");assert.equal(r.run('tab'),'story');assert.match(r.run('storyView()'),/商店任務線/);assert.equal(r.run('setAlchemyAutoBuy(true)'),false);
+ const r=game();assert.match(r.run('alchemyView()'),/完成商店的特殊任務線/);r.run("openStory('shop_rescue','npc')");assert.equal(r.run('tab'),'story');assert.match(r.run('storyView()'),/商店任務線/);assert.equal(r.run('setAlchemyAutoBuy(true)'),false);
  replace(r,d=>{d.lifeSkills.materialBuyPrices.清水=100;d.lifeSkills.materialBuyPrices.藥水瓶=20;d.lifeSkills.recipes.alchemy.inputs=[['清水',3],['藥水瓶',2],['紅色草',1]];});
  r.run("state.materials={清水:1,藥水瓶:1,紅色草:1};state.gold=1000;save()");assert.equal(r.run("startLifeWork('alchemy')"),false);r.run('party.story.vip=1;save();setAlchemyAutoBuy(true)');assert.equal(r.run('shopPayablePrice(200)'),190);assert.equal(r.run("startLifeWork('alchemy')"),true);assert.equal(r.run('state.gold'),1000);tick(r,5000);assert.equal(r.run('state.gold'),791);assert.equal(r.run('materialCount("清水")'),0);assert.equal(r.run('materialCount("藥水瓶")'),0);assert.equal(r.run('healPotionCount("heal_small")'),1);assert.equal(r.run('__EMBERWILD_LIFE_SKILLS.jobs.work'),null);
  r.run("setMaterialCount('紅色草',2);state.gold=1;save()");assert.equal(r.run("startLifeWork('alchemy')"),false);tick(r,5000);assert.equal(r.run('state.gold'),1);assert.equal(r.run('healPotionCount("heal_small")'),1);assert.equal(r.run('materialCount("清水")'),0);
@@ -72,7 +72,7 @@ test('new stage executes after editor changes; sequential quest links and prior 
 });
 
 test('runtime dialogue continuation/exit and every guide preserve the independent exploration state',()=>{
- const r=game();r.run("openStory('goddess_intro');readStory('goddess_intro')");assert.match(r.run('storyView()'),/歡迎來到營地/);r.run('nextStoryDialogue()');assert.match(r.run('storyView()'),/完成階段／繼續劇情/);r.run('endStoryDialogue()');assert.equal(r.run('party.story.quests.goddess_intro.current'),'welcome');const old=json(r,'({map:party.map,kills:state.totalKills,running})');for(const id of Object.keys(M.GUIDES)){r.run(`storyNavigate('${id}')`);assert.equal(r.run('tab'),['gather','alchemy'].includes(id)?'lifeSkills':id);}assert.deepEqual(json(r,'({map:party.map,kills:state.totalKills,running})'),old);assert.deepEqual(r.errors,[]);
+ const r=game();r.run("openStory('goddess_intro');readStory('goddess_intro')");assert.match(r.run('storyView()'),/歡迎來到營地/);r.run('nextStoryDialogue()');assert.match(r.run('storyView()'),/完成階段／繼續劇情/);r.run('endStoryDialogue()');assert.equal(r.run('party.story.quests.goddess_intro.current'),'welcome');const old=json(r,'({map:party.map,kills:state.totalKills,running})');for(const id of Object.keys(M.GUIDES)){r.run(`storyNavigate('${id}')`);assert.equal(r.run('tab'),id);}assert.deepEqual(json(r,'({map:party.map,kills:state.totalKills,running})'),old);assert.deepEqual(r.errors,[]);
 });
 
 test('failed recipe attempts count actions but cannot satisfy successful recipe condition; missing other ingredients never buys basics',()=>{

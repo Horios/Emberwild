@@ -6,8 +6,8 @@ function game(){const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);clos
 function advance(r,ms){r.advance(ms);r.run('tick();');}
 
 test('Gathering awards exactly once per five seconds and updates the accessible progress bar',()=>{
-  const r=game();r.run('setTab("lifeSkills");startLifeGathering();');
-  assert.match(r.elements.get('app').innerHTML,/setTab\('lifeSkills'\)/);
+  const r=game();r.run('setTab("gather");startLifeGathering();');
+  assert.match(r.elements.get('app').innerHTML,/setTab\('gather'\)/);
   assert.match(r.elements.get('app').innerHTML,/<progress[^>]+aria-label="採集進度"/);
   advance(r,4999);assert.equal(r.run('materialCount("紅色草")'),0);
   assert.equal(r.elements.get('life-gather-progress').value,4999);
@@ -132,15 +132,15 @@ test('Shop categories render only their own products and preserve purchases and 
 });
 
 test('Life stock shows uses and quantities and sells through the shared inventory with save rollback',()=>{
-  const r=game();r.run('setTab("lifeSkills");state.materials["紅色草"]=4;state.materials["小蟲"]=2;');
-  const view=r.run('lifeSkillsView()');assert.match(view,/目前材料庫存/);assert.match(view,/可加工製作紅色草泥/);assert.match(view,/製作簡易治療藥水/);assert.match(view,/尚無用途/);
-  assert.equal((view.match(/class="life-stock-row"/g)||[]).length,5);
+  const r=game();r.run('setTab("gather");state.materials["紅色草"]=4;state.materials["小蟲"]=2;');
+  const view=r.run('gatheringView()'),alchemy=r.run('alchemyView()');assert.match(view,/目前材料庫存/);assert.match(view,/id="life-gather"/);assert.doesNotMatch(view,/id="life-alchemy"/);assert.match(alchemy,/id="life-alchemy"/);assert.doesNotMatch(alchemy,/id="life-gather"/);
+  assert.equal((view.match(/class="life-stock-row /g)||[]).length,5);
   const gold=r.run('state.gold');
   r.run(`sellMaterialFromControl({closest:()=>({dataset:{material:'紅色草'},querySelector:()=>({value:'3'})})});sellAllMaterialFromControl({closest:()=>({dataset:{material:'小蟲'}})});`);
   assert.equal(r.run('state.gold'),gold+9);assert.equal(r.run('materialCount("紅色草")'),1);assert.equal(r.run('materialCount("小蟲")'),0);
   const savedGold=r.run('state.gold');r.run('globalThis.originalSave=save;save=()=>false;sellMaterial("紅色草",1);save=originalSave;');
   assert.equal(r.run('state.gold'),savedGold);assert.equal(r.run('materialCount("紅色草")'),1);
-  const gatherPanel=view.split('<div class="life-skill-grid">')[1].split('</section>')[0];
+  const gatherPanel=view.split('<div class="life-skill-grid life-skill-single">')[1].split('</section>')[0];
   assert.doesNotMatch(gatherPanel,/賣價|尚無用途|後續再新增/);assert.deepEqual(r.errors,[]);
 });
 

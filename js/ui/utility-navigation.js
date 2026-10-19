@@ -1,6 +1,6 @@
 /* Compact utility dialogs and account-owned number reminders. */
 (()=>{
-  const A=EmberwildAchievements,labels={mailbox:'信箱',achievements:'成就',equipment:'背包',quests:'委託手札'},utilityIds=['mailbox','achievements','options'];
+  const A=EmberwildAchievements,labels={mailbox:'信箱',achievements:'成就',equipment:'背包',quests:'委託'},utilityIds=['mailbox','achievements','options'];
   const settings=()=>party?(party.numberReminders??=A.numberReminderDefaults()):A.numberReminderDefaults();
   function counts(){
     if(!party||!state)return {mailbox:0,achievements:0,equipment:0,quests:0};

@@ -1,7 +1,8 @@
 const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path');
 const {openRuntime}=require('./runtime.cjs');
 const root=path.resolve(__dirname,'..');
-const pages=['battle','roster','partnerRoster','character','skills','equipment','worn','forge','bossCraft','quests','shop','lifeSkills','guide','statistics'];
+const pages=['battle','statistics','shop','guide','roster','partnerRoster','character','skills','equipment','worn','forge','bossCraft','quests','gather','alchemy','story'];
+const navPages=[['battle','battle'],['statistics','statistics'],['shop','shop'],['guide','guide'],['roster','roster'],['partnerRoster','partnerRoster'],['character','character'],['skills','skills'],['equipment','equipment'],['worn','worn'],['forge','forge'],['bossCraft','bossCraft'],['story-main','story'],['story-side','story'],['story-npc','story'],['quests','quests'],['gather','gather'],['alchemy','alchemy']];
 async function start(page){
  await page.evaluate(()=>{selectSaveSlot(1);start(0);clearInterval(timer);closeModal();recruitCompanion(10);closeModal();recruitCompanion(12);closeModal();});
  await page.waitForTimeout(60);await page.evaluate(()=>closeModal());
@@ -41,10 +42,10 @@ test('Mobile: all existing navigation works through shortcuts and the More menu 
  try{
   await p.setViewportSize({width:390,height:844});await start(p);
   assert.equal(await p.locator('aside nav>button:visible').count(),5);
-  for(const id of pages){
+  for(const [id,target] of navPages){
    const b=p.locator(`aside nav [data-page="${id}"]`);
    if(!await b.isVisible())await p.locator('.mobile-more-toggle').click();
-   await b.click();await p.waitForFunction(t=>tab===t,id);
+   await b.click();await p.waitForFunction(t=>tab===t,target);
    assert.equal(await p.locator('.mobile-more-pages').isVisible(),false);
    assert.equal(await p.locator('aside nav>button:visible').count(),5);
   }
@@ -115,9 +116,9 @@ test('Responsive: title, creation, utility dialogs and desktop layout stay usabl
   assert.equal(await p.locator('.mobile-journal-toggle').isVisible(),false);
   assert.equal(await p.locator('.mobile-more-toggle').isVisible(),false);
   assert.equal(await p.locator('#mobileJournalBody').isVisible(),true);
-  assert.equal(await p.locator('aside nav [data-page]:visible').count(),pages.length);
+  assert.equal(await p.locator('aside nav [data-page]:visible').count(),navPages.length);
   const order=await p.locator('aside nav [data-page]').evaluateAll(nodes=>nodes.map(e=>({id:e.dataset.page,y:e.getBoundingClientRect().y})).sort((a,b)=>a.y-b.y).map(e=>e.id));
-  assert.deepEqual(order,pages);
+  assert.deepEqual(order,navPages.map(([id])=>id));
   const rects=await p.evaluate(()=>['aside','main','#globalBattleJournal'].map(s=>{const r=document.querySelector('.layout').querySelector(s).getBoundingClientRect();return {x:r.x,right:r.right};}));
   assert(rects[0].right<=rects[1].x&&rects[1].right<=rects[2].x,'desktop retains three columns');
   await p.evaluate(()=>returnToTitle());assert.equal(await p.locator('.mobile-more-toggle').count(),0);

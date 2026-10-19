@@ -127,8 +127,8 @@ function statisticsView(){
 }
 function ensureStatisticsNavButton(){
   const nav=document.querySelector('#app nav');if(!nav)return;
-  let btn=nav.querySelector('[data-statistics-tab]');
-  if(!btn){btn=document.createElement('button');btn.dataset.statisticsTab='1';btn.textContent='統計';btn.onclick=()=>setTab('statistics');nav.appendChild(btn);}
+  let btn=nav.querySelector('[data-page="statistics"], [data-statistics-tab]');
+  if(!btn){btn=document.createElement('button');btn.dataset.page='statistics';btn.dataset.statisticsTab='1';btn.textContent='戰鬥統計';btn.onclick=()=>setTab('statistics');nav.appendChild(btn);}
   if(tab==='statistics'){nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}else btn.classList.remove('active');
 }
 const battleStatisticsRenderBase=render;

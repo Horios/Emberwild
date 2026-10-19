@@ -19,12 +19,12 @@
       }
     }
     const nav=document.querySelector('#app>.layout>aside nav');
-    if(nav&&!nav.querySelector('.mobile-more-toggle')){
+    if(nav&&mobile.matches&&!nav.querySelector('.mobile-more-toggle')){
       nav.setAttribute('aria-label','遊戲分頁');
       const pages=document.createElement('div');pages.id='mobileMorePages';pages.className='mobile-more-pages';pages.setAttribute('aria-label','其他功能');
-      for(const [index,button] of [...nav.children].entries()){
+      for(const [index,button] of [...nav.querySelectorAll('button[data-page]')].entries()){
         button.style.setProperty('--page-order',index);
-        const id=button.dataset.statisticsTab?'statistics':button.getAttribute('onclick')?.match(/setTab\('([^']+)'\)/)?.[1];
+        const id=button.dataset.page||(button.dataset.statisticsTab?'statistics':button.getAttribute('onclick')?.match(/setTab\('([^']+)'\)/)?.[1]);
         if(!id)continue;
         button.dataset.page=id;
         if(!primary.includes(id))pages.appendChild(button);

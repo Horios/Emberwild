@@ -1,0 +1,21 @@
+#app>.layout>aside nav>.game-nav-group{margin:0;border:1px solid transparent;border-radius:5px;color:var(--text-soft,var(--muted));font-size:12px;line-height:1.4}
+#app>.layout>aside nav>.game-nav-group[open]{border-color:var(--line);background:color-mix(in srgb,var(--panel) 55%,transparent)}
+#app>.layout>aside nav>.game-nav-group>summary{display:flex;align-items:center;gap:6px;min-height:32px;padding:6px 8px;color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.08em;list-style:none;text-transform:none}
+#app>.layout>aside nav>.game-nav-group>summary::-webkit-details-marker{display:none}
+#app>.layout>aside nav>.game-nav-group>summary>span:first-child{flex:1}
+#app>.layout>aside nav>.game-nav-group.has-active>summary{color:var(--gold)}
+#app>.layout>aside nav .game-nav-chevron{flex:0 0 auto;font-size:17px;line-height:1;transform:rotate(0);transition:transform .15s ease}
+#app>.layout>aside nav>.game-nav-group[open]>summary .game-nav-chevron{transform:rotate(90deg)}
+#app>.layout>aside nav .game-nav-items{display:grid;gap:2px;padding:0 4px 5px}
+#app>.layout>aside nav .game-nav-items>button{width:100%;min-height:31px;padding:6px 8px 6px 13px;font-size:12px}
+#app>.layout>aside nav .game-nav-items>button.active{border-left-width:3px}
+.nav-story-mobile-badge{display:none}
+
+@media(max-width:900px){
+  #app>.layout>aside nav>.game-nav-group{display:none}
+  .nav-story-mobile-badge{display:contents}
+}
+
+@media(prefers-reduced-motion:reduce){
+  #app>.layout>aside nav .game-nav-chevron{transition:none}
+}
