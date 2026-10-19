@@ -26,7 +26,7 @@
 .inventory-list-item.item-slot,.forge-gear-item.item-slot,.worn-candidate.item-slot,.token-inventory-row.item-slot{
   display:flex;width:var(--item-slot-width);max-width:100%;height:auto;min-height:var(--item-slot-height);padding:7px 10px;gap:10px
 }
-.account-item-row.icon-only-row,.account-material-row.icon-only-row,.life-stock-row.icon-only-row,.token-inventory-list .token-inventory-row{display:block;min-width:0}
+.account-item-row.icon-only-row,.account-material-row.icon-only-row,.life-stock-row.icon-only-row{display:block;min-width:0}
 
 .mailbox-attachments{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;width:100%;max-width:480px;margin:12px 0 20px}
 .mailbox-attachment.item-slot{display:flex;width:var(--item-slot-width);max-width:100%;height:auto;min-height:var(--item-slot-height);padding:7px 10px;aspect-ratio:auto;overflow:hidden}
