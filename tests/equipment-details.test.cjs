@@ -223,19 +223,12 @@ test('Equipment ratings, source contributions and existing equipment flows',asyn
       await r.page.evaluate(()=>openForge(state.bag[0].id));
       assert.ok(await r.page.locator('.forge-gear-name').first().evaluate(el=>el.scrollHeight<=el.clientHeight+1));
     });
-    await t.test('Inventory, forge, pending loot, recipes and item descriptions contain no player-visible T tiers',async()=>{
+    await t.test('Inventory shows saved T tiers and has no pending equipment controls',async()=>{
       const out=await r.page.evaluate(()=>{
-        __equipmentTestHero();const g=__equipmentTestGear({tier:12,powerTier:10,plus:10,affix:[{type:0,rank:3,value:3}]});state.bag.push(g);state.equipped[0]=g.id;forgeSelection=g.id;
-        pendingGearLoot=[__equipmentTestGear({id:'pending-1',powerTier:1}),__equipmentTestGear({id:'pending-2',powerTier:2}),__equipmentTestGear({id:'pending-3',powerTier:10})];
-        state.consumables.power_tier_reroll=1;
-        const text=[inventoryGearDetail(g),forgeView(),pendingGearBottomView(),update12BossMemberView(),accountItemsView(),supplyDetail(SHOP.find(x=>x.id==='power_tier_reroll'))].join('\n');
-        const host=document.createElement('div');host.innerHTML=text;
-        const description=equipmentPlayerItemDescription({id:'power_tier_reroll',description:'重新抽選 T1～T10 強度階級。'});
-        return {text:host.textContent,description,pending:pendingGearBottomView()};
+        __equipmentTestHero();const g=__equipmentTestGear({tier:12,powerTier:10,plus:10,affix:[{type:0,rank:3,value:3}]});state.bag.push(g);
+        clearGearInventoryFilters();return {html:inlineInventoryView(),pending:typeof pendingGearLoot};
       });
-      assert.doesNotMatch(out.text,/\bT(?:10|[1-9])\b|T 階|T 級/);
-      assert.doesNotMatch(out.description,/\bT(?:10|[1-9])\b/);assert.match(out.description,/基底評級/);
-      assert.match(out.pending,/基底評級：D ×2/);assert.match(out.pending,/基底評級：SSS ×1/);
+      assert.match(out.html,/gear-tier-10[^]*?T10/);assert.doesNotMatch(out.html,/claimPending|pending-gear/);assert.equal(out.pending,'undefined');
     });
     await t.test('Equipment comparison, wear, enhancement to configured +15, reroll and save/load still work',async()=>{
       const out=await r.page.evaluate(()=>{

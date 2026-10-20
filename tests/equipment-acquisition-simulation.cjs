@@ -1,6 +1,6 @@
 /* Real battle generators in the existing DOM-free harness; no layout claims. */
 const fs=require('node:fs'),path=require('node:path'),{loadRuntime}=require('./headless-runtime.cjs');
-const root=path.resolve(__dirname,'..'),r=loadRuntime(root);r.ctx.seed=require('../data/balance.json');r.run('applyBalanceConfig(seed,{persist:false});selectSaveSlot(1);render=()=>{};note=()=>{};');
+const root=path.resolve(__dirname,'..'),r=loadRuntime(root);r.ctx.seed=require('../data/balance.json');r.run('applyBalanceConfig(seed,{persist:false});render=()=>{};note=()=>{};');
 const result=JSON.parse(r.run(`JSON.stringify((()=>{
  let randomSeed=20261020;Math.random=()=>((randomSeed=(Math.imul(randomSeed,1664525)+1013904223)>>>0)/4294967296);
  const rows=[],baseSave=save;let killStats=null;

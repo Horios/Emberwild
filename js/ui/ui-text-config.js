@@ -221,17 +221,6 @@ inlineInventoryView=function(){
     initial=function(job){const h=initHero(finalInitialBase(job));if(typeof syncHeroSkillArrays==='function')syncHeroSkillArrays(h);return h;};
   }
 
-  if(typeof rewardGroupKill==='function'){
-    const finalPendingRewardBase=rewardGroupKill;
-    rewardGroupKill=function(e){
-      if(e?.rewarded)return;
-      const previous=collectingBattleGear;
-      collectingBattleGear=true;
-      try{return finalPendingRewardBase(e);}
-      finally{collectingBattleGear=previous;}
-    };
-  }
-
   if(typeof pacedRound==='function'){
     const finalAutoRetryPacedRoundBase=pacedRound;
     pacedRound=function*(){
@@ -251,11 +240,9 @@ inlineInventoryView=function(){
   }
 
   if(typeof resetSession==='function'){
-    const finalPendingResetSessionBase=resetSession;
+    const finalInventoryResetSessionBase=resetSession;
     resetSession=function(){
-      const result=finalPendingResetSessionBase();
-      pendingGearLoot=[];
-      collectingBattleGear=false;
+      const result=finalInventoryResetSessionBase();
       if(typeof inventorySelectedGearId!=='undefined')inventorySelectedGearId=null;
       // resetSession() still came from the legacy filter model. Always restore
       // the current inventory filter schema so a new game/import does not
@@ -411,46 +398,6 @@ inlineInventoryView=function(){
     };
   }
 
-  // Preserve late pending-loot data through validateParty() so manual JSON
-  // import does not silently discard it. The actual gear objects are validated
-  // after the party state is available by reusing the final validateSave().
-  if(typeof validateParty==='function'){
-    const auditedValidatePartyBase=validateParty;
-    validateParty=function(data){
-      data=EmberwildTokens.prepareSave(data,RULES.bagCapacity);
-      const out=auditedValidatePartyBase(data);
-      if(data?.pendingGearLoot!==undefined){
-        if(!Array.isArray(data.pendingGearLoot))throw Error('待結算裝備資料無效');
-        out.pendingGearLoot=validatePendingGearArray(data.pendingGearLoot,out);
-      }
-      return out;
-    };
-  }
-  function validatePendingGearArray(raw,validatedParty=null){
-    if(raw===undefined)return [];
-    if(!Array.isArray(raw))throw Error('待結算裝備資料無效');
-    const members=validatedParty?.members||[state],hero=validatedParty?members.find(h=>memberKey(h)===validatedParty.selected):state;
-    const existing=new Set(members.flatMap(h=>(h?.bag||[]).map(g=>g.id))),seen=new Set(),out=[],template=clonePlain(hero);
-    for(const item of raw){
-      if(!item||typeof item.id!=='string'||existing.has(item.id)||seen.has(item.id))throw Error('待結算裝備 ID 無效');
-      seen.add(item.id);
-      const probe={...template,map:0,bag:[clonePlain(item)],equipped:[null,null,null,null,null]};
-      const valid=validateSave(probe);
-      if(!valid?.bag?.[0])throw Error('待結算裝備資料無效');
-      out.push(valid.bag[0]);
-    }
-    return out;
-  }
-  if(typeof loadParty==='function'){
-    const auditedLoadPartyBase=loadParty;
-    loadParty=function(data){
-      const validated=validateParty(data),queued=validated.pendingGearLoot;
-      const copy=clonePlain(data);copy.pendingGearLoot=[];
-      const out=auditedLoadPartyBase(copy);
-      pendingGearLoot=queued||[];
-      return out;
-    };
-  }
 })();
 
 

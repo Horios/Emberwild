@@ -1,9 +1,9 @@
 /* All manual disposal paths share the existing prices/reward functions and the
-   same reference audit. Automatic overflow handles only newly dropped items. */
+   same reference audit. Battle overflow stays in the bag and pauses exploration. */
 (()=>{
   const T=__EMBERWILD_TEAMS,M=EmberwildTeams,copy=M.copy;
   const disposable=g=>g&&!g.locked&&!inlineAffixDrafts.has(affixDraftKey(g));
-  const quickDisposable=g=>disposable(g)&&[0,1].includes(gearQualityRank(g))&&!MToken(g)&&!gearWearer(g.id)&&!M.references(T.build(),g.id).length&&!(g.plus>0)&&!g.rerolled&&g.boss===undefined;
+
 
   // Each encounter keeps the equipment values it started with. Players may
   // strengthen/reroll during combat, but those live item changes are projected
@@ -34,16 +34,17 @@
   const spawnGroupBase=spawnGroup;
   spawnGroup=function(...args){captureBattleEquipment();return spawnGroupBase(...args);};
 
-  function dispose(ids,mode,includeEnhance=true,quick=false){
+  function dispose(ids,mode,includeEnhance=true,options={}){
     if(!party)return false;
     ensureBoard();T.capture();
-    let items=[...new Set(ids)].map(findGear).filter(quick?quickDisposable:disposable);if(!items.length)return false;
+    let items=[...new Set(ids)].map(findGear).filter(g=>disposable(g)&&(mode!=='sell'||globalThis.__EMBERWILD_CAN_SELL_GEAR?.(g)!==false)&&(!options.batch||!gearWearer(g.id)&&!M.references(T.build(),g.id).length));if(!items.length)return false;
     const verb=mode==='sell'?'販售':'分解',activeIds=currentBattleGearIds(),blocked=items.filter(g=>activeIds.has(g.id));
     items=items.filter(g=>!activeIds.has(g.id));
     if(!items.length){toast('目前戰鬥隊伍正在使用的裝備無法'+verb);return false;}
     const refs=new Map();for(const g of items)for(const p of M.references(T.build(),g.id))refs.set(p.id,p.name);
     if(refs.size&&!confirm(`此${items.length>1?'批裝備':'裝備'}正在其他隊伍或目前未出戰的配置中使用：${[...refs.values()].join('、')}。\n目前戰鬥隊伍使用中的裝備不會被處理；若繼續${verb}，相關裝備／信物欄位會清空且不自動補裝。確定繼續？`))return false;
-    if(!quick&&!refs.size&&(items.length>1||items.some(g=>g.boss!==undefined))&&!confirm(`確定${verb} ${items.length} 件裝備？物品實體將失去，無法復原。`))return false;
+    if(!options.reviewed&&!refs.size&&(items.length>1||items.some(g=>g.boss!==undefined))&&!confirm(`確定${verb} ${items.length} 件裝備？物品實體將失去，無法復原。`))return false;
+    if(mode==='sell'&&state.gold+items.reduce((n,g)=>n+equipmentSellPrice(g),0)>1e12){toast('金幣已達上限，裝備已保留');return false;}
     const b=copy(T.build()),bag=state.bag,selected=party.selected,hp=party.members.map(h=>h.hp),memberGear=party.members.map(x=>({equipped:copy(x.equipped),tokenId:x.tokenId})),h=T.player(),resource={};
     for(const k of ['gold','ore','dust','gems','materials','potions','consumables'])resource[k]=copy(h[k]);
     const healingPotions=copy(healingInventory()),oldBoard=copy(h.board);
@@ -58,17 +59,12 @@
     }catch(e){h.board=oldBoard;party.buildSystem=b;state.bag=bag;for(const k of Object.keys(resource))h[k]=resource[k];const inv=healingInventory();for(const k of Object.keys(inv))delete inv[k];Object.assign(inv,healingPotions);party.selected=selected;state=partyMember(selected)||h;party.members.forEach((x,i)=>{x.equipped=copy(memberGear[i].equipped);x.tokenId=memberGear[i].tokenId;x.hp=hp[i];});toast('操作未保存：'+e.message);return false;}
   }
   salvage=id=>dispose([id],'salvage');globalThis.sellGear=id=>dispose([id],'sell');
-  globalThis.sellAllGearByQuality=q=>Number.isInteger(q)&&q>=0&&q<=3&&dispose(state.bag.filter(g=>gearQualityRank(g)===q).map(g=>g.id),'sell');
-  salvageAll=()=>dispose(state.bag.filter(g=>!MToken(g)&&gearQualityRank(g)===0&&(g.plus||0)===0&&!g.affix.length&&g.boss===undefined).map(g=>g.id),'salvage',false);
+  globalThis.sellAllGearByQuality=q=>Number.isInteger(q)&&q>=0&&q<=3&&dispose(state.bag.filter(g=>gearQualityRank(g)===q).map(g=>g.id),'sell',true,{batch:true});
+  salvageAll=()=>dispose(state.bag.filter(g=>!MToken(g)&&gearQualityRank(g)===0&&(g.plus||0)===0&&!g.affix.length&&g.boss===undefined).map(g=>g.id),'salvage',false,{batch:true});
   const MToken=g=>EmberwildTokens.isToken(g);
-  globalThis.quickDisposeJournalGear=function(q,mode){
-    if(!party||![0,1].includes(q)||!['salvage','sell'].includes(mode)||typeof globalThis.quickDisposePendingQuality!=='function')return false;
-    const ok=globalThis.quickDisposePendingQuality(q,mode);
-    if(!ok)toast('沒有可快速整理的'+AFFIX_RANK[q]+'待領取裝備，或操作未保存');return ok;
-  };
-  massSalvageTargets=ids=>{const active=currentBattleGearIds();return state.bag.filter(g=>ids.includes(g.id)&&disposable(g)&&!active.has(g.id));};
-  requestMassSalvage=q=>Number.isInteger(q)&&q>=0&&q<=3&&dispose(state.bag.filter(g=>!MToken(g)&&gearQualityRank(g)===q).map(g=>g.id),'salvage');
-  confirmMassSalvage=()=>{if(!massSalvageIds)return false;const ok=dispose(massSalvageIds,'salvage');if(ok){massSalvageIds=null;closeModal();}return ok;};
+  massSalvageTargets=ids=>{const active=currentBattleGearIds();return state.bag.filter(g=>ids.includes(g.id)&&disposable(g)&&!gearWearer(g.id)&&!M.references(T.build(),g.id).length&&!active.has(g.id));};
+  requestMassSalvage=q=>Number.isInteger(q)&&q>=0&&q<=3&&dispose(state.bag.filter(g=>!MToken(g)&&gearQualityRank(g)===q).map(g=>g.id),'salvage',true,{batch:true});
+  confirmMassSalvage=()=>{if(!massSalvageIds)return false;const ok=dispose(massSalvageIds,'salvage',true,{batch:true});if(ok){massSalvageIds=null;closeModal();}return ok;};
 
   // Enhancing or accepting new affixes on an item used by the current encounter
   // is allowed. The encounter snapshot above keeps its old combat values until

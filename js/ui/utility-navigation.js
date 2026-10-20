@@ -5,7 +5,7 @@
   function counts(){
     if(!party||!state)return {mailbox:0,achievements:0,equipment:0,quests:0};
     __EMBERWILD_COMPANION_UNLOCK_TEST.syncUnlocks();
-    const a=party.achievements,read=new Set(a.readCompleted),gearIds=new Set((pendingGearLoot||[]).map(g=>g.id));
+    const a=party.achievements,read=new Set(a.readCompleted),gearIds=new Set();
     for(const g of party.sharedGear?.items||state.bag||[])if(inlineAffixDrafts.has(affixDraftKey(g))||pendingAffix?.id===g.id)gearIds.add(g.id);
     const quests=questReadyCount();
     return {mailbox:party.mailbox.messages.filter(m=>!m.read||!m.claimed).length,achievements:a.completed.filter(id=>!read.has(id)).length,equipment:gearIds.size,quests};

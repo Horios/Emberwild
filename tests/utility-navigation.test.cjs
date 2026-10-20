@@ -17,9 +17,9 @@ test('Achievement unread count clears when opened, tracks later milestones, surv
 test('Mail reminder remains until attachments are claimed and drops to zero without duplicate rewards',()=>{
  const r=game();mail(r);assert.equal(r.run('numberBadgeCounts().mailbox'),1);r.run('openUtilityPanel("mailbox");openMailboxMail(1)');assert.equal(r.run('numberBadgeCounts().mailbox'),1);r.run('claimMailboxAttachments(1)');assert.equal(r.run('numberBadgeCounts().mailbox'),0);assert.equal(r.run('companionTicketCount(15)'),1);assert.equal(r.elements.get('utilityReminder-mailbox').hidden,true);
 });
-test('Bag reminder counts pending equipment and unresolved affix drafts once each, clearing after actual settlement and resolution',()=>{
- const r=game();r.run('globalThis.a=gear(1,0,0,0);globalThis.b=gear(1,1,0,0);pendingGearLoot.push(a,b);globalThis.g=state.bag[0];inlineAffixDrafts.set(affixDraftKey(g),structuredClone(g.affix));pendingAffix={id:g.id,affix:structuredClone(g.affix)};render()');assert.equal(r.run('numberBadgeCounts().equipment'),3);assert.match(r.elements.get('app').innerHTML,/navReminder-equipment/);
- r.run('pendingAffix=null;claimPendingGearLoot()');assert.equal(r.run('numberBadgeCounts().equipment'),1);r.run('resolveInlineAffix(g.id,false)');assert.equal(r.run('numberBadgeCounts().equipment'),0);r.run('inlineAffixDrafts.set("shared:missing",[])');assert.equal(r.run('numberBadgeCounts().equipment'),0);
+test('Bag reminder counts unresolved affix drafts once, without a pending-loot reminder',()=>{
+ const r=game();r.run('globalThis.a=gear(1,0,0,0);globalThis.b=gear(1,1,0,0);addGear(a);addGear(b);globalThis.g=state.bag[0];inlineAffixDrafts.set(affixDraftKey(g),structuredClone(g.affix));pendingAffix={id:g.id,affix:structuredClone(g.affix)};render()');assert.equal(r.run('numberBadgeCounts().equipment'),1);assert.match(r.elements.get('app').innerHTML,/navReminder-equipment/);
+ r.run('pendingAffix=null;render()');assert.equal(r.run('numberBadgeCounts().equipment'),1);r.run('resolveInlineAffix(g.id,false)');assert.equal(r.run('numberBadgeCounts().equipment'),0);r.run('inlineAffixDrafts.set("shared:missing",[])');assert.equal(r.run('numberBadgeCounts().equipment'),0);
 });
 test('Quest reminder counts the daily commission and side quests, excluding completed and blocked rewards',()=>{
  const r=game();r.run('state.materials={};const q=state.board.tasks[0];delete q.designVersion;delete q.objectives;delete q.rewards;q.source="gather";q.mat="紅色草";delete q.item;q.n=3;q.kind="gem";q.gem=0;q.done=false;state.materials[q.mat]=3');assert.equal(r.run('numberBadgeCounts().quests'),1);r.run('claimBoard(state.board.tasks[0].id)');assert.equal(r.run('numberBadgeCounts().quests'),0);
@@ -39,9 +39,9 @@ test('Navigation shares one scan while building page HTML and reads live state o
  const r=game();
  r.run('let scans=0;const readyBase=questReadyCount;questReadyCount=function(){scans++;return readyBase();};scans=0;render();');
  assert.equal(r.run('scans'),2);
- r.run('pendingGearLoot.push(gear(1,0,0,0))');
+ r.run('globalThis.badgeGear=state.bag[0];inlineAffixDrafts.set(affixDraftKey(badgeGear),[])');
  assert.match(r.run('numberBadgeHTML("equipment")'),/>1<\/span>/);
- r.run('pendingGearLoot=[]');
+ r.run('inlineAffixDrafts.clear()');
  assert.match(r.run('numberBadgeHTML("equipment")'),/ hidden /);
  assert.deepEqual(r.errors,[]);
 });

@@ -97,7 +97,7 @@ spawnGroup=function(){const r=battleStatsSpawnGroupBase();beginBattleStatistics(
 const battleStatsAwardXPBase=awardXP;
 awardXP=function(amount){if(statsRewardingKill&&activeBattleStat)activeBattleStat.xp+=Math.max(0,Math.floor(Number(amount)||0));return battleStatsAwardXPBase(amount);};
 const battleStatsAddGearBase=addGear;
-addGear=function(g){if(statsRewardingKill&&activeBattleStat)addBattleStatDrop(equipmentDisplayName(g),1);return battleStatsAddGearBase(g);};
+addGear=function(g){if(statsRewardingKill&&activeBattleStat)addBattleStatDrop(equipmentDisplayName(g)+(globalThis.EmberwildTokens?.isToken(g)?' · '+AFFIX_RANK[g.rar]:''),1);return battleStatsAddGearBase(g);};
 const battleStatsRewardGroupKillBase=rewardGroupKill;
 rewardGroupKill=function(e){if(e?.rewarded)return;const before=battleStatLootSnapshot();statsRewardingKill=true;try{return battleStatsRewardGroupKillBase(e);}finally{statsRewardingKill=false;collectBattleStatLootDiff(before,battleStatLootSnapshot());}};
 const battleStatsEnemyBasicBase=performEnemyBasic;

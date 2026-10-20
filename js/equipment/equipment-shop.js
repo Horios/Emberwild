@@ -34,7 +34,7 @@
     const found=offer(stageId+'/'+entryId);if(!found)return null;
     const {stage:s,entry:e}=found,ref=C.equipmentForms(ITEM_FORMS).find(r=>r.form.id===e.formId);if(!ref)return null;
     const g=gear(Math.max(1,Math.min(12,Math.ceil(s.level/5))),ref.slot,0,e.job);
-    Object.assign(g,{formJob:ref.group,form:ref.index,powerTier:s.powerTier,equipmentLevel:s.level,equipmentSource:'shop',baseRuleVersion:1,prefixId:'',suffixId:'',affix:[],plus:0,canEnhance:e.canEnhance,canReroll:e.canReroll});
+    Object.assign(g,{formJob:ref.group,form:ref.index,powerTier:s.powerTier,equipmentLevel:s.level,equipmentSource:'shop',acquiredAt:Date.now(),baseRuleVersion:1,prefixId:'',suffixId:'',affix:[],plus:0,canEnhance:e.canEnhance,canReroll:e.canReroll});
     delete g.baseSnapshot;
     // A fixed shop base is exactly 100%, regardless of the stage's displayed T.
     const baseline=gearStatBreakdown(g);g.baseSnapshot.base={...baseline.body};g.baseSnapshot.mult=1;

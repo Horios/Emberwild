@@ -422,7 +422,8 @@ function validateSave(input,{companion=false}={}) {
   // to early renderers; the original boot bytes are rehydrated after those skills exist.
   if(s.active.some(i=>i!==null&&i>=skillCount))s.active=s.active.map(i=>i!==null&&i>=skillCount?null:i);
   if(!Array.isArray(s.sockets)||s.sockets.length!==s.skills.length||s.sockets.length>MAX_SAVE_SKILLS||!s.sockets.every((v,i)=>v===null||int(v,0,2)&&s.skills[i]>0))fail('寶石插槽無效');
-  if(!Array.isArray(s.bag)||s.bag.length>RULES.bagCapacity)fail('背包無效');
+  if(!Array.isArray(s.bag)||s.bag.length>EmberwildGearInventory.SAVE_LIMIT)fail('背包無效');
+  for(const g of s.bag)if(g?.acquiredAt!==undefined&&(!Number.isSafeInteger(g.acquiredAt)||g.acquiredAt<0))fail('裝備取得時間無效');
   const ids=new Set();
   for(const g of s.bag) {
     if(EmberwildTokens.isToken(g)){EmberwildTokens.validateItem(g,RULES.enhanceMax);if(ids.has(g.id))fail('信物 ID 重複');ids.add(g.id);continue;}
@@ -431,6 +432,8 @@ function validateSave(input,{companion=false}={}) {
     ids.add(g.id);
     if(g.equipmentLevel!==undefined&&!int(g.equipmentLevel,1,RULES.maxLevel))fail('裝備等級無效');
     if(g.baseRuleVersion!==undefined&&![0,1].includes(g.baseRuleVersion))fail('裝備基底版本無效');
+    for(const key of ['canEnhance','canReroll'])if(g[key]!==undefined&&typeof g[key]!=='boolean')fail('裝備培養設定無效');
+    if(g.equipmentSource!==undefined&&g.equipmentSource!=='shop')fail('裝備取得來源無效');
     if(g.baseSnapshot!==undefined){const b=g.baseSnapshot;if(!object(b)||b.version!==1||!num(b.mult,.01,100)||['raw','body','base'].some(key=>!object(b[key])||['atk','hp','def'].some(k=>!int(b[key][k],0,1e9))))fail('裝備基底快照無效');}
     if(g.rerolled!==undefined&&typeof g.rerolled!=='boolean')fail('洗鍊紀錄無效');
     if(g.affixLock!==undefined&&(!int(g.affixLock,0,1)||g.affixLock>=g.affix.length))fail('潛能鎖定資料無效');
@@ -543,6 +546,7 @@ save=function(show=false){
  }
 };
 function validateParty(data){
+ data=EmberwildGearInventory.prepareSave(data);
  data=EmberwildTimedBoosts.prepareSave(data);
  EmberwildCompanionSkills.validateUnlockProgress(data?.companionUnlocks);
  EmberwildAchievements.validateState(data?.achievements);
@@ -554,7 +558,7 @@ function validateParty(data){
  if(!Array.isArray(data.members)||data.members.length<1||data.members.length>513||!Array.isArray(data.active)||data.active.length<1||data.active.length>3||new Set(data.active).size!==data.active.length||!['single','group'].includes(data.encounterMode)||!Number.isInteger(data.map)||!MAPS[data.map]||![0,1,2].includes(data.difficulty)||typeof data.cleared!=='boolean')throw Error('隊伍資料無效');
  const playTimeMs=Number.isSafeInteger(data.playTimeMs)&&data.playTimeMs>=0?data.playTimeMs:0;
  if(data.progressionXpRequirements!==undefined&&(!Array.isArray(data.progressionXpRequirements)||data.progressionXpRequirements.length!==data.members.length||data.progressionXpRequirements.some(n=>!Number.isSafeInteger(n)||n<=0)))throw Error('存檔 EXP 曲線快照無效');
- const result={numberReminders:EmberwildAchievements.validateNumberReminders(data.numberReminders),mailbox:EmberwildAchievements.validateMailbox(data.mailbox),achievements:EmberwildAchievements.validateState(data.achievements),companionUnlocks:EmberwildCompanionSkills.validateUnlockProgress(data.companionUnlocks),companionEquipmentVersion:EmberwildTokens.VERSION,pendingGearLoot:data.pendingGearLoot,progressionCurveVersion:data.progressionCurveVersion,progressionXpRequirements:data.progressionXpRequirements?[...data.progressionXpRequirements]:undefined,version:3,enlisted:data.enlisted,members:[],active:[...data.active],selected:data.selected,map:data.map,difficulty:data.difficulty,encounterMode:'group',cleared:data.cleared,playTimeMs,companionNames:data.companionNames,companionProfiles:data.companionProfiles,...EmberwildTimedBoosts.validateState(data)};
+ const result={numberReminders:EmberwildAchievements.validateNumberReminders(data.numberReminders),mailbox:EmberwildAchievements.validateMailbox(data.mailbox),achievements:EmberwildAchievements.validateState(data.achievements),companionUnlocks:EmberwildCompanionSkills.validateUnlockProgress(data.companionUnlocks),companionEquipmentVersion:EmberwildTokens.VERSION,progressionCurveVersion:data.progressionCurveVersion,progressionXpRequirements:data.progressionXpRequirements?[...data.progressionXpRequirements]:undefined,version:3,enlisted:data.enlisted,members:[],active:[...data.active],selected:data.selected,map:data.map,difficulty:data.difficulty,encounterMode:'group',cleared:data.cleared,playTimeMs,companionNames:data.companionNames,companionProfiles:data.companionProfiles,...EmberwildTimedBoosts.validateState(data)};
  for(const raw of data.members){
   // Reserves may be below the expedition level; validate their personal data at home.
   const companion=result.members.length>0,h=solo.validateSave({...raw,map:0},{companion});initHero(h);
@@ -1138,7 +1142,7 @@ const auditValidateParty=validateParty;
 validateParty=function(data){
  const result=auditValidateParty(data),ids=new Set(),worn=new Set();
  for(const h of result.members){for(const g of h.bag){if(ids.has(g.id))throw Error('不同角色背包具有重複裝備 ID，請使用未損壞的備份');ids.add(g.id);}for(const id of h.equipped.filter(Boolean)){if(worn.has(id))throw Error('同一裝備不能由多人穿戴');worn.add(id);}}
- if(ids.size>RULES.bagCapacity)throw Error('共用背包超過容量');
+ if(ids.size>EmberwildGearInventory.SAVE_LIMIT)throw Error('共用背包超過容量');
  for(const key of ['gold','ore','dust','potions'])if(!Number.isSafeInteger(result.members.reduce((n,h)=>n+h[key],0))||result.members.reduce((n,h)=>n+h[key],0)>1e12)throw Error('帳號資源超出可保存範圍');
  for(let i=0;i<3;i++)if(result.members.reduce((n,h)=>n+h.gems[i],0)>1e9)throw Error('帳號寶石超出可保存範圍');
  for(const [field,limit] of [['materials',1e9],['consumables',1e6]]){const totals=new Map();for(const h of result.members)for(const [k,n] of Object.entries(h[field]))totals.set(k,(totals.get(k)||0)+n);if([...totals.values()].some(n=>n>limit))throw Error('帳號物品超出可保存範圍');}

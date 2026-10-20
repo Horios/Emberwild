@@ -27,9 +27,9 @@ test('Idle notification refreshes do not mutate unchanged UI; saves coalesce and
   });
   assert.equal(await r.page.evaluate(()=>journalStyleMutations),0);
   assert.equal(await r.page.evaluate(()=>{let scheduled=0;const original=queueMicrotask;queueMicrotask=fn=>{scheduled++;return original(fn);};try{save();save();save();return scheduled;}finally{queueMicrotask=original;}}),1);
-  await r.page.evaluate(()=>{pendingGearLoot.push(gear(1,0,0,0));render();});
+  await r.page.evaluate(()=>{globalThis.reminderGear=state.bag[0];inlineAffixDrafts.set(affixDraftKey(reminderGear),structuredClone(reminderGear.affix));render();});
   assert.equal(await r.page.locator('#navReminder-equipment').textContent(),'1');
-  await r.page.evaluate(()=>{claimPendingGearLoot();render();});
+  await r.page.evaluate(()=>{resolveInlineAffix(reminderGear.id,false);render();});
   assert(await r.page.locator('#navReminder-equipment').isHidden());
   assert.deepEqual(r.errors,[]);
  }finally{await r.browser.close();}

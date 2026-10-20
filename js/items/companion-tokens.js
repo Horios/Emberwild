@@ -55,7 +55,7 @@
   const baseReset=resetEncounter;
   resetEncounter=function(){clear();return baseReset();};
   function makeToken(id,quality=null){const d=config.catalog.find(x=>x.id===id);if(!d)return null;const q=quality??d.quality;const g={id:uid(),type:M.TYPE,tokenId:d.id,name:d.name,slot:4,job:0,tier:1,rar:q,plus:0,affix:[],locked:false,snapshot:copy(d),qualityMultipliers:copy(config.qualityMultipliers)};M.validateItem(g,RULES.enhanceMax);return g;}
-  function addToken(g){ensureSharedGear();if(state.bag.length<RULES.bagCapacity)state.bag.push(g);else pendingGearLoot.push(g);note(`獲得 ${AFFIX_RANK[g.rar]} ${g.snapshot.name}${state.bag.includes(g)?'':'（待結算）'}`,'item');if(typeof addExpeditionLoot==='function')addExpeditionLoot(g.snapshot.name,1,g.rar);if(typeof addBattleStatDrop==='function')addBattleStatDrop(g.snapshot.name+' · '+AFFIX_RANK[g.rar],1);}
+  function addToken(g){ensureSharedGear();addGear(g);}
   globalThis.createCompanionToken=makeToken;
   globalThis.grantConfiguredToken=function(id,rng=Math.random){
     const def=config.catalog.find(t=>t.id===id);if(!def)return null;
@@ -75,7 +75,7 @@
   packParty=function(){const d=basePack();d.companionEquipmentVersion=M.VERSION;for(const h of d.members){h.tokenId??=null;if(h.companionId!==undefined)h.equipped=Array(5).fill(null);}return d;};
   const baseLoad=loadParty;
   loadParty=function(data){const out=baseLoad(M.prepareSave(data,RULES.bagCapacity));syncTokens();for(const h of party.members.filter(companion))withHero(h,clampVitals);return out;};
-  function syncTokens(){if(!party)return;for(const g of [...state.bag,...pendingGearLoot].filter(M.isToken)){const d=config.catalog.find(x=>x.id===g.tokenId);if(d){g.snapshot=copy(d);g.name=d.name;g.qualityMultipliers=copy(config.qualityMultipliers);}}for(const h of party.members.filter(companion)){const g=findGear(h.tokenId);if(g&&!M.canEquip(g,h))h.tokenId=null;}}
+  function syncTokens(){if(!party)return;for(const g of state.bag.filter(M.isToken)){const d=config.catalog.find(x=>x.id===g.tokenId);if(d){g.snapshot=copy(d);g.name=d.name;g.qualityMultipliers=copy(config.qualityMultipliers);}}for(const h of party.members.filter(companion)){const g=findGear(h.tokenId);if(g&&!M.canEquip(g,h))h.tokenId=null;}}
   const baseValidate=validateBalanceConfig;
   validateBalanceConfig=function(input){const next=M.normalize(input?.companionTokens),out=baseValidate(input);for(const d of [next.drop,...next.catalog.map(x=>x.drop)])if(d.maps.some(i=>!out.balanceSettings.maps.catalog[i])||d.monsters.some(id=>!out.balanceSettings.monsters.catalog.some(m=>m.id===id)))throw Error('信物掉落指定了不存在的地圖或怪物');out.companionTokens=next;return out;};
   const baseExport=exportableBalance;
@@ -161,7 +161,7 @@
   const baseCategory=setInventoryCategory;
   setInventoryCategory=function(value){if(value==='tokens'){inventoryCategory=value;render();return;}return baseCategory(value);};
   const baseInventory=equipmentView;
-  equipmentView=function(){return inventoryCategory==='tokens'?inventoryTabs()+`<div class="companion-management-page">${pendingGearLootView()+tokenInventory()}</div>`:baseInventory();};
+  equipmentView=function(){return inventoryCategory==='tokens'?inventoryTabs()+`<div class="companion-management-page">${tokenInventory()}</div>`:baseInventory();};
   const baseWorn=wornEquipmentView;
   wornEquipmentView=function(){pageHeroSelection.set('worn',memberKey(party.members[0]));return `<div class="companion-management-page worn-token-page">${baseWorn()+companionCards()}</div>`;};
   for(const name of ['rosterView','partnerRosterView']){const base=globalThis[name];globalThis[name]=function(){return `<div class="companion-management-page">${base()}</div>`;};}

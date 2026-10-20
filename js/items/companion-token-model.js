@@ -65,12 +65,7 @@
     if(raw?.version!==3)return raw;
     const data=copy(raw);if(!Array.isArray(data.members))return data;
     for(const h of data.members.slice(1))if(Array.isArray(h.equipped))h.equipped=h.equipped.map(()=>null);
-    if(data.companionEquipmentVersion===undefined){
-      // Worn gear already belongs to each old member's bag. Preserve its exact object
-      // and move only excess unowned entries to the existing persisted loot queue.
-      const keep=new Set(data.members[0]?.equipped?.filter(Boolean)||[]);let count=data.members.reduce((n,h)=>n+(h.bag?.length||0),0);
-      if(count>capacity){data.pendingGearLoot??=[];for(const h of [...data.members].reverse())if(Array.isArray(h.bag))h.bag=h.bag.filter(g=>{if(count>capacity&&!keep.has(g.id)&&g.id!==h.tokenId){data.pendingGearLoot.push(g);count--;return false;}return true;});}
-    }
+    // Preserve excess legacy gear in the shared bag; exploration pauses until space is available.
     data.companionEquipmentVersion=VERSION;return data;
   }
   return {TYPE,VERSION,stats,effectKeys,events,actions,defaults,copy,isToken,canEquip,normalize,validateEffects,validateAbility,validateItem,effectsFor,eligible,weighted,prepareSave};

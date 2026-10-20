@@ -48,7 +48,7 @@ dialog::backdrop{background:var(--backdrop)}
 .stat-grid span,.detail-stat,.companion-key-stats span,.companion-extra-stats span,.companion-skill-slot-group,
 .team-member>summary,.inventory-control-fold[open]>summary,.forge-gear-toolbar{background:var(--surface)}
 .forge-preview,.forge-action,.mastery-card,.mastery-dev-box,.skill-level-row,.mastery-icon-box,
-.roster-team-slot,.companion-roster-details>details,.inventory-control-fold,.pending-gear-chip,
+.roster-team-slot,.companion-roster-details>details,.inventory-control-fold,
 .pending-quality-group,.pending-color-group,.pending-affix-group,.forge-gear-pane,.forge-detail-pane,
 .heal-auto-row,.equipment-identity-line,.forge-power-reroll,.inline-affix-comparison,
 .empty,.skill-slot,.encounter-topline,.battle-arena{background:var(--inset);border-color:var(--line)}

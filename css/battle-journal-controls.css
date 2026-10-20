@@ -9,8 +9,3 @@
 .journal-filter{display:flex;align-items:center;gap:6px;font-size:11px;margin-top:5px;color:var(--muted)}
 .journal-filter select{min-width:0;flex:1;height:27px;padding:2px 5px;font-size:11px}
 .global-journal-head .journal-actions{flex-wrap:wrap}
-
-.journal-quick-dispose{border-top:1px solid var(--line);padding-top:5px;font-size:11px}
-.journal-dispose-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin-top:4px}
-.journal-dispose-actions button{height:27px;min-height:27px;padding:2px 4px;font-size:11px}
-.journal-quick-dispose p{font-size:10px;margin:4px 0 0;line-height:1.4;color:var(--muted)}

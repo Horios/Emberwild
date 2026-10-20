@@ -91,6 +91,7 @@
   function validateEquipmentStages(stages,{equipmentForms:forms,maps,classes}={}){
     if(!Array.isArray(stages)||stages.length>100)throw Error('裝備販售階段必須為最多 100 筆的陣列');
     const ids=new Set(),refs=forms?new Map(equipmentForms(forms).map(row=>[row.form.id,row])):null,mapIds=maps?new Set(maps.filter(m=>m.bossEnabled!==false).map(m=>m.id)):null;
+    if(refs&&refs.size!==equipmentForms(forms).length)throw Error('裝備定義 ID 不可重複');
     for(const stage of stages){
       if(!stage||typeof stage.id!=='string'||!/^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(stage.id)||ids.has(stage.id))throw Error('裝備販售階段 ID 無效或重複');ids.add(stage.id);
       if(typeof stage.name!=='string'||!stage.name.trim()||stage.name.length>80||!integer(stage.level,1,60)||!integer(stage.powerTier,1,10)||!integer(stage.order,0,10000)||typeof stage.initiallyUnlocked!=='boolean'||!Array.isArray(stage.unlockMapIds)||new Set(stage.unlockMapIds).size!==stage.unlockMapIds.length||stage.unlockMapIds.some(id=>typeof id!=='string'||mapIds&&!mapIds.has(id))||!stage.initiallyUnlocked&&!stage.unlockMapIds.length)throw Error('裝備販售階段的等級／T 級／通關條件無效：'+stage.id);

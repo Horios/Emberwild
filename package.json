@@ -22,7 +22,10 @@
     "test:save-compatibility": "node --test tests/team-model.test.cjs tests/team-runtime.test.cjs tests/team-save-compatibility.test.cjs tests/team-save-compatibility.browser.test.cjs",
     "test:life": "node --test tests/life-skills.test.cjs tests/life-products.test.cjs tests/life-products.browser.test.cjs",
     "test:balance": "node --test tests/balance-roundtrip.test.cjs tests/balance-roundtrip.browser.test.cjs tests/material-prices.test.cjs",
-    "test:quests": "node --test tests/daily-commissions.test.cjs tests/quest-design.test.cjs tests/quest-design.browser.test.cjs"
+    "test:quests": "node --test tests/daily-commissions.test.cjs tests/quest-design.test.cjs tests/quest-design.browser.test.cjs",
+    "test:acquisition": "node --test tests/equipment-acquisition.test.cjs tests/speed-boss-progression.test.cjs tests/daily-commissions.test.cjs",
+    "test:inventory": "node --test tests/gear-inventory.test.cjs tests/expedition-stop-dispose.test.cjs",
+    "test:acquisition-simulation": "node tests/equipment-acquisition-simulation.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

@@ -1,5 +1,5 @@
 
-/* Update 21: sale economy, grouped pending loot and configurable salvage output. */
+/* Sale economy and configurable salvage output. */
 (function installEconomyAndSalvageSystem(){
   const QUALITY_NAMES=(typeof AFFIX_RANK!=='undefined'?AFFIX_RANK:['普通','精良','稀有','傳說']);
   const DEFAULT_GEAR_SELL=[12,30,75,180];
@@ -116,7 +116,17 @@
     else if(type==='item'){const item=SHOP.find(x=>x.id===key);if(isHealPotion(item))setHealPotionCount(key,healPotionCount(key)+n);else if(item)state.consumables[key]=(state.consumables[key]||0)+n;}
     else if(type==='gem'){for(let i=0;i<n;i++){const gi=key==='random'?rand(3):Number(key);if(Number.isInteger(gi)&&gi>=0&&gi<3)state.gems[gi]=(state.gems[gi]||0)+1;}}
   }
-  function grantSalvageRewards(g,includeEnhance=true){const identity=globalThis.__EMBERWILD_GEAR_CATALOGUE_KEY?.(g),custom=identity&&globalThis.__EMBERWILD_ITEM_DETAILS?.(identity.kind,identity.key)?.salvageRewards;if(custom!==undefined){for(const x of custom)grantEconomyReward(x.type,x.key,x.quantity);return {ore:custom.filter(x=>x.type==='ore').reduce((n,x)=>n+x.quantity,0),dust:custom.filter(x=>x.type==='dust').reduce((n,x)=>n+x.quantity,0)};}const r=update12SalvageRewards(g,includeEnhance);state.ore+=r.ore;state.dust+=r.dust;for(const x of salvageExtraRules(g))grantEconomyReward(x.type,x.key,x.quantity);return r;}
+  function salvageRewardPlan(g,includeEnhance=true){
+    const identity=globalThis.__EMBERWILD_GEAR_CATALOGUE_KEY?.(g),custom=identity&&globalThis.__EMBERWILD_ITEM_DETAILS?.(identity.kind,identity.key)?.salvageRewards;
+    if(custom!==undefined)return custom.map(x=>({...x}));
+    const r=update12SalvageRewards(g,includeEnhance);
+    return [{type:'ore',key:'',quantity:r.ore},{type:'dust',key:'',quantity:r.dust},...salvageExtraRules(g).map(x=>({...x}))];
+  }
+  function grantSalvageRewards(g,includeEnhance=true){
+    const plan=salvageRewardPlan(g,includeEnhance);for(const x of plan)grantEconomyReward(x.type,x.key,x.quantity);
+    return {ore:plan.filter(x=>x.type==='ore').reduce((n,x)=>n+x.quantity,0),dust:plan.filter(x=>x.type==='dust').reduce((n,x)=>n+x.quantity,0)};
+  }
+  globalThis.salvageRewardPlan=salvageRewardPlan;
   globalThis.grantSalvageRewards=grantSalvageRewards;
 
   salvage=function(id){
@@ -132,13 +142,6 @@
   salvageAll=function(){
     const targets=state.bag.filter(g=>!EmberwildTokens.isToken(g)&&gearQualityRank(g)===0&&(g.plus||0)===0&&!g.affix.length&&g.boss===undefined&&!state.equipped.includes(g.id)&&!g.locked),ids=new Set(targets.map(g=>g.id));for(const g of targets)grantSalvageRewards(g,false);state.bag=state.bag.filter(g=>!ids.has(g.id));pruneGearSelections();save();render();toast(`已分解 ${ids.size} 件未養成普通裝備`);
   };
-  // Auto-salvage on a full inventory must use the same configurable output.
-  const economyAddGearBase=addGear;
-  addGear=function(g){
-    if(!(typeof collectingBattleGear!=='undefined'&&collectingBattleGear)&&state.bag.length>=RULES.bagCapacity){g.rar=0;grantSalvageRewards(g,false);note('背包已滿，掉落裝備自動分解。');return;}
-    return economyAddGearBase(g);
-  };
-
   function canDisposeBagGear(g){return !!g&&globalThis.__EMBERWILD_CAN_SELL_GEAR?.(g)!==false&&!g.locked&&!gearWearer(g.id)&&!inlineAffixDrafts.has(affixDraftKey(g));}
   function sellGear(id){
     const g=findGear(id);if(g&&globalThis.__EMBERWILD_CAN_SELL_GEAR?.(g)===false)return toast('此裝備不可販售');if(!canDisposeBagGear(g))return toast('已穿戴、鎖定或待確認洗鍊的裝備不能販售');
@@ -159,25 +162,6 @@
   };
   const economyBulkSalvageBase=bulkSalvageControls;
   bulkSalvageControls=function(){return economyBulkSalvageBase()+`<div class="actions bulk-sell-actions">${QUALITY_NAMES.map((name,q)=>`<button onclick="sellAllGearByQuality(${q})">販售所有${name}</button>`).join('')}</div>`;};
-
-  function pendingByQuality(q){return pendingGearLoot.filter(g=>gearQualityRank(g)===q);}
-  function claimPendingQuality(q){
-    const room=Math.max(0,RULES.bagCapacity-state.bag.length),group=pendingByQuality(q);if(!group.length)return toast('沒有'+QUALITY_NAMES[q]+'待領取裝備');if(!room)return toast('裝備背包已滿');
-    const take=group.slice(0,room),ids=new Set(take.map(g=>g.id));state.bag.push(...take);pendingGearLoot=pendingGearLoot.filter(g=>!ids.has(g.id));save();render();toast(`已領取 ${take.length} 件${QUALITY_NAMES[q]}裝備${take.length<group.length?'；背包已滿':''}`);
-  }
-  function disposePendingQuality(q,mode){
-    const group=pendingByQuality(q);if(!group.length)return toast('沒有'+QUALITY_NAMES[q]+'待領取裝備');
-    const hasBoss=group.some(g=>g.boss!==undefined),verb=mode==='sell'?'販售':'分解',total=mode==='sell'?group.reduce((n,g)=>n+equipmentSellPrice(g),0):0;
-    if((q>=2||hasBoss)&&!confirm(`確定${verb} ${group.length} 件${QUALITY_NAMES[q]}待領取裝備${mode==='sell'?`，獲得 ${total} 金幣`:''}？${hasBoss?'\n其中包含 BOSS 專屬裝備。':''}`))return;
-    const snap=economyResourceSnapshot(),old=pendingGearLoot;try{if(mode==='sell')state.gold+=total;else for(const g of group)grantSalvageRewards(g,false);const ids=new Set(group.map(g=>g.id));pendingGearLoot=pendingGearLoot.filter(g=>!ids.has(g.id));if(!save())throw Error('儲存失敗');render();toast(`已${verb} ${group.length} 件${QUALITY_NAMES[q]}裝備${mode==='sell'?`，獲得 ${total} 金幣`:''}`);}catch(e){pendingGearLoot=old;restoreEconomyResources(snap);toast('操作失敗：'+e.message);}
-  }
-  globalThis.claimPendingQuality=claimPendingQuality;globalThis.salvagePendingQuality=q=>disposePendingQuality(q,'salvage');globalThis.sellPendingQuality=q=>disposePendingQuality(q,'sell');
-
-  pendingGearLootView=function(){
-    if(!pendingGearLoot.length)return `<section class="panel pending-gear-panel"><div class="row"><b>待結算裝備 0 件</b><span class="small">戰鬥掉落先存放於此，不會改變背包中的裝備順序。</span></div><p class="small">目前沒有待結算裝備。</p></section>`;
-    const groups=QUALITY_NAMES.map((name,q)=>{const list=pendingByQuality(q),total=list.reduce((n,g)=>n+equipmentSellPrice(g),0);return `<section class="pending-quality-group effect-quality-${q}"><div class="row"><b>${name} ${list.length} 件</b><span class="small">${list.length?`販售 ${equipmentSellPrice(list[0])}／件`:'—'}</span></div><div class="small">${list.slice(0,3).map(g=>esc(equipmentDisplayName(g))).join('、')}${list.length>3?'…':''}</div><div class="actions"><button onclick="claimPendingQuality(${q})" ${list.length?'':'disabled'}>領取</button><button onclick="salvagePendingQuality(${q})" ${list.length?'':'disabled'}>分解</button><button onclick="sellPendingQuality(${q})" ${list.length?'':'disabled'}>販售${list.length?' '+total+'金':''}</button></div></section>`;}).join('');
-    return `<section class="panel pending-gear-panel"><div class="row"><div><b>待結算裝備 ${pendingGearLoot.length} 件</b><span class="small" style="margin-left:10px">可依品質直接領取、分解或販售。</span></div><button onclick="claimPendingGearLoot()" ${state.bag.length>=RULES.bagCapacity?'disabled':''}>全部結算並領取</button></div><div class="pending-quality-groups">${groups}</div></section>`;
-  };
 
   function sellMaterial(key,qty){if(globalThis.__EMBERWILD_CAN_SELL?.(key==='升級卷軸'?'item':'material',key==='升級卷軸'?'level_scroll':key)===false)return toast('此素材不可販售');const have=materialCount(key),n=Math.max(0,Math.min(have,Math.floor(Number(qty)||0)));if(n<1)return toast('請輸入要販售的數量');const unit=materialSellPrice(key),gold=state.gold;if(!Number.isSafeInteger(unit*n)||gold+unit*n>1e12)return toast('金幣已達上限，素材已保留');setMaterialCount(key,have-n);state.gold+=unit*n;if(!save()){setMaterialCount(key,have);state.gold=gold;return;}render();toast(`已販售 ${key} ×${n}，獲得 ${unit*n} 金幣`);}
   function sellMaterialFromControl(btn){const box=btn.closest('[data-material]'),input=box.querySelector('input');sellMaterial(box.dataset.material,input.value);}

@@ -3,7 +3,7 @@
    Normal gear: prefix + suffix + base + internal power tier.
    - Player base ratings describe only powerTier; enhancement and effect quality are separate.
    - Prefix/suffix each carry one explicit gameplay effect.
-   Boss gear: no prefix/suffix and no random reroll affixes; one boss-exclusive profile supplies exactly three fixed effects.
+   Boss gear: one exclusive profile supplies three fixed effects alongside rerollable affixes.
 */
 (()=>{
   const clone=v=>JSON.parse(JSON.stringify(v));
@@ -340,7 +340,7 @@
     }
     return g;
   }
-  function allKnownGear(){const out=[];for(const h of party?.members||[])for(const g of h?.bag||[])out.push(g);if(state&&!party?.members?.includes(state))for(const g of state.bag||[])out.push(g);if(Array.isArray(globalThis.pendingGearLoot))out.push(...globalThis.pendingGearLoot);else if(typeof pendingGearLoot!=='undefined'&&Array.isArray(pendingGearLoot))out.push(...pendingGearLoot);return [...new Map(out.filter(Boolean).map(g=>[g.id,g])).values()];}
+  function allKnownGear(){const out=[];for(const h of party?.members||[])for(const g of h?.bag||[])out.push(g);if(state&&!party?.members?.includes(state))for(const g of state.bag||[])out.push(g);return [...new Map(out.filter(Boolean).map(g=>[g.id,g])).values()];}
   function normalizeAllGearIdentity(){for(const g of allKnownGear()){ensureGearIdentityMeta(g);g.name=gearName(g);}}
 
   function baseFormForGear(g){return g&&g.boss===undefined&&Number.isInteger(g.form)?itemForm(g):null;}
@@ -662,6 +662,8 @@
       const key=AFFIX_EFFECT_KEYS[a.type]||(a.type===4?'skillEffectPct':a.type===5?'skillCooldownReduction':'');
       if(key)addEffect({key,value:a.value,...(a.element?{element:a.element}:{}),...(a.race?{race:a.race}:{}),...([4,5].includes(a.type)?{skill:a.skill??0}:{})},true);
     }
+    const numeric={...ledger.total};
+    for(const row of ledger.rows){const e=row.effect||(row.affix?.type===15?{key:'attackPct',value:row.affix.value}:null);if(e&&CHARACTER_EFFECT_KEYS.has(e.key))numeric[e.key]=(numeric[e.key]||0)+(Number(e.value)||0);}
     const values=statText(ledger.total)==='—'?[]:statText(ledger.total).split(' / ');
     for(const e of effects.values()){
       // The existing skill formula multiplies its fixed and random bonus groups.
@@ -672,10 +674,26 @@
         e.value=Number(e.value.toFixed(2));
         if(!e.value)continue;
       }
+      if(e.key!=='basicElement')numeric[[e.key,e.element||'',e.race||'',e.skill??''].join(':')]=e.value;
       values.push(e.key==='skillProcChance'?'核心技能 '+((e.skill??0)+1)+' 觸發率 '+(e.value>=0?'+':'')+e.value+'%':e.key==='skillCooldownReduction'?'核心技能 '+((e.skill??0)+1)+' 冷卻 −'+e.value+' 回合':effectText(e));
     }
     const affixes=ledger.rows.filter(row=>row.affix).map(row=>({label:row.label.replace(' 加成',''),rule:row.rule,rank:row.affix.rank??0}));
-    return {total:ledger.total,values,affixes};
+    return {total:ledger.total,values,affixes,numeric};
+  };
+  globalThis.equipmentNumericFields=function(){
+    const fields=[{key:'atk',label:'攻擊'},{key:'def',label:'防禦'},{key:'hp',label:'生命'},{key:'speed',label:'速度'}];
+    for(const [key,label] of Object.entries(EFFECT_LABELS)){
+      if(key==='basicElement'||FLAT_PANEL_KEYS[key]||PCT_PANEL_KEYS[key])continue;
+      if(CHARACTER_EFFECT_KEYS.has(key)){fields.push({key,label:label+'加成（%）'});continue;}
+      if(['elementDamagePct','elementResistPct'].includes(key)){for(const [target,name] of Object.entries(ELEMENTS))fields.push({key:[key,target,'',''].join(':'),label:name+' · '+label+'（%）'});}
+      else if(key==='raceDamagePct'){for(const [target,name] of Object.entries(RACES))fields.push({key:[key,'',target,''].join(':'),label:name+' · '+label+'（%）'});}
+      else if(['skillEffectPct','skillCooldownReduction'].includes(key)){
+        const count=Math.max(...CLASSES.map(c=>c.skills.length));
+        for(let i=0;i<count;i++)fields.push({key:[key,'','',i].join(':'),label:'核心技能 '+(i+1)+' · '+label});
+        if(key==='skillCooldownReduction')for(let i=0;i<count;i++)fields.push({key:['skillProcChance','','',i].join(':'),label:'核心技能 '+(i+1)+' · 觸發率（%）'});
+      }else fields.push({key:[key,'','',''].join(':'),label});
+    }
+    return fields;
   };
   globalThis.equipmentTotalSummaryText=function(g){return globalThis.equipmentAbilitySummary(g).values.join(' / ')||'—';};
   globalThis.equipmentTotalSummaryHTML=function(g){
