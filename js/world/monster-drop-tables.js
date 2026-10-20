@@ -63,7 +63,13 @@ makeBaseEnemy=function(map=state.map,h=state,rng=Math.random){const e=dropTableM
 
 function heroDropRateBonus(h){return equipment(h).flatMap(g=>g.affix||[]).filter(a=>a.type===17).reduce((n,a)=>n+(Number(a.value)||0),0)/100;}
 function partyDropRateBonus(){const hs=party?heroes():(state?[state]:[]);return hs.reduce((n,h)=>n+heroDropRateBonus(h),0);}
-function effectiveDropChance(rule,e,bonus=partyDropRateBonus()){const mode=Math.max(0,Math.min(2,Number(e?.difficulty)||0)),base=Math.max(0,Math.min(1,Number(rule?.chanceByDifficulty?.[mode])||0));return Math.min(1,base*(1+Math.max(0,Number(bonus)||0)));}
+function equipmentLevelGapDropFactor(rule,e){
+  if(!['gear','gearLegendary','equipment'].includes(rule?.type)||!['normal','elite'].includes(e?.kind)||e.bossChallenge)return 1;
+  const cfg=GAMEPLAY_SETTINGS.equipment?.dropLevelGap;if(!cfg?.enabled)return 1;
+  const mi=e.region??party?.map??0,max=MAPS[mi]?.max??e.lv??1,level=party?.members?.[0]?.lv??state?.lv??max,gap=Math.max(0,level-max-cfg.freeLevels);
+  return Math.max(cfg.minimumMultiplier,1/(1+gap*cfg.penaltyPerLevel));
+}
+function effectiveDropChance(rule,e,bonus=partyDropRateBonus()){const mode=Math.max(0,Math.min(2,Number(e?.difficulty)||0)),base=Math.max(0,Math.min(1,Number(rule?.chanceByDifficulty?.[mode])||0));return Math.min(1,base*equipmentLevelGapDropFactor(rule,e)*(1+Math.max(0,Number(bonus)||0)));}
 function configuredDropRules(e){const id=e.monsterId||resolveMonsterCatalogId(e);return (GAMEPLAY_SETTINGS.drops?.entries||[]).filter(r=>r.enabled!==false&&r.sources.includes(id)&&r.kinds.includes(e.kind));}
 function configuredDropDescription(row,kind,mapIndex){
   const e={monsterId:row.id,kind,region:mapIndex,difficulty:party?.difficulty??state?.difficulty??0},bonus=partyDropRateBonus();
@@ -97,7 +103,7 @@ function grantConfiguredDrop(rule,e,rng=Math.random){
   if(rule.type==='potion'){const item=typeof healPotionItems==='function'?(healPotionItems().find(x=>x.id==='heal_standard')||healPotionItems()[0]):null;if(item&&typeof healPotionCount==='function'&&typeof setHealPotionCount==='function')setHealPotionCount(item.id,healPotionCount(item.id)+qty);else state.potions+=qty;note('獲得 '+(item?.name||'治療藥水')+' ×'+qty,'item');return {name:item?.name||'治療藥水',count:qty};}
   if(rule.type==='item'){const item=SHOP.find(x=>x.id===rule.key);if(!item)return null;if(typeof isHealPotion==='function'&&isHealPotion(item)&&typeof healPotionCount==='function'&&typeof setHealPotionCount==='function')setHealPotionCount(item.id,healPotionCount(item.id)+qty);else{state.consumables??={};state.consumables[item.id]=(state.consumables[item.id]||0)+qty;}note('獲得 '+item.name+' ×'+qty,'item');return {name:item.name,count:qty};}
   if(rule.type==='gem'){for(let q=0;q<qty;q++){const i=rule.key==='random'?Math.floor(rng()*GEMS.length):Math.max(0,Math.min(GEMS.length-1,Number(rule.key)||0));state.gems[i]++;note('獲得 '+GEMS[i].name,'item');}return {name:rule.key==='random'?'隨機技能寶石':GEMS[Number(rule.key)||0].name,count:qty};}
-  if(rule.type==='gear'||rule.type==='gearLegendary'){for(let q=0;q<qty;q++){const rar=rule.type==='gearLegendary'?0:(rng()<r.equipmentQuality.rareChance?2:rng()<r.equipmentQuality.fineConditionalChance?1:0),g=gear(tier,Math.floor(rng()*4),rar);modeAffixes(g,mode);if(rule.type==='gearLegendary')ensureLegendaryDropAffix(g);addGear(g);}return {name:rule.name,count:qty};}
+  if(rule.type==='gear'||rule.type==='gearLegendary'){for(let q=0;q<qty;q++){const rar=rule.type==='gearLegendary'?0:(rng()<r.equipmentQuality.rareChance?2:rng()<r.equipmentQuality.fineConditionalChance?1:0),g=gear(tier,Math.floor(rng()*4),rar);modeAffixes(g,mode);if(rule.type==='gearLegendary')ensureLegendaryDropAffix(g);gearStatBreakdown(g);addGear(g);}return {name:rule.name,count:qty};}
   if(rule.type==='bossGear'){for(let q=0;q<qty;q++)addGear(bossGear(mi,state.job,mode));return {name:rule.name,count:qty};}
   return null;
 }

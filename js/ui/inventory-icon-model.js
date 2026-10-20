@@ -139,6 +139,9 @@
       else if(r.type==='gem'&&r.key==='random')for(let g=0;g<3;g++)add('gem',g,'shop',label,'shopSettings',path,rule,active);
       else add(['ore','dust'].includes(r.type)?'material':r.type,r.type==='ore'?'鍛鐵':r.type==='dust'?'粉塵':r.key,'shop',label,'shopSettings',path,rule,active);
     }
+    for(const [i,stage]of (doc.shopSettings?.equipmentStages||[]).entries())for(const [j,e]of stage.entries.entries()){
+      for(const [group,slots]of (doc.equipmentForms||[]).entries())for(const [slot,forms]of slots.entries())for(const [index,form]of forms.entries())if(form.id===e.formId)add('equipment','form:'+group+':'+slot+':'+index,'shop',stage.name,'shopSettings','shopSettings.equipmentStages.'+i+'.entries.'+j,{price:e.unitPrice,quantity:e.quantity,level:stage.level,refId:e.id});
+    }
     for(const [i,r]of (doc.balanceSettings?.drops?.entries||[]).entries()){
       const path='balanceSettings.drops.entries.'+i,targets=monsters.filter(m=>(!r.sources?.length||r.sources.includes(m.id))&&(!r.kinds?.length||r.kinds.includes(m.kind)||m.kind==='normal'&&m.eliteEnabled!==false&&r.kinds.includes('elite'))),rule={chanceByDifficulty:r.chanceByDifficulty,quantityMin:r.quantityMin,quantityMax:r.quantityMax,refId:r.id};
       const active=r.enabled!==false&&targets.some(m=>m.enabled!==false||m.kind!=='boss'&&(m.bossStageCount||0)>0&&maps[m.mapIndex]?.bossEnabled!==false);

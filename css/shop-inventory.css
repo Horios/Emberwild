@@ -82,3 +82,11 @@
   .shop-product-row{grid-template-columns:minmax(0,1fr)}
   .shop-product-row .shop-product-meta,.shop-product-row .shop-product-copy,.shop-product-row>button,.shop-product-row>.actions{grid-column:1;grid-row:auto;text-align:left}
 }
+
+.equipment-shop-stage{margin:12px 0;border:1px solid var(--line);border-radius:8px;padding:10px;min-width:0}
+.equipment-stage-toggle{display:block;width:100%;text-align:left;font-weight:700;margin-bottom:8px;white-space:normal}
+.equipment-shop .shop-product-row{min-width:0;max-width:100%}
+.equipment-shop .shop-product-row .item-slot{width:100%;max-width:100%}
+.equipment-shop .item-slot-art{flex:0 0 32px;width:32px;height:32px}
+.shop-catalog-scroll:has(.equipment-shop){overflow:visible;max-height:none}
+#equipment-shop-quantity{width:80px}

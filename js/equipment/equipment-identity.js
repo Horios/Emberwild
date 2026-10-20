@@ -86,11 +86,13 @@
     suffixes:DEFAULT_SUFFIXES,
     bossAffixes:DEFAULT_BOSS_AFFIXES,
     strength:{
-      multipliers:[1,1.06,1.12,1.19,1.25,1.31,1.37,1.43,1.49,1.55],
+      multipliers:[.8,.85,.9,.95,1,1.04,1.08,1.12,1.16,1.2],
+      bossMultipliers:[1.15,1.167,1.183,1.2,1.217,1.233,1.25,1.267,1.283,1.3],
+      acquisitionVersion:1,legacyMultipliers:[1,1.08,1.16,1.24,1.32,1.4,1.48,1.56,1.64,1.72],legacyBossLevelBonus:7,
       weightsByDifficulty:[
-        [70,20,8,2,0,0,0,0,0,0],
-        [0,0,5,20,55,15,5,0,0,0],
-        [0,0,0,0,0,2,5,10,23,60]
+        [8,12,16,20,20,12,6,3,2,1],
+        [2,4,8,12,22,20,14,9,6,3],
+        [1,2,3,6,12,18,20,18,12,8]
       ]
     },
     rerollItem:{id:POWER_ITEM_ID,name:'強度重鑄石',description:'',cost:0,sellPrice:80,shopEnabled:false,shopChance:.06,shopPrice:650,dropRuleInitialized:false}
@@ -174,6 +176,10 @@
     out.bossAffixes=normalizeBossAffixes(src.bossAffixes,src.seriesPrefixes);
     const st=src.strength&&typeof src.strength==='object'?src.strength:{};
     out.strength.multipliers=Array.from({length:10},(_,i)=>finite(st.multipliers?.[i],DEFAULT_POWER.strength.multipliers[i],.01,100));
+    out.strength.acquisitionVersion=st.acquisitionVersion===1?1:0;
+    out.strength.bossMultipliers=Array.from({length:10},(_,i)=>finite(st.bossMultipliers?.[i],DEFAULT_POWER.strength.bossMultipliers[i],.01,100));
+    out.strength.legacyMultipliers=Array.from({length:10},(_,i)=>finite(st.legacyMultipliers?.[i],st.multipliers?.[i]??DEFAULT_POWER.strength.legacyMultipliers[i],.01,100));
+    out.strength.legacyBossLevelBonus=finite(st.legacyBossLevelBonus,7,0,100);
     out.strength.weightsByDifficulty=Array.from({length:3},(_,d)=>Array.from({length:10},(_,i)=>finite(st.weightsByDifficulty?.[d]?.[i],DEFAULT_POWER.strength.weightsByDifficulty[d][i],0,1e9)));
     const r=src.rerollItem&&typeof src.rerollItem==='object'?src.rerollItem:{};
     out.rerollItem={id:POWER_ITEM_ID,name:typeof r.name==='string'&&r.name.trim()?r.name.trim():DEFAULT_POWER.rerollItem.name,description:typeof r.description==='string'?r.description:DEFAULT_POWER.rerollItem.description,cost:0,sellPrice:finite(r.sellPrice,80,0,1e9),shopEnabled:false,shopChance:finite(r.shopChance,.06,0,1),shopPrice:Math.round(finite(r.shopPrice,650,1,1e9)),dropRuleInitialized:!!r.dropRuleInitialized,textStyleId:typeof r.textStyleId==='string'?r.textStyleId:''};
@@ -224,6 +230,9 @@
   ensurePowerDropRule();
 
   function validatePowerInput(raw){
+    const st=raw?.strength;
+    for(const key of ['multipliers','bossMultipliers','legacyMultipliers'])if(st?.[key]!==undefined&&(!Array.isArray(st[key])||st[key].length!==10||st[key].some(v=>!Number.isFinite(v)||v<=0||v>100)))throw Error('T 級倍率無效：'+key);
+    if(st?.weightsByDifficulty!==undefined&&(!Array.isArray(st.weightsByDifficulty)||st.weightsByDifficulty.length!==3||st.weightsByDifficulty.some(row=>!Array.isArray(row)||row.length!==10||row.some(v=>!Number.isFinite(v)||v<0)||!row.some(v=>v>0))))throw Error('T 級權重無效');
     const p=normalizePower(raw);
     const checkRows=(rows,label)=>{
       const ids=new Set();
@@ -258,10 +267,10 @@
         naming:'一般裝備名稱 = 前綴 + 後綴 + 基底；前綴或後綴可為空；BOSS 裝備只使用 BOSS 專屬名稱。',
         stats:'一般裝備 ATK/HP/DEF 只由基底、T1~T10 與既有 +N 強化計算；前後綴不提供 raw ATK/HP/DEF。',
         affixChance:'prefixes / suffixes 的 chanceByTier[0..9] 分別代表 T1～T10 的實際百分比機率（0~100）；同一 T 級與部位合計不足 100% 時，剩餘機率為無該類詞綴。舊版 weight 只作匯入相容。',
-        boss:'BOSS 專屬裝備沒有前後綴與隨機洗鍊詞條；bossAffixes 每筆固定 3 條效果。',
+        boss:'BOSS 裝備不抽前後綴，保留三條專屬效果及兩個可洗鍊隨機詞綴。',
         effects:[...BOSS_EFFECT_KEYS]
       };
-      out.notes=[...(out.notes||[]),'equipmentPowerSystem schemaVersion=4：prefixes / suffixes 各一條效果；chanceByTier[0..9] 分別控制 T1～T10 實際百分比機率，舊版 weight 會自動轉入有效 T 級。','同一 T 級與部位的前綴／後綴機率池各自以 100% 為上限；不足 100% 的剩餘機率會生成無前綴／無後綴裝備。','一般裝備 raw ATK/HP/DEF 不受前後綴影響；由 equipmentForms 基底、T 階級與既有強化計算。','BOSS 專屬裝備不抽前後綴，也不使用隨機洗鍊詞條。'];
+      out.notes=[...(out.notes||[]),'equipmentPowerSystem schemaVersion=4：prefixes / suffixes 各一條效果；chanceByTier[0..9] 分別控制 T1～T10 實際百分比機率，舊版 weight 會自動轉入有效 T 級。','同一 T 級與部位的前綴／後綴機率池各自以 100% 為上限；不足 100% 的剩餘機率會生成無前綴／無後綴裝備。','一般裝備 raw ATK/HP/DEF 不受前後綴影響；由 equipmentForms 基底、T 階級與既有強化計算。','BOSS 專屬裝備不抽前後綴；三條專屬效果保留，隨機詞綴可洗鍊。'];
       return out;
     };
   }
@@ -276,6 +285,7 @@
       copy.equipmentPowerSystem=clone(nextPower);
       // Validate the complete candidate before changing the live equipment rules.
       validateDescriptionItems(normalizeDescriptionBalance(copy).items);validateBalanceConfig(copy);
+      for(const g of allKnownGear())if(!EmberwildTokens.isToken(g)&&!g.starterPack)gearStatBreakdown(g);
       EQUIPMENT_POWER=nextPower;globalThis.__EMBERWILD_EQUIPMENT_POWER=EQUIPMENT_POWER;
       syncRerollItem();ensurePowerDropRule(copy.balanceSettings);copy.equipmentPowerSystem=clone(EQUIPMENT_POWER);
       const out=identityApplyBase(copy,{persist:false});
@@ -300,7 +310,7 @@
   function bossProfileForGear(g){if(!g||g.boss===undefined)return null;const id=bossProfileId(g);return EQUIPMENT_POWER.bossAffixes.find(x=>x.id===id)||DEFAULT_BOSS_AFFIXES.find(x=>x.id===id)||null;}
   function strengthAnchor(mode){return mode===2?10:mode===1?5:1;}
   function rollStrengthTier(mode){mode=Math.max(0,Math.min(2,Number(mode)||0));const w=EQUIPMENT_POWER.strength.weightsByDifficulty[mode]||[],rows=Array.from({length:10},(_,i)=>({tier:i+1,weight:Number(w[i])||0})),hit=rollWeighted(rows);return hit?.tier||strengthAnchor(mode);}
-  function strengthMultiplier(g){const t=Math.max(1,Math.min(10,Number(g?.powerTier)||strengthAnchor(g?.difficulty)));return Number(EQUIPMENT_POWER.strength.multipliers[t-1])||1;}
+  function strengthMultiplier(g){const t=Math.max(1,Math.min(10,Number(g?.powerTier)||strengthAnchor(g?.difficulty)));if(g?.baseSnapshot)return g.baseSnapshot.mult;const rules=EQUIPMENT_POWER.strength;return Number((g?.baseRuleVersion===1?(g.boss===undefined?rules.multipliers:rules.bossMultipliers):rules.legacyMultipliers)[t-1])||1;}
   const BASE_RATINGS=['D','D','C','C','B','B','A','S','SS','SSS'];
   globalThis.equipmentBaseRating=function(g){
     if(!g||g.slot===undefined||g.starterPack)return '—';
@@ -325,7 +335,7 @@
       if(freshNames||!hasPrefix||(g.prefixId!==''&&(!prefixById(g.prefixId)||!prefixById(g.prefixId).slots.includes(slot))))g.prefixId=(freshNames?rollNamedAffix(EQUIPMENT_POWER.prefixes,tier,slot):deterministicRow(EQUIPMENT_POWER.prefixes,tier,slot,0))?.id||'';
       if(freshNames||!hasSuffix||(g.suffixId!==''&&(!suffixById(g.suffixId)||!suffixById(g.suffixId).slots.includes(slot))))g.suffixId=(freshNames?rollNamedAffix(EQUIPMENT_POWER.suffixes,tier,slot):deterministicRow(EQUIPMENT_POWER.suffixes,tier,slot,3))?.id||'';
     }else{
-      g.prefixId='';g.suffixId='';g.affix=[];delete g.affixLock;
+      g.prefixId='';g.suffixId='';if(!Array.isArray(g.affix))g.affix=[];
       g.bossQualityRank=Math.max(2,Math.min(3,Number(GS('equipment.boss.affixRankByDifficulty',[2,2,3])[g.difficulty||0])||2));
     }
     return g;
@@ -342,7 +352,13 @@
   function identityEffectEntriesForGear(g){
     if(EmberwildTokens.isToken(g))return EmberwildTokens.effectsFor(g,GS('equipment.enhance.statPerLevel',.05));
     ensureGearIdentityMeta(g);
-    if(g.boss!==undefined)return (bossProfileForGear(g)?.effects||[]).map(e=>({...e,source:'boss'}));
+    if(g.boss!==undefined)return (bossProfileForGear(g)?.effects||[]).map(e=>{
+      const key={gearAtkPct:'atk',gearHpPct:'hp',gearDefPct:'def'}[e.key];
+      // New BOSS bases reference the matching standard shop form. Their exclusive
+      // percent effects are affixes applied once, outside that immutable base.
+      if(g.baseRuleVersion===1&&key)return {key:{atk:'flatAttack',hp:'flatHp',def:'flatDefense'}[key],value:Math.round((g.baseSnapshot?.base[key]||0)*(1+(g.plus||0)*GS('equipment.enhance.statPerLevel',.05))*e.value/100),ruleEffect:e,source:'boss'};
+      return {...e,source:'boss'};
+    });
     const out=baseEffectEntries(g),p=prefixById(g.prefixId),s=suffixById(g.suffixId);
     if(p?.effect)out.push({...p.effect,source:'prefix'});
     if(s?.effect)out.push({...s.effect,source:'suffix'});
@@ -352,7 +368,7 @@
   function effectNumberForHero(h,key){return identityEffectsForHero(h).filter(e=>e.key===key).reduce((n,e)=>n+(Number(e.value)||0),0);}
 
   function effectText(effect){
-    if(!effect)return '無效果';
+    if(!effect)return '無效果';if(effect.ruleEffect)return effectText(effect.ruleEffect);
     const key=effect.key,value=effect.value,label=EFFECT_LABELS[key]||key;
     if(key==='basicElement')return '此武器攻擊屬性：'+(ELEMENTS[value]||value);
     if(key==='basicAdvanceNextRound')return '普攻後，下回合行動往前 '+Math.round(Number(value)||0)+' 格';
@@ -383,11 +399,11 @@
   equipmentNameHTML=function(g){return identityNameHTMLBase(g)+globalThis.equipmentBaseRatingHTML(g);};
 
   const identityGearFactoryBase=gear;
-  gear=function(tier=1,slot=rand(4),rar=0,job=null){const g=identityGearFactoryBase(tier,slot,rar,job);ensureGearIdentityMeta(g,{freshNames:true,freshPower:true,mode:0});g.name=gearName(g);return g;};
+  gear=function(tier=1,slot=rand(4),rar=0,job=null){const g=identityGearFactoryBase(tier,slot,rar,job);ensureGearIdentityMeta(g,{freshNames:true,freshPower:true,mode:0});g.baseRuleVersion=EQUIPMENT_POWER.strength.acquisitionVersion;delete g.baseSnapshot;g.name=gearName(g);return g;};
   const identityModeAffixesBase=modeAffixes;
-  modeAffixes=function(g,mode){const out=identityModeAffixesBase(g,mode);if(g){g.difficulty=Math.max(0,Math.min(2,Number(mode)||0));ensureGearIdentityMeta(g,{freshNames:true,freshPower:true,mode:g.difficulty});g.name=gearName(g);}return out;};
+  modeAffixes=function(g,mode){const out=identityModeAffixesBase(g,mode);if(g){delete g.baseSnapshot;g.difficulty=Math.max(0,Math.min(2,Number(mode)||0));ensureGearIdentityMeta(g,{freshNames:true,freshPower:true,mode:g.difficulty});g.name=gearName(g);}return out;};
   const identityBossGearBase=bossGear;
-  bossGear=function(mi,job=state.job,mode=state.difficulty||0){const g=identityBossGearBase(mi,job,mode);g.affix=[];delete g.affixLock;ensureGearIdentityMeta(g,{freshPower:true,mode});g.name=gearName(g);return g;};
+  bossGear=function(mi,job=state.job,mode=state.difficulty||0){const g=identityBossGearBase(mi,job,mode);delete g.baseSnapshot;ensureGearIdentityMeta(g,{freshPower:true,mode});g.affix=rollAffixes(g);delete g.affixLock;g.name=gearName(g);gearStatBreakdown(g);return g;};
 
   const identityQualityBase=gearQualityRank;
   gearQualityRank=function(g){if(g?.boss!==undefined)return Math.max(2,Math.min(3,Number(g.bossQualityRank??GS('equipment.boss.affixRankByDifficulty',[2,2,3])[g.difficulty||0])||2));return identityQualityBase(g);};
@@ -395,7 +411,7 @@
   gearQualityRank=function(g){return EmberwildTokens.isToken(g)?g.rar:tokenQualityBase(g);};
 
   bossPower=function(){return 1;};
-  function rawTierStats(g){const tier=Math.max(1,Number(g?.tier)||1)+(g?.boss!==undefined?GS('equipment.boss.baseLevelBonus',7)/GS('equipment.requiredLevel.perTier',5):0),atkPer=g.slot===2?GS('equipment.baseStats.offhandAttackPerTier',GS('equipment.baseStats.accessoryAttackPerTier',4)):GS('equipment.baseStats.accessoryAttackPerTier',4),hpPer=g.slot===2?GS('equipment.baseStats.offhandHpPerTier',GS('equipment.baseStats.accessoryHpPerTier',20)):GS('equipment.baseStats.accessoryHpPerTier',20);return {atk:g.slot===0?(Number.isFinite(g.starterPack?.baseAttack)?g.starterPack.baseAttack:tier*GS('equipment.baseStats.weaponAttackPerTier',11)):[2,3].includes(g.slot)?tier*atkPer:0,hp:g.slot===1?tier*GS('equipment.baseStats.armorHpPerTier',45):[2,3].includes(g.slot)?tier*hpPer:0,def:g.slot===1?tier*GS('equipment.baseStats.armorDefensePerTier',4):0};}
+  function rawTierStats(g){if(g?.baseSnapshot&&!g.starterPack)return {...g.baseSnapshot.raw};const tier=(Number.isInteger(g?.equipmentLevel)?1+(g.equipmentLevel-GS('equipment.requiredLevel.base',1))/GS('equipment.requiredLevel.perTier',5):Math.max(1,Number(g?.tier)||1))+(g?.boss!==undefined&&g.baseRuleVersion!==1?EQUIPMENT_POWER.strength.legacyBossLevelBonus/GS('equipment.requiredLevel.perTier',5):0),atkPer=g.slot===2?GS('equipment.baseStats.offhandAttackPerTier',GS('equipment.baseStats.accessoryAttackPerTier',4)):GS('equipment.baseStats.accessoryAttackPerTier',4),hpPer=g.slot===2?GS('equipment.baseStats.offhandHpPerTier',GS('equipment.baseStats.accessoryHpPerTier',20)):GS('equipment.baseStats.accessoryHpPerTier',20);const raw={atk:g.slot===0?(Number.isFinite(g.starterPack?.baseAttack)?g.starterPack.baseAttack:tier*GS('equipment.baseStats.weaponAttackPerTier',11)):[2,3].includes(g.slot)?tier*atkPer:0,hp:g.slot===1?tier*GS('equipment.baseStats.armorHpPerTier',45):[2,3].includes(g.slot)?tier*hpPer:0,def:g.slot===1?tier*GS('equipment.baseStats.armorDefensePerTier',4):0};if(g.boss!==undefined&&g.baseRuleVersion===1){const form=ITEM_FORMS[g.job]?.[g.slot]?.[0];for(const [key,fx] of [['atk','gearAtkPct'],['hp','gearHpPct'],['def','gearDefPct']])raw[key]=Math.round(raw[key]*(1+(form?.fixedEffects||[]).filter(e=>e.key===fx).reduce((n,e)=>n+Number(e.value||0),0)/100));}return raw;}
   function baseStatPct(g,key){
     const effects=identityEffectEntriesForGear(g);
     return effects.filter(e=>e.key===key).reduce((n,e)=>n+(Number(e.value)||0),0);
@@ -403,8 +419,17 @@
   function gearStatBreakdown(g){
     if(EmberwildTokens.isToken(g)){const zero={atk:0,hp:0,def:0};return {raw:{...zero},body:{...zero},grade:{...zero},enhance:{...zero},total:{...zero},mult:g.qualityMultipliers[g.rar],powerTier:1,prefix:null,suffix:null,bossProfile:null};}
     ensureGearIdentityMeta(g);
+    const mult=g.starterPack?Number(EQUIPMENT_POWER.strength.legacyMultipliers[(g.powerTier||1)-1])||1:strengthMultiplier(g);
     const raw=rawTierStats(g);
-    const mult=strengthMultiplier(g),integers=EmberwildProgression.gearStats(raw,{atk:baseStatPct(g,'gearAtkPct'),hp:baseStatPct(g,'gearHpPct'),def:baseStatPct(g,'gearDefPct')},mult,g.plus||0,GS('equipment.enhance.statPerLevel',.05));
+    // Persist the generated base, before enhancement and random affixes. Changing
+    // published T rules or rerolling affixes must never rewrite an owned base.
+    let integers;
+    if(g.starterPack){integers=EmberwildProgression.gearStats(raw,{atk:baseStatPct(g,'gearAtkPct'),hp:baseStatPct(g,'gearHpPct'),def:baseStatPct(g,'gearDefPct')},mult,g.plus||0,GS('equipment.enhance.statPerLevel',.05));}
+    else{
+      if(!g.baseSnapshot){const b=EmberwildProgression.gearStats(raw,{atk:baseStatPct(g,'gearAtkPct'),hp:baseStatPct(g,'gearHpPct'),def:baseStatPct(g,'gearDefPct')},mult,0,0);g.baseSnapshot={version:1,raw:b.raw,body:b.body,base:b.total,mult};}
+      const b=g.baseSnapshot,total=Object.fromEntries(['hp','atk','def'].map(k=>[k,Math.round(b.base[k]*(1+(g.plus||0)*GS('equipment.enhance.statPerLevel',.05)))]));
+      integers={raw:{...b.raw},body:{...b.body},grade:Object.fromEntries(['hp','atk','def'].map(k=>[k,b.base[k]-b.body[k]])),enhance:Object.fromEntries(['hp','atk','def'].map(k=>[k,total[k]-b.base[k]])),total};
+    }
     return {...integers,mult,powerTier:g.powerTier||1,prefix:prefixById(g.prefixId),suffix:suffixById(g.suffixId),bossProfile:bossProfileForGear(g)};
   }
   globalThis.gearStatBreakdown=gearStatBreakdown;
@@ -540,7 +565,7 @@
       return row;
     };
     Object.assign(add('基底數值').stats,b.raw);
-    const effects=g.boss===undefined?baseEffectEntries(g):(b.bossProfile?.effects||[]);
+    const effects=g.boss===undefined?baseEffectEntries(g):identityEffectEntriesForGear(g);
     const baseCount=growth?growth.baseCount:effects.length;
     if(!baseCount)add('基底效果');
     effects.slice(0,baseCount).forEach((e,i)=>add((g.boss===undefined?'基底效果 ':'BOSS 專屬加成 ')+(i+1),effectText(e),e));
@@ -690,31 +715,27 @@
   gearDesc=function(g){return globalThis.equipmentTotalSummaryText(g);};
 
   const identityRerollBase=reroll;
-  reroll=function(id){const g=findGear(id);if(g?.boss!==undefined)return toast('BOSS 專屬裝備固定三條專屬詞綴，不能洗鍊隨機詞條');return identityRerollBase(id);};
+  reroll=function(id){const g=findGear(id);if(g?.equipmentSource==='shop'&&g.canReroll===false)return toast('此裝備不可洗鍊');return identityRerollBase(id);};
   const identityAutoRerollBase=autoReroll;
-  autoReroll=function(id,targetRank){const g=findGear(id);if(g?.boss!==undefined)return toast('BOSS 專屬裝備不能自動洗鍊');return identityAutoRerollBase(id,targetRank);};
+  autoReroll=function(id,targetRank){const g=findGear(id);if(g?.canReroll===false)return toast('此裝備不可洗鍊');return identityAutoRerollBase(id,targetRank);};
 
   const identityForgeViewBase=forgeView;
   forgeView=function(){
     let html=identityForgeViewBase();
     const g=typeof findGear==='function'?findGear(forgeSelection):null;
-    if(!g||g.starterPack||globalThis.EmberwildTokens?.isToken(g))return html;
+    if(!g||g.starterPack||g.equipmentSource==='shop'||globalThis.EmberwildTokens?.isToken(g))return html;
     ensureGearIdentityMeta(g);
-    if(g.boss!==undefined){
-      const profile=bossProfileForGear(g),body='<section class="forge-action boss-exclusive-note"><h3>BOSS 專屬詞綴</h3><p class="small">固定三條，沒有前綴／後綴，也不能洗鍊隨機詞條。</p>'+(profile?.effects||[]).map((e,i)=>'<p><b>'+(i+1)+'.</b> '+esc(effectText(e))+'</p>').join('')+'</section>';
-      html=html.replace(/<section class="forge-action"><h3>洗鍊隨機詞條<\/h3>[\s\S]*?<\/section>/,body);
-    }
     const n=state?.consumables?.[POWER_ITEM_ID]||0,b=gearStatBreakdown(g);
     const card='<section class="forge-power-reroll"><h3>基底重鑄</h3><p><b>基底評級：'+globalThis.equipmentBaseRating(g)+'</b>（'+esc(sourceDifficulty(g))+'來源，基底倍率 ×'+Number(b.mult.toFixed(3))+'）。</p><p class="small">'+esc(EQUIPMENT_POWER.rerollItem.name)+' ×'+n+' · 依原始掉落難度重抽基底；強化與詞綴不改變基底評級。</p><div class="actions"><button onclick="rerollEquipmentPowerTier(\''+g.id+'\')" '+(n<1?'disabled':'')+'>消耗 1 個重鑄基底</button></div></section>';
     const tail=html.lastIndexOf('</section>');return tail>=0?html.slice(0,tail)+card+html.slice(tail):html+card;
   };
 
   globalThis.rerollEquipmentPowerTier=function(id){
-    const g=typeof findGear==='function'?findGear(id):allKnownGear().find(x=>x.id===id);if(!g)return toast('找不到裝備');
+    const g=typeof findGear==='function'?findGear(id):allKnownGear().find(x=>x.id===id);if(!g)return toast('找不到裝備');if(g.equipmentSource==='shop')return toast('商店裝備的 T 級與基底固定，無法重鑄');
     syncRerollItem();state.consumables??={};if((state.consumables[POWER_ITEM_ID]||0)<1)return toast(EQUIPMENT_POWER.rerollItem.name+'不足');
     const old=g.powerTier||strengthAnchor(g.difficulty),weights=EQUIPMENT_POWER.strength.weightsByDifficulty[Math.max(0,Math.min(2,g.difficulty||0))]||[],choices=weights.filter(x=>x>0).length;let next=rollStrengthTier(g.difficulty||0);
     if(choices>1)for(let n=0;n<8&&next===old;n++)next=rollStrengthTier(g.difficulty||0);
-    state.consumables[POWER_ITEM_ID]--;g.powerTier=next;g.name=gearName(g);for(const h of party?.members||[state])withHero(h,clampVitals);save();render();toast('基底重鑄完成 · 基底評級：'+BASE_RATINGS[old-1]+' → 基底評級：'+BASE_RATINGS[next-1]+'（基底倍率 ×'+Number(EQUIPMENT_POWER.strength.multipliers[old-1].toFixed(3))+' → ×'+Number(strengthMultiplier(g).toFixed(3))+'）');
+    state.consumables[POWER_ITEM_ID]--;delete g.baseSnapshot;g.powerTier=next;gearStatBreakdown(g);g.name=gearName(g);for(const h of party?.members||[state])withHero(h,clampVitals);save();render();toast('基底重鑄完成 · 基底評級：'+BASE_RATINGS[old-1]+' → 基底評級：'+BASE_RATINGS[next-1]+'（基底倍率 ×'+Number(EQUIPMENT_POWER.strength.multipliers[old-1].toFixed(3))+' → ×'+Number(strengthMultiplier(g).toFixed(3))+'）');
   };
 
   if(typeof supplyDetail==='function'){const identitySupplyDetailBase=supplyDetail;supplyDetail=function(item){if(item?.id===POWER_ITEM_ID)return '基底重鑄道具 · 基底評級：D～SSS · 在裝備強化頁使用 · 賣價 '+Math.round(item.sellPrice||0)+' 金幣';return identitySupplyDetailBase(item);};}
@@ -726,7 +747,7 @@
   if(typeof update12BossMemberView==='function'){
     update12BossMemberView=function(job=state.job){
       const mode=state.difficulty||0,b=GAMEPLAY_SETTINGS.equipment.boss,needMat=Math.max(0,Math.round(b.craftMaterialCount));
-      return heading('BOSS WORKSHOP / 首領製作',MODES[mode].name+'模式專屬裝備')+modePicker()+'<section class="panel">'+resourceLine()+uiHelp('製作說明','BOSS 專屬裝備固定三條專屬詞綴，不抽前綴／後綴，也不能洗鍊隨機詞條；基礎能力約高於需求等級 ' + GS('equipment.boss.baseLevelBonus',7) + ' 級，基底評級依難度浮動，詞綴至少為稀有品質。')+'</section><div class="cards boss-recipes">'+MAPS.map((m,i)=>{if(typeof worldIsFinalMap==='function'?worldIsFinalMap(i):i===6)return '';const family=regionFamily(i),tier=regionTier(i),g={job,slot:bossEquipmentSlot(family),tier,boss:family,region:i,difficulty:mode,rar:0,plus:0,affix:[],powerTier:strengthAnchor(mode)},mat=bossMaterial(i,mode),n=state.materials[mat]||0,cost=Math.round(tier*b.craftGoldPerTier*(mode+1)),ready=canVisit(i)&&state.lv>=m.min&&state.gold>=cost&&n>=needMat;return '<article class="card boss-recipe">'+'<span class="tag">'+esc(m.name)+'</span>'+gearSlotHTML(g,{preview:g})+'<p class="small">'+esc(CLASSES[job].name)+' · LV'+m.min+'</p>'+'<div class="recipe-cost"><span>'+itemSlotHTML('material',mat,{count:needMat,detailLabel:'所需數量'})+' 持有 '+n+'</span><span>◈ '+cost+'</span></div><button class="primary" onclick="craftBoss('+i+','+job+')" '+(ready?'':'disabled')+'>'+(!canVisit(i)?'尚未解鎖':ready?'製作裝備':'等級／材料不足')+'</button></article>';}).join('')+'</div>';
+      return heading('BOSS WORKSHOP / 首領製作',MODES[mode].name+'模式專屬裝備')+modePicker()+'<section class="panel">'+resourceLine()+uiHelp('製作說明','BOSS 裝備保留三條專屬效果，另有可洗鍊詞綴；新基底依 T 級為同級標準的 115%～130%，強化與詞綴另外計算。')+'</section><div class="cards boss-recipes">'+MAPS.map((m,i)=>{if(typeof worldIsFinalMap==='function'?worldIsFinalMap(i):i===6)return '';const family=regionFamily(i),tier=regionTier(i),g={job,slot:bossEquipmentSlot(family),tier,boss:family,region:i,difficulty:mode,rar:0,plus:0,affix:[],powerTier:strengthAnchor(mode)},mat=bossMaterial(i,mode),n=state.materials[mat]||0,cost=Math.round(tier*b.craftGoldPerTier*(mode+1)),ready=canVisit(i)&&state.lv>=m.min&&state.gold>=cost&&n>=needMat;return '<article class="card boss-recipe">'+'<span class="tag">'+esc(m.name)+'</span>'+gearSlotHTML(g,{preview:g})+'<p class="small">'+esc(CLASSES[job].name)+' · LV'+m.min+'</p>'+'<div class="recipe-cost"><span>'+itemSlotHTML('material',mat,{count:needMat,detailLabel:'所需數量'})+' 持有 '+n+'</span><span>◈ '+cost+'</span></div><button class="primary" onclick="craftBoss('+i+','+job+')" '+(ready?'':'disabled')+'>'+(!canVisit(i)?'尚未解鎖':ready?'製作裝備':'等級／材料不足')+'</button></article>';}).join('')+'</div>';
     };
   }
 

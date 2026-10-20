@@ -138,7 +138,7 @@
   if(typeof chooseMap==='function'){const base=chooseMap;chooseMap=function(mi){if(party?.bossChallenge?.active&&mi!==party.map)party.bossChallenge=null;return base(mi);};}
 
   function completeAttempt(){
-    const ch=party?.bossChallenge;if(!ch?.active||!ch.stagePaid)return;const mi=ch.mapIndex,entry=bossProgressEntry(mi);ch.stagePaid=false;refillParty();clearEncounter();
+    const ch=party?.bossChallenge;if(!ch?.active||!ch.stagePaid)return;const mi=ch.mapIndex,entry=bossProgressEntry(mi);globalThis.recordMapClear?.(mi);ch.stagePaid=false;refillParty();clearEncounter();
     if(entry.charges>0){running=true;note(`BOSS 關卡完成。仍有 ${entry.charges} 次挑戰，將自動進入下一場。`);}else{party.bossChallenge=null;running=true;note('BOSS 挑戰次數已用完，返回目前地圖繼續一般探索。');}
     save();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();
   }

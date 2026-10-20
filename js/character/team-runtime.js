@@ -112,7 +112,7 @@
   const socketBase=socket;socket=function(i,value){if(state!==player())return socketBase(i,value);if(!safe()||plan().job===null||!Number.isInteger(i)||!player().skills[i])return false;const type=Number(value),p=plan();if(!Number.isInteger(type)||type< -1||type>2)return false;if(type>=0&&player().gems[type]<1)return false;return transaction(()=>{const old=p.sockets[i];p.sockets[i]=null;if(old&&!build().plans.some(other=>other.sockets.includes(old))){player().gems[build().permanent.gemInstances[old]]++;delete build().permanent.gemInstances[old];}if(type>=0){const id='gem-'+build().permanent.gemSerial++;build().permanent.gemInstances[id]=type;player().gems[type]--;p.sockets[i]=id;}player().sockets=p.sockets.map(id=>id?build().permanent.gemInstances[id]:null);});};
   const baseSave=save;save=function(...args){if(suppressSave)return true;if(party&&!hydrating)capture();return baseSave(...args);};
   const basePack=packParty;packParty=function(){capture();const out=basePack();out.buildSystem=copy(build());return out;};
-  function validateBuild(data,p){return M.validate(data,{classes:classDocs(),supports:SUPPORT,members:p.members,items:p.members.flatMap(h=>h.bag),progression:GAMEPLAY_SETTINGS.progression,level:p.members[0].lv,config:cfg,wearable:(g,j,i)=>!EmberwildTokens.isToken(g)&&gearWearableJobs(g).includes(j)&&gearEquipPositions(g).includes(i)&&gearRequiredLevelByTier(g.tier)<=p.members[0].lv});}
+  function validateBuild(data,p){return M.validate(data,{classes:classDocs(),supports:SUPPORT,members:p.members,items:p.members.flatMap(h=>h.bag),progression:GAMEPLAY_SETTINGS.progression,level:p.members[0].lv,config:cfg,wearable:(g,j,i)=>!EmberwildTokens.isToken(g)&&gearWearableJobs(g).includes(j)&&gearEquipPositions(g).includes(i)&&gearRequiredLevel(g)<=p.members[0].lv});}
   const baseValidate=validateParty;validateParty=function(input){const d=M.prepareSave(input),p=baseValidate(d);if(d.buildSystem!==undefined)p.buildSystem=validateBuild(d.buildSystem,p);return p;};
   const baseLoad=loadParty;loadParty=function(input){
     const d=M.prepareSave(input);validateParty(d);hydrating=true;try{baseLoad(d);if(d.buildSystem)party.buildSystem=validateBuild(d.buildSystem,party);else delete party.buildSystem;}finally{hydrating=false;}
@@ -153,7 +153,7 @@
       suppressSave=true;balanceBase(d,{persist:false});applyRules(d);
       if(next){
         party.buildSystem=next;
-        for(const p of next.plans)if(p.job!==null)p.equipped=p.equipped.map((id,i)=>{const g=findGear(id);return g&&gearWearableJobs(g).includes(p.job)&&gearEquipPositions(g).includes(i)&&gearRequiredLevelByTier(g.tier)<=player().lv?id:null;});
+        for(const p of next.plans)if(p.job!==null)p.equipped=p.equipped.map((id,i)=>{const g=findGear(id);return g&&gearWearableJobs(g).includes(p.job)&&gearEquipPositions(g).includes(i)&&gearRequiredLevel(g)<=player().lv?id:null;});
         apply(plan());capture();resetBattleState();
       }
       if(persist)localStorage.setItem(BALANCE_KEY,JSON.stringify(exportableBalance()));

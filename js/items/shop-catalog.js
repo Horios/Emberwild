@@ -57,7 +57,7 @@
       offerCount:field(random,'offerCount',DEFAULT_RANDOM.offerCount),
       refreshBaseCost:field(random,'refreshBaseCost',DEFAULT_RANDOM.refreshBaseCost),
       refreshCostStep:field(random,'refreshCostStep',DEFAULT_RANDOM.refreshCostStep),entries
-    },fixedOffers:{entries:fixedEntries}};
+    },fixedOffers:{entries:fixedEntries},equipmentStages:copy(src.equipmentStages??[])};
   }
   const integer=(n,min,max)=>Number.isSafeInteger(n)&&n>=min&&n<=max;
   const number=(n,min,max)=>Number.isFinite(n)&&n>=min&&n<=max;
@@ -84,8 +84,26 @@
         }else if(!integer(rule.quantity,1,10000))throw Error(label+'，數量無效');
       }
     }
+    validateEquipmentStages(cfg.equipmentStages,options);
     return cfg;
   }
+  function equipmentForms(forms=[]){const rows=[];forms.forEach((slots,group)=>slots.forEach((list,slot)=>list.forEach((form,index)=>rows.push({form:{...form,id:form.id||'job'+group+'-slot'+slot+'-form'+index},group,slot,index}))));return rows;}
+  function validateEquipmentStages(stages,{equipmentForms:forms,maps,classes}={}){
+    if(!Array.isArray(stages)||stages.length>100)throw Error('裝備販售階段必須為最多 100 筆的陣列');
+    const ids=new Set(),refs=forms?new Map(equipmentForms(forms).map(row=>[row.form.id,row])):null,mapIds=maps?new Set(maps.filter(m=>m.bossEnabled!==false).map(m=>m.id)):null;
+    for(const stage of stages){
+      if(!stage||typeof stage.id!=='string'||!/^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(stage.id)||ids.has(stage.id))throw Error('裝備販售階段 ID 無效或重複');ids.add(stage.id);
+      if(typeof stage.name!=='string'||!stage.name.trim()||stage.name.length>80||!integer(stage.level,1,60)||!integer(stage.powerTier,1,10)||!integer(stage.order,0,10000)||typeof stage.initiallyUnlocked!=='boolean'||!Array.isArray(stage.unlockMapIds)||new Set(stage.unlockMapIds).size!==stage.unlockMapIds.length||stage.unlockMapIds.some(id=>typeof id!=='string'||mapIds&&!mapIds.has(id))||!stage.initiallyUnlocked&&!stage.unlockMapIds.length)throw Error('裝備販售階段的等級／T 級／通關條件無效：'+stage.id);
+      if(typeof stage.mapId!=='string'||maps&&!maps.some(m=>m.id===stage.mapId))throw Error('裝備階段對應地圖無效：'+stage.id);
+      if(!Array.isArray(stage.entries)||stage.entries.length>1000)throw Error('裝備階段商品最多 1000 筆');
+      const offers=new Set();for(const entry of stage.entries){
+        const ref=refs?.get(entry?.formId);
+        if(!entry||typeof entry.id!=='string'||!/^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(entry.id)||offers.has(entry.id)||typeof entry.formId!=='string'||refs&&!ref||!integer(entry.job,0,(classes?.length??4)-1)||ref&&!(ref.form.wearableJobs||[ref.group]).includes(entry.job)||!integer(entry.unitPrice,1,1e9)||!integer(entry.quantity,1,100)||typeof entry.canEnhance!=='boolean'||typeof entry.canReroll!=='boolean')throw Error('裝備商品引用／職業／價格／培養設定無效：'+stage.id);
+        offers.add(entry.id);
+      }
+    }
+    return stages;
+  }
   function fixedItemIds(cfg){return new Set(cfg.fixedOffers.entries.filter(x=>x.enabled&&x.type==='item').map(x=>x.key));}
-  root.EmberwildShopCatalog=Object.freeze({TYPES,DEFAULT_RANDOM,normalize,normalizeRule,validate,fixedItemIds,LEGACY_DESCRIPTIONS});
+  root.EmberwildShopCatalog=Object.freeze({TYPES,DEFAULT_RANDOM,normalize,normalizeRule,validate,validateEquipmentStages,equipmentForms,fixedItemIds,LEGACY_DESCRIPTIONS});
 })(globalThis);

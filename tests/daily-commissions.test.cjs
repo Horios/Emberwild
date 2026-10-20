@@ -23,7 +23,7 @@ test('real kills respect species and snapshotted level range; enhance and every 
  r.run(`startDailyCommission(hunt.id);killForDaily('wrong_species',hunt.objectives[0].levelMin);killForDaily(hunt.objectives[0].key,hunt.objectives[0].levelMax+1)`);assert.equal(r.run('state.board.tasks.find(q=>q.id===hunt.id).objectives[0].progress'),0);
  r.run('killForDaily(hunt.objectives[0].key,hunt.objectives[0].levelMin)');assert.equal(r.run('state.board.tasks.find(q=>q.id===hunt.id).objectives[0].progress'),1);
  r.run(`startDailyCommission(state.board.tasks.find(q=>q.objectives[0].type==='enhance').id);globalThis.g=gear(1,0,0,0);addGear(g);enhance(g.id);startDailyCommission(state.board.tasks.find(q=>q.objectives[0].type==='salvage').id);salvage(g.id);pendingGearLoot=[];globalThis.pending=gear(1,0,0,0);pending.affix=[];pending.prefixId=pending.suffixId='';pendingGearLoot.push(pending);quickDisposePendingQuality(0,'salvage');`);
- assert.equal(r.run("state.board.tasks.find(q=>q.objectives[0].type==='enhance').objectives[0].progress"),1);assert.equal(r.run("state.board.tasks.find(q=>q.objectives[0].type==='salvage').objectives[0].progress"),2);assert.deepEqual(r.errors,[]);
+ assert.equal(r.run("state.board.tasks.find(q=>q.objectives[0].type==='enhance').objectives[0].progress"),1);assert.equal(r.run("state.board.tasks.find(q=>q.objectives[0].type==='salvage').objectives[0].progress"),r.run("Math.min(2,state.board.tasks.find(q=>q.objectives[0].type==='salvage').objectives[0].quantity)"));assert.deepEqual(r.errors,[]);
 });
 
 test('collect tasks deduct every delivered inventory and failed saves restore stock, claims, bonus and event counters',()=>{

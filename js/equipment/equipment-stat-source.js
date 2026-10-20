@@ -364,3 +364,11 @@ characterView=function(){let html=update12CharacterViewConsistency(),a=GAMEPLAY_
 // The battle page was composed by earlier wrappers; replace only the stale balance-dependent supply text.
 const update12BattleViewConsistency=battleView;
 battleView=function(){let html=update12BattleViewConsistency(),pc=Math.round(GS('quests.potion.buyCost',75)),pq=Math.round(GS('quests.potion.buyQuantity',5)),th=Math.round(GS('combat.autoPotionThreshold',.35)*10000)/100;return html.replace(/\+\d+ 瓶／\d+ 金幣/g,`+${pq} 瓶／${pc} 金幣`).replace(/低於\d+(?:\.\d+)?%自動喝藥/g,`低於${th}%自動喝藥`);};
+
+// Roaming equipment attenuation is data; all other loot retains the same rates.
+(()=>{
+ GAMEPLAY_SETTINGS_DEFAULTS.equipment.dropLevelGap={enabled:true,freeLevels:5,penaltyPerLevel:.4,minimumMultiplier:.05};
+ const normalizeBase=normalizeGameplaySettings;normalizeGameplaySettings=function(input){const cfg=normalizeBase(input);cfg.equipment.dropLevelGap={enabled:true,freeLevels:5,penaltyPerLevel:.4,minimumMultiplier:.05,...input?.equipment?.dropLevelGap};return cfg;};
+ const validateBase=validateGameplaySettings;validateGameplaySettings=function(input){const cfg=validateBase(input),v=cfg.equipment.dropLevelGap;if(typeof v.enabled!=='boolean'||!Number.isFinite(v.freeLevels)||v.freeLevels<0||!Number.isFinite(v.penaltyPerLevel)||v.penaltyPerLevel<0||!Number.isFinite(v.minimumMultiplier)||v.minimumMultiplier<0||v.minimumMultiplier>1)throw Error('裝備掉落等級差設定無效');return cfg;};
+ GAMEPLAY_SETTINGS=normalizeGameplaySettings(GAMEPLAY_SETTINGS);
+})();

@@ -6,7 +6,7 @@
 
   function forgeIsToken(g){return globalThis.EmberwildTokens?.isToken(g)===true;}
   function forgeGearMeta(g){
-    return forgeIsToken(g)?[companionTokenJobLabel(g),'信物']:[gearWearableJobsText(g),CLASS_GEAR[g.job][g.slot],`LV ${gearRequiredLevelByTier(g.tier)}`];
+    return forgeIsToken(g)?[companionTokenJobLabel(g),'信物']:[gearWearableJobsText(g),CLASS_GEAR[g.job][g.slot],`LV ${gearRequiredLevel(g)}`];
   }
 
   function forgeSortValue(g,key){
@@ -78,7 +78,7 @@
     if(!g)return `<div class="inventory-detail-empty"><b>沒有可顯示的裝備</b><p class="small">調整左側篩選條件後選擇裝備。</p></div>`;
     const wearer=gearWearer(g.id),worn=!!wearer,draft=inlineAffixDrafts.has(affixDraftKey(g)),locked=!!g.locked;
       const forgeAction=`<button onclick="openForge('${g.id}')">強化／洗鍊</button>`;
-    return `<div class="inventory-detail-pane"><div class="inventory-detail-heading"><div><h2>${equipmentNameHTML(g)}</h2></div><span class="tag">${qualityTag(g)}${locked?' · 已鎖定':''}</span></div><div class="inventory-detail-meta">${gearWearableJobsText(g)} · ${CLASS_GEAR[g.job][g.slot]} · LV ${gearRequiredLevelByTier(g.tier)}${worn?' · 目前由 '+esc(characterName(wearer))+' 穿戴':''}</div><section class="inventory-detail-section"><h3>裝備能力</h3><p class="inventory-detail-stats equipment-total-summary">${globalThis.equipmentTotalSummaryHTML(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g)}</section><section class="inventory-detail-section"><div class="actions inventory-detail-actions">${forgeAction}<button onclick="toggleGearLock('${g.id}')">${locked?'解除鎖定':'鎖定'}</button><button class="danger" onclick="salvage('${g.id}')" ${worn||draft||locked?'disabled':''}>分解</button></div>${draft?'<p class="inventory-detail-forge-note">這件裝備有待確認的洗鍊結果，請前往「裝備強化」處理。</p>':''}</section></div>`;
+    return `<div class="inventory-detail-pane"><div class="inventory-detail-heading"><div><h2>${equipmentNameHTML(g)}</h2></div><span class="tag">${qualityTag(g)}${locked?' · 已鎖定':''}</span></div><div class="inventory-detail-meta">${gearWearableJobsText(g)} · ${CLASS_GEAR[g.job][g.slot]} · LV ${gearRequiredLevel(g)}${worn?' · 目前由 '+esc(characterName(wearer))+' 穿戴':''}</div><section class="inventory-detail-section"><h3>裝備能力</h3><p class="inventory-detail-stats equipment-total-summary">${globalThis.equipmentTotalSummaryHTML(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g)}</section><section class="inventory-detail-section"><div class="actions inventory-detail-actions">${forgeAction}<button onclick="toggleGearLock('${g.id}')">${locked?'解除鎖定':'鎖定'}</button><button class="danger" onclick="salvage('${g.id}')" ${worn||draft||locked?'disabled':''}>分解</button></div>${draft?'<p class="inventory-detail-forge-note">這件裝備有待確認的洗鍊結果，請前往「裝備強化」處理。</p>':''}</section></div>`;
   };
 
   // Forge is now an account-level workbench: no character tabs, a sortable

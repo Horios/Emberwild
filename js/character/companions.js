@@ -160,7 +160,7 @@
         h.hp=fullHealth&&h.lv>previous?stats(h).hp:Math.min(h.hp,stats(h).hp);
       }
       // A previously higher-level companion keeps all gear and gems in storage.
-      h.equipped=h.equipped.map(id=>id&&h.bag.some(g=>g.id===id&&gearRequiredLevelByTier(g.tier)<=h.lv)?id:null);
+      h.equipped=h.equipped.map(id=>id&&h.bag.some(g=>g.id===id&&gearRequiredLevel(g)<=h.lv)?id:null);
       h.sockets.forEach((gem,i)=>{if(gem!==null&&!h.skills[i]){h.gems[gem]++;h.sockets[i]=null;}});
       h.hp=wasDead?0:Math.min(h.hp,stats(h).hp);
     }

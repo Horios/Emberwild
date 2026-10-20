@@ -85,7 +85,7 @@
   function info(ref){
     const {kind,key,g}=ref,item=definition(kind,key),description=globalThis.EmberwildTokens?.isToken(g)?companionTokenDescription(g):globalThis.__EMBERWILD_ITEM_DESCRIPTION?.(kind,key)||'';
     let detail='';
-    if(g)detail=`<p>${globalThis.EmberwildTokens?.isToken(g)?esc(gearDesc(g)):esc(gearWearableJobsText(g)+' · LV '+gearRequiredLevelByTier(g.tier))}</p><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryHTML?.(g)||esc(gearDesc(g))}</p>${globalThis.equipmentAttributeDetailsHTML?.(g)||''}${g.starterPack?'<p>可強化；不可洗鍊詞綴或重鑄基底。</p>':''}`;
+    if(g)detail=`<p>T${g.powerTier||1} · ${g.affix?.length?'已附詞綴':'尚未洗鍊／無隨機詞綴'}${g.equipmentSource==='shop'?' · 固定商店基底':''}</p><p>${globalThis.EmberwildTokens?.isToken(g)?esc(gearDesc(g)):esc(gearWearableJobsText(g)+' · LV '+gearRequiredLevel(g))}</p><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryHTML?.(g)||esc(gearDesc(g))}</p>${globalThis.equipmentAttributeDetailsHTML?.(g)||''}${g.starterPack?'<p>可強化；不可洗鍊詞綴或重鑄基底。</p>':''}`;
     else if(kind==='item'&&key.startsWith('companion-ticket-'))detail='<p>領取後存入背包，使用可解鎖指定夥伴；重複取得依原規則轉換。</p>';
     else if(item)detail='<p>'+esc(key==='level_scroll'?'全隊共用等級 +1':supplyDetail(item))+'</p>';
     else if(kind==='gem')detail='<p>'+esc(GEMS[Number(key)]?.desc||'技能鑲嵌寶石')+'</p>';
@@ -106,6 +106,7 @@
     if(ref.context==='shop'){
       const id=attr(JSON.stringify(ref.shopId)),price=Number(ref.price)||0,disabled=ref.sold||state.gold<price;
       if(ref.shopType==='market')return `<button onclick="itemDetailsAction(()=>buyMarketOffer(${id}))" ${disabled?'disabled':''}>${ref.sold?esc(ref.soldLabel||'已售完'):'購買'}</button>`;
+      if(ref.shopType==='equipment')return `<div class="actions"><label>購買份數<input id="equipment-shop-quantity" type="number" min="1" max="100" step="1" value="1" inputmode="numeric"></label><button onclick="itemDetailsAction(()=>buyEquipmentShopOffer(${id},Number(document.getElementById('equipment-shop-quantity').value)))" ${disabled?'disabled':''}>購買</button></div>`;
       if(ref.shopType==='fixed')return `<button onclick="itemDetailsAction(()=>buyFixedShopOffer(${id}))" ${disabled?'disabled':''}>購買</button>`;
       if(ref.shopType==='life')return `<div class="actions"><button onclick="itemDetailsAction(()=>buyLifeMaterial(${id},1))" ${state.gold<price?'disabled':''}>購買 1 份</button><button onclick="itemDetailsAction(()=>buyLifeMaterial(${id},10))" ${state.gold<(globalThis.lifeMaterialPurchasePrice?.(ref.shopId,10)??price*10)?'disabled':''}>購買 10 份</button></div>`;
       return '';
