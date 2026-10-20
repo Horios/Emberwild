@@ -14,7 +14,7 @@ test('five distinct snapshots survive switches, balance imports and cold reload,
 test('four claims consume stock, award frozen random materials and unlock one two-hour ticket; fifth is blocked',()=>{
  const r=game();allTypes(r);const qs=json(r,'state.board.tasks');for(const q of qs.slice(0,4)){assert.equal(complete(r,q),true);assert.equal(r.run('claimBoard(qid)'),false);}
  assert.equal(r.run('state.board.tasks.filter(q=>q.done).length'),4);assert.equal(r.run('questReadyCount()'),1);assert.equal(complete(r,qs[4]),false);assert.equal(r.run('claimDailyBonus()'),true);assert.equal(r.run('state.consumables.speed2_120m'),1);assert.equal(r.run('claimDailyBonus()'),false);r.run('save();loadParty(packParty())');assert.equal(r.run('claimDailyBonus()'),false);assert.equal(r.run('state.board.tasks.filter(q=>q.done).length'),4);
- r.run("useSupply('speed2_120m');setBattleSpeed(2)");assert.equal(r.run('battleRate'),2);assert.equal(r.run('party.timedBoosts.find(b=>b.itemId==="speed2_120m").expiresAt-Date.now()'),7200000);r.advance(7200000);r.run('tick()');assert.equal(r.run('battleRate'),1);assert.deepEqual(r.errors,[]);
+ r.run("useSupply('speed2_120m');setBattleSpeed(2)");assert.equal(r.run('battleRate'),2);assert.equal(r.run('party.timedBoosts.find(b=>b.itemId==="speed2_120m").remainingMs'),7200000);r.advance(7200000);r.run('tick()');assert.equal(r.run('battleRate'),2);r.run('running=true;__EMBERWILD_TIMED_BOOST_TEST.syncCombatClock()');r.advance(7200000);r.run('__EMBERWILD_TIMED_BOOST_TEST.syncCombatClock();__EMBERWILD_TIMED_BOOST_TEST.expireBoosts()');assert.equal(r.run('battleRate'),1);assert.deepEqual(r.errors,[]);
 });
 
 test('real kills respect species and snapshotted level range; enhance and every manual salvage path count after start',()=>{

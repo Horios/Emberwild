@@ -229,7 +229,7 @@ inlineInventoryView=function(){
       // A wipe is the only normal round outcome that clears foes/enemy after
       // starting in the running state. Final-boss victory keeps the defeated
       // foe list, while a manual pause does not clear the encounter.
-      if(startedRunning&&party&&!running&&!foes.length&&!enemy&&living().length){
+      if(startedRunning&&party&&!party.questChallenge&&!globalThis.isFinalMap?.(party.map)&&!running&&!foes.length&&!enemy&&living().length){
         running=true;
         note('全隊恢復後，自動重新挑戰目前區域。');
         save();

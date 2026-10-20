@@ -1292,10 +1292,16 @@ function refreshGlobalJournal(){
  const panel=$('globalBattleJournal');if(!party||!panel)return;
  const live=$('liveLog'),list=$('journalLootList'),detail=live?.querySelector?.('details'),history=live?.querySelector?.('.history-events'),current=live?.querySelector?.('.current-events');
  const saved={open:detail?.open,loot:list?.scrollTop||0,history:history?.scrollTop||0,current:current?.scrollTop||0};
- const html=sharedBattleJournal();panel.innerHTML=html.slice(html.indexOf('>')+1,html.lastIndexOf('</section>'));
- const next=$('liveLog'),d=next?.querySelector?.('details'),h=next?.querySelector?.('.history-events'),c=next?.querySelector?.('.current-events');
- if(d)d.open=!!saved.open;if(h)h.scrollTop=saved.history;if(c)c.scrollTop=saved.current;
- const l=$('journalLootList');if(l)l.scrollTop=saved.loot;
+ const fresh=document.createElement('template');fresh.innerHTML=sharedBattleJournal();
+ // Keep the log, scroll containers, disclosures and controls mounted. Update only
+ // information that actually changed; the log appends through appendBattleLogLine.
+ for(const selector of ['.journal-title-row','.journal-summary','.journal-actions','.journal-filter','#journalRealtimeStatus','#journalLootList']){
+  const before=panel.querySelector(selector),after=fresh.content.querySelector?.(selector);
+  if(before&&after&&before.innerHTML!==after.innerHTML)before.innerHTML=after.innerHTML;
+ }
+ const oldSummary=panel.querySelector('.journal-loot-compact>summary,.mobile-loot-content>h3'),newSummary=fresh.content.querySelector?.('.journal-loot-compact>summary,.mobile-loot-content>h3');
+ if(oldSummary&&newSummary&&oldSummary.textContent!==newSummary.textContent)oldSummary.textContent=newSummary.textContent;
+ syncBattleLogHeader(live);
  const wallet=$('wallet');if(wallet)wallet.textContent='全隊金幣 '+party.members[0].gold.toLocaleString();
 }
 

@@ -31209,7 +31209,19 @@
             "choices": [],
             "guides": [
               "battle"
-            ]
+            ],
+            "encounter": {
+              "enabled": true,
+              "name": "解救商人",
+              "mapIndex": 0,
+              "repeatable": false,
+              "enemies": [
+                {
+                  "monsterId": "map0_mob0",
+                  "count": 3
+                }
+              ]
+            }
           },
           {
             "id": "supplies",

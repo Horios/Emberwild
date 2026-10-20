@@ -83,7 +83,7 @@
     if(globalThis.__EMBERWILD_FINAL_STAGE_CLEARED)return;
     globalThis.__EMBERWILD_FINAL_STAGE_CLEARED=true;
     const boss=foes.find(e=>e.kind==='final'),mode=boss?.difficulty??state.difficulty??0,d=MODES[mode],gate=isGate(mi),firstClear=gate&&!party.cleared,before=Math.floor(GS('progression.levelCaps.beforeClear',30));
-    running=false;refillParty();
+    globalThis.expeditionChallengeResult={name:MAPS[mi]?.name||'終局關卡',success:true};running=false;refillParty();
     globalThis.recordMapClear?.(mi);
     if(gate){party.cleared=true;for(const h of heroes()){h.modeClears[mode]=(h.modeClears[mode]||0)+1;if(h.lv>=before)h.won=true;}}
     note(`終局關卡「${MAPS[mi]?.name||'未命名'}」已完成。`);
@@ -94,7 +94,9 @@
   if(typeof pacedRound==='function'){
     const customStagePacedBase=pacedRound;
     pacedRound=function*(){
+      const finalAttempt=party&&isFinal(party.map)&&running;
       yield* customStagePacedBase();
+      if(finalAttempt&&party&&!running&&!foes.length){globalThis.expeditionChallengeResult={name:MAPS[party.map]?.name||'終局關卡',success:false};save();render();}
       if(party&&isFinal(party.map)&&foes.length&&foes.some(e=>e.kind==='final')&&foes.every(e=>e.hp<=0))completeFinalStage(party.map);
     };
   }

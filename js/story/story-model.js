@@ -2,11 +2,12 @@
 (function(root){
  'use strict';
  const copy=x=>JSON.parse(JSON.stringify(x));
- const TYPES={companions:'招募夥伴數',party:'上陣人數',region:'解鎖地區',visit:'到達地區',explore:'地區擊殺進度',kill:'指定怪物擊殺',kills:'任意怪物擊殺',boss:'指定地區 BOSS',bosses:'任意 BOSS',stock:'持有道具',acquired:'累積取得道具',gatherItem:'採集指定素材',gather:'採集次數',recipe:'完成指定配方',alchemy:'煉金次數',enhance:'強化次數',enhanceLevel:'裝備最高強化',level:'主角等級',quest:'完成任務',stage:'完成階段',flag:'任務 Flag',unlock:'永久解鎖'};
+ const TYPES={encounter:'任務關卡通關',companions:'招募夥伴數',party:'上陣人數',region:'解鎖地區',visit:'到達地區',explore:'地區擊殺進度',kill:'指定怪物擊殺',kills:'任意怪物擊殺',boss:'指定地區 BOSS',bosses:'任意 BOSS',stock:'持有道具',acquired:'累積取得道具',gatherItem:'採集指定素材',gather:'採集次數',recipe:'完成指定配方',alchemy:'煉金次數',enhance:'強化次數',enhanceLevel:'裝備最高強化',level:'主角等級',quest:'完成任務',stage:'完成階段',flag:'任務 Flag',unlock:'永久解鎖'};
  const GUIDES={battle:'前往探索',partnerRoster:'前往夥伴',roster:'前往隊伍',equipment:'前往背包',worn:'前往裝備',forge:'前往強化',gather:'前往採集',alchemy:'前往煉金',shop:'前往商店',skills:'前往技能'};
  const condition=(type='kills',key='',count=1,mode='lifetime')=>({type,key,count,mode,itemType:'material'});
  const group=conditions=>({mode:'all',conditions:conditions||[]});
- const stage=(id='stage_1',name='新階段')=>({id,name,speaker:'旁白',description:'',dialogue:[{speaker:'旁白',kind:'narrator',text:'請填寫劇情。'}],conditions:group(),rewards:{gold:0,ore:0,items:[]},effects:[],next:'',branches:[],choices:[],guides:[]});
+ const encounter=()=>({enabled:false,name:'任務關卡',mapIndex:0,repeatable:false,enemies:[]});
+ const stage=(id='stage_1',name='新階段')=>({id,name,encounter:encounter(),speaker:'旁白',description:'',dialogue:[{speaker:'旁白',kind:'narrator',text:'請填寫劇情。'}],conditions:group(),rewards:{gold:0,ore:0,items:[]},effects:[],next:'',branches:[],choices:[],guides:[]});
  const quest=(id='quest_1',name='新任務',type='side',npc='')=>({id,name,type,npc,description:'',enabled:true,hidden:false,unlock:group(),prerequisites:[],entry:'stage_1',stages:[stage()],rewards:{gold:0,ore:0,items:[]},effects:[],nextQuests:[]});
  function defaults(){return {version:1,quests:[]};}
  function issues(d,ctx={}){
@@ -19,6 +20,7 @@
     if(c.type==='kill'&&ctx.monsters&&!ctx.monsters.some(m=>m.id===c.key))add(label+'不存在的怪物 '+c.key);
     if(c.type==='recipe'&&ctx.recipes&&!Object.hasOwn(ctx.recipes,c.key))add(label+'不存在的配方 '+c.key);
     if(c.type==='quest'&&!qs.has(c.key))add(label+'不存在的任務 '+c.key);
+    if(c.type==='encounter'){const [q,s]=c.key.split('/');if(!qs.get(q)?.stages?.some(x=>x.id===s&&x.encounter?.enabled))add(label+'不存在的任務關卡 '+c.key);}
     if(c.type==='stage'){const [q,s]=c.key.split('/');if(!qs.get(q)?.stages?.some(x=>x.id===s))add(label+'不存在的任務階段 '+c.key);}
     if(['stock','acquired','gatherItem'].includes(c.type)&&(!c.key||c.itemType==='item'&&ctx.items&&!ctx.items.some(x=>x.id===c.key)))add(label+'道具引用無效 '+c.key);
    }
@@ -37,6 +39,10 @@
    const graph=new Map();for(const s of q.stages){if(!s||!id(s.id)||graph.has(s.id)){add(label+'階段 ID 無效或重複');continue;}graph.set(s.id,[]);}
    if(!graph.has(q.entry))add(label+'開始階段不存在');
    for(const s of q.stages){if(!s||!graph.has(s.id))continue;const sl=label+s.id+'：';
+    if(s.encounter!==undefined){const e=s.encounter;
+     if(!e||typeof e.enabled!=='boolean'||typeof e.name!=='string'||typeof e.repeatable!=='boolean'||!Number.isInteger(e.mapIndex)||e.mapIndex<0||ctx.maps&&!ctx.maps[e.mapIndex]||!Array.isArray(e.enemies))add(sl+'任務關卡設定無效');
+     else if(e.enabled){if(!e.name.trim()||ctx.maps?.[e.mapIndex]?.mapType==='final'||!e.enemies.length||e.enemies.reduce((n,x)=>n+x.count,0)>20)add(sl+'任務關卡需一般地區與 1～20 隻敵人');for(const x of e.enemies){const m=ctx.monsters?.find(m=>m.id===x.monsterId);if(!x||typeof x.monsterId!=='string'||!Number.isInteger(x.count)||x.count<1||x.count>20||ctx.monsters&&(!m||m.mapIndex!==e.mapIndex||m.kind==='final'))add(sl+'任務關卡敵人引用無效');}}
+    }
     conditions(s.conditions,sl);rewards(s.rewards,sl);effects(s.effects,sl);
     if(typeof s.name!=='string'||typeof s.speaker!=='string'||typeof s.description!=='string'||!Array.isArray(s.dialogue)||s.dialogue.some(x=>!x||!['npc','player','narrator'].includes(x.kind)||typeof x.speaker!=='string'||typeof x.text!=='string'))add(sl+'劇情文字無效');
     if(!Array.isArray(s.guides)||s.guides.some(g=>!Object.hasOwn(GUIDES,g)))add(sl+'導引無效');
@@ -53,5 +59,5 @@
   acyclic(edges,'任務鏈');return [...new Set(errors)];
  }
  function validate(d,ctx){const e=issues(d,ctx);if(e.length)throw Error(e.join('\n'));return copy(d);}
- const api={copy,TYPES,GUIDES,condition,group,stage,quest,defaults,issues,validate};root.EmberwildStory=api;if(typeof module==='object'&&module.exports)module.exports=api;
+ const api={copy,TYPES,GUIDES,condition,group,encounter,stage,quest,defaults,issues,validate};root.EmberwildStory=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);

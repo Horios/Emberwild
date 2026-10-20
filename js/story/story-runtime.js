@@ -4,14 +4,14 @@
  let design=M.defaults(),category='main',selected='',dialogue=null,trackingOwner=null,inventoryBefore={},committedInventory={},pendingGains={};
  const context=d=>({maps:d.balanceSettings?.maps?.catalog,monsters:d.balanceSettings?.monsters?.catalog,items:d.items,recipes:d.lifeSkills?.recipes});
  function fresh(){return {version:1,quests:{},flags:{},unlocks:{},vip:0,autoBuy:false};}
- function freshStats(){return {version:1,visits:{},explore:{},gatherItems:{},gather:0,recipes:{},alchemy:0,enhance:0,enhanceLevel:0,acquired:{}};}
+ function freshStats(){return {version:1,encounters:{},visits:{},explore:{},gatherItems:{},gather:0,recipes:{},alchemy:0,enhance:0,enhanceLevel:0,acquired:{}};}
  function validData(raw,fallback){if(raw===undefined)return fallback;const x=copy(raw);function walk(v){if(!v||typeof v!=='object')return;for(const [k,n] of Object.entries(v)){if(['__proto__','constructor','prototype'].includes(k))throw Error('劇情存檔包含無效鍵值');if(typeof n==='number'&&(!Number.isSafeInteger(n)||n<0||n>1e12))throw Error('劇情存檔數值無效');walk(n);}}walk(x);return x;}
  function validateProgress(raw,stats){const q=validData(raw,fresh()),p=validData(stats,freshStats());
   if(p.version!==1||q.version!==1||![0,1].includes(q.vip)||typeof q.autoBuy!=='boolean'||!q.quests||!q.flags||!q.unlocks||[q.quests,q.flags,q.unlocks].some(x=>Array.isArray(x)||typeof x!=='object'))throw Error('劇情存檔格式無效');
   for(const [id,r] of Object.entries(q.quests)){if(!r||r.started!==undefined&&typeof r.started!=='boolean'||typeof r.current!=='string'||typeof r.done!=='boolean'||!Array.isArray(r.completed)||r.completed.some(x=>typeof x!=='string')||!r.baseline||!r.choices||Array.isArray(r.baseline)||Array.isArray(r.choices)||typeof r.baseline!=='object'||typeof r.choices!=='object'||new Set(r.completed).size!==r.completed.length||Object.values(r.baseline).some(n=>!Number.isSafeInteger(n)||n<0)||Object.values(r.choices).some(v=>typeof v!=='string'))throw Error('任務階段存檔無效：'+id);}
   for(const f of [q.flags,q.unlocks])if(Object.values(f).some(v=>typeof v!=='boolean'))throw Error('任務解鎖格式無效');
   for(const k of Object.keys(freshStats()))if(p[k]===undefined)p[k]=freshStats()[k];
-  for(const k of ['visits','explore','gatherItems','recipes','acquired'])if(!p[k]||Array.isArray(p[k])||typeof p[k]!=='object'||Object.values(p[k]).some(n=>!Number.isSafeInteger(n)||n<0))throw Error('永久統計格式無效');
+  for(const k of ['encounters','visits','explore','gatherItems','recipes','acquired'])if(!p[k]||Array.isArray(p[k])||typeof p[k]!=='object'||Object.values(p[k]).some(n=>!Number.isSafeInteger(n)||n<0))throw Error('永久統計格式無效');
   for(const k of ['gather','alchemy','enhance','enhanceLevel'])if(!Number.isSafeInteger(p[k])||p[k]<0)throw Error('永久統計數值無效');return {story:q,progressStats:p};
  }
  function migrateStats(account){const p=freshStats(),h=account.members?.[0];if(!h)return p;p.visits[String(account.map??0)]=1;p.enhance=(h.bag||[]).reduce((n,g)=>n+(g.plus||0),0);p.enhanceLevel=Math.max(0,...(h.bag||[]).map(g=>g.plus||0));
@@ -27,6 +27,7 @@
  globalThis.recordGatheredItem=(type,key,n)=>{const p=stats();p.gatherItems[type+':'+key]=(p.gatherItems[type+':'+key]||0)+n;};
  const countStock=c=>c.itemType==='item'?(globalThis.__EMBERWILD_INVENTORY_STOCK?.count(c.key)||0):materialCount(c.key);
  function value(c){const h=playerHero(),p=stats(),q=ensure(),sum=o=>Object.values(o||{}).reduce((a,b)=>a+b,0);switch(c.type){
+  case 'encounter':return p.encounters[c.key]||0;
   case 'companions':return party.members.length-1;case 'party':return party.buildSystem?.plans?.find(x=>x.id===party.buildSystem.activeId)?.job===null?0:heroes().length;
   case 'region':return Number(!!MAPS[Number(c.key)]&&solo.canVisit(Number(c.key),h));case 'visit':return Number(p.visits[c.key]||party.map===Number(c.key));case 'explore':return p.explore[c.key]||0;
   case 'kill':{const m=GAMEPLAY_SETTINGS.monsters.catalog.find(m=>m.id===c.key);return m?h.kills[m.material]||0:0;}case 'kills':return h.totalKills;
@@ -90,5 +91,51 @@
  claimTutorial=function(){openStory('goddess_intro','main');return false;};
  globalThis.storyCategoryReminder=type=>{if(!party||!state)return {ready:0,new:0};sync();const rows=design.quests.filter(q=>q.type===type&&q.enabled&&record(q.id)&&!record(q.id).done);const out={ready:0,new:0};for(const q of rows){const r=record(q.id),s=q.stages.find(s=>s.id===r.current);if(s&&met(s.conditions,r)&&(!s.choices.length||s.choices.some(c=>met(c.conditions,r))))out.ready++;if(!r.started)out.new++;}if(type==='side'){const extra=sideQuestReminder();out.ready+=extra.ready;out.new+=extra.new;}return out;};
  const badgeBase=numberBadgeHTML;globalThis.numberBadgeHTML=function(id){if(id!=='story')return badgeBase(id);const n=storyReadyCount();return n?`<span class="number-badge" aria-label="可繼續任務 ${n}">${n}</span>`:'';};
+
+ // Task stages supply encounter data to the existing spawn/round/reward pipeline.
+ function questEncounterRows(){
+  if(!party)return [];sync();const out=[];
+  for(const q of design.quests){const r=record(q.id);if(!q.enabled||q.hidden&&!r)continue;
+   for(const s of q.stages){const e=s.encounter;if(!e?.enabled)continue;const key=q.id+'/'+s.id,completed=(stats().encounters[key]||0)>0;
+    const reached=!!r&&(r.current===s.id&&!r.done||e.repeatable&&(r.completed.includes(s.id)||r.done));
+    out.push({key,questId:q.id,stageId:s.id,name:e.name,source:q.name,mapIndex:e.mapIndex,enemies:copy(e.enemies),repeatable:e.repeatable,completed,unlocked:!!r?.started&&reached&&(!completed||e.repeatable)&&canVisit(e.mapIndex)});
+   }
+  }return out;
+ }
+ globalThis.questEncounterRows=questEncounterRows;
+ globalThis.startQuestEncounter=function(key){
+  const row=questEncounterRows().find(x=>x.key===key);if(!row?.unlocked)return toast('任務進度尚未開放此關卡，或關卡已完成');
+  if(!globalThis.__EMBERWILD_TEAMS?.valid())return toast('請先完成可探索的隊伍編成');
+  if(state.bag.length>=RULES.bagCapacity)return toast('背包已滿，請先整理裝備');
+  globalThis.__EMBERWILD_TIMED_BOOST_TEST.syncCombatClock();
+  stopTeamExploration();chooseMap(row.mapIndex);party.questChallenge={key:row.key,name:row.name,mapIndex:row.mapIndex};
+  globalThis.expeditionChallengeResult=null;running=true;spawnGroup();globalThis.__EMBERWILD_TIMED_BOOST_TEST.syncCombatClock();save();render();return true;
+ };
+ const spawnBase=spawnGroup;spawnGroup=function(){
+  const ch=party?.questChallenge;if(!ch)return spawnBase();
+  const row=questEncounterRows().find(x=>x.key===ch.key);if(!row?.unlocked){running=false;party.questChallenge=null;return false;}
+  const h=[...heroes()].sort((a,b)=>a.lv-b.lv)[0],mi=row.mapIndex,mode=party.difficulty||0;
+  foes=[];effects=[];actorCooldowns={};supportCooldowns={};round=0;for(const hero of heroes())hero.shield=0;
+  for(const spec of row.enemies){const m=monsterCatalog().find(x=>x.id===spec.monsterId),kind=m.kind;
+   const ahead=EmberwildProgression.encounterLevelLead(GAMEPLAY_SETTINGS,h.lv),max=Math.max(MAPS[mi].min,Math.min(MAPS[mi].max,h.lv+ahead));
+   for(let i=0;i<spec.count;i++){const lv=kind==='boss'?MAPS[mi].max:MAPS[mi].min+Math.floor(Math.random()*(max-MAPS[mi].min+1)),v=EmberwildProgression.monsterStats(GAMEPLAY_SETTINGS,lv,kind,mode,m);
+    foes.push({id:'foe-'+uid(),monsterId:m.id,name:m.name,icon:'',mat:m.material,lv,...v,maxhp:v.hp,kind,turn:0,rewarded:false,element:m.element,race:m.race,maxDrops:m.maxDrops,difficulty:mode,region:mi,questEncounter:ch.key});
+   }
+  }
+  enemy=foes[0]||null;beginBattleStatistics();note('任務關卡開始：'+row.name+'。');return true;
+ };
+ const questRoundBase=pacedRound;pacedRound=function*(){
+  const ch=party?.questChallenge;yield* questRoundBase();if(!ch||party?.questChallenge!==ch)return;
+  const success=foes.length>0&&foes.every(e=>e.hp<=0);
+  if(success||!running&&!foes.length){
+   running=false;party.questChallenge=null;
+   if(success){stats().encounters[ch.key]=(stats().encounters[ch.key]||0)+1;sync();}
+   globalThis.expeditionChallengeResult={name:ch.name,success,key:ch.key};
+   note('任務關卡「'+ch.name+'」'+(success?'挑戰成功，任務進度已更新。':'挑戰失敗，可依任務規則重試。'));save();render();
+  }
+ };
+ const stopBase=stopTeamExploration;stopTeamExploration=function(...args){if(party)party.questChallenge=null;return stopBase(...args);};
+ const changeMapBase=chooseMap;chooseMap=function(...args){if(party)party.questChallenge=null;globalThis.expeditionChallengeResult=null;return changeMapBase(...args);};
+
  globalThis.__EMBERWILD_STORY={get design(){return copy(design);},value,progress,met,sync,record,transaction,stats,resetTracking,validateProgress};
 })();
