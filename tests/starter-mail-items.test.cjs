@@ -1,8 +1,7 @@
-const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs');
+const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path');
 const {loadRuntime}=require('./headless-runtime.cjs'),root=path.resolve(__dirname,'..');
-const published=JSON.parse(fs.readFileSync(path.join(root,'data/balance.json')));
 const json=(r,s)=>JSON.parse(r.run('JSON.stringify('+s+')'));
-function game(edit){const r=loadRuntime(root),d=structuredClone(published);if(edit)edit(d);r.ctx.doc=d;r.run('applyBalanceConfig(doc);selectSaveSlot(1);start(0);closeModal()');return r;}
+function game(edit){const r=loadRuntime(root),d=json(r,'exportableBalance()');if(edit)edit(d);r.ctx.doc=d;r.run('applyBalanceConfig(doc);selectSaveSlot(1);start(0);closeModal()');return r;}
 
 test('all classes start with five ordinary white items; only the weapon is mailed and claiming never equips it',()=>{
  for(let job=0;job<4;job++){
@@ -36,13 +35,15 @@ test('all catalogue kinds are mailed in chunks of at most six and land in their 
 });
 test('failed saves, a full bag and stock overflow retain every attachment and roll back all inventory changes',()=>{
  const r=game(d=>d.starterPackItems[0]=[{kind:'material',key:'紅色草',quantity:3}]);
- const before=r.run('JSON.stringify(packParty())');r.run('globalThis.realSave=save;save=()=>false');assert.equal(r.run('claimAllMailboxAttachments()'),false);assert.equal(r.run('JSON.stringify(packParty())'),before);
- r.run('save=()=>{throw Error("disk")};');assert.equal(r.run('claimAllMailboxAttachments()'),false);assert.equal(r.run('JSON.stringify(packParty())'),before);
+ const before=r.run('JSON.stringify(packParty())');r.run('globalThis.realSave=save;save=()=>false');for(const claim of ['claimMailboxAttachments(1)','claimAllMailboxAttachments()']){assert.equal(r.run(claim),false);assert.equal(r.run('JSON.stringify(packParty())'),before);}
+ r.run('save=()=>{throw Error("disk")};');for(const claim of ['claimMailboxAttachments(1)','claimAllMailboxAttachments()']){assert.equal(r.run(claim),false);assert.equal(r.run('JSON.stringify(packParty())'),before);}
  r.run('save=realSave;while(state.bag.length<RULES.bagCapacity)state.bag.push(gear(1,1,0,0));');assert.equal(r.run('claimMailboxAttachments(1)'),false);assert.equal(r.run('party.mailbox.messages[0].claimed'),false);
  r.run('state.bag=state.bag.slice(0,5);state.materials["紅色草"]=1e9;');assert.equal(r.run('claimMailboxAttachments(1)'),false);assert.equal(r.run('state.bag.length'),5);assert.equal(r.run('party.mailbox.messages[0].claimed'),false);
+ r.run('state.materials["紅色草"]=0;globalThis.saveCalls=0;save=(...args)=>{if(++saveCalls>1)throw Error("duplicate save");return realSave(...args);};');
+ assert.equal(r.run('claimMailboxAttachments(1)'),true);assert.equal(r.run('saveCalls'),1);assert.equal(r.run('claimAllMailboxAttachments()'),false);assert.equal(r.run('saveCalls'),1);
 });
-test('pending/claimed mail survives cold reload and no gifts are sent again on loading an existing save',()=>{
- const r=game();r.run('save()');let reload=loadRuntime(root,'index.html',Object.fromEntries(r.values));assert.equal(reload.run('party.mailbox.messages.length'),1);assert.equal(reload.run('state.bag.length'),5);reload.run('continueFromTitle();closeModal()');assert.equal(reload.run('claimMailboxAttachments(1)'),true);
+test('pending/claimed mail survives cold reload and no gifts are sent again on loading an existing save',async()=>{
+ const r=game();r.run('save()');let reload=loadRuntime(root,'index.html',Object.fromEntries(r.values));assert.equal(reload.run('party.mailbox.messages.length'),1);assert.equal(reload.run('state.bag.length'),5);reload.run('continueFromTitle();closeModal()');assert.equal(reload.run('EmberwildOffline.busy'),true);assert.equal(reload.run('claimMailboxAttachments(1)'),false);assert.equal(reload.run('party.mailbox.messages[0].claimed'),false);await reload.run('EmberwildOffline.settle()');assert.equal(reload.run('claimMailboxAttachments(1)'),true);
  reload=loadRuntime(root,'index.html',Object.fromEntries(reload.values));assert.equal(reload.run('party.mailbox.messages.length'),1);assert.equal(reload.run('party.mailbox.messages[0].claimed'),true);assert.equal(reload.run('claimMailboxAttachments(1)'),false);assert.equal(reload.run('state.bag.length'),6);assert.deepEqual(reload.errors,[]);
 });
 test('six attachment slots use SVG; inventory keeps detail actions; references and mail stay non-modal',()=>{

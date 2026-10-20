@@ -242,8 +242,9 @@
   'salvage','salvageAll','sellGear','sellAllGearByQuality','confirmMassSalvage','confirmGearInventoryBatch','confirmTokenBatch','sellMaterial','sellCatalogueGem',
   'startDailyCommission','claimBoard','claimDailyBonus','startSideQuest','claimQuest','completeStoryStage','claimMailboxAttachments','claimAllMailboxAttachments','useLevelScroll'
  ]){
-  const base=globalThis[name];if(typeof base!=='function')continue;
-  globalThis[name]=function(...args){if(!stepping){if(globalThis.__EMBERWILD_SAVE_OWNER===false)return false;sync();if(job||failed)return false;}const wasRunning=running,wasEncounter=foes.length;const out=base.apply(this,args);if(!stepping){if(!wasRunning&&running&&!wasEncounter)ensure().startedAt=nowReal();sync();save();if(atTitle()){document.getElementById('offline-settlement').hidden=true;renderedReceipt=null;}}return out;};
+  // Mail claims commit attachments and claim flags atomically, including rollback.
+  const savesOwnState=['claimMailboxAttachments','claimAllMailboxAttachments'].includes(name),base=globalThis[name];if(typeof base!=='function')continue;
+  globalThis[name]=function(...args){if(!stepping){if(globalThis.__EMBERWILD_SAVE_OWNER===false)return false;sync();if(job||failed)return false;}const wasRunning=running,wasEncounter=foes.length;const out=base.apply(this,args);if(!stepping){if(!wasRunning&&running&&!wasEncounter)ensure().startedAt=nowReal();sync();if(!savesOwnState)save();if(atTitle()){document.getElementById('offline-settlement').hidden=true;renderedReceipt=null;}}return out;};
  }
  const continueBase=continueFromTitle;
  continueFromTitle=function(...args){const out=continueBase(...args);if(party){const c=ensure();lastMode=c.status==='running';void settle();}return out;};
