@@ -1778,7 +1778,7 @@ try{
   if(previewBuild&&message.startsWith('裝備類型無效：')){
     globalThis.__EMBERWILD_DEFERRED_CUSTOM_FORM_SAVE=true;
     console.warn('存檔使用尚未載入的測試裝備類型，等待完整模組或測試 JSON 後重試',e);
-  }else toast('存檔未能載入：'+message+'；將在完整模組載入後再重試。');
+  }else console.warn('存檔等待完整模組載入後重試：'+message);
 }
 render();window.emberwildBootComplete=true;timer=setInterval(()=>{if(!globalThis.__EMBERWILD_BALANCE_SOURCE||globalThis.__EMBERWILD_BALANCE_READY)tick();},50);setInterval(()=>{if(!globalThis.__EMBERWILD_BALANCE_SOURCE||globalThis.__EMBERWILD_BALANCE_READY)save();},5000);window.addEventListener('beforeunload',()=>{if(!globalThis.__EMBERWILD_BALANCE_SOURCE||globalThis.__EMBERWILD_BALANCE_READY)save();});
 

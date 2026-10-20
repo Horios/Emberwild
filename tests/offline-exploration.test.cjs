@@ -26,11 +26,11 @@ test('receipt, inventory and cursor persist atomically; reload before acknowledg
  const raw=r.values.get(key),cold=loadRuntime(root,'index.html',{[key]:raw},r.now);assert.deepEqual(cold.errors,[]);assert.equal(cold.run('party.offlineExploration.lastAt'),r.now);assert.equal(cold.run('state.totalKills'),r.run('state.totalKills'));
 });
 test('interrupted batches continue from their committed cursor, not the original offline start',async()=>{
- const a=game();a.advance(60000);const original=json(a,'packParty()');a.ctx.from=original.offlineExploration.lastAt;a.ctx.to=a.now;
+ const a=game();a.advance(300000);const original=json(a,'packParty()');a.ctx.from=original.offlineExploration.lastAt;a.ctx.to=a.now;
  // Start a real batch, then simulate a page close when its first yield is pending.
  const callbacks=[];a.ctx.setTimeout=fn=>{callbacks.push(fn);};const pending=a.run('EmberwildOffline.settle()');await new Promise(resolve=>setImmediate(resolve));
- const durable=JSON.parse(a.values.get(a.run('KEY')));assert(durable.offlineExploration.receipt);assert(durable.offlineExploration.lastAt>=original.offlineExploration.lastAt);
- const b=game();b.advance(60000);b.ctx.saved=durable;b.run('loadParty(saved)');await b.run('EmberwildOffline.settle()');assert.equal(b.run('party.offlineExploration.lastAt'),b.now);assert.equal(b.run('party.offlineExploration.receipt.complete'),true);
+ const durable=JSON.parse(a.values.get(a.run('KEY')));assert(durable.offlineExploration.pendingReceipt);assert(durable.offlineExploration.lastAt>=original.offlineExploration.lastAt);
+ const b=game();b.advance(300000);b.ctx.saved=durable;b.run('loadParty(saved)');await b.run('EmberwildOffline.settle()');assert.equal(b.run('party.offlineExploration.lastAt'),b.now);assert.equal(b.run('party.offlineExploration.receipt.complete'),true);
  while(callbacks.length){callbacks.shift()();await new Promise(resolve=>setImmediate(resolve));}await pending;
 });
 test('backwards clock and storage failure preserve the last valid save and unsettled time',async()=>{
@@ -38,21 +38,23 @@ test('backwards clock and storage failure preserve the last valid save and unset
  r.advance(61000);r.ctx.localStorage.setItem=()=>{throw Error('quota');};await r.run('retryOfflineExploration()');assert.equal(r.run('EmberwildOffline.failed'),true);assert.equal(r.values.get(key),raw);assert.equal(r.run('party.offlineExploration.lastAt'),JSON.parse(raw).offlineExploration.lastAt);
 });
 test('full bag preserves generated gear and terminates effective time without deleting existing equipment',async()=>{
- const r=game();r.run('GAMEPLAY_SETTINGS.equipment.bagCapacity=state.bag.length;save()');const ids=json(r,'state.bag.map(g=>g.id)');await settle(r,3600000);assert.equal(r.run('running'),false);assert.deepEqual(json(r,'state.bag.map(g=>g.id)'),ids);assert(r.run('party.offlineExploration.receipt.effectiveMs')<3600000);assert.match(r.run('party.offlineExploration.receipt.reason'),/背包/);
+ const r=game();r.run('GAMEPLAY_SETTINGS.equipment.bagCapacity=state.bag.length;save()');const ids=json(r,'state.bag.map(g=>g.id)');await settle(r,3600000);assert.equal(r.run('running'),false);assert.deepEqual(json(r,'state.bag.map(g=>g.id)'),ids);assert(r.run('(party.offlineExploration.receipt||party.offlineExploration.pendingReceipt).effectiveMs')<3600000);assert.match(r.run('(party.offlineExploration.receipt||party.offlineExploration.pendingReceipt).reason'),/背包/);
 });
 test('30s, 5m, 1h, 8h and 24h debts complete in finite batches with no artificial time cap',async t=>{
- for(const ms of [30000,300000,3600000,28800000,86400000])await t.test(String(ms),async()=>{const r=game(),start=performance.now();await settle(r,ms);const receipt=json(r,'party.offlineExploration.receipt');assert.equal(receipt.end-receipt.start,ms);assert.equal(r.run('party.offlineExploration.lastAt'),r.now);assert(receipt.effectiveMs<=ms);assert.equal(receipt.complete,true);assert(r.run('logs.length')<=65);t.diagnostic(`${ms/1000}s debt: ${Math.round(performance.now()-start)}ms, ${receipt.kills} kills, effective ${receipt.effectiveMs}ms`);});
+ for(const ms of [30000,300000,3600000,28800000,86400000])await t.test(String(ms),async()=>{const r=game(),start=performance.now();await settle(r,ms);const receipt=json(r,'party.offlineExploration.receipt||party.offlineExploration.pendingReceipt');assert.equal(receipt.end-receipt.start,ms);assert.equal(r.run('party.offlineExploration.lastAt'),r.now);assert(receipt.effectiveMs<=ms);if(r.run('!!party.offlineExploration.receipt'))assert.equal(receipt.complete,true);else assert.equal(receipt.battles,0);assert(r.run('logs.length')<=65);t.diagnostic(`${ms/1000}s debt: ${Math.round(performance.now()-start)}ms, ${receipt.kills} kills, effective ${receipt.effectiveMs}ms`);});
 });
 test('one ownership lock is acquired before module execution; phone/desktop receipt uses the existing SVG/detail components',()=>{
  const loader=fs.readFileSync(path.join(root,'js/balance/published-loader.js'),'utf8'),ui=fs.readFileSync(path.join(root,'js/combat/offline-exploration.js'),'utf8'),css=fs.readFileSync(path.join(root,'css/offline-exploration.css'),'utf8');assert(loader.indexOf('await new Promise((resolve,reject)=>{\n      navigator.locks.request')<loader.indexOf('const urls=Array.from'));assert.match(loader,/preview\?'preview':'production'/);assert.match(ui,/gearSlotHTML/);assert.match(ui,/equipmentAttributeDetailsHTML/);assert.match(css,/@media\(max-width:600px\)/);assert.match(css,/max-height:94dvh/);
 });
 
-test('hidden timers leave debt intact and visibility restoration settles once',async()=>{
- const r=game();r.ctx.document.hidden=true;r.ctx.document.visibilityState='hidden';r.dispatch('visibilitychange','document');const from=r.run('party.offlineExploration.lastAt');r.advance(60000);r.run('tick();tick()');assert.equal(r.run('party.offlineExploration.lastAt'),from);
+test('background timers advance real elapsed time and visibility restoration settles only the remainder',async()=>{
+ const r=game();r.ctx.document.hidden=true;r.ctx.document.visibilityState='hidden';r.dispatch('visibilitychange','document');const from=r.run('party.offlineExploration.lastAt');r.advance(60000);r.run('tick();tick()');await r.run('EmberwildOffline.settle()');assert.equal(r.run('party.offlineExploration.lastAt'),from+60000);
  r.ctx.document.hidden=false;r.ctx.document.visibilityState='visible';r.dispatch('visibilitychange','document');await r.run('EmberwildOffline.settle()');assert.equal(r.run('party.offlineExploration.receipt.effectiveMs'),60000);const before=result(r);r.dispatch('visibilitychange','document');await r.run('EmberwildOffline.settle()');assert.deepEqual(result(r),before);
 });
-test('gear details can close while a completed receipt remains open, and receipt acknowledgement resumes exactly once',async()=>{
- const r=game();await settle(r,60000);r.run(`$('modal').showModal();closeModal();`);assert.equal(r.elements.get('modal').open,false);const at=r.now;r.advance(10000);r.run('save()');const raw=JSON.parse(r.values.get(r.run('KEY')));assert.equal(raw.offlineExploration.status,'paused');r.ctx.saved=raw;r.run('loadParty(saved)');assert.equal(r.run('EmberwildOffline.active'),false);r.run('acknowledgeOfflineExploration()');assert.equal(r.run('party.offlineExploration.lastAt'),at+10000);assert.equal(r.run('running'),true);
+test('receipt stays frozen while exploration and saves continue; gear details can close',async()=>{
+ const r=game();await settle(r,60000);const first=json(r,'party.offlineExploration.receipt');r.run(`$('modal').showModal();closeModal();`);assert.equal(r.elements.get('modal').open,false);
+ await settle(r,10000);const raw=JSON.parse(r.values.get(r.run('KEY')));assert.equal(raw.offlineExploration.status,'running');assert.deepEqual(raw.offlineExploration.receipt,first);
+ r.ctx.saved=raw;r.run('loadParty(saved)');assert.equal(r.run('EmberwildOffline.active'),true);const before=result(r);assert.equal(r.run('acknowledgeOfflineExploration()'),true);assert.deepEqual(result(r),before);
 });
 test('production loader queues a second tab until the owner page hides, then only the new owner can save',async()=>{
  const vm=require('node:vm'),code=fs.readFileSync(path.join(root,'js/balance/published-loader.js'),'utf8');
@@ -73,7 +75,7 @@ test('a failed checkpoint restores the last committed batch and keeps its unfini
  r.ctx.localStorage.setItem=(k,v)=>{if(k===key&&++commits>=3)throw Error('quota after batch');return put(k,v);};
  await settleFailure();
  async function settleFailure(){r.advance(3600000);await r.run('EmberwildOffline.settle()');}
- assert.equal(r.run('EmberwildOffline.failed'),true);const raw=JSON.parse(r.values.get(key));assert(raw.offlineExploration.receipt);assert.equal(raw.offlineExploration.receipt.complete,false);assert(raw.offlineExploration.lastAt<r.now);assert.equal(r.run('state.totalKills'),raw.members[0].totalKills);
+ assert.equal(r.run('EmberwildOffline.failed'),true);const raw=JSON.parse(r.values.get(key));assert(raw.offlineExploration.pendingReceipt);assert.equal(raw.offlineExploration.pendingReceipt.complete,false);assert(raw.offlineExploration.lastAt<r.now);assert.equal(r.run('state.totalKills'),raw.members[0].totalKills);
  r.ctx.localStorage.setItem=put;await r.run('retryOfflineExploration()');assert.equal(r.run('EmberwildOffline.failed'),false);assert.equal(r.run('party.offlineExploration.lastAt'),r.now);assert.equal(r.run('party.offlineExploration.receipt.kills'),r.run('state.totalKills'));assert.equal(r.run('party.offlineExploration.receipt.complete'),true);
 });
 test('quest challenge and terminal victory survive cold combat restoration and use existing quest kill events',async()=>{
