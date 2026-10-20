@@ -1,4 +1,4 @@
-/* Shared exploration-time consumable contract. Percentages are source contributions, not multipliers. */
+/* Shared real-time consumable contract. Percentages are source contributions, not multipliers. */
 (function(root){
   'use strict';
   const TYPE='timedBoost',KINDS=['speed2','exp','drop'],MAX_STACK_MS=24*60*60*1000;
@@ -76,7 +76,7 @@
     {id:'exp_100_30m',type:TYPE,boostType:'exp',bonusPercent:100,durationMinutes:30,duration:0,cost:600,sellPrice:150,shopEnabled:false,name:itemName('exp',100,30),description:''},
     {id:'drop_50_30m',type:TYPE,boostType:'drop',bonusPercent:50,durationMinutes:30,duration:0,cost:600,sellPrice:150,shopEnabled:false,name:itemName('drop',50,30),description:''}
   ];
-  const DAILY_TICKET={id:'speed2_120m',type:TYPE,boostType:'speed2',bonusPercent:0,durationMinutes:120,duration:0,cost:0,sellPrice:0,shopEnabled:false,name:'兩倍速券2小時',description:'每日委託五選四完成獎勵，提供 2 小時有效探索的兩倍速時間。'};
+  const DAILY_TICKET={id:'speed2_120m',type:TYPE,boostType:'speed2',bonusPercent:0,durationMinutes:120,duration:0,cost:0,sellPrice:0,shopEnabled:false,name:'兩倍速券2小時',description:'每日委託五選四完成獎勵，提供 2 小時現實時間的兩倍速效果。'};
   const DEFAULT_RULES=DEFAULT_ITEMS.map((item,i)=>({id:item.id,enabled:true,type:'item',key:item.id,name:'',description:'',quantityMin:1,quantityMax:1,unitPrice:null,weight:i===0?.15:.35,selection:'weighted',chance:1,quantityScalesWithTier:false,priceScalesWithTier:false}));
   function migrateConfig(cfg){
     migrateElementalConfig(cfg);
@@ -97,7 +97,7 @@
       }
       cfg.timeUnits.timedBoostDuration='realMinutes';
     }
-    cfg.timeUnits.consumableClock='exploration';
+    cfg.timeUnits.consumableClock='wall';
     cfg.items??=[];if(!cfg.items.some(i=>i.id==='speed2_120m'))cfg.items.push(copy(DAILY_TICKET));
     return cfg;
   }

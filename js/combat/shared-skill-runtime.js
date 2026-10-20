@@ -2,6 +2,8 @@
    Monsters keep only skillId references; definitions remain in CLASSES / SKILL_ELEMENTS. */
 (()=>{
   let enemySharedCooldowns=Object.create(null);
+  globalThis.EmberwildEnemyCombatState={pack:()=>enemySharedCooldowns,restore:v=>{enemySharedCooldowns=v||Object.create(null);}};
+
   const BASIC_EFFECTS=new Set(['cleanse','dispel','revive','damage','heal','shield','drain','nextActiveDamage','advanceNextRound','shieldLowest','applyStatus','induceSkill']);
   const idFor=(job,index)=>CLASSES[job]?.skills?.[index]?.[6]?.sharedId||`job${job}-core${index}`;
   function sharedCoreSkillPool(){

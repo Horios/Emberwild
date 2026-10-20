@@ -21,7 +21,7 @@ test('legacy deadline and malformed new timer migration are validated without mu
  for(const patch of [{remainingMs:-1},{remainingMs:Infinity},{enabled:'yes'},{remainingMs:undefined,expiresAt:Infinity}])assert.throws(()=>M.validateState({timedBoosts:[{...buff(),...patch}]}));
 });
 test('runtime exploration clock, controls, save compatibility, effects and quest encounters',async t=>{
- const r=fixture(),baseline=json(r,'packParty()');const reset=()=>{r.ctx.saved=structuredClone(baseline);r.run('loadParty(saved);closeModal();setTab("battle");globalThis.expeditionChallengeResult=null;');};
+ const r=fixture();r.ctx.setTimeout=fn=>setImmediate(fn);const move=async ms=>{r.advance(ms);await r.run('EmberwildOffline.settle()');if(r.run('!!party.offlineExploration.receipt'))r.run('acknowledgeOfflineExploration()');};const baseline=json(r,'packParty()');const reset=()=>{r.ctx.saved=structuredClone(baseline);r.run('loadParty(saved);closeModal();setTab("battle");globalThis.expeditionChallengeResult=null;');};
  await t.test('one main operation surface and synchronized pause/resume/stop controls',()=>{
   reset();let view=r.run('battleView()');assert.equal((view.match(/onclick="startSelectedExploration\(\)"/g)||[]).length,1);assert(!view.includes('onclick="toggleBattle()"'));assert.match(view,/一般探索/);assert.match(view,/BOSS 難關/);assert.match(view,/任務關卡/);
   r.run('startSelectedExploration();durable();');for(const fn of ['battleView()','sharedBattleJournal()'])assert.match(r.run(fn),/onclick="toggleBattle\(\)">暫停/);
@@ -32,30 +32,29 @@ test('runtime exploration clock, controls, save compatibility, effects and quest
   reset();r.run('startSelectedExploration();durable();globalThis.oldFoe=foes[0];selectExplorationMap(1);');assert.equal(r.run('party.map'),0);assert.equal(r.run('foes[0]===oldFoe'),true);assert.match(r.run('battleView()'),/選擇其他目的地僅供準備/);
   r.run('stopTeamExploration();startSelectedExploration();');assert.equal(r.run('party.map'),1);assert.equal(r.run('foes.includes(oldFoe)'),false);assert.equal(r.run('running'),true);
  });
- await t.test('all enabled consumables use one real-time delta, with no double deduction from render/save',()=>{
-  reset();r.run('tickets();startSelectedExploration();durable();');r.advance(30000);r.run('tick();save();render();packParty();');assert.deepEqual(json(r,'party.timedBoosts.map(b=>b.remainingMs)'),[1770000,1770000,1770000]);assert.equal(r.run('party.combatSession.idleTimeMs'),30000);assert.equal(r.run('battleRate'),2);
-  r.run('toggleBattle()');r.advance(100000);r.run('tick();save()');assert.equal(r.run('party.timedBoosts[0].remainingMs'),1770000);
-  r.run('toggleBattle()');r.advance(1000);r.run('tick();stopTeamExploration()');r.advance(100000);r.run('tick()');assert.equal(r.run('party.timedBoosts[0].remainingMs'),1769000);
+ await t.test('wall-clock effects count paused and stopped time; active time counts only exploration',async()=>{
+  reset();r.run('tickets();startSelectedExploration();durable();');await move(30000);assert.deepEqual(json(r,'party.timedBoosts.map(b=>b.remainingMs)'),[1770000,1770000,1770000]);assert.equal(r.run('party.combatSession.idleTimeMs'),30000);
+  r.run('toggleBattle()');await move(100000);assert.equal(r.run('party.timedBoosts[0].remainingMs'),1670000);assert.equal(r.run('party.combatSession.idleTimeMs'),30000);
+  r.run('toggleBattle()');await move(1000);r.run('stopTeamExploration()');await move(100000);assert.equal(r.run('party.timedBoosts[0].remainingMs'),1569000);
  });
- await t.test('independent toggles change actual EXP/drop effects and preserve other sources',()=>{
+ await t.test('independent toggles change effects while retaining independent wall deadlines',async()=>{
   reset();r.run('tickets();setTimedBoostEnabled("team:1",false);');assert.equal(r.run('EmberwildTimedBoosts.bonus(party,"exp")'),0);assert.equal(r.run('partyDropRateBonus()'),.5);r.run('awardXP(100)');assert.equal(r.run('state.xp'),100);
-  r.run('startSelectedExploration();durable()');r.advance(2000);r.run('tick()');assert.deepEqual(json(r,'party.timedBoosts.map(b=>b.remainingMs)'),[1798000,1800000,1798000]);
+  r.run('startSelectedExploration();durable()');await move(2000);assert.deepEqual(json(r,'party.timedBoosts.map(b=>b.remainingMs)'),[1798000,1798000,1798000]);
   r.run('setTimedBoostEnabled("team:1",true);state.xp=0;awardXP(100)');assert.equal(r.run('state.xp'),200);assert.equal(r.run('effectiveDropChance({chanceByDifficulty:[.05,.05,.05]},{difficulty:0})'),.07500000000000001);
  });
- await t.test('natural speed exhaustion links at exact cutoff; manual 1x/pause/stop never link',()=>{
-  reset();r.run('tickets();setPauseBoostsOnSpeedEnd(true);startSelectedExploration();durable();party.timedBoosts[0].remainingMs=100;');r.advance(500);r.run('tick()');assert.equal(r.run('battleRate'),1);assert.equal(r.run('party.timedBoosts[1].remainingMs'),1799900);assert.equal(r.run('party.timedBoosts[1].enabled'),false);
+ await t.test('natural speed exhaustion disables linked effects at cutoff; all deadlines keep counting',async()=>{
+  reset();r.run('tickets();setPauseBoostsOnSpeedEnd(true);startSelectedExploration();durable();party.timedBoosts[0].remainingMs=100;');await move(500);assert.equal(r.run('battleRate'),1);assert.equal(r.run('party.timedBoosts[1].remainingMs'),1799500);assert.equal(r.run('party.timedBoosts[1].enabled'),false);
   r.run('setTimedBoostEnabled("team:1",true);useSupply("speed2_30m");setBattleSpeed(2);setBattleSpeed(1);');assert.equal(r.run('party.timedBoosts.find(b=>b.boostType==="exp").enabled'),true);
-  r.run('stopTeamExploration()');r.advance(1000);r.run('tick()');assert.equal(r.run('party.timedBoosts.find(b=>b.boostType==="exp").enabled'),true);
+  r.run('stopTeamExploration()');await move(1000);assert.equal(r.run('party.timedBoosts.find(b=>b.boostType==="exp").enabled'),true);
  });
- await t.test('save/reload, cold load and old saves retain exact remaining time with no offline combat',()=>{
-  reset();r.run('tickets();setTimedBoostEnabled("team:2",false);setPauseBoostsOnSpeedEnd(true);startSelectedExploration();durable();');r.advance(1200);r.run('tick();save();globalThis.snapshot=structuredClone(packParty());');const data=json(r,'snapshot'),key=r.run('KEY');
-  r.advance(3600000);r.run('loadParty(snapshot);');assert.deepEqual(json(r,'party.timedBoosts'),data.timedBoosts);assert.equal(r.run('running'),false);assert.equal(r.run('party.combatSession.pauseBoostsOnSpeedEnd'),true);
-  const cold=loadRuntime(root,'index.html',{[key]:JSON.stringify(data),'emberwild-active-save-slot':'1'},r.now);assert.deepEqual(cold.errors,[]);if(cold.run('!!party'))assert.deepEqual(json(cold,'party.timedBoosts'),data.timedBoosts);
-  r.run('delete snapshot.combatSession;delete snapshot.timedBoosts;loadParty(snapshot)');assert.deepEqual(json(r,'party.timedBoosts'),[]);assert.equal(r.run('party.combatSession.pauseBoostsOnSpeedEnd'),false);
+ await t.test('save/reload restores running combat; old saves have no retrospective offline rewards',async()=>{
+  reset();r.run('tickets();setTimedBoostEnabled("team:2",false);setPauseBoostsOnSpeedEnd(true);startSelectedExploration();durable();');await move(1200);r.run('save();globalThis.snapshot=structuredClone(packParty());');
+  r.advance(3600000);r.run('loadParty(snapshot)');assert.equal(r.run('running'),true);await r.run('EmberwildOffline.settle()');assert.equal(r.run('party.offlineExploration.receipt.complete'),true);assert.equal(r.run('party.timedBoosts.every(b=>b.remainingMs===0)'),true);r.run('acknowledgeOfflineExploration()');
+  r.run('delete snapshot.combatSession;delete snapshot.timedBoosts;delete snapshot.offlineExploration;loadParty(snapshot)');assert.deepEqual(json(r,'party.timedBoosts'),[]);assert.equal(r.run('party.combatSession.pauseBoostsOnSpeedEnd'),false);assert.equal(r.run('running'),false);
  });
- await t.test('elemental potions share the same clock and can be disabled per source',()=>{
-  reset();const item=r.run('SHOP.find(i=>i.type==="ward").id');r.ctx.item=item;r.run('state.consumables[item]=2;useSupply(item);globalThis.originalLeft=EmberwildTimedBoosts.remainingMs(EmberwildTimedBoosts.buffRows(state.ward)[0]);startSelectedExploration();durable();');r.advance(2000);r.run('tick()');assert.equal(r.run('EmberwildTimedBoosts.remainingMs(EmberwildTimedBoosts.buffRows(state.ward)[0])'),r.run('originalLeft')-2000);
-  r.run('setTimedBoostEnabled("0:ward:0",false)');r.advance(2000);r.run('tick()');assert.equal(r.run('EmberwildTimedBoosts.remainingMs(EmberwildTimedBoosts.buffRows(state.ward)[0])'),r.run('originalLeft')-2000);assert.equal(r.run('activeSupplies(state,"ward").length'),0);
+ await t.test('elemental potions share wall time, including when effects are disabled',async()=>{
+  reset();const item=r.run('SHOP.find(i=>i.type==="ward").id');r.ctx.item=item;r.run('state.consumables[item]=2;useSupply(item);globalThis.originalLeft=EmberwildTimedBoosts.remainingMs(EmberwildTimedBoosts.buffRows(state.ward)[0]);startSelectedExploration();durable();');await move(2000);assert.equal(r.run('EmberwildTimedBoosts.remainingMs(EmberwildTimedBoosts.buffRows(state.ward)[0])'),r.run('originalLeft')-2000);
+  r.run('setTimedBoostEnabled("0:ward:0",false)');await move(2000);assert.equal(r.run('EmberwildTimedBoosts.remainingMs(EmberwildTimedBoosts.buffRows(state.ward)[0])'),r.run('originalLeft')-4000);assert.equal(r.run('activeSupplies(state,"ward").length'),0);
   r.run('globalThis.elementSave=structuredClone(packParty());loadParty(elementSave)');assert.equal(r.run('EmberwildTimedBoosts.buffRows(state.ward)[0].enabled'),false);
  });
  await t.test('BOSS entrance keeps charges and original auto-return settlement',()=>{

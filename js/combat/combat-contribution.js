@@ -33,7 +33,7 @@
     return out;
   }
   function writeCache(){
-    if(!party||!cache)return;
+    if(!party||!cache||globalThis.__EMBERWILD_OFFLINE_SILENT)return;
     try{localStorage.setItem(storageKey(),JSON.stringify(cache));}catch{}
   }
   function ensure(){

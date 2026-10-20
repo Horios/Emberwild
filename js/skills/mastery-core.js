@@ -110,15 +110,24 @@ function ensureMasterySettings(settings){
 ensureMasterySettings(GAMEPLAY_SETTINGS_DEFAULTS);
 ensureMasterySettings(GAMEPLAY_SETTINGS);
 
-function masterySettings(){ensureMasterySettings(GAMEPLAY_SETTINGS);return GAMEPLAY_SETTINGS.skills.mastery;}
+function masterySettings(){
+  // Simulation batches cannot edit design data; normalize once per batch.
+  const cache=globalThis.__EMBERWILD_OFFLINE_RULE_CACHE;
+  if(cache?.masteryOwner===GAMEPLAY_SETTINGS)return cache.mastery;
+  ensureMasterySettings(GAMEPLAY_SETTINGS);
+  if(cache){cache.masteryOwner=GAMEPLAY_SETTINGS;cache.mastery=GAMEPLAY_SETTINGS.skills.mastery;}
+  return GAMEPLAY_SETTINGS.skills.mastery;
+}
 function masteryStepCost(level){
   const s=masterySettings(),l=Math.max(0,Math.floor(Number(level)||0));
   return Math.max(1,Math.round(s.xpBase+l*s.xpLinear+l*l*s.xpQuadratic));
 }
 function masteryLevelFromXp(xp){
-  const s=masterySettings(),value=Math.max(0,Math.floor(Number(xp)||0));let level=0,spent=0;
+  const s=masterySettings(),value=Math.max(0,Math.floor(Number(xp)||0)),cache=globalThis.__EMBERWILD_OFFLINE_RULE_CACHE;
+  const levels=cache?(cache.masteryLevels??=new Map()):null;if(levels?.has(value))return levels.get(value);
+  let level=0,spent=0;
   while(level<s.maxLevel){const cost=masteryStepCost(level);if(value<spent+cost)break;spent+=cost;level++;}
-  return level;
+  levels?.set(value,level);return level;
 }
 function masteryProgress(xp){
   const value=Math.max(0,Math.floor(Number(xp)||0)),level=masteryLevelFromXp(value),max=masterySettings().maxLevel;

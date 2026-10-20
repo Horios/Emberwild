@@ -50,8 +50,9 @@
       const out=baseCast(h,i,v);if(out!==false)trigger(h,'skillCast');else if(reserved)Object.assign(reserved.r,reserved.before);return out;
     }finally{context=previous;}
   };
+  globalThis.EmberwildTokenCombatState={pack:()=>[...combat],restore:rows=>{combat.clear();for(const [k,v] of rows||[])combat.set(k,v);}};
   const baseRound=pacedRound;
-  pacedRound=function*(){if(running&&!$('modal').open){preparingRound=true;try{for(const h of living()){ensureBattle(h);const r=companion(h)?runtime(h):null,a=item(h)?.snapshot.ability;if(r?.started&&a?.event==='round'&&eventClock()-r.round+1>=a.threshold)trigger(h,'round');}}finally{preparingRound=false;}}yield* baseRound();if(!foes.some(e=>e.hp>0)||!living().length)clear();};
+  pacedRound=function*(){if(!globalThis.__EMBERWILD_RESUMING_ROUND&&running&&!$('modal').open){preparingRound=true;try{for(const h of living()){ensureBattle(h);const r=companion(h)?runtime(h):null,a=item(h)?.snapshot.ability;if(r?.started&&a?.event==='round'&&eventClock()-r.round+1>=a.threshold)trigger(h,'round');}}finally{preparingRound=false;}}yield* baseRound();if(!foes.some(e=>e.hp>0)||!living().length)clear();};
   const baseReset=resetEncounter;
   resetEncounter=function(){clear();return baseReset();};
   function makeToken(id,quality=null){const d=config.catalog.find(x=>x.id===id);if(!d)return null;const q=quality??d.quality;const g={id:uid(),type:M.TYPE,tokenId:d.id,name:d.name,slot:4,job:0,tier:1,rar:q,plus:0,affix:[],locked:false,snapshot:copy(d),qualityMultipliers:copy(config.qualityMultipliers)};M.validateItem(g,RULES.enhanceMax);return g;}

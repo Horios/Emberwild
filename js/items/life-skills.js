@@ -161,6 +161,7 @@
     const section=`<section class="shop-section life-shop-section"><div class="shop-section-head"><h2>生活技能材料</h2><span class="small">存入全隊共用材料庫。</span></div><div class="shop-product-grid">${productRows}</div></section>`;
     return section;
   };
+  globalThis.emberwildLifeHeartbeat=tickLifeSkills;
   const baseTick=tick;tick=function(...args){tickLifeSkills();return baseTick(...args);};
   const baseLoad=loadParty;loadParty=function(...args){const result=baseLoad(...args);resetJobs();return result;};
   const baseStart=start;start=function(...args){const result=baseStart(...args);resetJobs();return result;};

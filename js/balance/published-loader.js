@@ -54,6 +54,18 @@
     const preview=/(?:^|\/)preview(?:\/|$)/.test(location.pathname);
     const key=preview?'emberwild-preview-balance-test-v1':'emberwild-balance-test-v1';
     if(preview){try{if(localStorage.getItem(key+'-published-base')===version){const raw=localStorage.getItem(key);if(raw)globalThis.__EMBERWILD_BALANCE_SOURCE=JSON.parse(raw);}}catch{}}
+    if(!navigator.locks){throw Error('此瀏覽器不支援安全的多分頁存檔鎖，請使用支援 Web Locks 的瀏覽器');}
+    update('正在取得存檔使用權；若另一分頁正在遊玩，請先關閉該分頁');
+    let releaseOwnership;
+    const ownership=new Promise(resolve=>{releaseOwnership=resolve;});
+    await new Promise((resolve,reject)=>{
+      navigator.locks.request('emberwild-game:'+(preview?'preview':'production'),async()=>{
+        globalThis.__EMBERWILD_SAVE_OWNER=true;resolve();await ownership;
+        globalThis.__EMBERWILD_SAVE_OWNER=false;
+      }).catch(reject);
+    });
+    addEventListener('pagehide',()=>{globalThis.save?.();releaseOwnership();},{once:true});
+    addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
     const urls=Array.from(document.querySelectorAll('script[data-balance-src]'),node=>{const url=new URL(node.getAttribute('data-balance-src'),location.href);url.searchParams.set('balance-build',runtimeVersion);return url.href;});
     total=urls.length;update('正在下載遊戲');
     const downloads=urls.map(preload);
