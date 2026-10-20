@@ -5,7 +5,7 @@
  const copy=v=>v==null?v:JSON.parse(JSON.stringify(v)),api=EmberwildTimedBoosts;
  const hooks=()=>[EmberwildControlCombatState,EmberwildEnemyCombatState,EmberwildStatusCombatState,EmberwildTokenCombatState];
  const transient=['hp','shield','basicAdvanceRound','procAdvanceRound','procAdvanceSteps','nextActiveDamageBonus','healPotionCooldownRemaining'];
- let internal=false,stepping=false,job=null,failed=false,restoring=false,lastMode=false,actionSerial=0,lastRendered=0,gearPage=0,lastCheck=0,requestedAt=0,renderedReceipt=null,jobOffline=false;
+ let internal=false,stepping=false,job=null,failed=false,restoring=false,lastMode=false,actionSerial=0,lastRendered=0,gearPage=0,lastCheck=0,requestedAt=0,renderedReceipt=null,jobOffline=false,lastCommitted=globalThis.__EMBERWILD_BOOT_SAVE_RAW||null;
  const atTitle=()=>!!globalThis.isEmberwildTitleOpen?.();
  const nowReal=Date.now.bind(Date),basePack=packParty,baseSave=save,baseLoad=loadParty,baseValidate=validateParty;
  const active=()=>!!party&&running&&!$('modal')?.open&&!globalThis.isEmberwildTitleOpen?.();
@@ -17,6 +17,8 @@
    else if(c.receipt){c.pendingReceipt=c.receipt;c.receipt=null;}
    delete c.resumeRunning;c.version=2;
   }
+  // Earlier versions could save a visible but empty completed receipt.
+  if(c.receipt?.complete&&!hasRewards(c.receipt))c.receipt=null;
   c.pendingReceipt??=null;if(c.pendingReceipt)c.pendingReceipt.battles??=0;
   return c;
  }
@@ -33,6 +35,20 @@
   party.members.forEach((h,i)=>{for(const k of transient){if(b.heroes[i]?.[k]===undefined)delete h[k];else h[k]=b.heroes[i][k];}});
   running=c.status==='running';lastMode=running;
  }
+ function validateCombat(b,members){
+  const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v),count=n=>Number.isSafeInteger(n)&&n>=0;
+  const counters=v=>object(v)&&Object.values(v).every(n=>Number.isFinite(n)&&n>=0);
+  const ids=new Set(b.foes.map(e=>e.id)),heroIds=new Set(members.map(h=>'hero-'+memberKey(h)));
+  if(ids.size!==b.foes.length||!counters(b.actorCooldowns)||!counters(b.supportCooldowns)||b.effects.some(e=>!object(e)||typeof e.target!=='string'||typeof e.kind!=='string'||!Number.isFinite(e.value)||!Number.isFinite(e.until)))throw Error('離線戰鬥狀態無效');
+  const [control,enemies,status,tokens]=b.states;
+  if(!object(control)||!object(control.states)||!Array.isArray(control.summons)||control.summons.some(v=>!object(v))||!object(enemies)||Object.values(enemies).some(v=>!counters(v))||!object(status)||!Array.isArray(status.active)||status.active.some(v=>!object(v))||!Number.isSafeInteger(status.clock)||status.clock< -1||!count(status.serial)||!Array.isArray(tokens)||tokens.some(row=>!Array.isArray(row)||row.length!==2||!['number','string'].includes(typeof row[0])||!object(row[1])))throw Error('離線戰鬥效果快照無效');
+  if(b.activeBattleStat&&(!object(b.activeBattleStat)||!Array.isArray(b.activeBattleStat.deaths)||!counters(b.activeBattleStat.drops)||!Number.isFinite(b.activeBattleStat.xp)||b.activeBattleStat.xp<0))throw Error('離線戰鬥統計無效');
+  const p=b.progress;if(!p)return;
+  if(p.order.some(ref=>!object(ref)||!['hero','enemy'].includes(ref.side)||typeof ref.id!=='string'||!(ref.side==='hero'?heroIds:ids).has(ref.id)))throw Error('離線回合角色引用無效');
+  if(p.unit){const ref=p.order[p.index],h=ref?.side==='hero'?members.find(h=>'hero-'+memberKey(h)===ref.id):null,u=p.unit;
+   if(!h||!object(u)||!Array.isArray(u.support)||!Array.isArray(u.active)||!count(u.index)||u.index>u.support.length||u.support.some(i=>!count(i)||!SUPPORT[h.job]?.[i])||u.active.some(i=>!count(i)||!CLASSES[h.job]?.skills[i]))throw Error('離線回合技能游標無效');
+  }
+ }
  function validate(raw,members=[]){
   if(raw===undefined)return null;
   const c=copy(raw),validTime=n=>Number.isSafeInteger(n)&&n>=0&&n<=8.64e15;
@@ -41,6 +57,7 @@
    if(b.heroes.length!==members.length||b.heroes.some(h=>!Number.isFinite(h.hp)||h.hp<0||!Number.isFinite(h.shield)||h.shield<0)||b.foes.some(e=>!e||typeof e.id!=='string'||!Number.isFinite(e.hp)||e.hp<0||!Number.isFinite(e.maxhp)||e.maxhp<=0))throw Error('離線戰鬥角色資料無效');
    if(b.questChallenge&&(typeof b.questChallenge.key!=='string'||typeof b.questChallenge.name!=='string'||!Number.isInteger(b.questChallenge.mapIndex)))throw Error('離線任務關卡無效');
    if(b.progress&&(!Array.isArray(b.progress.order)||!Number.isInteger(b.progress.index)||b.progress.index<0||b.progress.index>b.progress.order.length))throw Error('離線回合游標無效');
+   validateCombat(b,members);
   }
   for(const r of [c.receipt,c.pendingReceipt].filter(Boolean)){if(!validTime(r.start)||!validTime(r.end)||r.end<r.start||typeof r.id!=='string'||typeof r.complete!=='boolean'||!Array.isArray(r.levels)||!Array.isArray(r.gear)||!r.items||!r.boosts||![r.effectiveMs,r.kills,r.xp,r.goldGained,r.goldSpent].every(n=>Number.isFinite(n)&&n>=0))throw Error('離線收益紀錄無效');
    if(c.version===2&&((r===c.receipt&&!r.complete)||(r===c.pendingReceipt&&r.complete)))throw Error('離線收益紀錄狀態無效');
@@ -64,7 +81,7 @@
   if(!internal){sync();if(job)return true;}
   if(failed||globalThis.__EMBERWILD_SAVE_OWNER===false)return false;
   // Never move lastAt just because a save ran: it represents settled events only.
-  return baseSave(...args);
+  const saved=baseSave(...args);if(saved===true&&typeof globalThis.__EMBERWILD_BOOT_SAVE_RAW==='string')lastCommitted=globalThis.__EMBERWILD_BOOT_SAVE_RAW;return saved;
  };
  function virtual(at,fn){const prev=Date.now;Date.now=()=>at;try{return fn();}finally{Date.now=prev;}}
  function quiet(fn){
@@ -145,7 +162,8 @@
  }
  function commit(){internal=true;try{if(save()!==true)throw Error('無法儲存結算進度，原存檔與未補算時間仍保留');}finally{internal=false;}}
  function rollback(message){
-  const raw=localStorage.getItem(KEY);restoring=true;try{if(raw)loadParty(JSON.parse(raw));}catch{}finally{restoring=false;}failed=true;
+  let raw=null;try{raw=localStorage.getItem(KEY);}catch{}
+  restoring=true;try{for(const candidate of new Set([raw,lastCommitted]))if(candidate){try{loadParty(JSON.parse(candidate));break;}catch{}}}finally{restoring=false;}failed=true;
   showProgress(message,true);
  }
  function showProgress(message,error=false){
@@ -182,6 +200,8 @@
      let more;
      do{const start=c.lastAt,r=c.pendingReceipt;more=advance(end);if(jobOffline)recordInterval(r,start,c.lastAt);commit();if(more)await new Promise(resolve=>setTimeout(resolve,0));}while(more);
     }while(c.lastAt<requestedAt);
+    // A throttled tick takes this async path; do not starve online life jobs.
+    internal=true;try{globalThis.emberwildLifeHeartbeat?.();}finally{internal=false;}
     if(!document.hidden)promote();commit();render();showReceipt();
     if(!c.receipt)document.getElementById('offline-settlement').hidden=true;
    }catch(e){rollback(String(e.message||e));}
@@ -207,9 +227,17 @@
  };
  // UI actions are already synchronous. Flush debt before changing the team/map,
  // and persist the new running/paused/stopped state after the operation.
- for(const name of ['toggleBattle','stopTeamExploration','restartExploration','startSelectedExploration','startBossChallenge','startQuestEncounter','leaveBossChallenge','chooseMap','returnToTitle','setBattleSpeed','setTimedBoostEnabled','useSupply','closeModal']){
+ for(const name of [
+  'toggleBattle','stopTeamExploration','restartExploration','startSelectedExploration','startBossChallenge','startQuestEncounter','leaveBossChallenge',
+  'chooseMap','changeDifficulty','setEncounterMode','returnToTitle','setBattleSpeed','setTimedBoostEnabled','setPauseBoostsOnSpeedEnd','useSupply','closeModal',
+  'buyFixedShopOffer','buyMarketOffer','buyHealingPotion','buySupply','buyLifeMaterial','sellInventoryItem',
+  'setHeroAutoPotion','setHeroAutoPotionThreshold','setHeroAutoPotionItem','potion',
+  'enhance','reroll','autoReroll','acceptAffix','resolveInlineAffix','rerollEquipmentPowerTier','socket',
+  'salvage','salvageAll','sellGear','sellAllGearByQuality','confirmMassSalvage','confirmGearInventoryBatch','sellMaterial','sellCatalogueGem',
+  'startDailyCommission','claimBoard','claimDailyBonus','startSideQuest','claimQuest','completeStoryStage','claimMailboxAttachments','claimAllMailboxAttachments','useLevelScroll'
+ ]){
   const base=globalThis[name];if(typeof base!=='function')continue;
-  globalThis[name]=function(...args){if(!stepping){sync();if(job||failed)return false;}const wasRunning=running,wasEncounter=foes.length;const out=base.apply(this,args);if(!stepping){if(!wasRunning&&running&&!wasEncounter)ensure().startedAt=nowReal();sync();save();if(atTitle()){document.getElementById('offline-settlement').hidden=true;renderedReceipt=null;}}return out;};
+  globalThis[name]=function(...args){if(!stepping){if(globalThis.__EMBERWILD_SAVE_OWNER===false)return false;sync();if(job||failed)return false;}const wasRunning=running,wasEncounter=foes.length;const out=base.apply(this,args);if(!stepping){if(!wasRunning&&running&&!wasEncounter)ensure().startedAt=nowReal();sync();save();if(atTitle()){document.getElementById('offline-settlement').hidden=true;renderedReceipt=null;}}return out;};
  }
  const continueBase=continueFromTitle;
  continueFromTitle=function(...args){const out=continueBase(...args);if(party){const c=ensure();lastMode=c.status==='running';void settle();}return out;};

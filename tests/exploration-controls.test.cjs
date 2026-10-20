@@ -21,7 +21,7 @@ test('legacy deadline and malformed new timer migration are validated without mu
  for(const patch of [{remainingMs:-1},{remainingMs:Infinity},{enabled:'yes'},{remainingMs:undefined,expiresAt:Infinity}])assert.throws(()=>M.validateState({timedBoosts:[{...buff(),...patch}]}));
 });
 test('runtime exploration clock, controls, save compatibility, effects and quest encounters',async t=>{
- const r=fixture();r.ctx.setTimeout=fn=>setImmediate(fn);const move=async ms=>{r.advance(ms);await r.run('EmberwildOffline.settle()');if(r.run('!!party.offlineExploration.receipt'))r.run('acknowledgeOfflineExploration()');};const baseline=json(r,'packParty()');const reset=()=>{r.ctx.saved=structuredClone(baseline);r.run('loadParty(saved);closeModal();setTab("battle");globalThis.expeditionChallengeResult=null;');};
+ const r=fixture();r.ctx.setTimeout=fn=>setImmediate(fn);const move=async ms=>{r.advance(ms);await r.run('EmberwildOffline.settle()');if(r.run('!!party.offlineExploration.receipt'))r.run('acknowledgeOfflineExploration()');};const baseline=json(r,'packParty()');const reset=()=>{r.ctx.saved=structuredClone(baseline);r.ctx.saved.offlineExploration.lastAt=r.now;r.run('loadParty(saved);closeModal();setTab("battle");globalThis.expeditionChallengeResult=null;');};
  await t.test('one main operation surface and synchronized pause/resume/stop controls',()=>{
   reset();let view=r.run('battleView()');assert.equal((view.match(/onclick="startSelectedExploration\(\)"/g)||[]).length,1);assert(!view.includes('onclick="toggleBattle()"'));assert.match(view,/一般探索/);assert.match(view,/BOSS 難關/);assert.match(view,/任務關卡/);
   r.run('startSelectedExploration();durable();');for(const fn of ['battleView()','sharedBattleJournal()'])assert.match(r.run(fn),/onclick="toggleBattle\(\)">暫停/);
@@ -49,7 +49,7 @@ test('runtime exploration clock, controls, save compatibility, effects and quest
  });
  await t.test('save/reload restores running combat; old saves have no retrospective offline rewards',async()=>{
   reset();r.run('tickets();setTimedBoostEnabled("team:2",false);setPauseBoostsOnSpeedEnd(true);startSelectedExploration();durable();');await move(1200);r.run('save();globalThis.snapshot=structuredClone(packParty());');
-  r.advance(3600000);r.run('loadParty(snapshot)');assert.equal(r.run('running'),true);await r.run('EmberwildOffline.settle()');assert.equal(r.run('party.offlineExploration.receipt.complete'),true);assert.equal(r.run('party.timedBoosts.every(b=>b.remainingMs===0)'),true);r.run('acknowledgeOfflineExploration()');
+  r.advance(3600000);r.run('loadParty(snapshot)');assert.equal(r.run('running'),true);await r.run('EmberwildOffline.settle()');assert.equal(r.run('party.offlineExploration.receipt'),null);assert.equal(r.run('party.offlineExploration.pendingReceipt.battles'),0);assert.equal(r.run('party.timedBoosts.every(b=>b.remainingMs===0)'),true);
   r.run('delete snapshot.combatSession;delete snapshot.timedBoosts;delete snapshot.offlineExploration;loadParty(snapshot)');assert.deepEqual(json(r,'party.timedBoosts'),[]);assert.equal(r.run('party.combatSession.pauseBoostsOnSpeedEnd'),false);assert.equal(r.run('running'),false);
  });
  await t.test('elemental potions share wall time, including when effects are disabled',async()=>{

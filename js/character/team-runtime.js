@@ -139,6 +139,9 @@
     catch(e){throw Error('平衡設定不相容於已保存的隊伍：'+e.message+'。請先調整配置；原設定保留。');}
   }
   const balanceBase=applyBalanceConfig;
+  // Re-enter the final adapters without staging a build or committing another save.
+  function restoreRules(doc){const previous=resettingBalance;resettingBalance=true;try{applyBalanceConfig(doc,{persist:false});}finally{resettingBalance=previous;}}
+  function rollbackDocument(){const doc=exportableBalance();return globalThis.EmberwildInventoryIcons?.migrateDescriptions?.(doc,{hydrate:true})||doc;}
   applyBalanceConfig=function(input,{persist=true}={}){
     if(party&&!safe())return false;
     const d=validateBalanceConfig(input);
@@ -146,7 +149,8 @@
     // Validate the completed reset once the full existing reset chain returns.
     if(resettingBalance){balanceBase(d,{persist:false});applyRules(d);return d;}
     capture();
-    const next=stageBalanceBuild(d),before=exportableBalance(),previousBuild=build()?copy(build()):null,previousCache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
+    // Inner importers need descriptions hydrated from the exported icon catalogue.
+    const next=stageBalanceBuild(d),before=rollbackDocument(),previousBuild=build()?copy(build()):null,previousCache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
     const previousMarket=party?.market===undefined?undefined:copy(party.market);
     const battle=party?{heroes:party.members.map(h=>({hp:h.hp,shield:h.shield,potion:h.healPotionCooldownRemaining||0})),actors:copy(actorCooldowns),supports:copy(supportCooldowns),clock:partyClock}:null;
     try{
@@ -162,7 +166,7 @@
     }catch(e){
       suppressSave=true;
       try{
-        balanceBase(before,{persist:false});applyRules(before);
+        restoreRules(before);
         if(previousBuild){party.buildSystem=previousBuild;apply(plan());}
         if(party){if(previousMarket===undefined)delete party.market;else party.market=previousMarket;}
         if(battle){party.members.forEach((h,i)=>{h.hp=battle.heroes[i].hp;h.shield=battle.heroes[i].shield;h.healPotionCooldownRemaining=battle.heroes[i].potion;});actorCooldowns=battle.actors;supportCooldowns=battle.supports;partyClock=battle.clock;}
@@ -175,7 +179,7 @@
   const resetBalanceBase=resetBalanceJSON;
   resetBalanceJSON=function(publishedDefaults){
     if(party&&!safe())return false;capture();
-    const before=exportableBalance(),oldBuild=build()?copy(build()):null,cache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
+    const before=rollbackDocument(),oldBuild=build()?copy(build()):null,cache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
     const previousMarket=party?.market===undefined?undefined:copy(party.market);
     const vitals=party?.members.map(h=>({hp:h.hp,shield:h.shield,potion:h.healPotionCooldownRemaining||0})),actors=copy(actorCooldowns),supports=copy(supportCooldowns),clock=partyClock;
     try{
@@ -185,7 +189,7 @@
     }catch(e){
       resettingBalance=false;suppressSave=true;
       try{
-        balanceBase(before,{persist:false});applyRules(before);if(oldBuild){party.buildSystem=oldBuild;apply(plan());}
+        restoreRules(before);if(oldBuild){party.buildSystem=oldBuild;apply(plan());}
         if(party){if(previousMarket===undefined)delete party.market;else party.market=previousMarket;}
         if(vitals){party.members.forEach((h,i)=>{h.hp=vitals[i].hp;h.shield=vitals[i].shield;h.healPotionCooldownRemaining=vitals[i].potion;});actorCooldowns=actors;supportCooldowns=supports;partyClock=clock;}
         if(cache===null)localStorage.removeItem(BALANCE_KEY);else localStorage.setItem(BALANCE_KEY,cache);

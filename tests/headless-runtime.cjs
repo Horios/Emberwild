@@ -34,8 +34,10 @@ function loadRuntime(root,entry='index.html',saved={},clockStart=Date.parse('202
     const code=src?fs.readFileSync(path.join(root,src[1].split('?')[0]),'utf8'):scripts[i][2];
     try{vm.runInContext(code,ctx,{filename,timeout:10000});}catch(e){throw new Error(filename+': '+e.stack);}
   }
+  const published=path.join(root,'data/balance.json');
+  ctx.__HEADLESS_PUBLISHED_BALANCE=fs.existsSync(published)?JSON.parse(fs.readFileSync(published,'utf8')):null;
   // Mirror the loader's final domain apply and late-validator save restoration.
-  vm.runInContext(`{const raw=typeof balanceSourceText==='function'?balanceSourceText():null;if(raw)applyBalanceConfig(JSON.parse(raw),{persist:false});const boot=globalThis.__EMBERWILD_TEAM_BOOT_RAW||globalThis.__EMBERWILD_BOOT_SAVE_RAW;if(boot)loadParty(JSON.parse(boot));}`,ctx,{filename:'headless-published-loader',timeout:10000});
+  vm.runInContext(`{const raw=typeof balanceSourceText==='function'?balanceSourceText():null;if(raw||globalThis.__HEADLESS_PUBLISHED_BALANCE)applyBalanceConfig(raw?JSON.parse(raw):globalThis.__HEADLESS_PUBLISHED_BALANCE,{persist:false});const boot=globalThis.__EMBERWILD_TEAM_BOOT_RAW||globalThis.__EMBERWILD_BOOT_SAVE_RAW;if(boot){try{loadParty(JSON.parse(boot));globalThis.__EMBERWILD_BOOT_SAVE_ERROR=null;}catch(error){party=null;state=null;running=false;globalThis.__EMBERWILD_BOOT_SAVE_ERROR=String(error.message||error);if(typeof backToTitle==='function')backToTitle();else render();}}}`,ctx,{filename:'headless-published-loader',timeout:10000});
   return {ctx,elements,errors,warnings,values,dispatch:(type,target='window',event={})=>{for(const fn of listeners[target].get(type)||[])fn({...event,type});},run:code=>vm.runInContext(code,ctx),advance:ms=>{now+=ms;},get now(){return now;}};
 }
 module.exports={loadRuntime};
