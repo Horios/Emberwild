@@ -1,17 +1,18 @@
-/* One destination/control surface; the battlefield uses the remaining space. */
-#app .text-battle-layout{display:flex!important;flex-direction:column;gap:10px!important;overflow:auto!important;min-height:0!important}
-#app .text-battle-layout>.expedition-control-card{flex:0 0 auto!important;height:auto!important;max-height:none!important;overflow:visible!important;padding:12px!important;order:-1}
-#app .text-battle-layout>.party-combat{flex:1 0 320px!important;min-height:320px!important;height:auto!important}
+/* Keep desktop controls in a narrow right column beside the battlefield. */
+#app .text-battle-layout{display:grid!important;grid-template-columns:minmax(0,1fr) clamp(240px,21vw,300px)!important;grid-template-rows:minmax(0,1fr)!important;gap:10px!important;overflow:hidden!important;min-height:0!important}
+#app .text-battle-layout>.expedition-control-card{grid-column:2!important;grid-row:1!important;align-self:stretch!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:auto!important;padding:12px!important;order:0}
+#app .text-battle-layout>.party-combat{grid-column:1!important;grid-row:1!important;min-width:0!important;min-height:0!important;height:100%!important}
 .exploration-categories,.exploration-primary-actions{display:flex;flex-wrap:wrap;gap:6px}
 #app .expedition-control-card button{width:auto;flex:0 0 auto;height:auto;min-height:34px;white-space:normal;line-height:1.4}
-.exploration-selection{display:grid;grid-template-columns:minmax(180px,1fr) minmax(160px,1.2fr) auto;gap:12px;align-items:center;margin:10px 0}
-.exploration-selection>label{display:grid;gap:4px;min-width:0;font-size:12px}
+.exploration-selection{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-items:start;margin:10px 0}
+.exploration-selection>label{grid-row:1;display:grid;gap:4px;min-width:0;font-size:12px}
 #app .exploration-selection select{width:100%;height:auto;min-height:38px;max-width:100%;font-size:13px}
-.exploration-destination-detail{min-width:0;font-size:12px;overflow-wrap:anywhere;line-height:1.5}
+.exploration-primary-actions{grid-column:1;grid-row:2;justify-content:flex-start}
+.exploration-destination-detail{grid-column:1;grid-row:3;min-width:0;font-size:12px;overflow-wrap:anywhere;line-height:1.5}
 .exploration-destination-detail p{margin:3px 0;color:var(--muted)}
 .exploration-live-status{display:flex;gap:5px 8px;flex-wrap:wrap;font-size:12px;border-top:1px solid var(--line);padding-top:8px;overflow-wrap:anywhere}
 .exploration-live-status small{flex-basis:100%;color:var(--muted)}
-.exploration-secondary-settings{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-top:8px}
+.exploration-secondary-settings{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:8px}
 .exploration-secondary-settings>details{flex:1 1 240px;min-width:0;border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin:0!important}
 .exploration-secondary-settings summary{cursor:pointer;font-size:12px;color:var(--text)}
 .boost-management-list{display:grid;gap:6px}
@@ -36,12 +37,11 @@
  #app .global-battle-journal{grid-template-rows:auto minmax(100px,1fr) 7px minmax(0,var(--journal-loot-height))!important}
  #app .global-battle-journal:has(.journal-loot-compact:not([open])){grid-template-rows:auto minmax(100px,1fr) 7px auto!important}
 }
-@media(max-width:1100px){.exploration-selection{grid-template-columns:minmax(0,1fr) auto}.exploration-destination-detail{grid-column:1/-1;grid-row:2}}
 @media(max-width:900px){
- #app .text-battle-layout{overflow:visible!important;display:flex!important}
- #app .text-battle-layout>.party-combat{flex:none!important;min-height:0!important}
+ #app .text-battle-layout{overflow:visible!important;display:flex!important;flex-direction:column}
+ #app .text-battle-layout>.expedition-control-card{flex:none!important;order:-1;height:auto!important;overflow:visible!important}
+ #app .text-battle-layout>.party-combat{flex:none!important;min-height:0!important;height:auto!important}
  .exploration-selection{grid-template-columns:minmax(0,1fr);gap:8px}
- .exploration-destination-detail{grid-column:1;grid-row:auto}
  #app .expedition-control-card button{min-height:44px;font-size:13px;padding:7px 12px!important}
  #app .exploration-selection select{font-size:16px;min-height:44px}
  .exploration-primary-actions{grid-column:1;gap:8px}
