@@ -24,4 +24,4 @@
   #app>.layout>aside nav .game-nav-chevron{transition:none}
 }
 
-.quest-new{display:inline-block;flex:0 0 auto;color:#40c86a!important;font-size:12px;font-weight:800;line-height:1.3;margin-left:6px;white-space:nowrap}.game-nav-items .number-badge{background:#c93138;color:#fff}.game-nav-items button>span:first-child{margin-right:auto}
+.quest-new{display:inline-flex;align-items:center;justify-content:center;flex:0 0 18px;width:18px;height:18px;padding:0;border-radius:50%;background:#258b48;color:#fff!important;font-size:11px;font-weight:800;line-height:1;margin-left:6px;vertical-align:middle;white-space:nowrap}.game-nav-items .number-badge{background:#c93138;color:#fff}.game-nav-items button>span:first-child{margin-right:auto}

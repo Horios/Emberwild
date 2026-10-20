@@ -46,7 +46,7 @@
   function rememberOpenState(){
     document.querySelectorAll?.('#app>.layout>aside nav details[data-nav-group]').forEach(group=>openState.set(group.dataset.navGroup,group.open));
   }
-  globalThis.taskReminderHTML=function(id){const status=id.startsWith('story-')?globalThis.storyCategoryReminder?.(id.slice(6)):id==='quests'?globalThis.dailyQuestReminder?.():null;if(!status)return '';return `${status.ready?`<span class="number-badge" aria-label="可完成任務 ${status.ready}">${status.ready}</span>`:''}${status.new?'<span class="quest-new" aria-label="有未開始任務">NEW!</span>':''}`;};
+  globalThis.taskReminderHTML=function(id){const status=id.startsWith('story-')?globalThis.storyCategoryReminder?.(id.slice(6)):id==='quests'?globalThis.dailyQuestReminder?.():null;if(!status)return '';return `${status.ready?`<span class="number-badge" aria-label="可完成任務 ${status.ready}">${status.ready}</span>`:''}${status.new?'<span class="quest-new" aria-label="有未開始任務">N</span>':''}`;};
   function pageBadge(page){return ['story-main','story-side','story-npc','quests'].includes(page.id)?taskReminderHTML(page.id):globalThis.numberBadgeHTML?.(page.id)||'';}
   globalThis.gameNavigationHTML=function(current){
     rememberOpenState();

@@ -39,6 +39,6 @@ test('one-task daily and one-time side progress migrate once; side content moves
  assert.equal(r.run('state.board.dailyVersion'),2);assert.equal(r.run('state.board.tasks.filter(q=>q.done).length'),1);assert(r.run('state.claimed.includes("wolves")'));r.run('loadParty(packParty());setStoryCategory("side");setQuestSideFilter("all")');assert.match(r.run('storyView()'),/縫補獵人的披肩/);assert.doesNotMatch(r.run('questView()'),/一次性支線|縫補獵人的披肩/);assert.equal(r.run('state.board.tasks.filter(q=>q.done).length'),1);
 });
 
-test('navigation shows task-specific red counts and green NEW, and clears NEW when started',()=>{
- const r=game();assert.match(r.run("taskReminderHTML('quests')"),/NEW!/);assert.match(r.run("taskReminderHTML('story-main')"),/可完成任務/);assert.match(r.run("taskReminderHTML('story-main')"),/NEW!/);r.run("readStory('goddess_intro')");assert.doesNotMatch(r.run("taskReminderHTML('story-main')"),/NEW!/);assert.match(r.run("gameNavigationHTML('quests')"),/data-page="story-side"/);assert.deepEqual(r.errors,[]);
+test('navigation shows task-specific red counts and a green N badge, and clears N when started',()=>{
+ const r=game();assert.match(r.run("taskReminderHTML('quests')"),/class="quest-new"[^>]*>N<\/span>/);assert.match(r.run("taskReminderHTML('story-main')"),/可完成任務/);assert.match(r.run("taskReminderHTML('story-main')"),/class="quest-new"[^>]*>N<\/span>/);r.run("readStory('goddess_intro')");assert.doesNotMatch(r.run("taskReminderHTML('story-main')"),/class="quest-new"[^>]*>N<\/span>/);assert.match(r.run("gameNavigationHTML('quests')"),/data-page="story-side"/);assert.deepEqual(r.errors,[]);
 });
