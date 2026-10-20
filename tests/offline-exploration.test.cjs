@@ -82,3 +82,12 @@ test('quest challenge and terminal victory survive cold combat restoration and u
  const r=game();r.run(`stopTeamExploration();state.lv=20;syncParty();refillParty();__EMBERWILD_STORY.record('shop_rescue').started=true;startQuestEncounter('shop_rescue/rescue');save();globalThis.copySave=structuredClone(packParty());loadParty(copySave);`);
  assert.equal(r.run('party.questChallenge.key'),'shop_rescue/rescue');await settle(r,60000);assert.equal(r.run('party.offlineExploration.receipt.stage'),'解救商人');assert.equal(r.run('party.offlineExploration.receipt.kills'),3);assert.equal(r.run('__EMBERWILD_STORY.stats().encounters["shop_rescue/rescue"]'),1);assert.equal(r.run('running'),false);
 });
+
+test('multi-hour replay paints progress before work and reports committed cursor against a fixed total',async()=>{
+ const r=game(),callbacks=[];r.ctx.setTimeout=fn=>callbacks.push(fn);r.advance(10800000);const start=r.run('party.offlineExploration.lastAt'),pending=r.run('EmberwildOffline.settle()');await new Promise(setImmediate);
+ const box=r.elements.get('offline-settlement');assert.equal(box.hidden,false);assert.match(box.innerHTML,/0%/);assert.match(box.innerHTML,/max="10800000" value="0"/);assert.equal(r.run('state.totalKills'),0);
+ let ticks=0;r.ctx.performance.now=()=>++ticks*20;
+ for(let i=0;i<6;i++){callbacks.shift()();await new Promise(setImmediate);}assert.match(box.innerHTML,/max="10800000"/);const value=Number(box.innerHTML.match(/value="(\d+)"/)[1]);assert(value>0&&value<10800000);assert.equal(value,r.run('party.offlineExploration.lastAt')-start);
+ r.ctx.performance.now=()=>0;r.ctx.setTimeout=fn=>setImmediate(fn);while(callbacks.length){callbacks.shift()();await new Promise(setImmediate);}await pending;
+ assert.equal(r.run('EmberwildOffline.failed'),false);assert.equal(r.run('party.offlineExploration.lastAt'),r.now);assert.match(box.innerHTML,/實際離線/);assert.doesNotMatch(box.innerHTML,/<progress/);assert.deepEqual(r.errors,[]);
+});

@@ -1,5 +1,5 @@
-/* Shared SVG item slots. Lists keep their actions; details use the existing gear
-   panel or a separate dialog so opening a mail attachment never replaces mail. */
+/* Shared SVG item slots. Backpack details use their existing panel/dialog;
+   references stay passive and shops expose purchase actions inline. */
 (()=>{
   let selection=null,hovered=null;
   const attr=value=>esc(String(value??''));
@@ -72,9 +72,18 @@
     const data=`data-item-kind="${attr(kind)}" data-item-key="${attr(key)}" data-item-context="${attr(context)}"${g?.id?` data-item-gear="${attr(g.id)}"`:''}${options.preview?` data-item-preview="${attr(JSON.stringify(options.preview))}"`:''}${options.mailId?` data-item-mail="${options.mailId}" data-item-index="${options.mailIndex}"`:''}${options.extra?` data-item-extra="${attr(options.extra)}"`:''}${quantity!==undefined?` data-item-quantity="${attr(quantity)}"`:''}${options.detailLabel?` data-item-quantity-label="${attr(options.detailLabel)}"`:''}${options.price!==undefined?` data-item-price="${attr(options.price)}"`:''}${options.priceLabel?` data-item-price-label="${attr(options.priceLabel)}"`:''}${options.shopType?` data-item-shop-type="${attr(options.shopType)}"`:''}${options.shopId!==undefined?` data-item-shop-id="${attr(options.shopId)}"`:''}${options.sold?` data-item-sold="true"`:''}${options.soldLabel?` data-item-sold-label="${attr(options.soldLabel)}"`:''}`;
     const token=globalThis.EmberwildTokens?.isToken(g),wearer=g&&typeof gearWearer==='function'?gearWearer(g.id):null;
     const content=`<span class="item-slot-art" aria-hidden="true">${icon(kind,key,g)}</span><span class="item-slot-name">${attr(n)}${g&&!token?` <span class="gear-tier-chip gear-tier-${Number.isInteger(g.powerTier)?g.powerTier:0}">${Number.isInteger(g.powerTier)?'T'+g.powerTier:'T—'}</span>`:''}${token?` <span class="tag token-job-tag">${attr(companionTokenJobLabel(g))}</span>${wearer?` <span class="token-wearer">${attr(characterName(wearer))} · 已裝備</span>`:''}`:''}</span>${options.count!==undefined?`<span class="item-slot-count" aria-label="數量 ${attr(options.count)}">×${attr(options.count)}</span>`:''}${g?.plus?`<span class="item-slot-plus" aria-hidden="true">+${g.plus}</span>`:''}${g&&typeof gearWearer==='function'&&gearWearer(g.id)?'<span class="item-slot-worn" aria-label="已穿戴"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7"/></svg></span>':''}`;
-    const tag=options.contentOnly?'span':'button';
-    return `<${tag} ${tag==='button'?'type="button" ':''}class="item-slot ${options.className||''}${options.selected?' selected':''}${g?' item-quality-'+gearQualityRank(g):''}" ${data} aria-label="${attr(label)}"${tag==='button'?` onclick="${options.onclick||'openItemSlotDetails(this)'}"`:''}${options.selected?' aria-pressed="true"':''}>${content}</${tag}>`;
+    const tag=!options.contentOnly&&(options.onclick||context==='inventory')?'button':'span';
+    const slot=`<${tag} ${tag==='button'?'type="button" ':''}class="item-slot ${options.className||''}${options.selected?' selected':''}${g?' item-quality-'+gearQualityRank(g):''}" ${data} aria-label="${attr(label)}"${tag==='button'?` onclick="${options.onclick||'openItemSlotDetails(this)'}"`:''}${options.selected?' aria-pressed="true"':''}>${content}</${tag}>`;
+    return slot+(context==='shop'&&!options.contentOnly?shopInlineControls(options):'');
   };
+  function shopInlineControls(o){
+    const id=attr(JSON.stringify(o.shopId)),price=Number(o.price)||0,disabled=o.sold||state.gold<price,off=disabled?'disabled':'';
+    let action='';
+    if(o.shopType==='equipment')action=`<input type="number" min="1" max="100" step="1" value="1" aria-label="購買份數"><button onclick="buyEquipmentShopOffer(${id},Number(this.previousElementSibling.value))" ${off}>購買</button>`;
+    else if(o.shopType==='life')action=`<button onclick="buyLifeMaterial(${id},1)" ${off}>購買 1 份</button><button onclick="buyLifeMaterial(${id},10)" ${o.sold||state.gold<(globalThis.lifeMaterialPurchasePrice?.(o.shopId,10)??price*10)?'disabled':''}>購買 10 份</button>`;
+    else if(['market','fixed'].includes(o.shopType))action=`<button onclick="${o.shopType==='market'?'buyMarketOffer':'buyFixedShopOffer'}(${id})" ${off}>${o.sold?attr(o.soldLabel||'已售完'):'購買'}</button>`;
+    return `<span class="shop-inline-controls"><span class="small">${attr(o.detailLabel||'商品數量')} ${attr(o.detailQuantity??o.count??1)} · ${price.toLocaleString()} 金幣</span><span class="shop-inline-actions">${action}</span></span>`;
+  }
   globalThis.gearSlotHTML=(g,options={})=>itemSlotHTML('equipment','',{...options,gear:g});
   globalThis.itemCostHTML=function(g){const c=upgradeMaterials(g);return '<span class="item-cost-line">'+[['鍛鐵',c.ore],['粉塵',c.dust],['以太鍛鐵',c.ether]].filter(([,n])=>n>0).map(([key,count])=>itemSlotHTML('material',key,{count,detailLabel:'所需數量'})).join(' ＋ ')+'</span>';};
   globalThis.mailAttachmentSlot=function(mailId,index){
@@ -103,14 +112,6 @@
   }
   function controls(ref){
     const {kind,key,g}=ref;
-    if(ref.context==='shop'){
-      const id=attr(JSON.stringify(ref.shopId)),price=Number(ref.price)||0,disabled=ref.sold||state.gold<price;
-      if(ref.shopType==='market')return `<button onclick="itemDetailsAction(()=>buyMarketOffer(${id}))" ${disabled?'disabled':''}>${ref.sold?esc(ref.soldLabel||'已售完'):'購買'}</button>`;
-      if(ref.shopType==='equipment')return `<div class="actions"><label>購買份數<input id="equipment-shop-quantity" type="number" min="1" max="100" step="1" value="1" inputmode="numeric"></label><button onclick="itemDetailsAction(()=>buyEquipmentShopOffer(${id},Number(document.getElementById('equipment-shop-quantity').value)))" ${disabled?'disabled':''}>購買</button></div>`;
-      if(ref.shopType==='fixed')return `<button onclick="itemDetailsAction(()=>buyFixedShopOffer(${id}))" ${disabled?'disabled':''}>購買</button>`;
-      if(ref.shopType==='life')return `<div class="actions"><button onclick="itemDetailsAction(()=>buyLifeMaterial(${id},1))" ${state.gold<price?'disabled':''}>購買 1 份</button><button onclick="itemDetailsAction(()=>buyLifeMaterial(${id},10))" ${state.gold<(globalThis.lifeMaterialPurchasePrice?.(ref.shopId,10)??price*10)?'disabled':''}>購買 10 份</button></div>`;
-      return '';
-    }
     if(!g&&ref.context!=='inventory')return '';
     if(g){
       if(!findGear(g.id))return '';
@@ -129,9 +130,9 @@
   }
   function dialog(){let d=document.getElementById('item-detail-dialog');if(!d){d=document.createElement('dialog');d.id='item-detail-dialog';document.body.appendChild(d);}return d;}
   function renderDetail(){const d=dialog();if(selection)d.innerHTML=`<div class="item-detail-top"><span class="item-detail-art">${icon(selection.kind,selection.key,selection.g)}</span><button onclick="closeItemDetails()" aria-label="關閉道具詳細資料">關閉</button></div>${info(selection)}${controls(selection)}`;}
-  globalThis.openItemSlotDetails=function(node){selection=refFromNode(node);if(!selection.kind)return;hideTooltip();renderDetail();const d=dialog();if(!d.open)d.showModal();};
+  globalThis.openItemSlotDetails=function(node){const ref=refFromNode(node);if(ref.context!=='inventory'||!ref.kind)return false;selection=ref;hideTooltip();renderDetail();const d=dialog();if(!d.open)d.showModal();};
   globalThis.closeItemDetails=function(){dialog().close();selection=null;};
-  globalThis.itemDetailsAction=function(action){action();if(selection?.context==='shop'&&selection.shopType==='market')selection.sold=selection.sold||!!party?.market?.offers?.find(o=>o.id===selection.shopId)?.sold;if(selection)renderDetail();};
+  globalThis.itemDetailsAction=function(action){action();if(selection)renderDetail();};
   let tooltip;
   function hideTooltip(){if(tooltip){if(typeof tooltip.hidePopover==='function'&&tooltip.matches(':popover-open'))tooltip.hidePopover();tooltip.hidden=true;}hovered=null;}
   function showTooltip(node){

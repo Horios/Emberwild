@@ -50,7 +50,7 @@ test('direct per-object colors, descriptions and equipment icons survive apply/s
  for(const expr of ["inventoryMaterialIcon('紅色草')","inventoryShopOfferIcon({kind:'material',key:'紅色草'})",'lifeSkillsView()'])assert.match(r.run(expr),/#123abc/);
  assert.match(r.run("inventoryItemIcon(SHOP.find(x=>x.id==='imbue_fire'))"),/#abcdef/);assert.match(r.run('inventoryGemIcon(0)'),/#ff6677/);
  assert.match(r.run('equipmentNameHTML(state.bag.find(g=>g.slot===0))'),/#3489ab/);assert.match(r.run("equipmentNameHTML({job:1,slot:0,tier:1,boss:0,region:0,rar:0,plus:0,affix:[]})"),/#ffab12/);
- r.run('openItemSlotDetails({dataset:{itemKind:"material",itemKey:"紅色草"}})');assert.match(r.elements.get('item-detail-dialog').innerHTML,/製作藥水的採集材料。/);assert.match(r.run('equipmentAttributeDetailsHTML(state.bag.find(g=>g.slot===0))'),/法師武器說明。/);
+ r.run('openItemSlotDetails({dataset:{itemKind:"material",itemKey:"紅色草",itemContext:"inventory"}})');assert.match(r.elements.get('item-detail-dialog').innerHTML,/製作藥水的採集材料。/);assert.match(r.run('equipmentAttributeDetailsHTML(state.bag.find(g=>g.slot===0))'),/法師武器說明。/);
  const saved=Object.fromEntries(r.values),reload=loadRuntime(root,'index.html',saved);assert.match(reload.run("inventoryMaterialIcon('紅色草')"),/#123abc/);assert.equal(reload.run("inventoryMaterialDescription('紅色草')"),'製作藥水的採集材料。');
  for(const color of ['red','#12345','url(javascript:x)','" onload="x']){r.ctx.bad={...published,inventoryIcons:[{kind:'material',key:'紅色草',iconType:'auto',color}]};assert.throws(()=>r.run('applyBalanceConfig(bad)'),/顏色/);}assert.deepEqual(r.errors,[]);assert.deepEqual(reload.errors,[]);
 });

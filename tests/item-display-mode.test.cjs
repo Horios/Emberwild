@@ -15,3 +15,14 @@ test('item slots always include names and the display preference is UI-only and 
   const invalid=loadRuntime(root,'index.html',{[key]:'retired-mode'});assert.equal(invalid.ctx.document.documentElement.dataset.itemDisplay,'icon-name');
   assert.deepEqual(r.errors,[]);assert.deepEqual(reload.errors,[]);assert.deepEqual(invalid.errors,[]);
 });
+
+test('only backpack slots open details; references stay passive and shop keeps direct purchase controls',()=>{
+ const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);closeModal();state.gold=100000;');
+ for(const context of ['reference','mail','reward','forge','shop']){
+  const html=r.run(`itemSlotHTML('material','鍛鐵',{context:'${context}',count:2})`);assert.match(html,/^<span /);assert.doesNotMatch(html,/onclick="openItemSlotDetails/);
+  r.ctx.slotContext=context;assert.equal(r.run("openItemSlotDetails({dataset:{itemKind:'material',itemKey:'鍛鐵',itemContext:slotContext}})"),false);
+ }
+ const inv=r.run("itemSlotHTML('material','鍛鐵',{context:'inventory'})");assert.match(inv,/^<button /);assert.match(inv,/openItemSlotDetails/);r.run("openItemSlotDetails({dataset:{itemKind:'material',itemKey:'鍛鐵',itemContext:'inventory'}})");assert(r.elements.get('item-detail-dialog').open);r.run('closeItemDetails()');
+ for(const category of ['random','fixed','equipment','life']){r.ctx.category=category;r.run('setShopCategory(category)');const html=r.run('shopView()');assert.match(html,/shop-inline-controls/);assert.match(html,/onclick="buy(?:MarketOffer|FixedShopOffer|EquipmentShopOffer|LifeMaterial)/);assert.doesNotMatch(html,/onclick="openItemSlotDetails/);}
+ const custom=r.run("gearSlotHTML(state.bag[0],{onclick:\"selectInventoryGear('test')\"})");assert.match(custom,/^<button /);assert.match(custom,/selectInventoryGear/);assert.deepEqual(r.errors,[]);
+});

@@ -45,25 +45,24 @@ test('pending/claimed mail survives cold reload and no gifts are sent again on l
  const r=game();r.run('save()');let reload=loadRuntime(root,'index.html',Object.fromEntries(r.values));assert.equal(reload.run('party.mailbox.messages.length'),1);assert.equal(reload.run('state.bag.length'),5);reload.run('continueFromTitle();closeModal()');assert.equal(reload.run('claimMailboxAttachments(1)'),true);
  reload=loadRuntime(root,'index.html',Object.fromEntries(reload.values));assert.equal(reload.run('party.mailbox.messages.length'),1);assert.equal(reload.run('party.mailbox.messages[0].claimed'),true);assert.equal(reload.run('claimMailboxAttachments(1)'),false);assert.equal(reload.run('state.bag.length'),6);assert.deepEqual(reload.errors,[]);
 });
-test('six attachment slots use SVG; inventory, forge, materials, shop and recipes keep detail actions',()=>{
+test('six attachment slots use SVG; inventory keeps detail actions; references and mail stay non-modal',()=>{
  const r=game();assert.equal((r.run('mailboxView()').match(/class="item-slot /g)||[]).length,6);assert.match(r.run('mailboxView()'),/data-item-mail="1"/);
  r.run('claimMailboxAttachments(1);state.materials["紅色草"]=3;state.consumables.imbue_fire=2;state.gems[0]=1;continueFromTitle()');
  for(const view of ['inventoryGearListItem(state.bag[0],true)','forgeView()','accountMaterialsView()','accountItemsView()','lifeSkillsView()','shopView()'])assert.match(r.run(view),/<svg/);
  const html=r.run('inventoryGearListItem(state.bag[0],true)');assert.match(html,/selectInventoryGear/);assert.doesNotMatch(html,/inventory-list-name|inventory-list-meta/);
  r.run('openItemSlotDetails({dataset:{itemKind:"material",itemKey:"紅色草",itemContext:"inventory"}})');assert.match(r.elements.get('item-detail-dialog').innerHTML,/紅色草/);assert.match(r.elements.get('item-detail-dialog').innerHTML,/sellMaterial/);
- r.run('openUtilityPanel("mailbox");globalThis.mailHTML=$("modal").innerHTML;openItemSlotDetails({dataset:{itemMail:"1",itemIndex:"0"}})');assert.equal(r.run('$("modal").innerHTML'),r.run('mailHTML'));assert.match(r.elements.get('item-detail-dialog').innerHTML,/基礎|基底/);assert.deepEqual(r.errors,[]);
+ r.run('openUtilityPanel("mailbox");globalThis.mailHTML=$("modal").innerHTML;openItemSlotDetails({dataset:{itemMail:"1",itemIndex:"0"}})');assert.equal(r.run('$("modal").innerHTML'),r.run('mailHTML'));assert.match(r.elements.get('item-detail-dialog').innerHTML,/紅色草/);assert.deepEqual(r.errors,[]);
 });
 test('shop uses an inventory-style slot grid and item details stay scoped to their source',()=>{
  const r=game();r.run('state.materials["清水"]=3');let shop=r.run('shopView()');assert.match(shop,/class="shop-product-grid"/);assert.match(shop,/data-item-context="shop"/);assert.match(shop,/class="shop-product-stock">庫存<br><b>\d+/);assert.match(shop,/class="shop-product-label">[^<]+/);assert.doesNotMatch(shop,/class="shop-product-meta"/);
  r.run('setShopCategory("life")');shop=r.run('shopView()');assert.match(shop,/class="shop-product-stock">庫存<br><b>3<\/b>/);assert.match(shop,/class="shop-product-label">清水<\/small>/);
- r.run('openItemSlotDetails({dataset:{itemKind:"item",itemKey:"heal_small",itemContext:"shop",itemQuantity:"3",itemQuantityLabel:"商品數量",itemPrice:"99",itemShopType:"fixed",itemShopId:"fixed-heal-small"}})');
- let detail=r.elements.get('item-detail-dialog').innerHTML;assert.match(detail,/商品數量：3/);assert.match(detail,/價格：99 金幣/);assert.match(detail,/>購買</);assert.doesNotMatch(detail,/持有|售價|賣出/);
- r.run('openItemSlotDetails({dataset:{itemKind:"material",itemKey:"紅色草",itemContext:"reference",itemQuantity:"2",itemQuantityLabel:"所需數量"}})');
- detail=r.elements.get('item-detail-dialog').innerHTML;assert.match(detail,/所需數量：2/);assert.doesNotMatch(detail,/材料庫存|售價|sellMaterial|賣出/);assert.deepEqual(r.errors,[]);
+ const slot=r.run(`itemSlotHTML('item','heal_small',{context:'shop',count:3,detailLabel:'商品數量',price:99,shopType:'fixed',shopId:'fixed-heal-small'})`);
+ assert.match(slot,/商品數量 3/);assert.match(slot,/99 金幣/);assert.match(slot,/buyFixedShopOffer/);assert.doesNotMatch(slot,/openItemSlotDetails/);
+ assert.equal(r.run('openItemSlotDetails({dataset:{itemKind:"material",itemKey:"紅色草",itemContext:"reference"}})'),false);assert.notEqual(r.elements.get('item-detail-dialog')?.open,true);assert.deepEqual(r.errors,[]);
 });
-test('a shop detail purchase uses the original offer and updates its sold state',()=>{
- const r=game();r.run('state.gold=1e6;shopView();globalThis.o=party.market.offers.find(x=>!x.sold&&!String(x.ruleId).startsWith("companion-recruit-"));globalThis.before=state.gold;openItemSlotDetails({dataset:{itemKind:o.kind==="ore"||o.kind==="dust"?"material":o.kind,itemKey:o.kind==="ore"?"鍛鐵":o.kind==="dust"?"粉塵":o.key,itemContext:"shop",itemQuantity:String(o.qty),itemQuantityLabel:"商品數量",itemPrice:String(o.price),itemShopType:"market",itemShopId:o.id}});itemDetailsAction(()=>buyMarketOffer(o.id))');
- assert.equal(r.run('o.sold'),true);assert.equal(r.run('state.gold'),r.run('before-o.price'));const detail=r.elements.get('item-detail-dialog').innerHTML;assert.match(detail,/已售完/);assert.doesNotMatch(detail,/sellMaterial|sellInventoryItem|賣出/);assert.deepEqual(r.errors,[]);
+test('inline shop purchase uses the original offer and updates its sold state without a detail dialog',()=>{
+ const r=game();r.run('state.gold=1e6;shopView();globalThis.o=party.market.offers.find(x=>!x.sold&&!String(x.ruleId).startsWith("companion-recruit-"));globalThis.before=state.gold;buyMarketOffer(o.id)');
+ assert.equal(r.run('o.sold'),true);assert.equal(r.run('state.gold'),r.run('before-o.price'));const html=r.run('shopView()');assert.match(html,/已售完/);assert.match(html,/data-item-sold="true"/);assert.doesNotMatch(html,/sellMaterial|sellInventoryItem|openItemSlotDetails/);assert.deepEqual(r.errors,[]);
 });
 test('legacy five-item gift configurations migrate to a weapon and invalid item references reject atomically',()=>{
  const r=game();r.run('globalThis.d=exportableBalance();d.starterPacks=d.starterPacks.map(row=>[row[0],{slot:1},{slot:2},{slot:3},{slot:3}]);applyBalanceConfig(d);');assert.deepEqual(json(r,'exportableBalance().starterPacks.map(row=>row.length)'),[1,1,1,1]);

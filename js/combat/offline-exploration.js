@@ -6,6 +6,7 @@
  const hooks=()=>[EmberwildControlCombatState,EmberwildEnemyCombatState,EmberwildStatusCombatState,EmberwildTokenCombatState];
  const transient=['hp','shield','basicAdvanceRound','procAdvanceRound','procAdvanceSteps','nextActiveDamageBonus','healPotionCooldownRemaining'];
  let internal=false,stepping=false,job=null,failed=false,restoring=false,lastMode=false,actionSerial=0,lastRendered=0,gearPage=0,lastCheck=0,requestedAt=0,renderedReceipt=null,jobOffline=false,lastCommitted=globalThis.__EMBERWILD_BOOT_SAVE_RAW||null;
+ let settlementProgress=null;
  const atTitle=()=>!!globalThis.isEmberwildTitleOpen?.();
  const nowReal=Date.now.bind(Date),basePack=packParty,baseSave=save,baseLoad=loadParty,baseValidate=validateParty;
  const active=()=>!!party&&running&&!$('modal')?.open&&!globalThis.isEmberwildTitleOpen?.();
@@ -168,8 +169,9 @@
  }
  function showProgress(message,error=false){
   const box=document.getElementById('offline-settlement');if(!box||atTitle())return;
-  const c=clock(),r=c?.pendingReceipt;box.hidden=false;
-  box.innerHTML=`<section role="status" aria-live="polite"><h2>離線探索收益</h2><p>${esc(message)}</p>${r?`<progress max="${Math.max(1,r.end-r.start)}" value="${Math.max(0,c.lastAt-r.start)}" aria-label="離線結算進度"></progress><p>${api.timeText(c.lastAt-r.start,true)} / ${api.timeText(r.end-r.start,true)}</p>`:''}${error?'<button onclick="retryOfflineExploration()">重試結算</button>':''}</section>`;
+  const c=clock(),p=settlementProgress;
+  const total=p?Math.max(1,p.target-p.start):0,done=p?Math.max(0,Math.min(total,c.lastAt-p.start)):0,percent=total?Math.floor(done/total*1000)/10:0;box.hidden=false;renderedReceipt=null;
+  box.innerHTML=`<section role="status" aria-live="polite" aria-busy="${!error}"><h2>離線探索收益</h2><p>${esc(message)}</p>${p?`<progress max="${total}" value="${done}" aria-label="離線結算進度"></progress><p class="offline-progress-value">${percent}% · 已計算 ${api.timeText(done,true)} / ${api.timeText(total,true)}</p>`:''}${error?'<button onclick="retryOfflineExploration()">重試結算</button>':''}</section>`;
  }
  function showReceipt(){
   const r=clock()?.receipt,box=document.getElementById('offline-settlement');if(!r?.complete||!eligible(r)||!box||atTitle()||document.hidden)return;
@@ -189,16 +191,20 @@
  function settle(target=nowReal(),offline=true){
   if(!party||restoring||atTitle()||globalThis.__EMBERWILD_SAVE_OWNER===false)return Promise.resolve();
   if(job){if(Number.isSafeInteger(target)){requestedAt=Math.max(requestedAt,target);if(offline){jobOffline=true;track(target);}}return job;}
-  const c=ensure();if(!Number.isSafeInteger(target)||target<0||target>8.64e15||target<c.lastAt){failed=true;showProgress('裝置時間無效或早於最後結算時間；收益與時間已保留，請校正時間後重試。',true);return Promise.resolve();}
+  const c=ensure();if(!Number.isSafeInteger(target)||target<0||target>8.64e15||target<c.lastAt){failed=true;settlementProgress=null;showProgress('裝置時間無效或早於最後結算時間；收益與時間已保留，請校正時間後重試。',true);return Promise.resolve();}
   requestedAt=target;jobOffline=offline;if(offline)track(target);
-  failed=false;
+  failed=false;settlementProgress={start:c.lastAt,target};
   job=Promise.resolve().then(async()=>{
    try{
-    commit();
+    const show=settlementProgress.target-settlementProgress.start>1000;
+    if(show)showProgress('正在計算掛機收益，請稍候…');commit();
+    // Paint the overlay before starting CPU-intensive combat replay.
+    if(show)await new Promise(resolve=>setTimeout(resolve,0));
+    let lastProgress=performance.now();
     do{
-     const end=requestedAt;
+     const end=requestedAt;settlementProgress.target=end;
      let more;
-     do{const start=c.lastAt,r=c.pendingReceipt;more=advance(end);if(jobOffline)recordInterval(r,start,c.lastAt);commit();if(more)await new Promise(resolve=>setTimeout(resolve,0));}while(more);
+     do{const start=c.lastAt,r=c.pendingReceipt;more=advance(end);if(jobOffline)recordInterval(r,start,c.lastAt);commit();if(show&&(performance.now()-lastProgress>=100||!more)){showProgress('正在計算掛機收益，請稍候…');lastProgress=performance.now();}if(more)await new Promise(resolve=>setTimeout(resolve,0));}while(more);
     }while(c.lastAt<requestedAt);
     // A throttled tick takes this async path; do not starve online life jobs.
     internal=true;try{globalThis.emberwildLifeHeartbeat?.();}finally{internal=false;}
@@ -233,7 +239,7 @@
   'buyFixedShopOffer','buyMarketOffer','buyHealingPotion','buySupply','buyLifeMaterial','sellInventoryItem',
   'setHeroAutoPotion','setHeroAutoPotionThreshold','setHeroAutoPotionItem','potion',
   'enhance','reroll','autoReroll','acceptAffix','resolveInlineAffix','rerollEquipmentPowerTier','socket',
-  'salvage','salvageAll','sellGear','sellAllGearByQuality','confirmMassSalvage','confirmGearInventoryBatch','sellMaterial','sellCatalogueGem',
+  'salvage','salvageAll','sellGear','sellAllGearByQuality','confirmMassSalvage','confirmGearInventoryBatch','confirmTokenBatch','sellMaterial','sellCatalogueGem',
   'startDailyCommission','claimBoard','claimDailyBonus','startSideQuest','claimQuest','completeStoryStage','claimMailboxAttachments','claimAllMailboxAttachments','useLevelScroll'
  ]){
   const base=globalThis[name];if(typeof base!=='function')continue;
