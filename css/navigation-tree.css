@@ -4,13 +4,6 @@
 #app>.layout>aside nav>.game-nav-group>summary::-webkit-details-marker{display:none}
 #app>.layout>aside nav>.game-nav-group>summary>span:first-child{flex:1}
 #app>.layout>aside nav>.game-nav-group.has-active>summary{color:var(--gold)}
-#app>.layout>aside nav .game-nav-drag{display:inline-flex;flex:0 0 25px;align-items:center;justify-content:center;width:25px;min-height:26px;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--muted);font-size:18px;line-height:1;cursor:grab;touch-action:none;letter-spacing:0}
-#app>.layout>aside nav .game-nav-drag:hover,#app>.layout>aside nav .game-nav-drag:focus-visible{color:var(--text);background:var(--panel);border-color:var(--line)}
-#app>.layout>aside nav .game-nav-drag:active{cursor:grabbing}
-#app>.layout>aside nav>.game-nav-group.nav-dragging{opacity:.55}
-#app>.layout>aside nav>.game-nav-group.nav-drop-before{box-shadow:inset 0 3px 0 var(--gold)}
-#app>.layout>aside nav>.game-nav-group.nav-drop-after{box-shadow:inset 0 -3px 0 var(--gold)}
-
 #app>.layout>aside nav .game-nav-chevron{flex:0 0 auto;font-size:17px;line-height:1;transform:rotate(0);transition:transform .15s ease}
 #app>.layout>aside nav>.game-nav-group[open]>summary .game-nav-chevron{transform:rotate(90deg)}
 #app>.layout>aside nav .game-nav-items{display:grid;gap:2px;padding:0 4px 5px}
@@ -32,3 +25,7 @@
 }
 
 .quest-new{display:inline-flex;align-items:center;justify-content:center;flex:0 0 18px;width:18px;height:18px;padding:0;border-radius:50%;background:#258b48;color:#fff!important;font-size:11px;font-weight:800;line-height:1;margin-left:6px;vertical-align:middle;white-space:nowrap}.game-nav-items .number-badge{background:#c93138;color:#fff}.game-nav-items button>span:first-child{margin-right:auto}
+
+#app>.layout>aside nav>.game-nav-group>summary>.quest-new{margin-left:0}
+#app>.layout>aside nav>.game-nav-group[open]>summary>.quest-new,#app>.layout>aside nav>.game-nav-group[open]>summary>.number-badge{display:none}
+.quest-new.quest-new-detail{flex:0 0 auto;width:auto;height:auto;min-width:0;padding:3px 7px;border-radius:4px;font-size:11px;line-height:1.3}
