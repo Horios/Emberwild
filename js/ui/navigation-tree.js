@@ -11,11 +11,11 @@
     gather:'採集',alchemy:'煉金'
   };
   const DEFAULTS={version:VERSION,groups:[
-    {id:'adventure',label:'探索與冒險',expanded:true,pages:[['battle','荒野探索'],['statistics','戰鬥統計'],['shop','商店'],['guide','冒險指南']]},
-    {id:'party',label:'角色與隊伍',expanded:true,pages:[['roster','隊伍編成'],['partnerRoster','夥伴名冊'],['character','角色能力'],['skills','技能']]},
-    {id:'equipment',label:'裝備與製作',expanded:false,pages:[['equipment','背包'],['worn','裝備與信物'],['forge','裝備強化'],['bossCraft','BOSS 製作']]},
-    {id:'missions',label:'主要任務',expanded:true,pages:[['story-main','主線'],['story-side','支線'],['story-npc','NPC 任務'],['quests','委託']]},
-    {id:'life',label:'生活技能',expanded:true,pages:[['gather','採集'],['alchemy','煉金']]}
+    {id:'missions',label:'主線',expanded:false,pages:[['story-main','主線'],['story-side','支線'],['story-npc','NPC 任務'],['quests','委託']]},
+    {id:'adventure',label:'探索',expanded:true,pages:[['battle','荒野探索'],['statistics','戰鬥統計'],['guide','冒險指南'],['roster','隊伍編成'],['partnerRoster','夥伴名冊'],['character','角色能力'],['skills','技能']]},
+    {id:'equipment',label:'背包',expanded:false,pages:[['equipment','背包'],['worn','裝備與信物'],['forge','裝備強化'],['bossCraft','BOSS 製作']]},
+    {id:'shop',label:'商店',expanded:false,pages:[['shop','商品列表']]},
+    {id:'life',label:'生活',expanded:false,pages:[['gather','採集'],['alchemy','煉金']]}
   ].map(group=>({...group,pages:group.pages.map(([id,label])=>({id,label}))}))};
   const validText=(value,max)=>typeof value==='string'&&value.trim()===value&&value.length>0&&value.length<=max;
   function normalize(raw){
@@ -52,7 +52,7 @@
     rememberOpenState();
     return design.groups.map(group=>{
       const groupActive=group.pages.some(page=>active(page,current));
-      const open=openState.has(group.id)?openState.get(group.id):(group.expanded||groupActive);
+      const open=openState.has(group.id)?openState.get(group.id):group.expanded;
       const storyBadge='';
       return `<details class="game-nav-group ${groupActive?'has-active':''}" data-nav-group="${esc(group.id)}" ${open?'open':''}><summary><span>${esc(group.label)}</span>${storyBadge}<span class="game-nav-chevron" aria-hidden="true">›</span></summary><div class="game-nav-items">${group.pages.map(page=>`<button type="button" data-page="${esc(page.id)}" class="${active(page,current)?'active':''}" onclick="${action(page)}" ${active(page,current)?'aria-current="page"':''}><span>${esc(page.label)}</span>${pageBadge(page)}</button>`).join('')}</div></details>`;
     }).join('');
