@@ -134,7 +134,7 @@
     rememberOpenState();
     return orderedGroups().map(group=>{
       const groupActive=group.pages.some(page=>active(page,current));
-      const open=openState.has(group.id)?openState.get(group.id):false;
+      const open=openState.has(group.id)?openState.get(group.id):group.expanded;
       const storyBadge='';
       return `<details class="game-nav-group ${groupActive?'has-active':''}" data-nav-group="${esc(group.id)}" ${open?'open':''}><summary><span>${esc(group.label)}</span>${storyBadge}<button type="button" class="game-nav-drag" data-nav-drag="${esc(group.id)}" draggable="true" aria-label="調整${esc(group.label)}順序，拖曳或使用上下方向鍵" title="拖曳排序，或用上下方向鍵">⠿</button><span class="game-nav-chevron" aria-hidden="true">›</span></summary><div class="game-nav-items">${group.pages.map(page=>`<button type="button" data-page="${esc(page.id)}" class="${active(page,current)?'active':''}" onclick="${action(page)}" ${active(page,current)?'aria-current="page"':''}><span>${esc(page.label)}</span>${pageBadge(page)}</button>`).join('')}</div></details>`;
     }).join('');
