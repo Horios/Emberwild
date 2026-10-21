@@ -27,6 +27,8 @@
     const out=validateBase(cfg),x=out.rewards.xp.kindMultiplier;
     if(!x||['normal','elite','boss'].some(k=>!Number.isFinite(x[k])||x[k]<=0))throw Error('EXP 遭遇倍率必須大於 0');
     if(out.difficulty.modes.some(d=>!Number.isFinite(d.xpMultiplier)||d.xpMultiplier<=0))throw Error('難度 EXP 倍率必須大於 0');
+    const p=out.progression.xpLevelGap;
+    if(!p||typeof p.enabled!=='boolean'||!Number.isInteger(p.freeLevels)||p.freeLevels<0||!Number.isInteger(p.midGap)||p.midGap<=p.freeLevels||!Number.isInteger(p.highGap)||p.highGap<=p.midGap||![p.midMultiplier,p.highMultiplier,p.minimumMultiplier].every(v=>Number.isFinite(v)&&v>0&&v<=1)||p.highMultiplier>p.midMultiplier||p.minimumMultiplier>p.highMultiplier)throw Error('經驗等級差懲罰設定無效');
     const interval=out.monsters.encounter.levelLeadInterval;
     if(!Number.isInteger(interval)||interval<0||interval>60)throw Error('怪物領先等級間隔必須為 0～60 整數');
     for(const [path,min] of [['progression.statsPerPoint.hp',0],['progression.statsPerPoint.attack',0],['progression.statsPerPoint.defense',0],['rewards.xp.base',0],['rewards.xp.perLevel',0],['progression.xpCurve.base',0],['progression.xpCurve.linear',0],['progression.xpCurve.quadratic',0],['progression.xpCurve.multiplierBase',.000001],['progression.xpCurve.multiplierPerLevel',0]])if(!Number.isFinite(gameplayAt(out,path))||gameplayAt(out,path)<min)throw Error('成長／EXP 設定無效：'+path);
@@ -43,7 +45,8 @@
       'balanceSettings.rewards.kindMultiplier':'金幣等既有獎勵的遭遇倍率；EXP 使用 rewards.xp.kindMultiplier。',
       'balanceSettings.difficulty.modes[].xpMultiplier':'EXP 專用難度倍率；reward 仍控制金幣等既有獎勵。',
       'balanceSettings.monsters.encounter.levelLeadInterval':'怪物每此間隔可領先 1 級，最多 progression.mapAheadAllowance 級；0 沿用固定上限。只限制隨機怪物等級，BOSS 固定為地圖上限。',
-      'balanceSettings.progression.xpCurve':'升級需求多項式，最後乘 skills.mastery.characterXpMultiplier；主角每隻怪取得 round(怪物總 EXP / 出戰人數) 一次，夥伴等級同步主角，不獨立累積 EXP。'
+      'balanceSettings.progression.xpCurve':'升級需求多項式，最後乘 skills.mastery.characterXpMultiplier；主角每隻怪取得 round(怪物總 EXP / 出戰人數) 一次，夥伴等級同步主角，不獨立累積 EXP。',
+      'balanceSettings.progression.xpLevelGap':'主角等級高於怪物 freeLevels 級內無懲罰；超出後線性遞減至 midGap/midMultiplier、highGap/highMultiplier，再降至 minimumMultiplier 並維持。所有怪物種類適用；在隊伍分配與 EXP 券之前計算，不影響金錢或掉落。'
     });
     out.legacySettings['balanceSettings.progression.statsPerLevel']={status:'fallback',replacement:'classes[].growthPerLevel',note:'只有缺少該職業獨立成長的舊 JSON 使用。'};
     return out;
