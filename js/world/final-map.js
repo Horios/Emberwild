@@ -82,7 +82,7 @@
   }
   if(typeof guideView==='function'){
     const finalMapGuideBase=guideView;
-    guideView=function(){const html=finalMapGuideBase().replace('終焉王座群怪模式為噬日者及最多五隻星隕護衛。','終局地圖採固定關卡編成；可設定最終首領並加入普通或菁英隨從。');return html.includes('終局地圖採固定關卡編成')?html:html+`<section class=\"panel\"><h2>終局地圖</h2><p>終局地圖採固定關卡編成：必須有 1 名最終首領，可加入普通或菁英隨從並設定數量與集火隊列。索引 6 的終焉王座是預設等級突破關卡；後續可新增更多終局地圖，擊敗它們不會再次改變等級上限。</p></section>`;};
+    guideView=function(){return finalMapGuideBase()+`<section class="panel"><h2>終局地圖</h2><p>終局關卡會出現最終首領，部分關卡也有普通或菁英隨從。擊敗終焉王座的噬日者可以突破等級上限；其他終局關卡的勝利不會重複提高等級上限。</p></section>`;};
   }
   if(typeof showRegionBestiary==='function'){
     showRegionBestiary=function(){
