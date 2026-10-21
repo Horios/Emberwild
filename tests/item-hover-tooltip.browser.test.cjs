@@ -40,7 +40,7 @@ test('Shared item hover descriptions survive journal scrolling and redraws until
       await page.evaluate(kind=>renderHoverFixture(kind),kind);
       await page.waitForTimeout(80);
       assert.equal(await tooltip.isVisible(),true,kind+' survives element replacement');
-      await page.mouse.move(700,520);
+      await page.mouse.move(2,2);
       await page.waitForTimeout(50);
       assert.equal(await tooltip.isVisible(),false,kind+' closes only after pointer leaves');
     }
@@ -59,7 +59,7 @@ test('Shared item hover descriptions survive journal scrolling and redraws until
       await page.waitForTimeout(60);
       assert.equal(await tooltip.isVisible(),true,'actual token row survives render #'+i);
     }
-    await page.mouse.move(700,520);
+    await page.mouse.move(2,2);
     await page.waitForTimeout(50);
     assert.equal(await tooltip.isVisible(),false);
     assert.deepEqual(game.errors,[]);
