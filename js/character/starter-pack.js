@@ -387,6 +387,7 @@
 
   function createStarterGear(job,position,entry){
     const g=gear(1,entry.slot,0,job);
+    if(globalThis.__EMBERWILD_EQUIPMENT_SKILLS)globalThis.__EMBERWILD_EQUIPMENT_SKILLS.generate(g,{source:'starter',force:true});
     g.job=job;
     g.formJob=entry.group;
     g.form=entry.form;

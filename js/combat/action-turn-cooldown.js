@@ -72,7 +72,7 @@ pacedRound=function*(){
    const u=p.unit;
    while(u.index<u.support.length){
     const i=u.support[u.index++],key=memberKey(h)+'-'+i;
-    if(castSupport(h,i)!==false){recordAction(heroKey(h),characterName(h),'輔助');supportCooldowns[key]=supportSkillCooldown(h,i);yield;if(!living().length||!foes.some(e=>e.hp>0))break;}
+    if(castSupport(h,i)!==false){recordAction(heroKey(h),characterName(h),'輔助');supportCooldowns[key]=globalThis.__EMBERWILD_EQUIPMENT_SKILLS?.supportCooldownOnCast(h,i)??supportSkillCooldown(h,i);yield;if(!living().length||!foes.some(e=>e.hp>0))break;}
    }
    if(!living().length||!foes.some(e=>e.hp>0))break;
    let actionTaken=false;

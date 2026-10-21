@@ -52,7 +52,7 @@
     try{
       M.clearReferences(T.build(),[...removed]);
       for(const x of party.members){x.equipped=x.equipped.map(id=>removed.has(id)?null:id);if(removed.has(x.tokenId))x.tokenId=null;}
-      let total=0;for(const g of items){if(mode==='sell'){const price=equipmentSellPrice(g);h.gold+=price;total+=price;}else grantSalvageRewards(g,includeEnhance);}
+      let total=0;for(const g of items){globalThis.__EMBERWILD_EQUIPMENT_SKILLS?.refund(g,h);if(mode==='sell'){const price=equipmentSellPrice(g);h.gold+=price;total+=price;}else grantSalvageRewards(g,includeEnhance);}
       state.bag=bag.filter(g=>!removed.has(g.id));if(mode==='salvage')globalThis.recordDailyProgress?.('salvage','',items.length);
       for(const x of party.members)x.hp=Math.min(x.hp,stats(x).hp);
       if(save()===false)throw Error('儲存失敗');pruneGearSelections();render();toast(`已${verb} ${items.length} 件装備${mode==='sell'?'，獲得 '+total+' 金幣':''}${blocked.length?'；略過 '+blocked.length+' 件目前戰鬥隊伍裝備':''}`);return true;
