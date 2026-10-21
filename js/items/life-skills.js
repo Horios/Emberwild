@@ -11,7 +11,15 @@
   globalThis.setLifeStockSort=value=>{if(!['default','name','quantity','price'].includes(value))return;stockSort=value;render();};
   globalThis.setLifeStockOpen=open=>{stockOpen=!!open;};
   const products=()=>Object.keys(design.materialBuyPrices||{}).map(name=>({name,description:globalThis.lifeMaterialDescription(name)}));
-  let RECIPES=design.recipes;
+  // Alchemy tier synthesis shares the existing processing lane, stock and save rules.
+  // No variant rolls: 5 × tier I → tier II; 10 × tier II → tier III.
+  const gemRecipes=()=>Object.fromEntries(GEMS.filter(g=>g.tier<3).map(g=>{
+    const id=GEMS.indexOf(g),amount=g.tier===1?5:10,output=id+GEM_KINDS;
+    return ['gem_'+id,{name:g.name+' ×'+amount+' → '+GEMS[output].name,
+      inputs:[[String(id),amount,'gem']],output:String(output),outputType:'gem',
+      periodMs:5000,chance:1,quantity:1}];
+  }));
+  let RECIPES={...design.recipes,...gemRecipes()};
   let owner=null,gather=null,work=null,lastTick=Date.now();
   const copy=v=>JSON.parse(JSON.stringify(v));
   const count=name=>ready()?materialCount(name):0;
@@ -22,10 +30,10 @@
   }
   const stock=globalThis.__EMBERWILD_INVENTORY_STOCK;
   const itemFor=(key,type)=>type==='item'?stock.item(key):null;
-  const stockCount=(key,type='material')=>type==='item'?stock.count(key):count(key);
-  function setStock(key,type,n){if(type==='item')return stock.set(key,n);setMaterialCount(key,n);return true;}
-  const productName=r=>globalThis.__EMBERWILD_ITEM_NAME?.(r.outputType,r.output,itemFor(r.output,r.outputType)?.name||r.output)||itemFor(r.output,r.outputType)?.name||r.output;
-  const inputName=([key,n,type='material'])=>globalThis.__EMBERWILD_ITEM_NAME?.(type,key,itemFor(key,type)?.name||key)||itemFor(key,type)?.name||key;
+  const stockCount=(key,type='material')=>type==='gem'?(playerHero()?.gems[Number(key)]||0):type==='item'?stock.count(key):count(key);
+  function setStock(key,type,n){if(type==='gem'){const id=Number(key);if(!Number.isInteger(id)||id<0||id>=GEMS.length||!Number.isSafeInteger(n)||n<0||n>LIMIT)return false;playerHero().gems[id]=n;return true;}if(type==='item')return stock.set(key,n);setMaterialCount(key,n);return true;}
+  const productName=r=>r.outputType==='gem'?GEMS[Number(r.output)]?.name:globalThis.__EMBERWILD_ITEM_NAME?.(r.outputType,r.output,itemFor(r.output,r.outputType)?.name||r.output)||itemFor(r.output,r.outputType)?.name||r.output;
+  const inputName=([key,n,type='material'])=>type==='gem'?GEMS[Number(key)]?.name:globalThis.__EMBERWILD_ITEM_NAME?.(type,key,itemFor(key,type)?.name||key)||itemFor(key,type)?.name||key;
   const productIcon=r=>itemFor(r.output,r.outputType)?inventoryItemIcon(itemFor(r.output,r.outputType)):inventoryMaterialIcon(r.output);
   const outputCount=r=>stockCount(r.output,r.outputType);
   const succeeds=chance=>chance===1||chance>0&&Math.random()<chance;
@@ -88,7 +96,7 @@
     if(!ready())return;
     const now=Date.now(),elapsed=Math.max(0,now-lastTick);lastTick=now;
     if(!gather&&!work)return;
-    const h=playerHero(),before={gold:h.gold,progressStats:party.progressStats?copy(party.progressStats):null,ore:h.ore,dust:h.dust,materials:{...h.materials},potions:{...healingInventory()},consumables:{...h.consumables}};
+    const h=playerHero(),before={gold:h.gold,progressStats:party.progressStats?copy(party.progressStats):null,ore:h.ore,dust:h.dust,materials:{...h.materials},potions:{...healingInventory()},consumables:{...h.consumables},gems:[...h.gems]};
     let changed=false,message='';
     if(gather){
       const target=GATHER_TARGETS.find(target=>target.id===gather.target);
@@ -115,7 +123,7 @@
       }
     }
     if(changed&&save()!==true){
-      h.gold=before.gold;if(before.progressStats)party.progressStats=before.progressStats;h.ore=before.ore;h.dust=before.dust;h.materials=before.materials;h.healingPotions=before.potions;h.consumables=before.consumables;
+      h.gold=before.gold;if(before.progressStats)party.progressStats=before.progressStats;h.ore=before.ore;h.dust=before.dust;h.materials=before.materials;h.healingPotions=before.potions;h.consumables=before.consumables;h.gems=before.gems;
       gather=null;work=null;message='生活技能產物未能儲存，已回復庫存並停止動作';
     }
     if(message)toast(message);
@@ -166,7 +174,7 @@
   const baseLoad=loadParty;loadParty=function(...args){const result=baseLoad(...args);resetJobs();return result;};
   const baseStart=start;start=function(...args){const result=baseStart(...args);resetJobs();return result;};
   const baseReturn=returnToTitle;globalThis.returnToTitle=function(...args){tickLifeSkills();resetJobs();return baseReturn(...args);};
-  const balanceBase=applyBalanceConfig;applyBalanceConfig=function(input,options={}){const result=balanceBase(input,options);if(input.lifeSkills){design=M.normalizeLife(input.lifeSkills,SHOP);GATHER_TARGETS=design.gathering;RECIPES=design.recipes;resetJobs();}return result;};
+  const balanceBase=applyBalanceConfig;applyBalanceConfig=function(input,options={}){const result=balanceBase(input,options);if(input.lifeSkills){design=M.normalizeLife(input.lifeSkills,SHOP);GATHER_TARGETS=design.gathering;RECIPES={...design.recipes,...gemRecipes()};resetJobs();}return result;};
   globalThis.__EMBERWILD_LIFE_SKILLS={get jobs(){return copy({gather,work});},get period(){return GATHER_TARGETS[0]?.periodMs||5000;},get bugChance(){return GATHER_TARGETS[0]?.bonusDrops?.[0]?.chance||0;},get design(){return copy(design);}};
   resetJobs();
   if(state)render();

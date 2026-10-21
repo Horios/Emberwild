@@ -72,3 +72,20 @@
 /* Reference slots keep hover information without opening another dialog. */
 .item-slot:not(button){cursor:default}.shop-inline-controls{display:flex;flex-direction:column;gap:6px;min-width:0;margin-top:6px}.shop-inline-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.shop-inline-actions input{width:64px;min-width:0}.shop-inline-actions button{min-height:32px}
 .shop-product-visual>.shop-inline-controls{grid-column:1/-1;grid-row:2}.shop-product-visual>.shop-product-stock{grid-column:2;grid-row:1}
+
+/* Five skill gem identities retain their colors through every alchemy tier. */
+.item-slot[data-item-kind="gem"][data-item-key="0"] .item-slot-art,
+.item-slot[data-item-kind="gem"][data-item-key="5"] .item-slot-art,
+.item-slot[data-item-kind="gem"][data-item-key="10"] .item-slot-art { color: #ef5d5d; }
+.item-slot[data-item-kind="gem"][data-item-key="1"] .item-slot-art,
+.item-slot[data-item-kind="gem"][data-item-key="6"] .item-slot-art,
+.item-slot[data-item-kind="gem"][data-item-key="11"] .item-slot-art { color: #49b976; }
+.item-slot[data-item-kind="gem"][data-item-key="2"] .item-slot-art,
+.item-slot[data-item-kind="gem"][data-item-key="7"] .item-slot-art,
+.item-slot[data-item-kind="gem"][data-item-key="12"] .item-slot-art { color: #ae83ec; }
+.item-slot[data-item-kind="gem"][data-item-key="3"] .item-slot-art,
+.item-slot[data-item-kind="gem"][data-item-key="8"] .item-slot-art,
+.item-slot[data-item-kind="gem"][data-item-key="13"] .item-slot-art { color: #e8edf7; }
+.item-slot[data-item-kind="gem"][data-item-key="4"] .item-slot-art,
+.item-slot[data-item-kind="gem"][data-item-key="9"] .item-slot-art,
+.item-slot[data-item-kind="gem"][data-item-key="14"] .item-slot-art { color: #64aaf0; }

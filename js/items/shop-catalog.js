@@ -76,7 +76,7 @@
         if(typeof rule.enabled!=='boolean'||!TYPES.includes(rule.type)||typeof rule.key!=='string'||typeof rule.name!=='string'||typeof rule.description!=='string')throw Error(label+'，基本資料無效');
         if(rule.unitPrice!==null&&!integer(rule.unitPrice,0,1e9)||rule.unitPrice===null&&rule.type!=='item')throw Error(label+'，單價無效');
         if(rule.type==='item'&&!items.has(rule.key))throw Error(label+'，找不到道具 '+rule.key);
-        if(rule.type==='gem'&&!(pool==='random'?['random','0','1','2']:['0','1','2']).includes(rule.key))throw Error(label+'，寶石種類無效');
+        if(rule.type==='gem'&&!(pool==='random'?['random','0','1','2','3','4']:['0','1','2','3','4']).includes(rule.key))throw Error(label+'，寶石種類無效');
         if(rule.type==='material'&&(!rule.key.trim()||rule.key.length>80||/[<>]/.test(rule.key)||['__proto__','constructor','prototype'].includes(rule.key)||pool==='fixed'&&rule.key==='region'))throw Error(label+'，素材名稱無效');
         if(['ore','dust'].includes(rule.type)&&rule.key!=='')throw Error(label+'，此商品不使用 key');
         if(pool==='random'){

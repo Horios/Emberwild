@@ -20639,9 +20639,9 @@
             "normal"
           ],
           "chanceByDifficulty": [
-            0.04,
-            0.08,
-            0.13
+            0.03,
+            0.06,
+            0.1
           ],
           "quantityMin": 1,
           "quantityMax": 1,
@@ -20742,9 +20742,9 @@
             "elite"
           ],
           "chanceByDifficulty": [
-            0.12,
-            0.22,
-            0.35
+            0.09,
+            0.17,
+            0.27
           ],
           "quantityMin": 1,
           "quantityMax": 1,
@@ -20846,9 +20846,9 @@
             "final"
           ],
           "chanceByDifficulty": [
-            0.35,
-            0.5,
-            0.7
+            0.27,
+            0.4,
+            0.55
           ],
           "quantityMin": 1,
           "quantityMax": 1,
@@ -30192,19 +30192,25 @@
       "kind": "gem",
       "key": "0",
       "iconType": "auto",
-      "description": "技能效果 +18%"
+      "description": "技能效果 +2%（加算型增幅）",
+      "color": "#EF5D5D",
+      "displayName": "赤焰石・1階"
     },
     {
       "kind": "gem",
       "key": "1",
       "iconType": "auto",
-      "description": "主動冷卻 −1 回合（最低 1）／觸發率 +10%"
+      "description": "主動技能成功施放後，5% 機率減少 1 回合冷卻（最低 1 回合）",
+      "color": "#49B976",
+      "displayName": "疾風石・1階"
     },
     {
       "kind": "gem",
       "key": "2",
       "iconType": "auto",
-      "description": "技能效果 +10%，觸發率 +5%／施放時回復攻擊力 15% 生命"
+      "description": "普攻觸發技能觸發率 +1 個百分點",
+      "color": "#AE83EC",
+      "displayName": "靈巧石・1階"
     },
     {
       "kind": "token",
@@ -30553,6 +30559,102 @@
       "key": "【地獄】上古冥視之瞳",
       "iconType": "auto",
       "description": "探索途中收集的製作素材。"
+    },
+    {
+      "kind": "gem",
+      "key": "3",
+      "iconType": "auto",
+      "description": "技能成功發動後，恢復生命比例最低的存活隊友相當於施放者攻擊力 3% 的生命",
+      "color": "#E8EDF7",
+      "displayName": "生息石・1階"
+    },
+    {
+      "kind": "gem",
+      "key": "4",
+      "iconType": "auto",
+      "description": "技能成功發動後，生命比例最低的存活隊友獲得相當於施放者防禦力 1% 的護盾，能與其他護盾累加",
+      "color": "#64AAF0",
+      "displayName": "守護石・1階"
+    },
+    {
+      "kind": "gem",
+      "key": "5",
+      "iconType": "auto",
+      "description": "技能效果 +4%（加算型增幅）",
+      "color": "#EF5D5D",
+      "displayName": "赤焰石・2階"
+    },
+    {
+      "kind": "gem",
+      "key": "6",
+      "iconType": "auto",
+      "description": "主動技能成功施放後，10% 機率減少 1 回合冷卻（最低 1 回合）",
+      "color": "#49B976",
+      "displayName": "疾風石・2階"
+    },
+    {
+      "kind": "gem",
+      "key": "7",
+      "iconType": "auto",
+      "description": "普攻觸發技能觸發率 +2 個百分點",
+      "color": "#AE83EC",
+      "displayName": "靈巧石・2階"
+    },
+    {
+      "kind": "gem",
+      "key": "8",
+      "iconType": "auto",
+      "description": "技能成功發動後，恢復生命比例最低的存活隊友相當於施放者攻擊力 6% 的生命",
+      "color": "#E8EDF7",
+      "displayName": "生息石・2階"
+    },
+    {
+      "kind": "gem",
+      "key": "9",
+      "iconType": "auto",
+      "description": "技能成功發動後，生命比例最低的存活隊友獲得相當於施放者防禦力 2% 的護盾，能與其他護盾累加",
+      "color": "#64AAF0",
+      "displayName": "守護石・2階"
+    },
+    {
+      "kind": "gem",
+      "key": "10",
+      "iconType": "auto",
+      "description": "技能效果 +6%（加算型增幅）",
+      "color": "#EF5D5D",
+      "displayName": "赤焰石・3階"
+    },
+    {
+      "kind": "gem",
+      "key": "11",
+      "iconType": "auto",
+      "description": "主動技能成功施放後，15% 機率減少 1 回合冷卻（最低 1 回合）",
+      "color": "#49B976",
+      "displayName": "疾風石・3階"
+    },
+    {
+      "kind": "gem",
+      "key": "12",
+      "iconType": "auto",
+      "description": "普攻觸發技能觸發率 +3 個百分點",
+      "color": "#AE83EC",
+      "displayName": "靈巧石・3階"
+    },
+    {
+      "kind": "gem",
+      "key": "13",
+      "iconType": "auto",
+      "description": "技能成功發動後，恢復生命比例最低的存活隊友相當於施放者攻擊力 9% 的生命",
+      "color": "#E8EDF7",
+      "displayName": "生息石・3階"
+    },
+    {
+      "kind": "gem",
+      "key": "14",
+      "iconType": "auto",
+      "description": "技能成功發動後，生命比例最低的存活隊友獲得相當於施放者防禦力 3% 的護盾，能與其他護盾累加",
+      "color": "#64AAF0",
+      "displayName": "守護石・3階"
     }
   ],
   "iconColorTemplates": [

@@ -88,7 +88,7 @@
     const tracker=status();tracker?.beginSkillCast?.(h,i);let ok=false;
     try{
       const power=skillPower(i,h)*(1+effectTotal(heroKey(h),'power'));ok=cast(h,sk,options(meta),v,power,skillCombatProfile(h,i,v));
-      if(ok&&h.sockets?.[i]===2&&sk.activation==='active')healing(h,h,v.atk*GS('skills.gems.hybridActiveHealAttack',.10));
+      if(ok)applyGemAfterSkill(h,i,v);
       const mastery=globalThis.__EMBERWILD_MASTERY;if(ok&&meta.mastery&&mastery?.gainMastery)mastery.gainMastery(h,meta.mastery,mastery.masterySettings().skillUseXp);
       return ok;
     }finally{tracker?.endSkillCast?.(h,i,ok);}

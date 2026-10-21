@@ -35,7 +35,7 @@ affixLabel=function(a,g){
 };
 /* Keep the unified equipment filter model; affix type 16 needs no separate filter override. */
 function allSkillCooldownReduction(h=state){return equipment(h).filter(g=>g.job===h.job||g.slot===1).flatMap(g=>g.affix||[]).filter(a=>a.type===16).reduce((n,a)=>n+(Number(a.value)||0),0);}
-skillCooldown=function(i,h=state){return Math.max(GAME_BALANCE.combat.minimumActiveCooldown,CLASSES[h.job].skills[i][3]-(h.sockets[i]===1?GS('skills.gems.cooldownReduction',1):0)-bonusFor(i,5,h)-allSkillCooldownReduction(h));};
+skillCooldown=function(i,h=state){return Math.max(GAME_BALANCE.combat.minimumActiveCooldown,CLASSES[h.job].skills[i][3]-bonusFor(i,5,h)-allSkillCooldownReduction(h));};
 function supportSkillCooldown(h,index){return Math.max(1,Math.round(SUPPORT[h.job][index].cooldown-allSkillCooldownReduction(h)));}
 function tickHeroCooldowns(h){for(const key of Object.keys(actorCooldowns))if(key.startsWith(memberKey(h)+'-'))actorCooldowns[key]=Math.max(0,Math.floor(actorCooldowns[key])-1);for(const key of Object.keys(supportCooldowns))if(key.startsWith(memberKey(h)+'-'))supportCooldowns[key]=Math.max(0,Math.floor(supportCooldowns[key])-1);}
 function cooldownLeft(cds,key){return Math.max(0,Math.floor(cds[key]||0));}
@@ -78,7 +78,7 @@ pacedRound=function*(){
    let actionTaken=false;
    for(const i of u.active){
     if(!foes.some(e=>e.hp>0))break;
-    if(castPartySkill(h,i,battleStats(h))!==false){actorCooldowns[memberKey(h)+'-'+i]=Math.max(0,Math.round(skillCooldown(i,h)));recordAction(heroKey(h),characterName(h),'技能');actionTaken=true;break;}
+    if(castPartySkill(h,i,battleStats(h))!==false){actorCooldowns[memberKey(h)+'-'+i]=Math.max(0,Math.round(gemCooldownOnCast(i,h)));recordAction(heroKey(h),characterName(h),'技能');actionTaken=true;break;}
    }
    p.index++;p.unit=null;
    if(actionTaken){yield;continue;}
@@ -97,7 +97,7 @@ function actionTurnElementLabel(element){return element==='physical'?'無屬性'
 coreSkillDetail=function(job,i,h=state){const sk=CLASSES[job]?.skills?.[i];if(!sk)return '';const old=state;if(h&&h!==state)state=h;let power=0,cdText='',proc=0;try{power=Math.round(skillPower(i,h)*100);if(sk[1]==='active')cdText=`冷卻 ${skillCooldown(i,h)} 回合`;else{proc=Math.round(procChance(i,h)*100);cdText=`普攻觸發率 ${proc}% · 冷卻 無`;}}finally{state=old;}const effectLabel={damage:'傷害倍率',heal:'治療倍率',shield:'護盾倍率',drain:'傷害／吸血倍率'}[sk[5]]||'效果倍率';return `${actionTurnElementLabel(coreSkillElement(job,i))} · ${effectLabel} ${power}% · 目標 ${coreSkillTargetText(sk)} · ${cdText} · 需求 LV${sk[2]}${skillRequiresAdvanced(sk,i)?'／二轉':''}`;};
 supportSkillDetail=function(job,i,h=state){const sk=SUPPORT[job]?.[i];if(!sk)return '';const level=Math.max(1,h?.supportLevels?.[i]||1),value=+((sk.value+Math.max(0,level-1)*(Number.isFinite(sk.effectPerLevel)?sk.effectPerLevel:GS('skills.support.effectPerExtraLevel',.2)))*100).toFixed(1),cd=supportSkillCooldown(h,i);return `${actionTurnElementLabel(sk.element)} · 目標 ${TARGET_NAMES[sk.target]} · ${EFFECT_NAMES[sk.kind]} ${value}% · 持續 ${sk.duration} 戰鬥回合 · 冷卻 ${cd} 回合 · 需求 LV${sk.level}${i===2?'／二轉':''}`;};
 const actionTurnApplyGameplaySettingsBase=applyGameplaySettingsSideEffects;
-applyGameplaySettingsSideEffects=function(){actionTurnApplyGameplaySettingsBase();GEMS[1].desc='主動技能冷卻 −'+GS('skills.gems.cooldownReduction',1)+' 回合（最低 '+GAME_BALANCE.combat.minimumActiveCooldown+'）／觸發率 +'+Math.round(GS('skills.gems.cooldownProcBonus',.10)*10000)/100+'%';};
+applyGameplaySettingsSideEffects=function(){actionTurnApplyGameplaySettingsBase();};
 applyGameplaySettingsSideEffects();
 const actionTurnGuideBase=guideView;
 guideView=function(){return `<section class="panel"><h2>行動回合冷卻</h2><p>主動與輔助技能的冷卻只在該角色自己的行動回合推進；冷卻 N 代表施放後要完整經過 N 次自身行動，之後才能再次施放。其他隊員與敵人行動不會扣除冷卻，戰鬥倍速也只改變播放速度。</p><p>每個角色自己的行動中，輔助技能不消耗主要行動；輔助處理完後，最多只會施放 1 個可用主動技能，若沒有主動技能可施放才會普通攻擊。主動技能或普通攻擊一旦執行，就結束該角色本回合。</p><p>主動技能最低冷卻為 ${GAME_BALANCE.combat.minimumActiveCooldown} 回合；因此 1 回合冷卻時，至少會隔一個自己的行動回合才再次施放。裝備的全技能冷卻詞條與指定技能冷卻詞條可同時生效。</p></section>`+actionTurnGuideBase();};

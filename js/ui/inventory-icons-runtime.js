@@ -2,7 +2,7 @@
 (()=>{
   const M=EmberwildInventoryIcons,baseExport=exportableBalance,baseValidate=validateBalanceConfig,baseApply=applyBalanceConfig;
   const defaultGemLabels=GEMS.map(g=>({name:g.name}));
-  function applyGemLabels(){for(const [i,g]of GEMS.entries()){g.name=lookup.get('gem:'+i)?.displayName||defaultGemLabels[i].name;g.desc=lookup.get('gem:'+i)?.description??'';}}
+  function applyGemLabels(){for(const [i,g]of GEMS.entries()){g.name=lookup.get('gem:'+i)?.displayName||defaultGemLabels[i].name;g.desc=lookup.get('gem:'+i)?.description??g.desc;}}
   let templates,definitions=M.migrateDescriptions(baseExport()).inventoryIcons,customIcons=baseExport().skillIcons||[],lookup=new Map(definitions.map(r=>[r.kind+':'+r.key,r]));
   const saved=balanceSourceText();if(saved){templates=EmberwildIconColors.validate(JSON.parse(saved));EmberwildIconColors.use(templates);definitions=M.validate(M.migrateDescriptions(JSON.parse(saved)),__EMBERWILD_SKILL_ICONS);lookup=new Map((definitions||[]).map(r=>[r.kind+':'+r.key,r]));}
   exportableBalance=()=>{const out=baseExport();if(templates!==undefined)out.iconColorTemplates=structuredClone(templates);if(definitions!==undefined)out.inventoryIcons=structuredClone(definitions);return M.migrateDescriptions(out);};
@@ -29,7 +29,7 @@
   equipmentDisplayName=function(g){const id=globalThis.__EMBERWILD_GEAR_CATALOGUE_KEY(g),name=lookup.get(id.kind+':'+id.key)?.displayName;return name?'+'+(g.plus||0)+' '+name:baseGearDisplay(g);};
   globalThis.inventoryGemSellPrice=i=>lookup.get('gem:'+String(i))?.sellPrice??0;
   globalThis.sellCatalogueGem=function(i,quantity=1){
-    if(!party||!state||!Number.isInteger(i)||i<0||i>2||!globalThis.__EMBERWILD_CAN_SELL('gem',i))return false;
+    if(!party||!state||!Number.isInteger(i)||i<0||i>=GEMS.length||!globalThis.__EMBERWILD_CAN_SELL('gem',i))return false;
     const n=Number(quantity),gold=state.gold,held=state.gems[i],price=inventoryGemSellPrice(i);
     if(!Number.isSafeInteger(n)||n<1||n>held||gold+n*price>1e12)return false;
     state.gems[i]-=n;state.gold+=n*price;

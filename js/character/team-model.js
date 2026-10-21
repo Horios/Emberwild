@@ -46,7 +46,7 @@
     for(const [k,v] of Object.entries(perm.payments))if(!skillKeys.has(k)||v!==true||!perm.unlocks[k])fail('技能材料消耗成果無效');
     for(const [k,v] of Object.entries(perm.classes))if(!/^\d+$/.test(k)||!classes[Number(k)]||!object(v)||typeof v.activated!=='boolean'||typeof v.advanced!=='boolean'||!int(v.xp)||!v.activated&&(v.xp||v.advanced))fail('職業永久成長無效');
     for(const [k,v] of Object.entries(perm.masteries))if(!/^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/.test(k)||!int(v))fail('武器／元素精通無效');
-    for(const [k,v] of Object.entries(perm.gemInstances))if(!/^gem-\d+$/.test(k)||!int(v,0,2))fail('技能寶石實體無效');
+    for(const [k,v] of Object.entries(perm.gemInstances))if(!/^gem-\d+$/.test(k)||!int(v,0,14))fail('技能寶石實體無效');
     if(Object.keys(perm.gemInstances).some(k=>Number(k.slice(4))>=perm.gemSerial))fail('技能寶石序號無效');
     if(perm.playerKey!==(members[0].playerId??members[0].job))fail('主角永久識別不符');
     const owned=new Map(items.map(g=>[g.id,g])),people=new Set(members.slice(1).map(h=>h.companionId??h.job)),ids=new Set(),totals=budget(level,progression,perm);

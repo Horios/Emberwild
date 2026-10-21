@@ -53,7 +53,7 @@
     if(!rows.length)return null;let roll=Math.random()*total;for(const rule of rows){roll-=rule.weight;if(roll<=0)return rule;}return rows[rows.length-1];
   }
   function offerFromRule(rule,serial,index,tier){
-    let key=rule.key;if(rule.type==='gem'&&key==='random')key=String(rand(3));if(rule.type==='material'&&key==='region'){const pool=regionMaterialPool();key=pool[rand(pool.length)];}
+    let key=rule.key;if(rule.type==='gem'&&key==='random')key=String(rand(GEM_KINDS));if(rule.type==='material'&&key==='region'){const pool=regionMaterialPool();key=pool[rand(pool.length)];}
     const scale=rule.quantityScalesWithTier?tier:1,min=rule.quantityMin*scale,max=rule.quantityMax*scale;
     const qty=Math.min(10000,Math.floor(min+Math.random()*(max-min+1))),price=Math.min(1e9,Math.round(qty*unitPrice(rule)*(rule.priceScalesWithTier?tier:1)));
     return {id:serial+'-'+index,kind:rule.type,key,qty,price,sold:false,ruleId:rule.id};
