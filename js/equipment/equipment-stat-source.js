@@ -338,11 +338,30 @@ shopView=function(){ensureMarket();const h=pageHero('shop'),pc=Math.round(GS('qu
 const update12RenderBase=render;
 render=function(){update12RenderBase();if(!state)return;const after=GS('progression.levelCaps.afterClear',60),before=GS('progression.levelCaps.beforeClear',30);document.querySelectorAll('.aside-foot .gold').forEach(el=>{el.textContent=state.won?' 已突破 · 上限 LV'+after:'LV'+before+' · 挑戰噬日者';});};
 
-guideView=function(){const g=GAMEPLAY_SETTINGS,c=g.combat,r=g.rewards,e=g.equipment,m=g.monsters,x=g.progression.xpLevelGap,drop=e.dropLevelGap;
- const xpHint=x?.enabled?`角色高於怪物 ${x.freeLevels} 級內獲得完整經驗；差 ${x.midGap} 級降至 ${Math.round(x.midMultiplier*100)}%，差 ${x.highGap} 級降至 ${Math.round(x.highMultiplier*100)}%，差 ${x.highGap+1} 級起為 ${Math.round(x.minimumMultiplier*100)}%。階段內逐級線性降低；包含 BOSS，於隊伍分配與經驗加成前結算。`:'目前未啟用怪物等級差經驗懲罰。';
- const dropHint=drop?.enabled?`普通與菁英怪的一般裝備掉落：角色超過地圖最高等級 ${drop.freeLevels} 級後，掉率依 1 ÷ (1 + 超出級數 × ${drop.penaltyPerLevel}) 遞減，最低保留原始掉率的 ${Math.round(drop.minimumMultiplier*100)}%；素材、BOSS 裝備不受此項限制。`:'目前未啟用低等地圖的一般裝備掉落懲罰。';
- return heading('FIELD NOTES / 冒險指南','目前平衡設定摘要')+`<section class="panel"><h2>成長與戰鬥</h2><p>通關前等級上限 LV${g.progression.levelCaps.beforeClear}，通關後 LV${g.progression.levelCaps.afterClear}。每級獲得 ${g.progression.levelRewards.abilityPoints} 能力點。二轉需求 LV${g.progression.advance.level}。</p><p>基礎暴擊傷害 ${Math.round(c.baseCritDamage*10000)/100}%；防禦係數 ${Math.round(c.defenseEffectiveness*10000)/100}%。一般越級每級增加 ${Math.round(c.levelGapDamagePerLevel*10000)/100}% 敵方傷害。全隊戰敗損失 ${Math.round(c.defeatGoldLoss*10000)/100}% 金幣。</p><p><b>低等怪經驗懲罰：</b>${xpHint} 金錢、素材與裝備掉落不會因經驗懲罰降低。</p><h2>遭遇與掉落</h2><p>一般地圖的菁英遭遇率由各地圖 <span class="code">maps.catalog[].eliteChance</span> 決定；BOSS 不會隨機遭遇，而是由擊殺累積 BOSS 挑戰進度。裝備、素材、寶石、消耗品等實際掉落由 <span class="code">drops.entries</span> 逐條判定。</p><p><b>低等區域裝備：</b>${dropHint} 一般裝備的詳細掉落率可在怪物掉落表查看。</p><h2>裝備與強化</h2><p>裝備背包 ${e.bagCapacity} 件，強化上限 +${e.enhance.maxLevel}，每 +1 的基礎能力增幅 ${Math.round(e.enhance.statPerLevel*10000)/100}%。升到 +${e.enhance.dustStartLevel} 開始消耗粉塵，+${e.enhance.etherStartLevel} 開始消耗以太鍛鐵。</p><div class="actions"><button class="danger" onclick="confirmNew()">建立新角色</button></div></section>`;};
-
+guideView=function(){
+ const g=GAMEPLAY_SETTINGS,p=g.progression,e=g.equipment,c=g.combat,x=p.xpLevelGap,drop=e.dropLevelGap;
+ const xpHint=x?.enabled?`<p>挑戰低等怪物時，高於怪物 ${x.freeLevels} 級以內仍可獲得完整經驗；高出 ${x.midGap} 級時剩 ${Math.round(x.midMultiplier*100)}%、高出 ${x.highGap} 級時剩 ${Math.round(x.highMultiplier*100)}%，高出 ${x.highGap+1} 級以上剩 ${Math.round(x.minimumMultiplier*100)}%。中間等級差逐級遞減，BOSS 也適用。</p>`:'';
+ const dropHint=drop?.enabled?`<p>角色高於地圖最高等級 ${drop.freeLevels} 級後，普通怪與菁英怪的裝備掉落率會逐漸降低，最低為原本的 ${Math.round(drop.minimumMultiplier*100)}%。素材與 BOSS 裝備不受這項限制。</p>`:'';
+ return heading('FIELD NOTES / 冒險指南','遊戲系統說明')+`<section class="panel guide-scroll">
+ <h2>角色成長與隊伍</h2>
+ <p>主角透過探索獲得經驗並升級，夥伴等級與主角同步。最多三人出戰，其他夥伴可以留在候補。每次升級獲得 ${p.levelRewards.abilityPoints} 點能力點；LV${p.advance.level} 可以二轉。擊敗界限突破首領後，等級上限由 LV${p.levelCaps.beforeClear} 提升至 LV${p.levelCaps.afterClear}。</p>
+ <p>金幣、素材、消耗品與背包由隊伍共用；角色的技能、配點與穿戴裝備則可分別設定。</p>
+ <h2>探索與戰鬥</h2>
+ <p>開始探索後會自動遭遇並攻擊怪物。普通探索的擊殺可累積地區 BOSS 挑戰進度。技能依裝備的技能槽與冷卻時間使用，普攻觸發技能須配置到觸發槽才會生效。火剋風、風剋冰、冰剋火，光與暗互相剋制。</p>
+ <p>遭遇結束後全隊恢復生命；戰敗會停止探索並損失 ${Math.round(c.defeatGoldLoss*100)}% 金幣。暫停不會回復生命，停止探索則結束目前的掛機。</p>
+ <h2>經驗與戰利品</h2>
+ <p>怪物等級、種類與探索難度會影響獲得的經驗。經驗由出戰隊伍人數分配，再由主角累積並同步夥伴等級；經驗加倍券可額外提高收益。</p>
+ ${xpHint}
+ <p>裝備、素材與其他戰利品依怪物掉落表判定；擊敗怪物取得的裝備會直接放入背包。一般裝備掉率依探索難度不同，詳情可在怪物資訊查看。</p>
+ ${dropHint}
+ <h2>裝備與養成</h2>
+ <p>裝備需符合職業及等級需求。背包最多持有 ${e.bagCapacity} 件裝備，可篩選、排序、鎖定及批次處理。強化最多 +${e.enhance.maxLevel}，能提升裝備能力；洗鍊可重新產生詞條，並選擇採用新結果或保留原詞條。BOSS 專屬裝備可使用對應素材製作。</p>
+ <h2>任務與生活技能</h2>
+ <p>主線、支線、NPC 任務與每日委託會依各自條件推進並提供獎勵。採集會按時間取得材料；煉金則依配方消耗材料製作道具。</p>
+ <h2>存檔與離線探索</h2>
+ <p>遊戲會自動保存進度，也可以匯出存檔備份或移轉裝置。探索進行中關閉網頁，重新進入後會補算離線期間完成的戰鬥與收益；暫停或停止探索的時間不會產生探索收益。</p>
+ </section>`;
+};
 
 // Update 12 views whose original renderers captured old constants before the settings layer existed.
 function update12BossMemberView(){
