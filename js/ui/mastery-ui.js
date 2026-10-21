@@ -256,16 +256,7 @@ characterView=function(){
 };
 const masteryGuideBase=guideView;
 guideView=function(){
-  let html=masteryGuideBase();
-  html=html.replace(/每級獲得\s*([\d.]+)\s*能力點[、，]\s*[\d.]+\s*技能點/g,'每級獲得 $1 能力點')
-    .replace(/每級增加[^。<]*。/g,'')
-    .replace(/技能上限[^。<]*。/g,'')
-    .replace(/每級消耗 1 技能點[^。<]*。/g,'')
-    .replace(/技能點/g,'')
-    .replace('每 5 級前往新區域','逐步前往適合等級的新區域')
-    .replace('核心技能 5 級','符合技能學習條件的精通')
-    .replace('只保存成長進度，不保存戰鬥中敵人；續玩從整備狀態開始。關閉頁面不會離線戰鬥。','探索中的離線時間會依實際經過時間補算戰鬥與收益，返回遊戲時完成結算。');
-  return `<section class="panel"><h2>角色成長與精通</h2><p>角色升級是重要的成長里程碑，可獲得能力點並逐步開放新挑戰。技能習得後就具備完整效果。戰士與弓箭手透過對應武器的普攻與技能累積武器精通；法師與牧師依實際施放技能的體系累積元素或光暗精通。精通等級是部分技能與二轉的解鎖條件。</p></section>`+html;
+  return `<section class="panel"><h2>角色成長與精通</h2><p>角色升級可獲得能力點並解鎖新的冒險內容。戰士與弓箭手使用對應武器的普攻與技能可累積武器精通；法師與牧師依實際施放技能的體系累積元素或光暗精通。技能學習與二轉可能需要指定的精通等級，習得技能即可使用完整效果。</p></section>`+masteryGuideBase();
 };
 if(state){save();render();}
 })();
