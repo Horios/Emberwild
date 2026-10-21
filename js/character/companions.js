@@ -54,7 +54,7 @@
   const byId=()=>new Map(plans.map(p=>[p.id,p]));
   function companionPlan(h){const current=byId().get(h?.companionId);return current?.job===h?.job?current:party?.companionProfiles?.[h?.companionId]?.job===h?.job?party.companionProfiles[h.companionId]:null;}
   function allPassivesFor(h){return (companionPlan(h)?.passives||[]).map(id=>passiveDefinitions.find(d=>d.id===id)).filter(Boolean);}
-  function skillDisabled(h,kind,id){return !!companionPlan(h)&&!!h.disabledCompanionSkills?.[kind]?.includes(id);}
+  function skillDisabled(h,kind,id){if(globalThis.__EMBERWILD_SKILLS)return false;return !!companionPlan(h)&&!!h.disabledCompanionSkills?.[kind]?.includes(id);}
   function validateDisabledSkills(raw){
     if(raw===undefined)return {core:[],support:[],passive:[]};
     if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).some(k=>!['core','support','passive'].includes(k)))throw Error('夥伴技能啟用設定無效');
@@ -131,6 +131,7 @@
     while(h.procSlots.length<PROC_SLOT_COUNT)h.procSlots.push(null);
     h.supportSlots=plan.support.filter(i=>h.supportLevels[i]&&!skillDisabled(h,'support',i)).slice(-2);
     while(h.supportSlots.length<2)h.supportSlots.push(null);
+    globalThis.__EMBERWILD_SKILLS?.refreshHero(h);
     h.sockets.forEach((gem,i)=>{if(gem!==null&&!h.skills[i]){h.gems[gem]++;h.sockets[i]=null;}});
     if(fullHealth)h.hp=stats(h).hp;else h.hp=Math.min(h.hp,stats(h).hp);
   }
@@ -161,7 +162,8 @@
       }
       // A previously higher-level companion keeps all gear and gems in storage.
       h.equipped=h.equipped.map(id=>id&&h.bag.some(g=>g.id===id&&gearRequiredLevel(g)<=h.lv)?id:null);
-      h.sockets.forEach((gem,i)=>{if(gem!==null&&!h.skills[i]){h.gems[gem]++;h.sockets[i]=null;}});
+      globalThis.__EMBERWILD_SKILLS?.refreshHero(h);
+    h.sockets.forEach((gem,i)=>{if(gem!==null&&!h.skills[i]){h.gems[gem]++;h.sockets[i]=null;}});
       h.hp=wasDead?0:Math.min(h.hp,stats(h).hp);
     }
   }
@@ -297,10 +299,10 @@
   function companionSkillsView(){
     const h=state,plan=companionPlan(h),mastery=globalThis.__EMBERWILD_MASTERY;
     const core=CLASSES[h.job].skills,support=SUPPORT[h.job]||[];
-    const toggle=(kind,id,unlocked)=>plan?`<div class="actions"><button data-companion-toggle="${memberKey(h)}:${kind}:${esc(id)}" aria-pressed="${unlocked&&!skillDisabled(h,kind,id)}" onclick="setCompanionSkillEnabled(${memberKey(h)},'${kind}',${kind==='passive'?`'${esc(id)}'`:id},${skillDisabled(h,kind,id)})" ${unlocked?'':'disabled'}>${unlocked?(skillDisabled(h,kind,id)?'啟用':'禁用'):'未解鎖'}</button></div>`:'';
+    const toggle=(kind,id,unlocked)=>!globalThis.__EMBERWILD_SKILLS&&plan?`<div class="actions"><button data-companion-toggle="${memberKey(h)}:${kind}:${esc(id)}" aria-pressed="${unlocked&&!skillDisabled(h,kind,id)}" onclick="setCompanionSkillEnabled(${memberKey(h)},'${kind}',${kind==='passive'?`'${esc(id)}'`:id},${skillDisabled(h,kind,id)})" ${unlocked?'':'disabled'}>${unlocked?(skillDisabled(h,kind,id)?'啟用':'禁用'):'未解鎖'}</button></div>`:'';
     const includes=(kind,i)=>!plan||(plan[kind]||[]).includes(i)||(kind==='core'?h.skills?.[i]||h.active?.includes(i)||h.procSlots?.includes(i):h.supportLevels?.[i]||h.supportSlots?.includes(i));
     const slotGroup=(label,slots,nameOf)=>`<div class="companion-skill-slot-group"><b>${label}</b>${Array.from({length:2},(_,slot)=>{const id=slots?.[slot]??null;return `<span>槽 ${slot+1}：${esc(id===null?'未配置':nameOf(id)||'未知技能')}</span>`;}).join('')}</div>`;
-    const slots=`<div class="companion-skill-loadout">${slotGroup('主動技能',h.active,i=>core[i]?.[0])}${slotGroup('普攻觸發技能',h.procSlots,i=>core[i]?.[0])}${slotGroup('輔助技能',h.supportSlots,i=>support[i]?.name)}</div>`;
+    const slots=globalThis.__EMBERWILD_SKILLS?'':`<div class="companion-skill-loadout">${slotGroup('主動技能',h.active,i=>core[i]?.[0])}${slotGroup('普攻觸發技能',h.procSlots,i=>core[i]?.[0])}${slotGroup('輔助技能',h.supportSlots,i=>support[i]?.name)}</div>`;
     const skillRows=(kind,list)=>list.map((sk,i)=>{
       const isCore=kind==='core',meta=isCore?sk[6]:sk;
       if(!includes(kind,i)||!skillAllowedForPartner(h,meta))return '';
@@ -316,9 +318,10 @@
     }).filter(Boolean).join('');
     const rows=skillRows('core',core)+skillRows('support',support);
     const passiveRows=allPassivesFor(h).map(d=>`<article class="companion-skill-card" data-companion-passive="${esc(d.id)}"><div class="skill-list-title"><span class="skill-icon-glyph" aria-hidden="true">${globalThis.__EMBERWILD_SKILL_ICONS?.svgFor(d.kind==='debuff'?'skull':'shield')||''}</span><b>${esc(d.name)}</b><span class="skill-state ${h.lv>=d.requiredLevel?'learned':'locked'}">${h.lv<d.requiredLevel?'未解鎖':skillDisabled(h,'passive',d.id)?'已禁用':'已啟用'}</span><span>被動 · ${d.kind==='debuff'?'DEBUFF':'BUFF'}</span></div><p>${esc(d.effects.map(Passive.effectText).join('、'))}</p><p class="small">需求 LV${d.requiredLevel} · ${esc(Passive.targets[d.target])} · ${d.target==='self'?'解鎖且啟用後常時生效':'啟用、上陣且存活時提供常駐光環'} · 不占技能槽</p>${d.description?`<p class="small">${esc(d.description)}</p>`:''}${toggle('passive',d.id,h.lv>=d.requiredLevel)}</article>`).join('');
-    return `<p class="small companion-skill-note">${plan?'技能達到需求角色等級後自動解鎖，可個別啟用或禁用；禁用選擇會隨存檔保留。':'保留原有隊員的技能與配置。'}</p>${slots}<div class="companion-skill-list">${rows||'<p class="small">此夥伴尚無技能。</p>'}</div><h3>常駐被動</h3><div class="companion-skill-list">${passiveRows||'<p class="small">此夥伴尚無被動。</p>'}</div>`;
+    return `<p class="small companion-skill-note">${plan?'技能達到需求角色等級後自動解鎖，所有已解鎖技能都會自動使用。':'保留原有隊員的技能與配置。'}</p>${slots}<div class="companion-skill-list">${rows||'<p class="small">此夥伴尚無技能。</p>'}</div><h3>常駐被動</h3><div class="companion-skill-list">${passiveRows||'<p class="small">此夥伴尚無被動。</p>'}</div>`;
   }
   globalThis.setCompanionSkillEnabled=function(key,kind,id,enabled){
+    if(globalThis.__EMBERWILD_SKILLS)return false;
     const h=partyMember(key),plan=companionPlan(h);if(!plan||typeof enabled!=='boolean')return false;
     let unlocked=false;
     if(kind==='core')unlocked=plan.core.includes(id)&&!!h.skills[id]&&skillAllowedForPartner(h,CLASSES[h.job].skills[id]?.[6]);

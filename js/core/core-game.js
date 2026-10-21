@@ -126,6 +126,8 @@ function pixel(index,extra=''){return '';}
 function enemyArt(e){if(!e)return pixel(6);if(e.kind==='final')return pixel(7);if(/史萊姆/.test(e.name))return pixel(4);if(/狼|獵犬/.test(e.name))return pixel(5);if(/樹|古木/.test(e.name))return pixel(6);return `<span class="monster-symbol">${e.icon}</span>`;}
 
 function creationSkillPreview(job){
+  const api=globalThis.__EMBERWILD_SKILLS;
+  if(api){const rows=api.system().classRules.find(r=>r.job===job).initial;return `<section class="creation-skill-preview" aria-label="${esc(CLASSES[job].name)}技能預覽"><h3>技能預覽</h3><ul>${rows.map(row=>{const sk=api.byId(row.skillId);return `<li><b>${esc(sk.name)}</b><span class="creation-skill-meta">主動 · LV${row.level}</span><p>${esc(sk.description||'')}</p></li>`;}).join('')}</ul></section>`;}
   const skills=CLASSES[job].skills.filter(sk=>sk[6]?.partnerId==null).slice(0,3);
   if(!skills.length)return '';
   return `<section class="creation-skill-preview" aria-label="${esc(CLASSES[job].name)}技能預覽"><h3>技能預覽</h3><ul>${skills.map(sk=>{
@@ -474,7 +476,7 @@ function validateSave(input,{companion=false}={}) {
   for(const k of ['advanced','won','autoPotion'])if(typeof s[k]!=='boolean')fail('角色狀態無效');
   if(!int(s.tutorial,0,3)||s.advanced&&s.lv<GS('progression.advance.level',15)||s.won&&s.lv<GS('progression.levelCaps.beforeClear',30))fail('角色進度無效');
   for(let i=0;i<skillCount;i++)if(!companion&&s.skills[i]>0&&(s.lv<CLASSES[s.job].skills[i][2]||skillRequiresAdvanced(CLASSES[s.job].skills[i],i)&&!s.advanced))fail('尚未解鎖的技能');
-  if(!array(s.active,2)||!s.active.every(i=>i===null||int(i,0,s.skills.length-1)&&s.skills[i]>0&&(i>=skillCount||CLASSES[s.job].skills[i][1]==='active'))||s.active[0]!==null&&s.active[0]===s.active[1])fail('主動槽無效');
+  if(!array(s.active,(s.skillLoadout||companion)?globalThis.__EMBERWILD_SKILLS?.slotCounts(s).active??2:2)||!s.active.every(i=>i===null||int(i,0,s.skills.length-1)&&s.skills[i]>0&&(i>=skillCount||CLASSES[s.job].skills[i][1]==='active'))||new Set(s.active.filter(i=>i!==null)).size!==s.active.filter(i=>i!==null).length)fail('主動槽無效');
   // Unknown trailing active slots belong to late-installed skills. Do not expose them
   // to early renderers; the original boot bytes are rehydrated after those skills exist.
   if(s.active.some(i=>i!==null&&i>=skillCount))s.active=s.active.map(i=>i!==null&&i>=skillCount?null:i);
@@ -649,7 +651,7 @@ function validateParty(data){
   // Reserves may be below the expedition level; validate their personal data at home.
   const companion=result.members.length>0,h=solo.validateSave({...raw,map:0},{companion});initHero(h);
   if(h.companionId!==undefined&&(!Number.isInteger(h.companionId)||h.companionId<10||h.companionId>1000000000||EmberwildCompanions.defaultPlans.find(p=>p.id===h.companionId)?.job!==h.job&&data.companionProfiles?.[h.companionId]?.job!==h.job))throw Error('夥伴識別無效');
-  if(!Array.isArray(h.supportLevels)||h.supportLevels.length<SUPPORT[h.job].length||h.supportLevels.length>64||h.supportLevels.some((n,i)=>!Number.isInteger(n)||n<0||n>Math.max(1,Math.floor(GS('skills.support.maxLevel',5)))||!companion&&n>0&&(h.lv<(SUPPORT[h.job][i]?.level??Infinity)||i===2&&!h.advanced))||!Array.isArray(h.supportSlots)||h.supportSlots.length!==2||h.supportSlots.some(i=>i!==null&&(!Number.isInteger(i)||i<0||i>=h.supportLevels.length||h.supportLevels[i]<1))||h.supportSlots[0]!==null&&h.supportSlots[0]===h.supportSlots[1])throw Error('輔助技能資料無效');
+  if(!Array.isArray(h.supportLevels)||h.supportLevels.length<SUPPORT[h.job].length||h.supportLevels.length>64||h.supportLevels.some((n,i)=>!Number.isInteger(n)||n<0||n>Math.max(1,Math.floor(GS('skills.support.maxLevel',5)))||!companion&&n>0&&(h.lv<(SUPPORT[h.job][i]?.level??Infinity)||i===2&&!h.advanced))||!Array.isArray(h.supportSlots)||h.supportSlots.length!==((h.skillLoadout||companion)?globalThis.__EMBERWILD_SKILLS?.slotCounts(h).support??2:2)||h.supportSlots.some(i=>i!==null&&(!Number.isInteger(i)||i<0||i>=h.supportLevels.length||h.supportLevels[i]<1))||new Set(h.supportSlots.filter(i=>i!==null)).size!==h.supportSlots.filter(i=>i!==null).length)throw Error('輔助技能資料無效');
   if(result.members.length===0)h.playerId=raw.playerId??h.job;
   result.members.push(h);
  }
@@ -879,6 +881,7 @@ function ensureAllProcSkillMeta(settings=null){for(let job=0;job<CLASSES.length;
 function validProcIndex(h,i){return Number.isInteger(i)&&i>=0&&i<CLASSES[h.job].skills.length&&CLASSES[h.job].skills[i][1]==='proc'&&h.skills[i]>0;}
 function ensureProcSlots(h){
  if(!h)return h;
+ if(globalThis.__EMBERWILD_SKILLS&&h.skillLoadout)return globalThis.__EMBERWILD_SKILLS.projectHero(h);
  const had=Array.isArray(h.procSlots);let slots=had?h.procSlots.slice(0,PROC_SLOT_COUNT):[];
  if(!had){const learned=[];for(let i=0;i<CLASSES[h.job].skills.length;i++)if(validProcIndex(h,i))learned.push(i);slots=learned.slice(0,PROC_SLOT_COUNT);}
  while(slots.length<PROC_SLOT_COUNT)slots.push(null);

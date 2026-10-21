@@ -61,7 +61,7 @@
       }
       if(!Array.isArray(p.stats)||p.stats.length!==3||p.stats.some(n=>!int(n,0,100000))||p.stats.reduce((a,v)=>a+v,0)>totals.ap||!Array.isArray(p.skills)||p.skills.length!==c||p.skills.some(n=>!int(n,0,1))||!Array.isArray(p.supportLevels)||p.supportLevels.length!==s||p.supportLevels.some(n=>!int(n,0,1)))fail('隊伍配點超出額度');
       for(const [kind,list] of [['core',p.skills],['support',p.supportLevels]])if(list.some((v,i)=>v&&!perm.unlocks[key(p.job,kind,i)]))fail('隊伍學習了尚未永久解鎖的技能');
-      for(const [field,list,type] of [['active',p.skills,'active'],['procSlots',p.skills,'proc'],['supportSlots',p.supportLevels,null]]){const slots=p[field];if(!Array.isArray(slots)||slots.length!==2||new Set(slots.filter(v=>v!==null)).size!==slots.filter(v=>v!==null).length||slots.some(i=>i!==null&&(!int(i,0,list.length-1)||!list[i]||type&&classes[p.job].skills[i].activation!==type)))fail('隊伍技能槽無效');}
+      for(const [field,list,type] of [['active',p.skills,'active'],['procSlots',p.skills,'proc'],['supportSlots',p.supportLevels,null]]){const slots=p[field];if(!Array.isArray(slots)||slots.length!==(p.skillLoadout?globalThis.__EMBERWILD_SKILLS?.slotCounts({job:p.job??0,advanced:!!perm.classes[p.job]?.advanced})[type||'support']??2:2)||new Set(slots.filter(v=>v!==null)).size!==slots.filter(v=>v!==null).length||slots.some(i=>i!==null&&(!int(i,0,list.length-1)||!list[i]||type&&classes[p.job].skills[i].activation!==type)))fail('隊伍技能槽無效');}
       p.playerActive??=true;
       const activeCount=Number(p.playerActive)+(p.companions?.length||0);
       if(typeof p.playerActive!=='boolean'||activeCount<1||activeCount>3||!Array.isArray(p.equipped)||p.equipped.length!==5||!object(p.tokens)||!Array.isArray(p.companions)||p.companions.length>3||!Array.isArray(p.enlisted)||p.enlisted.length>512||new Set(p.enlisted).size!==p.enlisted.length||new Set(p.companions).size!==p.companions.length||p.enlisted.some(k=>!people.has(k))||p.companions.some(k=>!p.enlisted.includes(k)))fail('隊伍編成無效');
@@ -72,8 +72,8 @@
       if(p.job===null&&(p.stats.some(Boolean)||p.skills.some(Boolean)||p.equipped.some(Boolean)||p.companions.length||p.enlisted.length||Object.values(p.tokens).some(Boolean)))fail('空白隊伍含有配置');
     }
     if(!ids.has(b.activeId)||Number(b.plans.reduce((n,p)=>Math.max(n,Number(p.id.slice(5))),0))>=b.serial)fail('目前隊伍或序號無效');
-    const fields=Object.keys(blank('team-1','隊伍'));
-    b.plans=b.plans.map(p=>Object.fromEntries(fields.map(k=>[k,p[k]])));
+    const fields=[...Object.keys(blank('team-1','隊伍')),'skillLoadout','activeSkillEquipmentId'];
+    b.plans=b.plans.map(p=>Object.fromEntries(fields.filter(k=>p[k]!==undefined).map(k=>[k,p[k]])));
     return b;
   }
   return {VERSION,defaults,copy,settings,rules,normalizeDocument,budget,key,blank,spent,references,clearReferences,prepareSave,validate};
