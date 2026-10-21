@@ -97,7 +97,7 @@
     if(g)detail=`<p>T${g.powerTier||1} · ${g.affix?.length?'已附詞綴':'尚未洗鍊／無隨機詞綴'}${g.equipmentSource==='shop'?' · 固定商店基底':''}</p><p>${globalThis.EmberwildTokens?.isToken(g)?esc(gearDesc(g)):esc(gearWearableJobsText(g)+' · LV '+gearRequiredLevel(g))}</p><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryHTML?.(g)||esc(gearDesc(g))}</p>${globalThis.equipmentAttributeDetailsHTML?.(g)||''}${g.starterPack?'<p>可強化；不可洗鍊詞綴或重鑄基底。</p>':''}`;
     else if(kind==='item'&&key.startsWith('companion-ticket-'))detail='<p>領取後存入背包，使用可解鎖指定夥伴；重複取得依原規則轉換。</p>';
     else if(item)detail='<p>'+esc(key==='level_scroll'?'全隊共用等級 +1':supplyDetail(item))+'</p>';
-    else if(kind==='gem')detail='<p>'+esc(GEMS[Number(key)]?.desc||'技能鑲嵌寶石')+'</p>';
+    else if(kind==='gem'&&!description)detail='<p>'+esc(GEMS[Number(key)]?.desc||'技能鑲嵌寶石')+'</p>';
     if(ref.context==='inventory'){
       if(item)detail+='<p>持有 '+(state?__EMBERWILD_INVENTORY_STOCK.count(key):0)+' · 售價 '+(key==='level_scroll'?materialSellPrice('升級卷軸'):typeof itemSellPrice==='function'?itemSellPrice(key):0)+' 金幣／個</p>';
       else if(kind==='item'&&key.startsWith('companion-ticket-'))detail+='<p>持有 '+(Number.isFinite(ref.quantity)?ref.quantity.toLocaleString():'0')+'</p>';
