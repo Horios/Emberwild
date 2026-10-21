@@ -5,7 +5,8 @@ const json=(runtime,code)=>JSON.parse(runtime.run('JSON.stringify('+code+')'));
 
 test('navigation defaults group every page once and expose the requested mission and life trees',()=>{
   const runtime=loadRuntime(root),design=json(runtime,'EmberwildNavigation.design');
-  assert.deepEqual(design.groups.map(group=>group.label),['探索與冒險','角色與隊伍','裝備與製作','主要任務','生活技能']);
+  assert.deepEqual(design.groups.map(group=>group.label),['主線','冒險','背包','商店','生活']);
+  assert(design.groups.every(group=>group.expanded===false));
   assert.deepEqual(design.groups.find(group=>group.id==='missions').pages.map(page=>page.label),['主線','支線','NPC 任務','委託']);
   assert.deepEqual(design.groups.find(group=>group.id==='life').pages.map(page=>page.label),['採集','煉金']);
   const pageIds=design.groups.flatMap(group=>group.pages.map(page=>page.id));
@@ -25,6 +26,26 @@ test('tree navigation renders virtual story categories and independent gathering
   runtime.run("setTab('gather')");assert.match(runtime.elements.get('app').innerHTML,/<h1>採集<\/h1>/);assert.doesNotMatch(runtime.elements.get('app').innerHTML,/id="life-alchemy"/);
   runtime.run("setTab('alchemy')");assert.match(runtime.elements.get('app').innerHTML,/<h1>煉金<\/h1>/);assert.doesNotMatch(runtime.elements.get('app').innerHTML,/id="life-gather"/);
   assert.deepEqual(runtime.errors,[]);
+});
+
+test('navigation begins collapsed and supports persistent independent group ordering',()=>{
+  const runtime=loadRuntime(root);
+  runtime.run('selectSaveSlot(1);start(0);closeModal()');
+  const html=runtime.elements.get('app').innerHTML;
+  const groups=[...html.matchAll(/<details class="game-nav-group[^"]*" data-nav-group="([^"]+)"([^>]*)>/g)];
+  assert.deepEqual(groups.map(match=>match[1]),['missions','adventure','equipment','shop','life']);
+  assert(groups.every(match=>!match[2].includes(' open')),'all sections begin collapsed');
+  assert.equal((html.match(/class="game-nav-drag"/g)||[]).length,5);
+  assert.match(html,/data-nav-drag="missions" draggable="true"/);
+  assert.equal(runtime.run("EmberwildNavigation.moveGroup('life','missions')"),true);
+  assert.deepEqual(json(runtime,'EmberwildNavigation.order'),['life','missions','adventure','equipment','shop']);
+  assert.equal(runtime.run("EmberwildNavigation.moveGroup('life','life')"),false);
+  const reordered=runtime.run("gameNavigationHTML('battle')");
+  assert(reordered.indexOf('data-nav-group="life"')<reordered.indexOf('data-nav-group="missions"'));
+  assert.deepEqual(JSON.parse(runtime.values.get('emberwild-navigation-group-order-v1')),['life','missions','adventure','equipment','shop']);
+  const reloaded=loadRuntime(root,'index.html',Object.fromEntries(runtime.values));
+  assert.deepEqual(json(reloaded,'EmberwildNavigation.order'),['life','missions','adventure','equipment','shop']);
+  assert.deepEqual(reloaded.errors,[]);
 });
 
 test('balance navigation changes round-trip and malformed page lists are rejected atomically',()=>{
