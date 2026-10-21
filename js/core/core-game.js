@@ -665,10 +665,21 @@ const stablePartyRender=render;
 let previousViewKey=null;
 const viewPositions=new Map();
 const SCROLL_REGIONS='#app,.layout>main,.layout>aside,.current-events,.history-events,.unit-effects,.unit-skills,.inventory-table,.buff-table-scroll,.compact-map-list,.member-content,.member-skill-content,.member-equipment-content,.page-owner-content,.inline-equipment-list,.worn-overview,.worn-character-list,.worn-detail-pane,.guide-scroll,.forge-detail-pane,.forge-gear-list,.player-skill-page,.layout>aside nav,.layout>aside .mobile-more-pages,.party-picker,.party-tabs,.journal-content,.journal-loot-list,.layout>main .inventory-list-scroll,.layout>main .shop-catalog-scroll,.layout>main .account-material-groups,.layout>main .companion-management-page,.layout>main .partner-owned-list,.layout>main .character-ability-scroll,.layout>main .squad-allies,.layout>main .squad-enemies,.layout>main .expedition-control-card,.layout>main .expedition-tools>details,.layout>main .initiative-panel,.layout>main .last-actions,.layout>main .roster-page,.layout>main .shared-shop-grid,.mobile-journal-body,.mobile-loot-body,.layout>main .forge-layout,.layout>main .forge-preview,.layout>main .forge-controls,.layout>main .squad-field,.layout>main .filters,.layout>main .cards>.card,.layout>main .material-panel,.layout>main .destination-panel';
+const SCROLL_REGION_TYPES=SCROLL_REGIONS.split(',');
+function scrollRegionEntries(){
+ const seen=new Map();
+ return [...document.querySelectorAll(SCROLL_REGIONS)].map(el=>{
+  // Conditional panels must not shift the scroll positions of unrelated regions.
+  const type=el.id?'id:'+el.id:SCROLL_REGION_TYPES.find(selector=>el.matches?.(selector))||el.tagName;
+  const order=seen.get(type)||0;
+  seen.set(type,order+1);
+  return [type+':'+order,el];
+ });
+}
 render=function(){
  if(document.querySelectorAll&&previousViewKey){
   viewPositions.set(previousViewKey,{
-   scroll:[...document.querySelectorAll(SCROLL_REGIONS)].map(el=>[el.scrollTop,el.scrollLeft]),
+   scroll:scrollRegionEntries().map(([name,el])=>[name,el.scrollTop,el.scrollLeft]),
    details:[...document.querySelectorAll('.layout main details')].map(el=>el.open)
   });
  }
@@ -676,7 +687,7 @@ render=function(){
  const key=state?tab+':'+(party?memberKey(pageHero(tab)):state.job):'start',position=viewPositions.get(key);
  if(position&&document.querySelectorAll){
   [...document.querySelectorAll('.layout main details')].forEach((el,i)=>{el.open=!!position.details[i];});
-  [...document.querySelectorAll(SCROLL_REGIONS)].forEach((el,i)=>{if(position.scroll[i]){el.scrollTop=position.scroll[i][0];el.scrollLeft=position.scroll[i][1];}});
+  const savedScroll=new Map(position.scroll.map(([name,top,left])=>[name,[top,left]]));scrollRegionEntries().forEach(([name,el])=>{const coords=savedScroll.get(name);if(coords){el.scrollTop=coords[0];el.scrollLeft=coords[1];}});
  }
  previousViewKey=key;
 };
