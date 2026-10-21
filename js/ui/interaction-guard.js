@@ -6,6 +6,8 @@
 
   globalThis.isEmberwildUIInteracting=()=>interacting;
   function finishInteraction(){
+    // Native drag-and-drop may cancel its pointer before the drag ends.
+    if(globalThis.__EMBERWILD_NAVIGATION_DRAGGING){scheduleRelease(100);return;}
     if(pointers.size||activeSelect)return;
     clearTimeout(releaseTimer);releaseTimer=null;
     interacting=false;
