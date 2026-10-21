@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {loadRuntime}=require('./headless-runtime.cjs'),M=require('../js/story/story-model.js');
-const root=path.resolve(__dirname,'..'),editor=path.resolve(root,'../Emberwild-Balance'),seed=JSON.parse(fs.readFileSync(path.join(root,'data/balance.json')));
+const root=path.resolve(__dirname,'..'),editor=path.resolve(root,'../balance-site'),seed=JSON.parse(fs.readFileSync(path.join(root,'data/balance.json')));
 const json=(r,c)=>JSON.parse(r.run('JSON.stringify('+c+')'));
 function game(){const r=loadRuntime(root);r.ctx.doc=structuredClone(seed);r.run('applyBalanceConfig(doc);selectSaveSlot(1);start(0);closeModal()');return r;}
 function complete(r,id,choice=''){const s=r.run(`party.story.quests['${id}'].current`);assert.equal(r.run(`completeStoryStage('${id}','${choice}','${s}')`),true,id+'/'+s);}

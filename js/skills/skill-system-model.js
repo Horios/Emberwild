@@ -8,6 +8,7 @@
   const integer=(v,min=0,max=1e12)=>Number.isSafeInteger(v)&&v>=min&&v<=max;
   const finite=(v,min=0,max=1e9)=>Number.isFinite(v)&&v>=min&&v<=max;
   const safe=v=>typeof v==='string'&&/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/.test(v)&&!['constructor','prototype','__proto__'].includes(v);
+  const adapters=sk=>sk.adapters||[sk.adapter],adapterFor=(sk,job)=>adapters(sk).find(a=>a.job===job)||sk.adapter;
   function fromLegacy(d){
     const definitions=[];
     d.classes.forEach((c,job)=>{
@@ -32,8 +33,8 @@
     }
     for(const sk of definitions)if(sk.sources.some(s=>s.type==='advanced'))classRules[sk.jobs[0]].advanced.push({skillId:sk.id,level:Math.max(15,sk.requiredLevel??sk.level??1)});
     const equipmentPool=definitions.filter(sk=>sk.sources.some(s=>s.type==='equipment')).map(sk=>({skillId:sk.id,jobs:sk.jobs,slots:[0,1,2,3],minLevel:1,maxLevel:999,weight:1,maps:[],monsters:[],bosses:[],allowShop:true,allowCraft:true}));
-    const gems=[['atk','flat','effect',[.02,.04,.06]],['speed','flat','cooldown',[.05,.1,.15]],['crit','ratio','procChance',[.01,.02,.03]],['hp','flat','heal',[.03,.06,.09]],['def','flat','shield',[.01,.02,.03]]].map(([stat,unit,key,values],kind)=>({kind,base:{stat,unit,values:kind===0?[2,4,6]:kind===1?[1,2,3]:kind===2?[.01,.02,.03]:kind===3?[10,20,30]:[1,2,3]},skill:{key,values,types:kind===1?['active','support']:kind===2?['proc']:['active','proc','support'],effects:[],slots:[0,1,2]},cap:1}));
-    return {version:VERSION,definitions,classRules,equipment:{chanceByDifficulty:[.15,.15,.15],formRules:[],pool:equipmentPool,socketBands:[{minLevel:1,maxLevel:10,weights:[.7,.3,0,0]},{minLevel:11,maxLevel:20,weights:[.35,.5,.15,0]},{minLevel:21,maxLevel:999,weights:[.1,.35,.35,.2]}],sourceRules:[{source:'starter',weights:[1,0,0,0]},{source:'boss',weights:[0,.3,.4,.3]}]},gems};
+    const gems=[['atk','flat','effect',[.02,.04,.06]],['speed','flat','cooldown',[.05,.1,.15]],['crit','ratio','procChance',[.01,.02,.03]],['hp','flat','heal',[.03,.06,.09]],['def','flat','shield',[.01,.02,.03]]].map(([stat,unit,key,values],kind)=>({kind,base:{stat,unit,values:kind===0?[2,4,6]:kind===1?[1,2,3]:kind===2?[.01,.02,.03]:kind===3?[10,20,30]:[1,2,3]},skill:{key,values,types:kind===1?['active','support']:kind===2?['proc']:['active','proc','support'],effects:[],slots:[0]},cap:1}));
+    return {version:VERSION,gemSlotRuleVersion:2,definitions,classRules,equipment:{chanceByDifficulty:[.15,.15,.15],formRules:[],pool:equipmentPool,socketBands:[{minLevel:1,maxLevel:10,weights:[.7,.3,0,0]},{minLevel:11,maxLevel:20,weights:[.35,.5,.15,0]},{minLevel:21,maxLevel:999,weights:[.1,.35,.35,.2]}],sourceRules:[{source:'starter',weights:[1,0,0,0]},{source:'boss',weights:[0,.3,.4,.3]}]},gems};
   }
   function validate(s){
     const fail=m=>{throw Error('技能系統：'+m);};
@@ -41,8 +42,10 @@
     const ids=new Map(),positions=new Set();
     for(const sk of s.definitions){
       const a=sk.adapter;
+      if(sk.adapters&&(!Array.isArray(sk.adapters)||!sk.adapters.length)||sk.type!=='passive'&&sk.jobs.some(j=>!adapters(sk).some(a=>a.job===j&&a.kind===sk.adapter.kind)))fail('技能職業與引擎對照不符：'+sk.id);
+      for(const b of adapters(sk)){if(!integer(b.job,0,3)||!sk.jobs.includes(b.job)||!integer(b.index,0,b.kind==='passive'?511:63)||!['core','support','passive'].includes(b.kind)||positions.has(`${b.job}:${b.kind}:${b.index}`))fail('技能引擎對照重複或無效：'+sk.id);positions.add(`${b.job}:${b.kind}:${b.index}`);}
       if(!safe(sk.id)||ids.has(sk.id)||typeof sk.name!=='string'||!sk.name.trim()||sk.name.length>80||!types.includes(sk.type)||!Array.isArray(sk.jobs)||!sk.jobs.length||sk.jobs.some(j=>!integer(j,0,3))||!Array.isArray(sk.sources)||sk.sources.some(x=>!sources.includes(x.type))||typeof sk.disabled!=='undefined'&&typeof sk.disabled!=='boolean')fail('技能 ID、名稱、類型或來源無效：'+sk.id);
-      if(!a||!integer(a.job,0,3)||!integer(a.index,0,a.kind==='passive'?511:63)||!['core','support','passive'].includes(a.kind)||positions.has(`${a.job}:${a.kind}:${a.index}`))fail('技能引擎對照重複或無效：'+sk.id);
+      if(!a||!integer(a.job,0,3)||!integer(a.index,0,a.kind==='passive'?511:63)||!['core','support','passive'].includes(a.kind))fail('技能引擎對照重複或無效：'+sk.id);
       if(sk.type==='support'&&a.kind!=='support'||['active','proc'].includes(sk.type)&&a.kind!=='core')fail('技能類型與引擎對照不符：'+sk.id);
       for(const key of ['power','cooldown','duration','requiredLevel','procBaseChance','baseCritRate','defenseIgnore'])if(sk[key]!==undefined&&!finite(sk[key],0,key.includes('Chance')||['baseCritRate','defenseIgnore'].includes(key)?1:1e9))fail('技能數值無效：'+sk.id+' '+key);
       if(sk.systemEffect!==undefined&&!['taunt','guard','slow','regen'].includes(sk.systemEffect))fail('未知特殊效果：'+sk.id);
@@ -64,24 +67,28 @@
     let end=0;for(const row of e.socketBands){if(!integer(row.minLevel,1,999)||row.minLevel!==end+1||!integer(row.maxLevel,row.minLevel,999)||!weights(row))fail('孔數等級區間必須連續且機率總和為 1');end=row.maxLevel;}if(end!==999)fail('孔數分布需涵蓋 LV1～999');
     for(const row of e.sourceRules)if(!['starter','boss','drop','shop','craft','legacy'].includes(row.source)||!weights(row))fail('來源孔數機率無效');
     if(!Array.isArray(s.gems)||s.gems.length!==5||new Set(s.gems.map(g=>g.kind)).size!==5)fail('寶石定義無效');
-    for(const g of s.gems)if(!integer(g.kind,0,4)||!['atk','hp','def','speed','crit'].includes(g.base?.stat)||!['flat','ratio'].includes(g.base?.unit)||!['effect','cooldown','procChance','heal','shield'].includes(g.skill?.key)||![g.base.values,g.skill.values].every(a=>Array.isArray(a)&&a.length===3&&a.every(v=>finite(v,0,1e6)))||!Array.isArray(g.skill.types)||g.skill.types.some(x=>!types.includes(x))||!Array.isArray(g.skill.effects)||!Array.isArray(g.skill.slots)||g.skill.slots.some(x=>!integer(x,0,2))||!finite(g.cap,0,1e6))fail('寶石效果、相容性或階級無效');
+    for(const g of s.gems)if(!integer(g.kind,0,4)||!['atk','hp','def','speed','crit'].includes(g.base?.stat)||!['flat','ratio'].includes(g.base?.unit)||!['effect','cooldown','procChance','heal','shield'].includes(g.skill?.key)||![g.base.values,g.skill.values].every(a=>Array.isArray(a)&&a.length===3&&a.every(v=>finite(v,0,1e6)))||!Array.isArray(g.skill.types)||g.skill.types.some(x=>!types.includes(x))||!Array.isArray(g.skill.effects)||!Array.isArray(g.skill.slots)||g.skill.slots.some(x=>x!==0)||!finite(g.cap,0,1e6))fail('寶石效果、相容性或階級無效');
     for(const sk of s.definitions)for(const target of sk.induction?.targets||[])if(target.kind==='skill'&&!ids.has(target.skillId))fail('誘發技能引用不存在：'+target.skillId);
     return s;
   }
   function project(d){
-    const s=validate(d.skillSystem);
+    const raw=d.skillSystem;if(raw.gemSlotRuleVersion!==2){raw.gems.forEach(g=>g.skill.slots=g.skill.slots.filter(n=>n===0));raw.gemSlotRuleVersion=2;}
+    const s=validate(raw);
     const maps=d.balanceSettings?.maps?.catalog,monsters=d.balanceSettings?.monsters?.catalog,forms=new Set();
     for(const [job,slots] of (d.equipmentForms||[]).entries())for(const [slot,rows] of slots.entries())for(const [i,row] of rows.entries())forms.add(row.id||`job${job}-slot${slot}-form${i}`);
     for(const row of s.equipment.pool)if(maps&&row.maps.some(i=>!integer(i,0,maps.length-1))||monsters&&row.monsters.some(id=>!monsters.some(m=>m.id===id))||maps&&row.bosses.some(i=>!integer(i,0,maps.length-1)))throw Error('技能系統：裝備技能池來源引用不存在：'+row.skillId);
     for(const row of s.equipment.formRules||[])if(forms.size&&!forms.has(row.formId))throw Error('技能系統：固定裝備引用不存在：'+row.formId);
     for(const sk of s.definitions){
-      const {adapter,type,jobs,sources,disabled,...row}=copy(sk),{job,index,kind}=adapter;
+      for(const adapter of adapters(sk)){
+      const {adapters:unused,adapter:primary,type,jobs,sources,disabled,...row}=copy(sk),{job,index,kind}=adapter;
+      if(sk.adapters)row.id=sk.id+'-job'+job;
       if(kind==='passive'){d.passiveDefinitions[index]=row;continue;}
       const list=kind==='core'?d.classes[job].skills:d.supportSkills[job];
       if(index>list.length)throw Error('技能引擎對照不可跳號：'+sk.id);
       if(kind==='core'){row.activation=type;row.requiredLevel??=1;row.requiresAdvanced=false;row.powerPerLevel??=0;if(type==='proc'){row.procChancePerLevel??=0;row.procBaseChance??=.245;}}
       else row.level??=1;
       list[index]=row;
+      }
     }
     return d;
   }
@@ -112,5 +119,5 @@
     const ids=new Set();for(const member of members)for(const g of member.bag||[]){if(ids.has(g.id))throw Error('重複裝備 ID：'+g.id);ids.add(g.id);gear(g,{legacy:true,source:'legacy',system});}
     d.skillSystemVersion=VERSION;return d;
   }
-  return {VERSION,copy,types,sources,emptyConditions,fromLegacy,validate,project,normalizeDocument,slots,gear,migrateSave};
+  return {VERSION,copy,adapters,adapterFor,types,sources,emptyConditions,fromLegacy,validate,project,normalizeDocument,slots,gear,migrateSave};
 });

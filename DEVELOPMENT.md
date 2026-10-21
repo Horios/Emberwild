@@ -48,3 +48,11 @@
 平衡／設計器不放在此公開 Repository。
 其原始碼位於 Private Repository：`Horios/Emberwild-Balance`，主要檔案為 `balance-editor.html`。
 修改平衡器時同樣先讀取該 Repository 的最新 branch／檔案 SHA，不以舊附件作為最新版。
+
+## 裝備技能教學與第一孔規則（追加）
+
+沿用 `story` 任務階段、條件、領獎交易與存檔：`skill_equipment_intro` 接在 `goddess_intro` 後，四階段為 `equipment_gift`、`equip_skill`、`gem_skill`、`gem_base`。一般裝備獎勵範本 `initiation_charm` 生成啟程護符，附帶共用觸發技能 `tutorial_echo`（追擊），固定兩孔；兩顆獎勵均為一階赤焰石（0）。第一孔技能效果 +2%，第二孔攻擊 +2。只有第一孔能切換模式，選擇保存在裝備實例，未啟用時全部回到基礎效果。
+
+選用既有任務輔助技能：戰吼 `job0-support0`、奧術共鳴 `job1-support0`、鷹眼指引 `job2-support0`、晨光祝福 `job3-support0`。四招都是一級、無二轉／精通門檻、職業特色直觀的第一招輔助技能，且不與三招初始主動重複。各職業 ID 由任務獎勵資料設定，永久解鎖沿用角色 acquiredSkillIds；保留舊存檔已取得的技能。
+
+任務未完成前禁止出售／分解該獎勵裝備；遺失時沿用任務交易補發，預設最多兩次，寶石僅補足已領階段且實際缺少的數量。裝備範本、條件、孔位、各職業技能獎勵、補發上限與提示皆可在既有任務編輯器調整。新增行為測試：`tests/skill-equipment-tutorial.test.cjs`。

@@ -37,7 +37,7 @@
   function dispose(ids,mode,includeEnhance=true,options={}){
     if(!party)return false;
     ensureBoard();T.capture();
-    let items=[...new Set(ids)].map(findGear).filter(g=>disposable(g)&&(mode!=='sell'||globalThis.__EMBERWILD_CAN_SELL_GEAR?.(g)!==false)&&(!options.batch||!gearWearer(g.id)&&!M.references(T.build(),g.id).length));if(!items.length)return false;
+    let items=[...new Set(ids)].map(findGear).filter(g=>disposable(g)&&!globalThis.__EMBERWILD_STORY?.protectedGear(g)&&(mode!=='sell'||globalThis.__EMBERWILD_CAN_SELL_GEAR?.(g)!==false)&&(!options.batch||!gearWearer(g.id)&&!M.references(T.build(),g.id).length));if(!items.length)return false;
     const verb=mode==='sell'?'販售':'分解',activeIds=currentBattleGearIds(),blocked=items.filter(g=>activeIds.has(g.id));
     items=items.filter(g=>!activeIds.has(g.id));
     if(!items.length){toast('目前戰鬥隊伍正在使用的裝備無法'+verb);return false;}

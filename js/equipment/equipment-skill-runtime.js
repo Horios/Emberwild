@@ -7,7 +7,7 @@
  const pending=new WeakSet();
  const owner=()=>party?.members[0],rules=()=>S.system();
  function compatible(id,sk,slot){const g=rules().gems.find(g=>g.kind===id%5);return !!g&&!!sk&&g.skill.types.includes(sk.type)&&(!g.skill.effects.length||g.skill.effects.includes(sk.effect||sk.kind))&&g.skill.slots.includes(slot);}
- function mode(h,g,n){if(g.id!==h?.activeSkillEquipmentId||!g.skillId||n===0&&g.skillSockets.firstMode==='base')return 'base';const id=g.skillSockets.gems[n];return id!==null&&compatible(id,S.byId(g.skillId),n)?'skill':'base';}
+ function mode(h,g,n){if(n!==0||g.id!==h?.activeSkillEquipmentId||!g.skillId||g.skillSockets.firstMode==='base')return 'base';const id=g.skillSockets.gems[n];return id!==null&&compatible(id,S.byId(g.skillId),n)?'skill':'base';}
  function refresh(h){
   const base={},ratios={},skills=new Map();
   for(const g of equipment(h)){
@@ -80,10 +80,10 @@
   const g=findGear(id);type=Number(type);if(!g||EmberwildTokens.isToken(g)||!Number.isInteger(n)||n<0||n>=g.skillSockets?.count||!Number.isInteger(type)||type< -1||type>=GEMS.length)return false;
   const h=owner(),old=g.skillSockets.gems[n],next=type===-1?null:type;if(old===next)return true;
   if(next!==null&&h.gems[next]<1)return false;
-  if(next!==null&&g.skillId&&!compatible(next,S.byId(g.skillId),n)){toast('此寶石不適用於裝備技能');return false;}
+  if(next!==null&&n===0&&g.skillId&&g.skillSockets.firstMode==='skill'&&!compatible(next,S.byId(g.skillId),n)){toast('此寶石不適用於裝備技能');return false;}
   return transaction(()=>{if(old!==null)h.gems[old]++;if(next!==null)h.gems[next]--;g.skillSockets.gems[n]=next;});
  };
- globalThis.setEquipmentGemMode=function(id,value){const h=owner(),g=equipment(h).find(g=>g.id===id);if(!g||h.activeSkillEquipmentId!==id||!g.skillSockets?.count||!['skill','base'].includes(value))return false;return transaction(()=>{g.skillSockets.firstMode=value;});};
+ globalThis.setEquipmentGemMode=function(id,value){const h=owner(),g=equipment(h).find(g=>g.id===id);if(!g||h.activeSkillEquipmentId!==id||!g.skillSockets?.count||!['skill','base'].includes(value))return false;if(value==='skill'&&g.skillSockets.gems[0]!==null&&!compatible(g.skillSockets.gems[0],S.byId(g.skillId),0)){toast('第一孔寶石不相容，請先更換寶石或保留基礎模式');return false;}return transaction(()=>{g.skillSockets.firstMode=value;});};
  function refund(g,h=owner()){for(const id of g.skillSockets?.gems||[])if(id!==null)h.gems[id]++;}
  globalThis.__EMBERWILD_EQUIPMENT_SKILLS={refresh,generate,compatible,mode,effectsFor,skillRate,refund,supportCooldownOnCast};
  S.refreshAll();
