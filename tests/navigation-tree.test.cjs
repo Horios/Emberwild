@@ -28,24 +28,51 @@ test('tree navigation renders virtual story categories and independent gathering
   assert.deepEqual(runtime.errors,[]);
 });
 
-test('navigation begins collapsed and supports persistent independent group ordering',()=>{
+
+test('navigation begins collapsed, is not draggable, and uses designer-defined order',()=>{
   const runtime=loadRuntime(root);
   runtime.run('selectSaveSlot(1);start(0);closeModal()');
   const html=runtime.elements.get('app').innerHTML;
   const groups=[...html.matchAll(/<details class="game-nav-group[^"]*" data-nav-group="([^"]+)"([^>]*)>/g)];
   assert.deepEqual(groups.map(match=>match[1]),['missions','adventure','equipment','shop','life']);
-  assert(groups.every(match=>!match[2].includes(' open')),'all sections begin collapsed');
-  assert.equal((html.match(/class="game-nav-drag"/g)||[]).length,5);
-  assert.match(html,/data-nav-drag="missions" draggable="true"/);
-  assert.equal(runtime.run("EmberwildNavigation.moveGroup('life','missions')"),true);
-  assert.deepEqual(json(runtime,'EmberwildNavigation.order'),['life','missions','adventure','equipment','shop']);
-  assert.equal(runtime.run("EmberwildNavigation.moveGroup('life','life')"),false);
-  const reordered=runtime.run("gameNavigationHTML('battle')");
-  assert(reordered.indexOf('data-nav-group="life"')<reordered.indexOf('data-nav-group="missions"'));
-  assert.deepEqual(JSON.parse(runtime.values.get('emberwild-navigation-group-order-v1')),['life','missions','adventure','equipment','shop']);
+  assert(groups.every(match=>!match[2].includes(' open')));
+  assert(!html.includes('game-nav-drag')&&!html.includes('data-nav-drag')&&!html.includes('draggable="true"'));
+  assert.deepEqual(json(runtime,'EmberwildNavigation.order'),['missions','adventure','equipment','shop','life']);
+  runtime.values.set('emberwild-navigation-group-order-v1',JSON.stringify(['life','missions','adventure','equipment','shop']));
   const reloaded=loadRuntime(root,'index.html',Object.fromEntries(runtime.values));
-  assert.deepEqual(json(reloaded,'EmberwildNavigation.order'),['life','missions','adventure','equipment','shop']);
+  assert.deepEqual(json(reloaded,'EmberwildNavigation.order'),['missions','adventure','equipment','shop','life']);
+  assert.equal(reloaded.run('typeof EmberwildNavigation.moveGroup'),'undefined');
   assert.deepEqual(reloaded.errors,[]);
+});
+
+test('collapsed parent reminders show N before numbers and aggregate counts',()=>{
+  const runtime=loadRuntime(root);
+  runtime.run('selectSaveSlot(1);start(0);closeModal()');
+  runtime.run(`storyCategoryReminder=type=>type==='main'?{ready:4,new:1}:type==='side'?{ready:3,new:0}:{ready:0,new:0};
+    dailyQuestReminder=()=>({ready:5,new:0});
+    numberReminderCount=id=>id==='equipment'?7:0;
+    numberBadgeHTML=id=>id==='equipment'?'<span class="number-badge">7</span>':'';`);
+  const summary=group=>{
+    const html=runtime.run("gameNavigationHTML('battle')");
+    return html.split('data-nav-group="'+group+'"')[1]?.split('</summary>')[0]||'';
+  };
+  const missions=summary('missions');
+  assert(missions.includes('class="quest-new"')&&missions.includes('>N</span>'));
+  assert(!missions.includes('class="number-badge"'));
+  assert(summary('equipment').includes('class="number-badge"')&&summary('equipment').includes('>7</span>'));
+  runtime.run("storyCategoryReminder=type=>type==='main'?{ready:4,new:0}:type==='side'?{ready:3,new:0}:{ready:0,new:0};");
+  const numeric=summary('missions');
+  assert(numeric.includes('class="number-badge"')&&numeric.includes('>12</span>'));
+  assert(!numeric.includes('class="quest-new"'));
+  assert.deepEqual(runtime.errors,[]);
+});
+
+test('quest details show NEW! text rather than N',()=>{
+  const runtime=loadRuntime(root);
+  runtime.run('selectSaveSlot(1);start(0);closeModal()');
+  assert(runtime.run('storyView()').includes('class="quest-new quest-new-detail" aria-label="有未開始任務">NEW!</span>'));
+  assert(runtime.run('questView()').includes('class="quest-new quest-new-detail" aria-label="有未開始任務">NEW!</span>'));
+  assert.deepEqual(runtime.errors,[]);
 });
 
 test('adventure guide describes current systems without migration or development wording',()=>{
