@@ -25,15 +25,15 @@ test('a completed encounter without any real reward never shows an empty receipt
  assert.equal(r.run('party.offlineExploration.pendingReceipt.battles'),1);assert.equal(r.run('party.offlineExploration.receipt'),null);assert.notEqual(r.elements.get('offline-settlement')?.hidden,false);
 });
 
-test('open receipt does not stop online progress or change its DOM; another twenty minutes queues and survives cold reload',async()=>{
+test('open receipts stay unchanged during live background play; only a cold reload queues a new offline receipt',async()=>{
  const r=game();r.run('state.lv=20;syncParty();refillParty();save()');await settle(r,600000);const first=json(r,'party.offlineExploration.receipt'),html=r.elements.get('offline-settlement').innerHTML,kills=r.run('state.totalKills');
- for(let i=0;i<600;i++){r.advance(1000);r.run('tick()');}assert(r.run('state.totalKills')>kills);assert.deepEqual(json(r,'party.offlineExploration.receipt'),first);assert.equal(r.elements.get('offline-settlement').innerHTML,html);
- hidden(r,true);r.advance(1200000);hidden(r,false);await settle(r);
- assert.deepEqual(json(r,'party.offlineExploration.receipt'),first);assert.equal(r.elements.get('offline-settlement').innerHTML,html);
- const pending=json(r,'party.offlineExploration.pendingReceipt');assert(pending.battles>0);assert.equal(pending.intervals.reduce((n,x)=>n+x.end-x.start,0),1200000);assert(pending.start>=first.end);
- const key=r.run('KEY'),cold=loadRuntime(root,'index.html',{[key]:r.values.get(key)},r.now);cold.ctx.setTimeout=fn=>setImmediate(fn);const before=rewardState(cold);
- assert.deepEqual(json(cold,'party.offlineExploration.receipt'),first);assert.deepEqual(json(cold,'party.offlineExploration.pendingReceipt'),pending);
- cold.run('continueFromTitle()');await settle(cold);assert.equal(cold.run('acknowledgeOfflineExploration()'),true);assert.equal(cold.run('party.offlineExploration.receipt.id'),pending.id);assert.deepEqual(rewardState(cold),before);
+ for(let i=0;i<60;i++){r.advance(1000);r.run('tick()');}assert(r.run('state.totalKills')>kills);assert.deepEqual(json(r,'party.offlineExploration.receipt'),first);assert.equal(r.elements.get('offline-settlement').innerHTML,html);
+ hidden(r,true);r.advance(1200000);hidden(r,false);await r.run('EmberwildOffline.settle(undefined,false)');
+ assert.deepEqual(json(r,'party.offlineExploration.receipt'),first);assert.equal(r.elements.get('offline-settlement').innerHTML,html);assert.equal(r.run('party.offlineExploration.pendingReceipt'),null);
+ const key=r.run('KEY'),cold=loadRuntime(root,'index.html',{[key]:r.values.get(key)},r.now+1200000);cold.ctx.setTimeout=fn=>setImmediate(fn);
+ cold.run('continueFromTitle()');await cold.run('EmberwildOffline.settle(undefined,false)');
+ const pending=json(cold,'party.offlineExploration.pendingReceipt'),before=rewardState(cold);assert(pending.battles>0);assert.equal(pending.intervals.reduce((n,x)=>n+x.end-x.start,0),1200000);
+ assert.deepEqual(json(cold,'party.offlineExploration.receipt'),first);assert.equal(cold.run('acknowledgeOfflineExploration()'),true);assert.equal(cold.run('party.offlineExploration.receipt.id'),pending.id);assert.deepEqual(rewardState(cold),before);
  assert.equal(cold.run('acknowledgeOfflineExploration()'),true);assert.equal(cold.run('party.offlineExploration.receipt'),null);assert.equal(cold.elements.get('offline-settlement').hidden,true);
 });
 
@@ -75,4 +75,34 @@ test('normal defeat retries by existing rules, while a failed quest encounter st
  r.run('stopTeamExploration()');const before=rewardState(r);await settle(r,60000);assert.equal(r.run('state.totalKills'),before.kills);assert.equal(r.run('state.gold'),before.gold);
  const q=game();q.run(`stopTeamExploration();state.lv=20;syncParty();refillParty();__EMBERWILD_STORY.record('shop_rescue').started=true;startQuestEncounter('shop_rescue/rescue');state.hp=1;state.autoPotion=false;state.potions=0;foes.forEach(e=>{e.hp=e.maxhp=1000000;e.atk=1000000;});save();`);await settle(q,60000);
  assert.equal(q.run('running'),false);assert.equal(q.run('party.offlineExploration.receipt'),null);assert.equal(q.run('party.offlineExploration.pendingReceipt.battles'),1);assert.equal(q.run('party.offlineExploration.pendingReceipt.kills'),0);assert.equal(q.run('expeditionChallengeResult.success'),false);
+});
+
+
+test('foreground delays never flash offline progress or replace an open receipt',async()=>{
+ const r=game(),box=r.elements.get('offline-settlement'),writes=[],focus=[];let html=box.innerHTML,section=null;
+ Object.defineProperty(box,'innerHTML',{get:()=>html,set:value=>{html=value;writes.push(value);section={scrollTop:0,focus:options=>focus.push(options)};}});
+ box.querySelector=selector=>selector==='[role="dialog"]'?section:null;
+ for(let i=0;i<3;i++){r.advance(1500);r.run('tick()');await r.run('EmberwildOffline.settle(undefined,false)');}
+ assert.equal(writes.length,0);assert.equal(box.hidden,true);
+ await settle(r,60000);assert.equal(section.scrollTop,0);assert.equal(focus.at(-1).preventScroll,true);
+ const receipt=json(r,'party.offlineExploration.receipt'),kills=r.run('state.totalKills'),originalSection=section;section.scrollTop=180;writes.length=0;focus.length=0;
+ for(let i=0;i<3;i++){r.advance(1500);r.run('tick()');await r.run('EmberwildOffline.settle(undefined,false)');}
+ await settle(r,60000);
+ assert.equal(writes.length,0);assert.equal(focus.length,0);assert.equal(section,originalSection);assert.equal(section.scrollTop,180);
+ assert.deepEqual(json(r,'party.offlineExploration.receipt'),receipt);assert(r.run('state.totalKills')>kills);
+});
+
+
+test('a live page never adds online battles to an unfinished offline receipt, even after tab visibility changes',async()=>{
+ const r=game();await settle(r,1000);const pending=json(r,'party.offlineExploration.pendingReceipt'),kills=r.run('state.totalKills');
+ r.advance(60000);r.run('tick()');await r.run('EmberwildOffline.settle(undefined,false)');
+ hidden(r,true);r.advance(60000);r.run('tick()');await r.run('EmberwildOffline.settle(undefined,false)');hidden(r,false);await r.run('EmberwildOffline.settle(undefined,false)');
+ assert(r.run('state.totalKills')>kills);assert.deepEqual(json(r,'party.offlineExploration.pendingReceipt'),pending);assert.equal(r.run('party.offlineExploration.receipt'),null);assert.equal(r.elements.get('offline-settlement').hidden,true);
+});
+
+test('returning to the title and continuing in the same page cannot open offline progress',async()=>{
+ const r=game(),box=r.elements.get('offline-settlement'),writes=[];let html=box.innerHTML;
+ Object.defineProperty(box,'innerHTML',{get:()=>html,set:value=>{html=value;writes.push(value);}});
+ r.run('returnToTitle()');r.advance(60000);r.run('continueFromTitle()');await r.run('EmberwildOffline.settle(undefined,false)');
+ assert.equal(writes.length,0);assert.equal(r.run('party.offlineExploration.receipt'),null);assert.equal(box.hidden,true);
 });

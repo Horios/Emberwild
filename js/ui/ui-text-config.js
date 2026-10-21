@@ -444,6 +444,6 @@ try{
   }
 }catch(e){
   console.warn('最終存檔完整載入失敗',e);
-  if(!state){state=null;party=null;toast('存檔未能載入：'+e.message+'；可匯入備份。');}
+  if(!state){state=null;party=null;if(!globalThis.__EMBERWILD_BALANCE_SOURCE||globalThis.__EMBERWILD_BALANCE_READY)toast('存檔未能載入：'+e.message+'；可匯入備份。');}
 }
 render();

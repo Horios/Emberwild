@@ -50,7 +50,7 @@
     }
   }catch(e){
     console.warn('動態地圖套用後重新載入存檔失敗',e);
-    if(!state){state=null;party=null;toast('存檔未能載入：'+e.message+'；可匯入備份。');}
+    if(!state){state=null;party=null;if(!globalThis.__EMBERWILD_BALANCE_SOURCE||globalThis.__EMBERWILD_BALANCE_READY)toast('存檔未能載入：'+e.message+'；可匯入備份。');}
   }
 
   // Keep the player-facing bestiary consistent with per-map BOSS switches.

@@ -10,7 +10,7 @@
  // One wall-clock second of work amortizes serialization while bounding replay
  // lost on close. Only commit()/successful save moves the durable checkpoint.
  const checkpointIntervalMs=1000;
- let settlementProgress=null;
+ let settlementProgress=null,bootResumePending=!!globalThis.__EMBERWILD_BOOT_SAVE_RAW;
  const atTitle=()=>!!globalThis.isEmberwildTitleOpen?.();
  const nowReal=Date.now.bind(Date),basePack=packParty,baseSave=save,baseLoad=loadParty,baseValidate=validateParty;
  const active=()=>!!party&&running&&!$('modal')?.open&&!globalThis.isEmberwildTitleOpen?.();
@@ -126,13 +126,13 @@
   for(const l of r.levels)l.after=partyMember(l.key)?.lv??l.after;
  }
  const award=awardXP;
- awardXP=function(...args){const h=playerHero(),level=h?.lv,xp=h?.xp,out=award(...args),r=clock()?.pendingReceipt;if(stepping&&r&&!r.complete&&h){let gained=h.xp-xp;for(let lv=level;lv<h.lv;lv++)gained+=need(lv);r.xp+=Math.max(0,gained);}return out;};
+ awardXP=function(...args){const h=playerHero(),level=h?.lv,xp=h?.xp,out=award(...args),r=clock()?.pendingReceipt;if(stepping&&jobOffline&&r&&!r.complete&&h){let gained=h.xp-xp;for(let lv=level;lv<h.lv;lv++)gained+=need(lv);r.xp+=Math.max(0,gained);}return out;};
  const reward=rewardGroupKill;
- rewardGroupKill=function(e){const eligible=e&&!e.rewarded,before=playerHero()?.gold||0,out=reward(e),r=clock()?.pendingReceipt;if(stepping&&eligible&&e.rewarded&&r&&!r.complete){r.kills++;r.goldGained+=Math.max(0,playerHero().gold-before);}return out;};
+ rewardGroupKill=function(e){const eligible=e&&!e.rewarded,before=playerHero()?.gold||0,out=reward(e),r=clock()?.pendingReceipt;if(stepping&&jobOffline&&eligible&&e.rewarded&&r&&!r.complete){r.kills++;r.goldGained+=Math.max(0,playerHero().gold-before);}return out;};
  const finalize=finalizeBattleStatistics;
  finalizeBattleStatistics=function(result){
   const finished=!!activeBattleStat&&(result==='victory'||result==='wipe'),out=finalize(result),r=clock()?.pendingReceipt;
-  if(stepping&&finished&&r){r.battles++;r.lastBattleAt=Date.now();}return out;
+  if(stepping&&jobOffline&&finished&&r){r.battles++;r.lastBattleAt=Date.now();}return out;
  };
  function hasRewards(r){return !!r&&(r.xp>0||r.goldGained>0||r.gear.length>0||Object.values(r.items).some(n=>n>0));}
  function eligible(r){return hasRewards(r)&&(r.battles>0||r.legacy===true);}
@@ -149,14 +149,14 @@
  function consumeTo(at,combatActive){
   const c=clock(),elapsed=at-c.lastAt;if(elapsed<=0)return;
   const r=c.pendingReceipt,rows=buffs(),disabled=rows.filter(b=>!b.enabled);
-  if(r&&!r.complete&&combatActive){r.effectiveMs+=elapsed;for(const b of rows.filter(b=>b.enabled&&b.remainingMs>0)){
+  if(jobOffline&&r&&!r.complete&&combatActive){r.effectiveMs+=elapsed;for(const b of rows.filter(b=>b.enabled&&b.remainingMs>0)){
    const key=api.sourceKey(b);const entry=r.boosts[key]??={name:b.name,effect:b.boostType==='speed2'?'兩倍速':b.boostType==='exp'?'經驗＋'+b.bonusPercent+'%':b.boostType==='drop'?'掉寶＋'+b.bonusPercent+'%':'屬性藥水',ms:0};entry.ms+=Math.min(elapsed,b.remainingMs);
   }}
   if(combatActive)party.combatSession.idleTimeMs+=elapsed;
   api.consume(party,elapsed);
   // Disabled effects also retain their actual wall-clock deadline.
   for(const b of disabled)b.remainingMs=Math.max(0,b.remainingMs-elapsed);
-  if(r&&!r.complete)r.end=at;
+  if(jobOffline&&r&&!r.complete)r.end=at;
   c.lastAt=at;
   virtual(at,()=>__EMBERWILD_TIMED_BOOST_TEST.expireBoosts(at));
  }
@@ -179,7 +179,7 @@
    const expiry=Math.min(...buffs().filter(b=>b.enabled&&b.remainingMs>0).map(b=>c.lastAt+b.remainingMs),Infinity);
    const at=Math.min(target,Math.max(c.lastAt,nextActionAt),expiry);consumeTo(at,true);
    if(at===expiry){count++;continue;}
-   if(nextActionAt<=at){resources=captureResources(resources);event(at);collect(resources);count++;if(!running){lastMode=false;const r=c.pendingReceipt;if(r&&!r.complete){r.stoppedAt=at;r.reason=playerHero().bag.length>=RULES.bagCapacity?'背包已滿，掉落已保留':globalThis.expeditionChallengeResult?(expeditionChallengeResult.success?'任務關卡完成':'任務關卡戰敗'):'本次探索已依戰鬥規則結束';}}}
+   if(nextActionAt<=at){resources=jobOffline?captureResources(resources):null;event(at);collect(resources);count++;if(!running){lastMode=false;const r=c.pendingReceipt;if(jobOffline&&r&&!r.complete){r.stoppedAt=at;r.reason=playerHero().bag.length>=RULES.bagCapacity?'背包已滿，掉落已保留':globalThis.expeditionChallengeResult?(expeditionChallengeResult.success?'任務關卡完成':'任務關卡戰敗'):'本次探索已依戰鬥規則結束';}}}
    if(at===target)break;
   }});
   c.status=running?'running':foes.length?'paused':'stopped';return c.lastAt<target;
@@ -201,7 +201,7 @@
   if(renderedReceipt===r.id&&!box.hidden)return;renderedReceipt=r.id;
   box.hidden=false;const fmt=n=>Math.round(n).toLocaleString('zh-TW'),time=t=>new Date(t).toLocaleString('zh-TW',{hour12:false});
   const group=(kind,title)=>{const rows=Object.entries(r.items).filter(([k,n])=>k.startsWith(kind+':')&&n>0);return rows.length?`<h3>${title}</h3><div class="offline-items">${rows.map(([k,n])=>itemSlotHTML(kind,k.slice(kind.length+1),{count:n,detailLabel:'本次獲得'})).join('')}</div>`:'';};
-  box.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="offline-heading"><h2 id="offline-heading">離線探索收益</h2><p>${esc(r.map)} · ${esc(r.stage||'一般探索')} · ${r.reason?esc(r.reason):'正常完成補算'}</p><p class="small">開始 ${time(r.start)}<br>結束 ${time(r.end)}${r.stoppedAt?'<br>探索終止 '+time(r.stoppedAt):''}</p><div class="offline-summary"><div>實際離線<b>${api.timeText(r.intervals?.reduce((n,x)=>n+x.end-x.start,0)??r.end-r.start,true)}</b></div><div>有效掛機<b>${api.timeText(r.effectiveMs,true)}</b></div><div>擊殺怪物<b>${fmt(r.kills)} 隻</b></div><div>經驗值<b>＋${fmt(r.xp)}</b></div><div>金錢獲得<b>＋${fmt(r.goldGained)}</b></div><div>金錢消耗<b>−${fmt(r.goldSpent)}</b></div><div>金錢淨增加<b>${fmt(r.goldGained-r.goldSpent)}</b></div></div><p class="small">夥伴沿用現有規則，與主角同步等級，沒有獨立經驗槽。</p><div>${r.levels.map(l=>`<p>${esc(l.name)}：Lv.${l.before} → Lv.${l.after}（升級 ${l.after-l.before} 次）</p>`).join('')}</div>${group('material','素材收益')}${group('item','消耗品收益')}${group('gem','寶石收益')}${r.gear.length?'<h3>裝備收益 · '+r.gear.length+' 件</h3><div class="offline-items">'+r.gear.slice(gearPage*30,gearPage*30+30).map((g,j)=>{const i=gearPage*30+j;return `<button class="offline-gear" onclick="showOfflineGear(${i})">${gearSlotHTML(g,{preview:g,count:1,contentOnly:true})}<span class="q${gearQualityRank(g)}">${AFFIX_RANK[gearQualityRank(g)]}</span></button>`;}).join('')+'</div>'+ (r.gear.length>30?`<div class="actions"><button onclick="changeOfflineGearPage(-1)" ${gearPage===0?'disabled':''}>上一頁</button><span>${gearPage+1} / ${Math.ceil(r.gear.length/30)}</span><button onclick="changeOfflineGearPage(1)" ${(gearPage+1)*30>=r.gear.length?'disabled':''}>下一頁</button></div>`:''):''}<h3>增益實際生效時間</h3>${Object.values(r.boosts).map(b=>`<p>${esc(b.name)} · ${esc(b.effect)}：${api.timeText(b.ms,true)}</p>`).join('')||'<p>無限時增益</p>'}${Object.keys(r.consumed||{}).length?'<h3>道具消耗</h3>'+Object.entries(r.consumed).map(([k,n])=>'<p>'+esc(k.split(':').slice(1).join(':'))+' × '+fmt(n)+'</p>').join(''):''}<p class="small">收益已存入角色與背包；視窗僅顯示已保存的收益，探索仍會持續進行。此遊戲使用裝置時間，無法完全防止改時鐘作弊。</p><button class="primary" onclick="acknowledgeOfflineExploration()">確認／關閉</button></section>`;box.querySelector('[onclick="acknowledgeOfflineExploration()"]')?.focus();
+  box.innerHTML=`<section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="offline-heading"><h2 id="offline-heading">離線探索收益</h2><p>${esc(r.map)} · ${esc(r.stage||'一般探索')} · ${r.reason?esc(r.reason):'正常完成補算'}</p><p class="small">開始 ${time(r.start)}<br>結束 ${time(r.end)}${r.stoppedAt?'<br>探索終止 '+time(r.stoppedAt):''}</p><div class="offline-summary"><div>實際離線<b>${api.timeText(r.intervals?.reduce((n,x)=>n+x.end-x.start,0)??r.end-r.start,true)}</b></div><div>有效掛機<b>${api.timeText(r.effectiveMs,true)}</b></div><div>擊殺怪物<b>${fmt(r.kills)} 隻</b></div><div>經驗值<b>＋${fmt(r.xp)}</b></div><div>金錢獲得<b>＋${fmt(r.goldGained)}</b></div><div>金錢消耗<b>−${fmt(r.goldSpent)}</b></div><div>金錢淨增加<b>${fmt(r.goldGained-r.goldSpent)}</b></div></div><p class="small">夥伴沿用現有規則，與主角同步等級，沒有獨立經驗槽。</p><div>${r.levels.map(l=>`<p>${esc(l.name)}：Lv.${l.before} → Lv.${l.after}（升級 ${l.after-l.before} 次）</p>`).join('')}</div>${group('material','素材收益')}${group('item','消耗品收益')}${group('gem','寶石收益')}${r.gear.length?'<h3>裝備收益 · '+r.gear.length+' 件</h3><div class="offline-items">'+r.gear.slice(gearPage*30,gearPage*30+30).map((g,j)=>{const i=gearPage*30+j;return `<button class="offline-gear" onclick="showOfflineGear(${i})">${gearSlotHTML(g,{preview:g,count:1,contentOnly:true})}<span class="q${gearQualityRank(g)}">${AFFIX_RANK[gearQualityRank(g)]}</span></button>`;}).join('')+'</div>'+ (r.gear.length>30?`<div class="actions"><button onclick="changeOfflineGearPage(-1)" ${gearPage===0?'disabled':''}>上一頁</button><span>${gearPage+1} / ${Math.ceil(r.gear.length/30)}</span><button onclick="changeOfflineGearPage(1)" ${(gearPage+1)*30>=r.gear.length?'disabled':''}>下一頁</button></div>`:''):''}<h3>增益實際生效時間</h3>${Object.values(r.boosts).map(b=>`<p>${esc(b.name)} · ${esc(b.effect)}：${api.timeText(b.ms,true)}</p>`).join('')||'<p>無限時增益</p>'}${Object.keys(r.consumed||{}).length?'<h3>道具消耗</h3>'+Object.entries(r.consumed).map(([k,n])=>'<p>'+esc(k.split(':').slice(1).join(':'))+' × '+fmt(n)+'</p>').join(''):''}<p class="small">收益已存入角色與背包；視窗僅顯示已保存的收益，探索仍會持續進行。此遊戲使用裝置時間，無法完全防止改時鐘作弊。</p><button class="primary" onclick="acknowledgeOfflineExploration()">確認／關閉</button></section>`;box.querySelector('[role="dialog"]')?.focus({preventScroll:true});
  }
  globalThis.changeOfflineGearPage=function(delta){renderedReceipt=null;gearPage=Math.max(0,Math.min(Math.ceil((clock()?.receipt?.gear.length||1)/30)-1,gearPage+delta));showReceipt();};
  globalThis.showOfflineGear=function(i){const g=clock()?.receipt?.gear[i];if(!g)return;$('modal').innerHTML='<h2>'+equipmentNameHTML(g)+'</h2>'+equipmentAttributeDetailsHTML(g)+'<button onclick="closeModal()">關閉</button>';$('modal').showModal();};
@@ -219,7 +219,8 @@
   failed=false;settlementProgress={start:c.lastAt,target};
   job=Promise.resolve().then(async()=>{
    try{
-    const show=settlementProgress.target-settlementProgress.start>1000;
+    // Foreground catch-up is silent; an unread receipt keeps its DOM and scroll.
+    const show=jobOffline&&!c.receipt&&settlementProgress.target-settlementProgress.start>1000;
     if(show)showProgress('正在計算掛機收益，請稍候…');commit();
     // Paint the overlay before starting CPU-intensive combat replay.
     if(show)await new Promise(resolve=>setTimeout(resolve,0));
@@ -231,21 +232,20 @@
     }while(c.lastAt<requestedAt);
     // A throttled tick takes this async path; do not starve online life jobs.
     internal=true;try{globalThis.emberwildLifeHeartbeat?.();}finally{internal=false;}
-    if(!document.hidden)promote();commit();render();showReceipt();
+    if(jobOffline&&!document.hidden)promote();commit();render();showReceipt();
     if(!c.receipt)document.getElementById('offline-settlement').hidden=true;
    }catch(e){rollback(String(e.message||e));}
    finally{job=null;lastMode=atTitle()?false:running;lastCheck=nowReal();}
   });return job;
  }
- globalThis.retryOfflineExploration=function(){failed=false;return settle();};
+ globalThis.retryOfflineExploration=function(){failed=false;return settle(nowReal(),jobOffline);};
  function sync(now=nowReal()){
   if(internal||stepping||restoring||!party||failed||atTitle()||globalThis.__EMBERWILD_SAVE_OWNER===false)return;
-  if(job){requestedAt=Math.max(requestedAt,now);if(document.hidden){jobOffline=true;track(now);}return;}
-  const c=ensure();if(now<c.lastAt){void settle(now);return;}
-  if(now-c.lastAt>1000){void settle(now,!!document.hidden);return;}
-  if(document.hidden)track(now);
-  const start=c.lastAt,r=c.pendingReceipt;
-  internal=true;try{advance(now,50);if(document.hidden)recordInterval(r,start,c.lastAt);if(!document.hidden)promote();}finally{internal=false;}
+  if(job){requestedAt=Math.max(requestedAt,now);return;}
+  const c=ensure();if(now<c.lastAt){void settle(now,false);return;}
+  if(now-c.lastAt>1000){void settle(now,false);return;}
+  jobOffline=false;
+  internal=true;try{advance(now,50);}finally{internal=false;}
   lastMode=active();c.status=running?'running':foes.length?'paused':'stopped';
   if(c.receipt&&renderedReceipt!==c.receipt.id){try{commit();showReceipt();}catch(e){rollback(String(e.message||e));}}
  }
@@ -270,10 +270,10 @@
   globalThis[name]=function(...args){if(!stepping){if(globalThis.__EMBERWILD_SAVE_OWNER===false)return false;sync();if(job||failed)return false;}const wasRunning=running,wasEncounter=foes.length;const out=base.apply(this,args);if(!stepping){if(!wasRunning&&running&&!wasEncounter)ensure().startedAt=nowReal();sync();if(!savesOwnState)save();if(atTitle()){document.getElementById('offline-settlement').hidden=true;renderedReceipt=null;}}return out;};
  }
  const continueBase=continueFromTitle;
- continueFromTitle=function(...args){const out=continueBase(...args);if(party){const c=ensure();lastMode=c.status==='running';void settle();}return out;};
+ continueFromTitle=function(...args){const out=continueBase(...args);if(party){const c=ensure();lastMode=c.status==='running';const offline=bootResumePending&&lastMode;bootResumePending=false;void settle(nowReal(),offline);}return out;};
  const ui=document.createElement('div');ui.id='offline-settlement';ui.className='offline-settlement';ui.hidden=true;document.body.appendChild(ui);ui.tabIndex=-1;
  ui.addEventListener('keydown',event=>{if($('modal').open)return;if(event.key==='Escape'&&clock()?.receipt?.complete){event.preventDefault();acknowledgeOfflineExploration();}else if(event.key==='Tab'){const buttons=[...ui.querySelectorAll('button:not([disabled])')];if(!buttons.length){event.preventDefault();ui.focus();return;}const index=buttons.indexOf(document.activeElement),next=event.shiftKey?(index<=0?buttons.length-1:index-1):(index+1)%buttons.length;event.preventDefault();buttons[next].focus();}});
- document.addEventListener('visibilitychange',()=>{if(!party||atTitle())return;if(document.hidden){sync();save();}else{if(!job)lastMode=clock()?.status==='running';void settle();}});
+ document.addEventListener('visibilitychange',()=>{if(!party||atTitle())return;if(document.hidden){sync();save();}else{if(!job)lastMode=clock()?.status==='running';void settle(nowReal(),false);}});
  addEventListener('pagehide',()=>{if(party&&!job&&!failed&&!atTitle())save();});
  if(party){ensure();}lastCheck=nowReal();
  globalThis.EmberwildOffline={sync,settle,advance,snapshot,hydrate,validate,get busy(){return !!job;},get failed(){return failed;},get active(){return lastMode;}};
