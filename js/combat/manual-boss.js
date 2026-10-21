@@ -166,7 +166,7 @@
     const bossMeterGuideBase=guideView;
     guideView=function(){
       const b=GAMEPLAY_SETTINGS.monsters.bossMeter;
-      return `<section class="panel"><h2>BOSS 挑戰進度</h2><p>一般地圖不會隨機遭遇 BOSS。擊敗普通怪增加 ${b.normalProgress}% 進度，菁英怪為 ×${b.eliteMultiplier}；每累積 ${b.progressPerCharge}% 會存入 1 次 BOSS 挑戰，最多可保留 ${b.maxCharges} 次。</p><p>可在探索頁手動進入目前地圖的 BOSS 關卡。關卡內容由平衡設定獨立配置；若還有累積次數，完成後會自動進入下一場。次數用完會返回原地圖繼續一般探索，也可隨時手動離開；離開會放棄目前已消耗的一次挑戰。</p></section>`+bossMeterGuideBase();
+      return `<section class="panel"><h2>BOSS 挑戰進度</h2><p>一般地圖不會隨機遭遇 BOSS。擊敗普通怪增加 ${b.normalProgress}% 進度，菁英怪為 ×${b.eliteMultiplier}；每累積 ${b.progressPerCharge}% 會存入 1 次 BOSS 挑戰，最多可保留 ${b.maxCharges} 次。</p><p>可在探索頁手動進入目前地圖的 BOSS 關卡。每個地區的 BOSS 關卡有各自的敵人編成；若還有累積次數，完成後會自動進入下一場。次數用完會返回原地圖繼續一般探索，也可隨時手動離開；離開會放棄目前已消耗的一次挑戰。</p></section>`+bossMeterGuideBase();
     };
   }
 
