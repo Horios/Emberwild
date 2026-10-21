@@ -133,10 +133,14 @@
   globalThis.openItemSlotDetails=function(node){const ref=refFromNode(node);if(ref.context!=='inventory'||!ref.kind)return false;selection=ref;hideTooltip();renderDetail();const d=dialog();if(!d.open)d.showModal();};
   globalThis.closeItemDetails=function(){dialog().close();selection=null;};
   globalThis.itemDetailsAction=function(action){action();if(selection)renderDetail();};
-  let tooltip;
-  function hideTooltip(){if(tooltip){if(typeof tooltip.hidePopover==='function'&&tooltip.matches(':popover-open'))tooltip.hidePopover();tooltip.hidden=true;}hovered=null;}
-  function showTooltip(node){
-    if(!node)return;hovered=node;
+  let tooltip, pointerHover=false, lastPointer=null, hoverCheckQueued=false;
+  function hideTooltip(){
+    if(tooltip){if(typeof tooltip.hidePopover==='function'&&tooltip.matches(':popover-open'))tooltip.hidePopover();tooltip.hidden=true;}
+    hovered=null;pointerHover=false;
+  }
+  function showTooltip(node,fromPointer=false){
+    if(!node)return;
+    hovered=node;pointerHover=fromPointer;
     if(!tooltip){tooltip=document.createElement('div');tooltip.id='item-hover-tooltip';tooltip.className='item-hover-tooltip';tooltip.setAttribute('role','tooltip');document.body.appendChild(tooltip);}
     tooltip.innerHTML=info(refFromNode(node));tooltip.hidden=false;
     if(typeof tooltip.showPopover==='function'&&!tooltip.matches(':popover-open')){tooltip.setAttribute('popover','manual');tooltip.showPopover();}
@@ -145,10 +149,47 @@
     tooltip.style.left=Math.max(8,Math.min(left,innerWidth-tip.width-8))+'px';
     tooltip.style.top=Math.max(8,Math.min(rect.top,innerHeight-tip.height-8))+'px';
   }
-  document.addEventListener('pointerover',e=>{if(e.pointerType==='touch')return;const node=e.target.closest?.('[data-item-kind]');if(node&&node!==hovered)showTooltip(node);});
-  document.addEventListener('pointerout',e=>{if(hovered&&!hovered.contains?.(e.relatedTarget))hideTooltip();});
-  document.addEventListener('focusin',e=>{const node=e.target.closest?.('[data-item-kind]');if(node)showTooltip(node);});
-  document.addEventListener('focusout',hideTooltip);
-  document.addEventListener('scroll',hideTooltip,true);
+  function itemAtPointer(){
+    return lastPointer?document.elementFromPoint(lastPointer.x,lastPointer.y)?.closest?.('[data-item-kind]'):null;
+  }
+  function syncPointerHover(){
+    if(!pointerHover)return;
+    const node=itemAtPointer();
+    // A live render can replace the hovered element without moving the mouse.
+    if(node&&node!==hovered)showTooltip(node,true);
+    else if(!node)hideTooltip();
+  }
+  function queuePointerCheck(){
+    if(hoverCheckQueued||!pointerHover)return;
+    hoverCheckQueued=true;
+    requestAnimationFrame(()=>{hoverCheckQueued=false;syncPointerHover();});
+  }
+  function trackPointer(e){lastPointer={x:e.clientX,y:e.clientY};}
+  document.addEventListener('pointerover',e=>{
+    if(e.pointerType==='touch')return;
+    trackPointer(e);
+    const node=e.target.closest?.('[data-item-kind]');
+    if(node&&node!==hovered)showTooltip(node,true);
+    else if(node)pointerHover=true;
+    else queuePointerCheck();
+  });
+  document.addEventListener('pointermove',e=>{
+    if(e.pointerType==='touch')return;
+    trackPointer(e);
+    const node=e.target.closest?.('[data-item-kind]');
+    if(node&&node!==hovered)showTooltip(node,true);
+    else if(node)pointerHover=true;
+    else if(pointerHover)hideTooltip();
+  });
+  document.addEventListener('pointerout',e=>{
+    if(pointerHover&&hovered?.contains?.(e.target)&&!hovered.contains(e.relatedTarget))queuePointerCheck();
+  });
+  document.addEventListener('focusin',e=>{
+    const node=e.target.closest?.('[data-item-kind]');
+    if(node&&node!==hovered)showTooltip(node,false);
+  });
+  document.addEventListener('focusout',()=>{if(!pointerHover)hideTooltip();});
+  // Battle journal auto-scroll and unrelated panel scrolls must not close an item tooltip.
+  document.addEventListener('scroll',queuePointerCheck,true);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')hideTooltip();});
 })();
