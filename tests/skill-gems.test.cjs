@@ -65,8 +65,8 @@ test('alchemy spends five tier-one gems and ten tier-two gems in the existing fi
  r.run('playerHero().gems[0]=5;setTab("alchemy");');
  assert.match(r.elements.get('app').innerHTML,/赤焰石・1階 ×5/);
  assert.equal(r.run("startLifeWork('gem_0')"),true);
- r.advance(4999);r.run('tick()');assert.equal(r.run('playerHero().gems[0]'),5);
- r.advance(1);r.run('tick()');console.log('DEBUG-ALCH',r.run('JSON.stringify({gems:playerHero().gems.slice(0,11),jobs:__EMBERWILD_LIFE_SKILLS.jobs,materials:playerHero().materials})'));assert.equal(r.run('playerHero().gems[0]'),0);
+ r.advance(4999);r.run('tick()');console.log('DEBUG-FIRST',r.run('JSON.stringify(__EMBERWILD_LIFE_SKILLS.jobs)'));assert.equal(r.run('playerHero().gems[0]'),5);
+ r.advance(1);r.run('tick()');console.log('DEBUG-ALCH',r.run('JSON.stringify({gems:playerHero().gems.slice(0,11),jobs:__EMBERWILD_LIFE_SKILLS.jobs,materials:playerHero().materials,logs:globalThis.__DEBUG_GEM_ALCHEMY||[],errors:globalThis.__EMBERWILD_BOOT_SAVE_ERROR})'));assert.equal(r.run('playerHero().gems[0]'),0);
  assert.equal(r.run('playerHero().gems[5]'),1);
  r.run('playerHero().gems[5]=10;');
  assert.equal(r.run("startLifeWork('gem_5')"),true);
