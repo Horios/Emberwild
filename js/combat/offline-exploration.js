@@ -6,6 +6,10 @@
  const hooks=()=>[EmberwildControlCombatState,EmberwildEnemyCombatState,EmberwildStatusCombatState,EmberwildTokenCombatState];
  const transient=['hp','shield','basicAdvanceRound','procAdvanceRound','procAdvanceSteps','nextActiveDamageBonus','healPotionCooldownRemaining'];
  let internal=false,stepping=false,job=null,failed=false,restoring=false,lastMode=false,actionSerial=0,lastRendered=0,gearPage=0,lastCheck=0,requestedAt=0,renderedReceipt=null,jobOffline=false,lastCommitted=globalThis.__EMBERWILD_BOOT_SAVE_RAW||null;
+ // Profiling: full saves dominated replay (about 23ms each on an 8h debt).
+ // One wall-clock second of work amortizes serialization while bounding replay
+ // lost on close. Only commit()/successful save moves the durable checkpoint.
+ const checkpointIntervalMs=1000;
  let settlementProgress=null;
  const atTitle=()=>!!globalThis.isEmberwildTitleOpen?.();
  const nowReal=Date.now.bind(Date),basePack=packParty,baseSave=save,baseLoad=loadParty,baseValidate=validateParty;
@@ -93,13 +97,32 @@
  }
  function buffs(){return [...(party?.timedBoosts||[]),...party.members.flatMap(h=>api.ELEMENTAL_TYPES.flatMap(k=>api.buffRows(h[k])))];}
  function receipt(start,end){const p=playerHero();return {id:String(start)+'-'+String(end)+'-'+String(p.created),start,end,map:MAPS[party.map]?.name||'',stage:party.questChallenge?.name||(party.bossChallenge?.active?'BOSS 難關':'一般探索'),intervals:[],battles:0,effectiveMs:0,kills:0,xp:0,goldGained:0,goldSpent:0,items:{},consumed:{},gear:[],boosts:{},levels:party.members.map(h=>({key:memberKey(h),name:characterName(h),before:h.lv,after:h.lv})),complete:false,reason:'',stoppedAt:null};}
- function stock(){const h=playerHero();return Object.fromEntries([['material:鍛鐵',h.ore],['material:粉塵',h.dust],['item:legacy-potion',h.potions],...h.gems.map((n,i)=>['gem:'+i,n]),...Object.entries(h.materials).map(([k,n])=>['material:'+k,n]),...Object.entries(h.healingPotions||{}).map(([k,n])=>['item:'+k,n]),...Object.entries(h.consumables||{}).map(([k,n])=>['item:'+k,n])]);}
- function captureResources(){return {gold:playerHero().gold,gained:clock()?.pendingReceipt?.goldGained||0,items:stock(),ids:new Set(playerHero().bag.map(g=>g.id))};}
+ // Scratch buffers belong to one synchronous advance batch, never to the save.
+ function stock(out={}){
+  const h=playerHero();for(const k in out)out[k]=0;
+  out['material:鍛鐵']=h.ore;out['material:粉塵']=h.dust;out['item:legacy-potion']=h.potions;
+  for(let i=0;i<h.gems.length;i++)out['gem:'+i]=h.gems[i];
+  for(const k in h.materials)out['material:'+k]=h.materials[k];
+  for(const k in h.healingPotions)out['item:'+k]=h.healingPotions[k];
+  for(const k in h.consumables)out['item:'+k]=h.consumables[k];
+  return out;
+ }
+ function captureResources(before){
+  const r=clock()?.pendingReceipt;if(!r||r.complete)return null;
+  const h=playerHero();before??={items:{},after:{}};before.gold=h.gold;before.gained=r.goldGained;
+  stock(before.items);before.bag=h.bag;before.length=h.bag.length;return before;
+ }
  function collect(before){
-  const r=clock()?.pendingReceipt;if(!r||r.complete)return;
-  const delta=playerHero().gold-before.gold-(r.goldGained-before.gained);r.goldGained+=Math.max(0,delta);r.goldSpent+=Math.max(0,-delta);
-  const after=stock();for(const k of new Set([...Object.keys(before.items),...Object.keys(after)])){const n=(after[k]||0)-(before.items[k]||0);if(n>0)r.items[k]=(r.items[k]||0)+n;else if(n<0){r.consumed??={};r.consumed[k]=(r.consumed[k]||0)-n;}}
-  for(const g of playerHero().bag)if(!before.ids.has(g.id))r.gear.push(copy(g));
+  const r=clock()?.pendingReceipt;if(!before||!r||r.complete)return;
+  const h=playerHero(),delta=h.gold-before.gold-(r.goldGained-before.gained);r.goldGained+=Math.max(0,delta);r.goldSpent+=Math.max(0,-delta);
+  const after=stock(before.after);
+  for(const k in before.items){const n=(after[k]||0)-(before.items[k]||0);if(n>0)r.items[k]=(r.items[k]||0)+n;else if(n<0){r.consumed??={};r.consumed[k]=(r.consumed[k]||0)-n;}}
+  for(const k in after)if(!(k in before.items)&&after[k]>0)r.items[k]=(r.items[k]||0)+after[k];
+  // Combat only appends through addGear (equipment and tokens). UI disposal is
+  // blocked while replaying. Inspect just the appended tail, preserving order.
+  // Retain ID comparison if a future event replaces the bag array.
+  if(h.bag===before.bag){for(let i=before.length;i<h.bag.length;i++)r.gear.push(copy(h.bag[i]));}
+  else {const ids=new Set(before.bag.map(g=>g.id));for(const g of h.bag)if(!ids.has(g.id))r.gear.push(copy(g));}
   for(const l of r.levels)l.after=partyMember(l.key)?.lv??l.after;
  }
  const award=awardXP;
@@ -150,13 +173,13 @@
  function advance(target,maxEvents=150){
   const c=ensure();if(globalThis.__EMBERWILD_SAVE_OWNER===false)throw Error('存檔已由另一分頁接手');
   if(!c||target<c.lastAt)return false;
-  let count=0;const batchStart=performance.now();
+  let count=0,resources=null;const batchStart=performance.now();
   quiet(()=>{while(c.lastAt<target&&count<maxEvents&&(count===0||performance.now()-batchStart<12)){
    if(!lastMode||!running){const wait=target-c.lastAt;if(nextActionAt)nextActionAt+=wait;if(roundStartedAt)roundStartedAt+=wait;consumeTo(target,false);break;}
    const expiry=Math.min(...buffs().filter(b=>b.enabled&&b.remainingMs>0).map(b=>c.lastAt+b.remainingMs),Infinity);
    const at=Math.min(target,Math.max(c.lastAt,nextActionAt),expiry);consumeTo(at,true);
    if(at===expiry){count++;continue;}
-   if(nextActionAt<=at){const before=captureResources();event(at);collect(before);count++;if(!running){lastMode=false;const r=c.pendingReceipt;if(r&&!r.complete){r.stoppedAt=at;r.reason=playerHero().bag.length>=RULES.bagCapacity?'背包已滿，掉落已保留':globalThis.expeditionChallengeResult?(expeditionChallengeResult.success?'任務關卡完成':'任務關卡戰敗'):'本次探索已依戰鬥規則結束';}}}
+   if(nextActionAt<=at){resources=captureResources(resources);event(at);collect(resources);count++;if(!running){lastMode=false;const r=c.pendingReceipt;if(r&&!r.complete){r.stoppedAt=at;r.reason=playerHero().bag.length>=RULES.bagCapacity?'背包已滿，掉落已保留':globalThis.expeditionChallengeResult?(expeditionChallengeResult.success?'任務關卡完成':'任務關卡戰敗'):'本次探索已依戰鬥規則結束';}}}
    if(at===target)break;
   }});
   c.status=running?'running':foes.length?'paused':'stopped';return c.lastAt<target;
@@ -171,7 +194,7 @@
   const box=document.getElementById('offline-settlement');if(!box||atTitle())return;
   const c=clock(),p=settlementProgress;
   const total=p?Math.max(1,p.target-p.start):0,done=p?Math.max(0,Math.min(total,c.lastAt-p.start)):0,percent=total?Math.floor(done/total*1000)/10:0;box.hidden=false;renderedReceipt=null;
-  box.innerHTML=`<section role="status" aria-live="polite" aria-busy="${!error}"><h2>離線探索收益</h2><p>${esc(message)}</p>${p?`<progress max="${total}" value="${done}" aria-label="離線結算進度"></progress><p class="offline-progress-value">${percent}% · 已計算 ${api.timeText(done,true)} / ${api.timeText(total,true)}</p>`:''}${error?'<button onclick="retryOfflineExploration()">重試結算</button>':''}</section>`;
+  box.innerHTML=`<section role="status" aria-live="polite" aria-busy="${!error}"><h2>離線探索收益</h2><p>${esc(message)}</p>${p?`<progress max="${total}" value="${done}" aria-label="離線結算進度"></progress><p class="offline-progress-value">${percent}% · 已計算 ${api.timeText(done,true)} / ${api.timeText(total,true)}</p><p class="small">進度代表已計算時間；計算期間分批儲存，完成時立即儲存全部收益。</p>`:''}${error?'<button onclick="retryOfflineExploration()">重試結算</button>':''}</section>`;
  }
  function showReceipt(){
   const r=clock()?.receipt,box=document.getElementById('offline-settlement');if(!r?.complete||!eligible(r)||!box||atTitle()||document.hidden)return;
@@ -200,11 +223,11 @@
     if(show)showProgress('正在計算掛機收益，請稍候…');commit();
     // Paint the overlay before starting CPU-intensive combat replay.
     if(show)await new Promise(resolve=>setTimeout(resolve,0));
-    let lastProgress=performance.now();
+    let lastProgress=performance.now(),lastCheckpoint=lastProgress;
     do{
      const end=requestedAt;settlementProgress.target=end;
      let more;
-     do{const start=c.lastAt,r=c.pendingReceipt;more=advance(end);if(jobOffline)recordInterval(r,start,c.lastAt);commit();if(show&&(performance.now()-lastProgress>=100||!more)){showProgress('正在計算掛機收益，請稍候…');lastProgress=performance.now();}if(more)await new Promise(resolve=>setTimeout(resolve,0));}while(more);
+     do{const start=c.lastAt,r=c.pendingReceipt,status=c.status;more=advance(end);if(jobOffline)recordInterval(r,start,c.lastAt);if(c.status!==status||more&&performance.now()-lastCheckpoint>=checkpointIntervalMs){commit();lastCheckpoint=performance.now();}if(show&&(performance.now()-lastProgress>=100||!more)){showProgress('正在計算掛機收益，請稍候…');lastProgress=performance.now();}if(more)await new Promise(resolve=>setTimeout(resolve,0));}while(more);
     }while(c.lastAt<requestedAt);
     // A throttled tick takes this async path; do not starve online life jobs.
     internal=true;try{globalThis.emberwildLifeHeartbeat?.();}finally{internal=false;}

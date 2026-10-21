@@ -71,7 +71,8 @@ test('production loader queues a second tab until the owner page hides, then onl
  first.hide();await new Promise(resolve=>setTimeout(resolve,10));assert.equal(first.ctx.__EMBERWILD_SAVE_OWNER,false);assert.equal(second.ctx.__EMBERWILD_SAVE_OWNER,true);assert.equal(second.ctx.applied,1);assert.equal(maxOwners,1);second.hide();
 });
 test('a failed checkpoint restores the last committed batch and keeps its unfinished receipt recoverable',async()=>{
- const r=game(),key=r.run('KEY'),put=r.ctx.localStorage.setItem;let commits=0;
+ const r=game(),key=r.run('KEY'),put=r.ctx.localStorage.setItem;let commits=0,workTime=0;
+ r.ctx.performance.now=()=>workTime+=20;
  r.ctx.localStorage.setItem=(k,v)=>{if(k===key&&++commits>=3)throw Error('quota after batch');return put(k,v);};
  await settleFailure();
  async function settleFailure(){r.advance(3600000);await r.run('EmberwildOffline.settle()');}
@@ -83,7 +84,7 @@ test('quest challenge and terminal victory survive cold combat restoration and u
  assert.equal(r.run('party.questChallenge.key'),'shop_rescue/rescue');await settle(r,60000);assert.equal(r.run('party.offlineExploration.receipt.stage'),'解救商人');assert.equal(r.run('party.offlineExploration.receipt.kills'),3);assert.equal(r.run('__EMBERWILD_STORY.stats().encounters["shop_rescue/rescue"]'),1);assert.equal(r.run('running'),false);
 });
 
-test('multi-hour replay paints progress before work and reports committed cursor against a fixed total',async()=>{
+test('multi-hour replay paints progress before work and reports simulation cursor against a fixed total',async()=>{
  const r=game(),callbacks=[];r.ctx.setTimeout=fn=>callbacks.push(fn);r.advance(10800000);const start=r.run('party.offlineExploration.lastAt'),pending=r.run('EmberwildOffline.settle()');await new Promise(setImmediate);
  const box=r.elements.get('offline-settlement');assert.equal(box.hidden,false);assert.match(box.innerHTML,/0%/);assert.match(box.innerHTML,/max="10800000" value="0"/);assert.equal(r.run('state.totalKills'),0);
  let ticks=0;r.ctx.performance.now=()=>++ticks*20;

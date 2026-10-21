@@ -7,7 +7,7 @@ class Element {
   get lastElementChild(){return this.children.at(-1)||new Element();}
   querySelector(){return null;}querySelectorAll(){return [];}addEventListener(){}removeEventListener(){}appendChild(x){this.children.push(x);return x;}append(x){this.children.push(x);}remove(){}insertAdjacentHTML(_pos,html){this.innerHTML+=html;}setAttribute(k,v){this.attributes[k]=String(v);}getAttribute(k){return this.attributes[k]??null;}removeAttribute(k){delete this.attributes[k];}hasAttribute(k){return k in this.attributes;}showModal(){this.open=true;}close(){this.open=false;}focus(){}scrollIntoView(){}matches(){return false;}closest(){return null;}getBoundingClientRect(){return {width:1440,height:900,top:0,left:0,bottom:900,right:1440};}
 }
-function loadRuntime(root,entry='index.html',saved={},clockStart=Date.parse('2026-10-02T02:00:00Z')){
+function loadRuntime(root,entry='index.html',saved={},clockStart=Date.parse('2026-10-02T02:00:00Z'),options={}){
   const listeners={window:new Map(),document:new Map()};
   const on=(target,type,fn)=>{if(!listeners[target].has(type))listeners[target].set(type,[]);listeners[target].get(type).push(fn);};
   const elements=new Map(),values=new Map(Object.entries(saved)),errors=[],warnings=[];
@@ -31,7 +31,8 @@ function loadRuntime(root,entry='index.html',saved={},clockStart=Date.parse('202
   for(let i=0;i<scripts.length;i++){
     const src=scripts[i][1].match(/(?:\bsrc|data-balance-src)="([^"]+)"/),filename=src?src[1]:entry+':script-'+i;
     if(filename.includes('startup-guard')||filename.includes('published-loader'))continue;
-    const code=src?fs.readFileSync(path.join(root,src[1].split('?')[0]),'utf8'):scripts[i][2];
+    let code=src?fs.readFileSync(path.join(root,src[1].split('?')[0]),'utf8'):scripts[i][2];
+    if(options.transformSource)code=options.transformSource(filename.split('?')[0],code);
     try{vm.runInContext(code,ctx,{filename,timeout:10000});}catch(e){throw new Error(filename+': '+e.stack);}
   }
   const published=path.join(root,'data/balance.json');
