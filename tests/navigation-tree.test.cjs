@@ -48,6 +48,16 @@ test('navigation begins collapsed and supports persistent independent group orde
   assert.deepEqual(reloaded.errors,[]);
 });
 
+test('adventure guide describes current systems without migration or development wording',()=>{
+  const runtime=loadRuntime(root);
+  runtime.run('selectSaveSlot(1);start(0);closeModal()');
+  const guide=String(runtime.run('guideView()')).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ');
+  for(const title of ['角色成長與精通','BOSS 挑戰進度','終局地圖','經驗與戰利品','存檔與離線探索'])
+    assert(guide.includes(title),'missing guide section: '+title);
+  assert.doesNotMatch(guide,/改為|不再|新增|舊版|版本更新|平衡設定|索引\s*6|後續可新增|原本/);
+  assert.deepEqual(runtime.errors,[]);
+});
+
 test('balance navigation changes round-trip and malformed page lists are rejected atomically',()=>{
   const runtime=loadRuntime(root),before=json(runtime,'exportableBalance()'),custom=structuredClone(before);
   custom.navigation.groups[0].label='冒險總覽';
