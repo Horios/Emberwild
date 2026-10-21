@@ -65,7 +65,7 @@
     }return out;
   }
   globalThis.companionSkillDisabled=skillDisabled;
-  function passivesFor(h){return allPassivesFor(h).filter(d=>d.partnerId===h.companionId&&h.lv>=d.requiredLevel&&!skillDisabled(h,'passive',d.id));}
+  function passivesFor(h){return allPassivesFor(h).filter(d=>d.partnerId===h.companionId&&!globalThis.__EMBERWILD_SKILLS?.byId(d.id)?.disabled&&h.lv>=d.requiredLevel&&!skillDisabled(h,'passive',d.id));}
   function passiveEffectsFor(h){
     const out=passivesFor(h).filter(d=>d.target==='self').flatMap(d=>d.effects);
     if(party?.active.includes(memberKey(h)))for(const owner of heroes().filter(x=>x.hp>0))out.push(...passivesFor(owner).filter(d=>d.target==='allies').flatMap(d=>d.effects));
@@ -326,7 +326,7 @@
     let unlocked=false;
     if(kind==='core')unlocked=plan.core.includes(id)&&!!h.skills[id]&&skillAllowedForPartner(h,CLASSES[h.job].skills[id]?.[6]);
     else if(kind==='support')unlocked=plan.support.includes(id)&&!!h.supportLevels[id]&&skillAllowedForPartner(h,SUPPORT[h.job][id]);
-    else if(kind==='passive')unlocked=allPassivesFor(h).some(d=>d.id===id&&d.partnerId===h.companionId&&h.lv>=d.requiredLevel);
+    else if(kind==='passive')unlocked=allPassivesFor(h).some(d=>d.id===id&&d.partnerId===h.companionId&&!globalThis.__EMBERWILD_SKILLS?.byId(d.id)?.disabled&&h.lv>=d.requiredLevel);
     if(!unlocked)return false;
     const settings=validateDisabledSkills(h.disabledCompanionSkills);settings[kind]=settings[kind].filter(value=>value!==id);if(!enabled)settings[kind].push(id);h.disabledCompanionSkills=settings;
     applyPlan(h);for(const member of party.members)member.hp=Math.min(member.hp,stats(member).hp);

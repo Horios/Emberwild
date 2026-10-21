@@ -27,7 +27,7 @@
   function budget(level,progression,permanent){return {ap:Math.round((progression.starting.abilityPoints||0)+(level-1)*(progression.levelRewards.abilityPoints||0))+(permanent.abilityCredit||0)};
   }
   const key=(job,kind,i)=>`${job}:${kind}:${i}`;
-  function blank(id,name,job=null,coreCount=0,supportCount=0){return {id,name,job,playerActive:true,stats:[0,0,0],skills:Array(coreCount).fill(0),supportLevels:Array(supportCount).fill(0),active:[null,null],procSlots:[null,null],supportSlots:[null,null],equipped:Array(5).fill(null),sockets:Array(coreCount).fill(null),companions:[],enlisted:[],tokens:{}};}
+  function blank(id,name,job=null,coreCount=0,supportCount=0){return {id,name,job,playerActive:true,stats:[0,0,0],skills:Array(coreCount).fill(0),supportLevels:Array(supportCount).fill(0),active:[null,null],procSlots:[null,null],supportSlots:[null,null],equipped:Array(5).fill(null),sockets:Array(coreCount).fill(null),companions:[],enlisted:[],tokens:{},skillLoadout:null,activeSkillEquipmentId:null};}
   function spent(){return 0;}
   function references(build,id){return build.plans.filter(p=>p.equipped.includes(id)||Object.values(p.tokens).includes(id)).map(p=>({id:p.id,name:p.name}));}
   function clearReferences(build,ids){const set=new Set(ids);for(const p of build.plans){p.equipped=p.equipped.map(id=>set.has(id)?null:id);for(const k of Object.keys(p.tokens))if(set.has(p.tokens[k]))p.tokens[k]=null;}}

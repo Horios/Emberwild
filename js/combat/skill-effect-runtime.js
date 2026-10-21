@@ -19,7 +19,7 @@
     if(mode==='allies')return members(caster);
     if(mode==='weakest')return members(caster).sort((a,b)=>a.hp/maxHp(a)-b.hp/maxHp(b)).slice(0,1);
     const opponents=isHero(caster)?foes.filter(e=>e.hp>0):living();
-    if(mode==='enemies'||sk.maxTargets>=99)return opponents;
+    if(mode==='enemies'||sk.maxTargets>=99)return meta.targetLimit?opponents.slice(0,sk.maxTargets||1):opponents;
     const n=Math.max(1,Math.floor(sk.maxTargets||1)),pool=isHero(caster)&&n===1?opponents.filter(enemyAvailableForSingleTarget):opponents;
     return shuffleCopy(pool).slice(0,n);
   }

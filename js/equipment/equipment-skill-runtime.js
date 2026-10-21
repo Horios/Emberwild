@@ -27,7 +27,7 @@
   if(force){delete g.skillSockets;delete g.skillId;}
   if(g.skillSockets)return g;
   M.gear(g,{source,system:rules(),random:preview?()=>0:Math.random});
-  const form=typeof itemForm==='function'?itemForm(g):null,fixed=form?.skillId;
+  const original=typeof itemForm==='function'?itemForm(g):null,form={...original,...rules().equipment.formRules?.find(r=>r.formId===original?.id)},fixed=form?.skillId;
   if(fixed&&S.byId(fixed))g.skillId=fixed;
   else if(!preview&&form?.allowSkill!==false&&Math.random()<(form?.skillChance??rules().equipment.chanceByDifficulty[g.difficulty||0])){
    const rows=pool(g,source,{map:g.region??party?.map,monster:context.monster??enemy?.monsterId,...context}),sum=rows.reduce((a,x)=>a+x.weight,0);let n=Math.random()*sum;

@@ -17,7 +17,7 @@
   if(r.initial.some(x=>x.skillId===sk.id&&h.lv>=x.level))return true;
   if(h.advanced&&r.advanced.some(x=>x.skillId===sk.id&&h.lv>=x.level))return true;
   for(const src of sk.sources){
-   if(src.type==='quest'){const qs=src.questIds||sk.unlockConditions?.quests||['tutorial'];const required=qs.length?qs:['tutorial'];if(required.every(q=>q==='tutorial'?player()?.tutorial>=3:player()?.claimed?.includes(q)||party?.story?.completed?.includes?.(q))||h.acquiredSkillIds?.includes(sk.id))return true;}
+   if(src.type==='quest'){const qs=src.questIds||sk.unlockConditions?.quests||['tutorial'];const required=qs.length?qs:['tutorial'];if(required.every(q=>q==='tutorial'?player()?.tutorial>=3:player()?.claimed?.includes(q)||party?.story?.quests?.[q]?.done)||h.acquiredSkillIds?.includes(sk.id))return true;}
    if(src.type==='equipment'&&h.activeSkillEquipmentId&&worn(h).some(g=>g.id===h.activeSkillEquipmentId&&g.skillId===sk.id))return true;
   }
   return false;
@@ -37,6 +37,7 @@
  }
  function refreshHero(h){
   if(!h||!system)return h;
+  if(h===player()&&T()?.plan()?.job===null){h.skillLoadout=null;h.activeSkillEquipmentId=null;return h;}
   wornCache.delete(h);globalThis.__EMBERWILD_EQUIPMENT_SKILLS?.refresh(h);
   if(companion(h)){delete h.disabledCompanionSkills;return projectHero(h);}
   if(h.activeSkillEquipmentId&&!worn(h).some(g=>g.id===h.activeSkillEquipmentId&&byId.get(g.skillId)?.jobs.includes(h.job)))h.activeSkillEquipmentId=null;
@@ -95,7 +96,7 @@
  const oldXP=awardXP;awardXP=function(...args){const out=oldXP(...args);refreshAll();return out;};
  const oldSave=save;save=function(...args){refreshAll();return oldSave(...args);};
  globalThis.configureSkill=function(type,slot,id){
-  const h=state;if(companion(h)||!T()?.safe()||!['active','proc','support'].includes(type)||!Number.isInteger(slot)||slot<0||slot>=slotCounts(h)[type])return false;
+  const h=state;if(companion(h)||T()?.plan()?.job===null||!T()?.safe()||!['active','proc','support'].includes(type)||!Number.isInteger(slot)||slot<0||slot>=slotCounts(h)[type])return false;
   const sk=byId.get(id);if(id!==null&&(!sk||sk.type!==type||!learned(h,sk)))return false;
   const old=copy(h.skillLoadout);for(const list of Object.values(h.skillLoadout))for(let n=0;n<list.length;n++)if(id!==null&&list[n]===id)list[n]=null;
   h.skillLoadout[type][slot]=id;projectHero(h);actorCooldowns={};supportCooldowns={};combatRoundProgress=null;

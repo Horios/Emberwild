@@ -14,6 +14,7 @@
       c.skills.forEach((sk,index)=>definitions.push({...copy(sk),id:sk.id||`job${job}-core${index}`,type:sk.activation,jobs:[job],adapter:{job,index,kind:'core'},sources:[{type:sk.partnerId!=null?'companion':sk.requiresAdvanced||index===4||index===5?'advanced':index===1?'quest':'equipment',...(sk.partnerId!=null?{companionId:sk.partnerId}:{})}]}));
       (d.supportSkills[job]||[]).forEach((sk,index)=>definitions.push({...copy(sk),id:sk.id||`job${job}-support${index}`,type:'support',jobs:[job],adapter:{job,index,kind:'support'},sources:[{type:sk.partnerId!=null?'companion':index>=2?'advanced':index===0?'quest':'equipment',...(sk.partnerId!=null?{companionId:sk.partnerId}:{})}]}));
     });
+    for(const [index,sk] of (d.passiveDefinitions||[]).entries()){const j=d.companions.find(p=>p.id===sk.partnerId)?.job??0;definitions.push({...copy(sk),id:sk.id,type:'passive',jobs:sk.partnerId!=null?[j]:[0,1,2,3],adapter:{job:j,index,kind:'passive'},sources:[{type:sk.partnerId!=null?'companion':'quest',...(sk.partnerId!=null?{companionId:sk.partnerId}:{})}]});}
     const classRules=d.classes.map((_,job)=>({job,initial:[],advanced:[],slots:{first:{active:3,proc:1,support:1},advanced:{active:3,proc:2,support:2}}}));
     const names=[['嘲諷','減傷','重擊'],['魔爆','變形','火球'],['連射','狙擊','繩索陷阱'],['聖光','治療','癒合']];
     const descriptions=[['使敵人優先攻擊自己。','降低自身承受的傷害。','對單一敵人造成強力傷害。'],['以魔力爆發攻擊敵方群體。','使單一敵人變形，暫時無法行動；首領免疫。','以高倍率火球攻擊敵方群體，冷卻較長。'],['連續射擊同一敵人，穩定造成傷害。','瞄準單一敵人，造成高倍率爆發傷害。','布設繩索陷阱，降低敵方行動速度。'],['以聖光對單一敵人造成傷害。','恢復生命比例最低的一名存活隊友。','使全隊持續恢復生命。']];
@@ -25,14 +26,14 @@
     ];
     for(let job=0;job<4;job++)for(let n=0;n<3;n++){
       const id=`class${job}-initial${n}`,index=d.classes[job].skills.length+n,t=templates[job][n];
-      const sk={id,name:names[job][n],description:descriptions[job][n],type:'active',activation:'active',jobs:[job],adapter:{job,index,kind:'core'},sources:[{type:'class',level:[1,3,5][n]}],usageScope:'character',partnerId:null,requiredLevel:[1,3,5][n],requiresAdvanced:false,requiredMastery:null,requiredMasteryLevel:0,mastery:null,weaponTypes:[],unlockConditions:emptyConditions(),iconType:'auto',powerPerLevel:0,element:job===1?'fire':job===3?'light':'physical',maxTargets:1,hitCount:1,baseCritRate:0,baseCritDamage:1.5,defensePenetration:0,defenseIgnore:0,commonEffectKeys:['target'],...t};
+      const sk={id,name:names[job][n],description:descriptions[job][n],type:'active',activation:'active',jobs:[job],adapter:{job,index,kind:'core'},sources:[{type:'class',level:[1,3,5][n]}],usageScope:'character',partnerId:null,requiredLevel:[1,3,5][n],requiresAdvanced:false,requiredMastery:null,requiredMasteryLevel:0,mastery:['sword','fire','bow','light'][job],weaponTypes:[],unlockConditions:emptyConditions(),iconType:'auto',powerPerLevel:0,element:job===1?'fire':job===3?'light':'physical',maxTargets:1,hitCount:1,baseCritRate:0,baseCritDamage:1.5,defensePenetration:0,defenseIgnore:0,commonEffectKeys:['target'],targetLimit:true,...t};
       if(!sk.systemEffect&&sk.hitCount>1)sk.commonEffectKeys.push('hitCount');
       definitions.push(sk);classRules[job].initial.push({skillId:id,level:sk.requiredLevel});
     }
     for(const sk of definitions)if(sk.sources.some(s=>s.type==='advanced'))classRules[sk.jobs[0]].advanced.push({skillId:sk.id,level:Math.max(15,sk.requiredLevel??sk.level??1)});
     const equipmentPool=definitions.filter(sk=>sk.sources.some(s=>s.type==='equipment')).map(sk=>({skillId:sk.id,jobs:sk.jobs,slots:[0,1,2,3],minLevel:1,maxLevel:999,weight:1,maps:[],monsters:[],bosses:[],allowShop:true,allowCraft:true}));
     const gems=[['atk','flat','effect',[.02,.04,.06]],['speed','flat','cooldown',[.05,.1,.15]],['crit','ratio','procChance',[.01,.02,.03]],['hp','flat','heal',[.03,.06,.09]],['def','flat','shield',[.01,.02,.03]]].map(([stat,unit,key,values],kind)=>({kind,base:{stat,unit,values:kind===0?[2,4,6]:kind===1?[1,2,3]:kind===2?[.01,.02,.03]:kind===3?[10,20,30]:[1,2,3]},skill:{key,values,types:kind===1?['active','support']:kind===2?['proc']:['active','proc','support'],effects:[],slots:[0,1,2]},cap:1}));
-    return {version:VERSION,definitions,classRules,equipment:{chanceByDifficulty:[.15,.15,.15],pool:equipmentPool,socketBands:[{minLevel:1,maxLevel:10,weights:[.7,.3,0,0]},{minLevel:11,maxLevel:20,weights:[.35,.5,.15,0]},{minLevel:21,maxLevel:999,weights:[.1,.35,.35,.2]}],sourceRules:[{source:'starter',weights:[1,0,0,0]},{source:'boss',weights:[0,.3,.4,.3]}]},gems};
+    return {version:VERSION,definitions,classRules,equipment:{chanceByDifficulty:[.15,.15,.15],formRules:[],pool:equipmentPool,socketBands:[{minLevel:1,maxLevel:10,weights:[.7,.3,0,0]},{minLevel:11,maxLevel:20,weights:[.35,.5,.15,0]},{minLevel:21,maxLevel:999,weights:[.1,.35,.35,.2]}],sourceRules:[{source:'starter',weights:[1,0,0,0]},{source:'boss',weights:[0,.3,.4,.3]}]},gems};
   }
   function validate(s){
     const fail=m=>{throw Error('技能系統：'+m);};
@@ -41,7 +42,7 @@
     for(const sk of s.definitions){
       const a=sk.adapter;
       if(!safe(sk.id)||ids.has(sk.id)||typeof sk.name!=='string'||!sk.name.trim()||sk.name.length>80||!types.includes(sk.type)||!Array.isArray(sk.jobs)||!sk.jobs.length||sk.jobs.some(j=>!integer(j,0,3))||!Array.isArray(sk.sources)||sk.sources.some(x=>!sources.includes(x.type))||typeof sk.disabled!=='undefined'&&typeof sk.disabled!=='boolean')fail('技能 ID、名稱、類型或來源無效：'+sk.id);
-      if(!a||!integer(a.job,0,3)||!integer(a.index,0,63)||!['core','support','passive'].includes(a.kind)||positions.has(`${a.job}:${a.kind}:${a.index}`))fail('技能引擎對照重複或無效：'+sk.id);
+      if(!a||!integer(a.job,0,3)||!integer(a.index,0,a.kind==='passive'?511:63)||!['core','support','passive'].includes(a.kind)||positions.has(`${a.job}:${a.kind}:${a.index}`))fail('技能引擎對照重複或無效：'+sk.id);
       if(sk.type==='support'&&a.kind!=='support'||['active','proc'].includes(sk.type)&&a.kind!=='core')fail('技能類型與引擎對照不符：'+sk.id);
       for(const key of ['power','cooldown','duration','requiredLevel','procBaseChance','baseCritRate','defenseIgnore'])if(sk[key]!==undefined&&!finite(sk[key],0,key.includes('Chance')||['baseCritRate','defenseIgnore'].includes(key)?1:1e9))fail('技能數值無效：'+sk.id+' '+key);
       if(sk.systemEffect!==undefined&&!['taunt','guard','slow','regen'].includes(sk.systemEffect))fail('未知特殊效果：'+sk.id);
@@ -56,6 +57,7 @@
       for(const stage of ['first','advanced'])for(const type of ['active','proc','support'])if(!integer(rule.slots?.[stage]?.[type],0,type==='active'?3:2))fail('職業槽位超出上限');
     }
     const e=s.equipment;if(!e||!Array.isArray(e.pool)||!Array.isArray(e.chanceByDifficulty)||e.chanceByDifficulty.length!==3||e.chanceByDifficulty.some(x=>!finite(x,0,1)))fail('裝備技能機率無效');
+    if(e.formRules!==undefined&&(!Array.isArray(e.formRules)||e.formRules.some(r=>!safe(r.formId)||r.skillId&&!ids.has(r.skillId)||r.skillChance!==undefined&&!finite(r.skillChance,0,1)||r.allowSkill!==undefined&&typeof r.allowSkill!=='boolean')))fail('固定裝備技能設定無效');
     for(const row of e.pool){const sk=ids.get(row.skillId);if(!sk||!sk.sources.some(x=>x.type==='equipment')||!Array.isArray(row.jobs)||row.jobs.some(x=>!integer(x,0,3))||!Array.isArray(row.slots)||row.slots.some(x=>!integer(x,0,3))||!integer(row.minLevel,1,999)||!integer(row.maxLevel,row.minLevel,999)||!finite(row.weight,0)||!['maps','monsters','bosses'].every(k=>Array.isArray(row[k]))||typeof row.allowShop!=='boolean'||typeof row.allowCraft!=='boolean')fail('裝備技能池引用或限制無效：'+row.skillId);}
     if(!Array.isArray(e.socketBands)||!e.socketBands.length||!Array.isArray(e.sourceRules))fail('鑲嵌孔分布無效');
     const weights=row=>Array.isArray(row.weights)&&row.weights.length===4&&row.weights.every(v=>finite(v,0,1))&&Math.abs(row.weights.reduce((a,v)=>a+v,0)-1)<1e-8;
@@ -70,7 +72,7 @@
     const s=validate(d.skillSystem);
     for(const sk of s.definitions){
       const {adapter,type,jobs,sources,disabled,...row}=copy(sk),{job,index,kind}=adapter;
-      if(kind==='passive')continue;
+      if(kind==='passive'){d.passiveDefinitions[index]=row;continue;}
       const list=kind==='core'?d.classes[job].skills:d.supportSkills[job];
       if(index>list.length)throw Error('技能引擎對照不可跳號：'+sk.id);
       if(kind==='core'){row.activation=type;row.requiredLevel??=1;row.requiresAdvanced=false;}
