@@ -2,7 +2,7 @@
    sale transaction and salvage reward plan. No generated-stat cache is persisted. */
 (()=>{
   const defaults=()=>({job:'all',slot:'all',quality:'all',tMin:'',tMax:'',levelMin:'',levelMax:'',locked:'all',worn:'all',stat:'',op:'gte',value:'',upper:''});
-  let filter=defaults(),sort='acquired',direction='desc',multi=false,advanced=false,selected=new Set(),review=null;
+  let filter=defaults(),sort='quality',direction='desc',multi=false,advanced=false,selected=new Set(),review=null;
   const T=()=>globalThis.__EMBERWILD_TEAM_EQUIPMENT;
   const fields=()=>globalThis.equipmentNumericFields();
   const numeric=(g)=>globalThis.equipmentAbilitySummary(g).numeric;
@@ -33,7 +33,8 @@
       const am=a.value===null||a.value===undefined,bm=b.value===null||b.value===undefined;
       if(am!==bm)return am?1:-1;
       const d=am?0:a.value-b.value;
-      return (d?(direction==='asc'?d:-d):0)||a.index-b.index||String(a.g.id).localeCompare(String(b.g.id));
+      const tierDiff=sort==='quality'?(Number.isInteger(b.g.powerTier)?b.g.powerTier:-1)-(Number.isInteger(a.g.powerTier)?a.g.powerTier:-1):0;
+      return (d?(direction==='asc'?d:-d):0)||tierDiff||a.index-b.index||String(a.g.id).localeCompare(String(b.g.id));
     });
     return result;
   }
@@ -56,7 +57,7 @@
     const all=[['all','全部']],fs=fields();
     return `<div class="gear-management-controls"><div class="gear-basic-filters">${choose('job','職業',[...all,...CLASSES.map((c,i)=>[i,c.name])])}${choose('slot','部位',[...all,...['武器','護甲','副手','飾品'].map((s,i)=>[i,s])])}${choose('quality','品質',[...all,...AFFIX_RANK.map((q,i)=>[i,q])])}${choose('locked','鎖定',[...all,['yes','已鎖定'],['no','未鎖定']])}${choose('worn','穿戴',[...all,['yes','已裝備'],['no','未裝備']])}${input('tMin','T 級下限')}${input('tMax','T 級上限')}${input('levelMin','等級下限')}${input('levelMax','等級上限')}<button onclick="clearGearInventoryFilters()">清除篩選</button></div>
       <details ${advanced?'open':''} ontoggle="setGearInventoryAdvanced(this.open)"><summary>屬性數值篩選</summary><p class="small">依裝備自身總值（含詞綴與強化），不含角色或隊伍能力。</p><div class="gear-numeric-filters">${choose('stat','屬性',[['','不限制'],...fs.map(f=>[f.key,f.label])])}${choose('op','比較',[['gt','大於'],['gte','大於等於'],['eq','等於'],['lte','小於等於'],['lt','小於'],['range','區間（含上下限）']])}${input('value','數值／下限')}${filter.op==='range'?input('upper','數值上限'):''}</div></details>
-      <div class="gear-sort-controls"><label>排序<select aria-label="裝備排序" onchange="setGearInventorySort(this.value)">${[['acquired','取得時間'],['level','裝備等級'],['tier','T 級'],['quality','品質'],...fs.map(f=>[f.key,f.label]),['price','出售價格']].map(([key,label])=>`<option value="${key}" ${sort===key?'selected':''}>${esc(label)}</option>`).join('')}</select></label><button onclick="toggleGearInventoryDirection()">${direction==='desc'?'高 → 低':'低 → 高'}</button><button onclick="toggleGearInventoryMulti()" aria-pressed="${multi}">${multi?'結束多選':'多選裝備'}</button></div></div>`;
+      <div class="gear-sort-controls"><label>排序<select aria-label="裝備排序" onchange="setGearInventorySort(this.value)">${[['acquired','取得時間'],['level','裝備等級'],['tier','T 級'],['quality','稀有度 → T 級'],...fs.map(f=>[f.key,f.label]),['price','出售價格']].map(([key,label])=>`<option value="${key}" ${sort===key?'selected':''}>${esc(label)}</option>`).join('')}</select></label><button onclick="toggleGearInventoryDirection()">${direction==='desc'?'高 → 低':'低 → 高'}</button><button onclick="toggleGearInventoryMulti()" aria-pressed="${multi}">${multi?'結束多選':'多選裝備'}</button></div></div>`;
   }
   globalThis.setGearInventoryAdvanced=value=>{advanced=!!value;};
   function item(row){
@@ -89,7 +90,7 @@
     const current=list.find(r=>r.g.id===inventorySelectedGearId)?.g;
     return `<section class="panel compact-inventory-panel gear-management-panel">${resourceLine()}${state.bag.length>=RULES.bagCapacity?'<p class="gear-overflow-note" role="status">背包已滿，掉落已保留；整理至容量以下後可繼續探索。</p>':''}${controls()}<div class="inventory-master-detail"><section class="inventory-master-pane"><div class="inventory-master-heading"><b>裝備列表</b><span>顯示 ${list.length} 件</span></div><div class="inline-equipment-list inventory-list-scroll">${list.map(item).join('')||'<p class="empty">沒有符合條件的裝備。</p>'}</div>${multi?`<div class="gear-batch-controls"><b>已選 ${selected.size} 件</b><button onclick="selectVisibleGear()">全選目前結果</button><button onclick="clearSelectedGear()">清除選取</button><button onclick="requestGearInventoryBatch('sell')" ${selected.size?'':'disabled'}>批次出售</button><button onclick="requestGearInventoryBatch('salvage')" ${selected.size?'':'disabled'}>批次分解</button></div>`:''}</section><section class="inventory-detail-wrap">${inventoryGearDetail(current)}</section></div></section>`;
   };
-  const reset=resetSession;resetSession=function(){const out=reset();filter=defaults();sort='acquired';direction='desc';multi=false;selected.clear();review=null;return out;};
+  const reset=resetSession;resetSession=function(){const out=reset();filter=defaults();sort='quality';direction='desc';multi=false;selected.clear();review=null;return out;};
   const validate=validateParty;validateParty=data=>validate(EmberwildGearInventory.prepareSave(data));
   function full(){return !!state&&state.bag.length>=RULES.bagCapacity;}
   function blocked(){if(!full())return false;running=false;toast('背包已滿，請先整理裝備再繼續探索');return true;}

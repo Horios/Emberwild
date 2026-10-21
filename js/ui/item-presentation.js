@@ -52,7 +52,7 @@
   function name(kind,key,g){return g?equipmentDisplayName(g):globalThis.__EMBERWILD_ITEM_NAME?.(kind,key,rawName(kind,key))||rawName(kind,key);}
   function icon(kind,key,g){
     let glyph=kind==='material'?(/牙|骨/.test(key)?'bone':/翼|羽/.test(key)?'feather':'package'):kind==='gem'?'gem':kind==='token'?'medal':kind==='equipment'?['sword','shirt','shield','gem'][g?.slot??Number(key.split(':')[2])??0]:'package';
-    const item=definition(kind,key);
+    const item=kind==='item'?definition(kind,key):null;
     if(kind==='equipment'&&g?.slot===0)glyph=({staff:'wand-sparkles',holyStaff:'wand-sparkles',bow:'bow-arrow',crossbow:'crosshair',axe:'axe',hammer:'hammer',grimoire:'book-open'}[g.weaponType]||glyph);
     if(kind==='item')glyph=key==='level_scroll'||key.startsWith('companion-ticket-')||item?.type==='timedBoost'?'ticket':['healPotion','imbue','ward','elementTonic'].includes(item?.type)?'flask-round':item?.type==='gearTierReroll'?'sparkles':glyph;
     if(kind==='material')glyph=({'鍛鐵':'anvil','粉塵':'sparkles','以太鍛鐵':'anvil','光輝碎塊':'sparkles','紅色草':'leaf','紅色草泥':'flask-conical','清水':'droplet','藥水瓶':'flask-round','小蟲':'bug'})[key]||glyph;

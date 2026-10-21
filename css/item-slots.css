@@ -14,7 +14,15 @@
 .item-slot-worn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
 .item-slot-empty{cursor:default;opacity:.4}
 .item-slot.selected,.item-slot:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.item-quality-1{border-color:#669e8a}.item-quality-2{border-color:#8e83b3}.item-quality-3{border-color:#b9a46b}
+.item-quality-0{--item-quality-color:var(--muted)}
+.item-quality-1{--item-quality-color:#669e8a}.item-quality-2{--item-quality-color:#64aaf0}.item-quality-3{--item-quality-color:#b9a46b}
+:root[data-ui-theme="paper"] .item-quality-1{--item-quality-color:var(--positive)}
+:root[data-ui-theme="paper"] .item-quality-2{--item-quality-color:var(--info)}
+:root[data-ui-theme="paper"] .item-quality-3{--item-quality-color:var(--gold)}
+/* Keep the quality border on selection, hover and every theme. */
+:root .item-slot[class*="item-quality-"],:root .tag[class*="item-quality-"]{border-color:var(--item-quality-color)}
+:root .tag[class*="item-quality-"]{color:var(--item-quality-color)}
+.item-slot.selected{outline-color:var(--item-quality-color,var(--gold));box-shadow:inset 3px 0 var(--item-quality-color,var(--gold))}
 
 :root[data-item-display="name"] .item-slot-art,
 :root[data-item-display="name"] .inventory-item-icon,
