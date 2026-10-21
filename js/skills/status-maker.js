@@ -282,7 +282,6 @@ castPartySkill=function(h,i,v){
   const sk=CLASSES[h.job]?.skills?.[i],meta=sk?.[6];if(!sk||sk[5]!=='applyStatus')return statusCastBase(h,i,v);
   const def=statusById(meta?.statusId);if(!def||!statusAllowedTargetsForDefinition(def).includes(meta?.statusTarget||'enemy'))return false;const targets=statusTargetsForSkill(h,meta);if(!targets.length)return false;
   let success=false;for(const target of targets)success=applyCustomStatus(def,h,target)||success;
-  if(success&&h.sockets?.[i]===2&&sk[1]==='active'){const pv=v||battleStats(h),before=h.hp;h.hp=Math.min(pv.hp,h.hp+Math.round(healingAmount(h,pv.atk*GS('skills.gems.hybridActiveHealAttack',.10))));const recovered=Math.max(0,h.hp-before);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);}
   const mastery=globalThis.__EMBERWILD_MASTERY;
   if(success&&meta?.mastery&&mastery?.gainMastery)mastery.gainMastery(h,meta.mastery,mastery.masterySettings().skillUseXp);
   return success;

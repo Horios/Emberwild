@@ -37,11 +37,6 @@
     if(source.effect===api.EFFECT){
       if(inducedDepth||!api.tagged(source)||!h.skills?.[i]||h.hp<=0||!coreSkillAvailableToHero(h.job,i,h)||globalThis.__EMBERWILD_MASTERY?.coreMissingRequirements(h,i,true).length)return false;
       const count=induceHero(h,i);
-      if(source.activation==='active'&&h.sockets?.[i]===2){
-        const pv=v||battleStats(h),before=h.hp;
-        h.hp=Math.min(pv.hp,h.hp+Math.round(healingAmount(h,pv.atk*GS('skills.gems.hybridActiveHealAttack',.10))));
-        if(h.hp>before&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',h.hp-before);
-      }
       // A valid induction action consumes its normal turn/cooldown even when probability misses.
       if(source.mastery)globalThis.__EMBERWILD_MASTERY?.gainMastery(h,source.mastery,globalThis.__EMBERWILD_MASTERY.masterySettings().skillUseXp);
       note(characterName(h)+'・'+CLASSES[h.job].skills[i][0]+' [誘發]：成功 '+count+' 個技能');

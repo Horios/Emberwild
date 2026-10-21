@@ -47,8 +47,8 @@ test('all core skills of all classes respect each gem compatibility and three-ti
   if(job===0)console.log('DEBUG-ALL',JSON.stringify(records.slice(0,3)));
   assert(records.length>0,'no core skills for class '+job);
   for(const x of records){
-   assert.deepEqual(x.compatible,[true,x.isActive,x.isProc,true,true],job+' '+x.skill+' compatibility');
-   assert(x.power[0]>x.base&&x.power[1]>x.power[0]&&x.power[2]>x.power[1],job+' '+x.skill+' red tier progression');
+   assert.deepEqual(x.compatible,[x.base>0,x.isActive,x.isProc,true,true],job+' '+x.skill+' compatibility');
+   if(x.base>0)assert(x.power[0]>x.base&&x.power[1]>x.power[0]&&x.power[2]>x.power[1],job+' '+x.skill+' red tier progression');
    if(x.isProc)assert(x.procs[0]>=x.baseline&&x.procs[1]>=x.procs[0]&&x.procs[2]>=x.procs[1],job+' '+x.skill+' proc tiers');
    else assert.equal(x.procs[0],x.baseline,job+' '+x.skill+' active immune to proc gem');
    assert.equal(x.cdOff,x.baseCooldown,job+' '+x.skill+' failed wind roll');

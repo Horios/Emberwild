@@ -88,7 +88,7 @@
     const tracker=status();tracker?.beginSkillCast?.(h,i);let ok=false;
     try{
       const power=skillPower(i,h)*(1+effectTotal(heroKey(h),'power'));ok=cast(h,sk,options(meta),v,power,skillCombatProfile(h,i,v));
-      if(ok)applyGemAfterSkill(h,i,v);
+      
       const mastery=globalThis.__EMBERWILD_MASTERY;if(ok&&meta.mastery&&mastery?.gainMastery)mastery.gainMastery(h,meta.mastery,mastery.masterySettings().skillUseXp);
       return ok;
     }finally{tracker?.endSkillCast?.(h,i,ok);}

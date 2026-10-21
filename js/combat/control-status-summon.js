@@ -232,10 +232,6 @@
       const trapMeta={...meta,controlId:sk[6]?.controlId,powerMultiplier:Math.max(0,skillPower(i,h))};
       success=summonTrap(h,effect,trapMeta);
     }
-    if(success&&h.sockets?.[i]===2&&sk[1]==='active'){
-      const before=h.hp;h.hp=Math.min(profileV.hp,h.hp+Math.round(healingAmount(h,profileV.atk*GS('skills.gems.hybridActiveHealAttack',.10))));
-      const recovered=Math.max(0,h.hp-before);if(recovered>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'healing',recovered);
-    }
     const mastery=globalThis.__EMBERWILD_MASTERY;
     if(success&&sk[6]?.mastery&&mastery?.gainMastery)mastery.gainMastery(h,sk[6].mastery,mastery.masterySettings().skillUseXp);
     return success;
