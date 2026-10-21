@@ -113,9 +113,11 @@
       "shopSettings.fixedOffers.entries": "固定商品池：上架項目、數量、單價與顯示說明。",
       "items[].bonusPercent": "各限時來源的加算百分比，經驗與掉寶各自先相加。",
       "items[].durationMinutes": "抗性／屬性增幅與限時增益的現實分鐘；元素藥水可輸入小數，不使用 duration 的戰鬥回合。",
-      "combat.pacing.rates": "固定 1/2；2× 需要有效解鎖效果。"
+      "combat.pacing.rates": "固定 1/2；2× 需要有效解鎖效果。",
+      "balanceSettings.progression.xpLevelGap": "主角與怪物等級差經驗懲罰：超過免費等級差後線性遞減，所有怪物適用。",
+      "balanceSettings.equipment.dropLevelGap": "一般／菁英怪的一般裝備受低等地圖掉率懲罰，素材和 BOSS 不受影響。"
     },
-    "dropAlgorithm": "掉落率 = 基礎機率 × (1 + 全隊裝備加成 + 各有效限時來源加成)，封頂 100%；首殺保底不變。",
+    "dropAlgorithm": "一般裝備掉率=基礎率×低等地圖衰減×(1+全隊掉寶率加成)，至多100%；超過怪物 maxDrops 則隨機保留。",
     "legacySettings": {
       "balanceSettings.difficulty.modes[].equipmentChance": {
         "status": "deprecated",
@@ -8145,7 +8147,16 @@
         "defenseMultiplier": 1.12
       },
       "regionTierLevels": 5,
-      "mapAheadAllowance": 5
+      "mapAheadAllowance": 5,
+      "xpLevelGap": {
+        "enabled": true,
+        "freeLevels": 5,
+        "midGap": 10,
+        "midMultiplier": 0.5,
+        "highGap": 15,
+        "highMultiplier": 0.1,
+        "minimumMultiplier": 0.05
+      }
     },
     "skills": {
       "core": {},
@@ -20289,9 +20300,9 @@
             "normal"
           ],
           "chanceByDifficulty": [
-            0.0024,
-            0.003,
-            0.0036
+            0.018,
+            0.024,
+            0.03
           ],
           "quantityMin": 1,
           "quantityMax": 1,
@@ -20392,9 +20403,9 @@
             "elite"
           ],
           "chanceByDifficulty": [
-            0.0072,
-            0.009,
-            0.0108
+            0.036,
+            0.048,
+            0.06
           ],
           "quantityMin": 1,
           "quantityMax": 1,
@@ -21159,9 +21170,9 @@
             "normal"
           ],
           "chanceByDifficulty": [
-            1.64e-05,
-            3.16e-05,
-            5.24e-05
+            0.0000164,
+            0.0000316,
+            0.0000524
           ],
           "quantityMin": 1,
           "quantityMax": 1,
@@ -21262,9 +21273,9 @@
             "elite"
           ],
           "chanceByDifficulty": [
-            1.96e-05,
-            4.8e-05,
-            9.1e-05
+            0.0000196,
+            0.000048,
+            0.000091
           ],
           "quantityMin": 1,
           "quantityMax": 1,
