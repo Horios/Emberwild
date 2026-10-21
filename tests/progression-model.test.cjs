@@ -24,6 +24,21 @@ test('Actual three-person XP share keeps the final level below thirty ordinary e
   let previous=0;for(let l=1;l<60;l++){const fights=curve.requiredXp(s,l)/curve.xpShare(curve.enemyXp(s,l),3)/4.5;assert(fights>=previous);previous=fights;}
   assert(curve.enemyXp(s,59,'boss')>curve.enemyXp(s,59,'elite')&&curve.enemyXp(s,59,'elite')>curve.enemyXp(s,59));
 });
+test('Low-level foes lose EXP before party sharing, with full rewards on equal or stronger foes',()=>{
+  const s=settings(),rate=curve.xpLevelGapFactor;
+  for(const [gap,expected] of [[0,1],[5,1],[6,.9],[10,.5],[11,.42],[15,.1],[16,.05],[25,.05]]){
+    assert(Math.abs(rate(s,10+gap,10)-expected)<1e-10,'gap '+gap);
+  }
+  assert.equal(rate(s,8,10),1);
+  assert.equal(curve.enemyXp(s,10),108);
+  assert.equal(curve.enemyXp(s,10,'normal',0,20),54);
+  assert.equal(curve.enemyXp(s,10,'normal',0,26),5);
+  assert.equal(curve.xpShare(curve.enemyXp(s,10,'normal',0,26),3),2);
+  assert.equal(curve.enemyXp(s,10,'elite',1,20),Math.round(108*2.2*1.45*.5));
+  assert.equal(curve.enemyXp(s,10,'boss',0,26),54);
+  s.progression.xpLevelGap.enabled=false;
+  assert.equal(curve.enemyXp(s,10,'normal',0,26),108);
+});
 test('Direct equipment stats and each displayed contribution are integral and monotonic',()=>{
   for(const raw of [{atk:3,hp:0,def:0},{atk:0,hp:8,def:2},{atk:1,hp:3,def:0},{atk:36,hp:0,def:0}]){
     let previous;for(const power of curve.defaults.powerMultipliers){const out=curve.gearStats(raw,{atk:15},power,0,.05);
