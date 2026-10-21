@@ -31422,8 +31422,8 @@
     "groups": [
       {
         "id": "missions",
-        "label": "主要任務",
-        "expanded": true,
+        "label": "主線",
+        "expanded": false,
         "pages": [
           {
             "id": "story-main",
@@ -31445,7 +31445,7 @@
       },
       {
         "id": "adventure",
-        "label": "探索與冒險",
+        "label": "探索",
         "expanded": true,
         "pages": [
           {
@@ -31457,20 +31457,9 @@
             "label": "戰鬥統計"
           },
           {
-            "id": "shop",
-            "label": "商店"
-          },
-          {
             "id": "guide",
             "label": "冒險指南"
-          }
-        ]
-      },
-      {
-        "id": "party",
-        "label": "角色與隊伍",
-        "expanded": true,
-        "pages": [
+          },
           {
             "id": "roster",
             "label": "隊伍編成"
@@ -31491,7 +31480,7 @@
       },
       {
         "id": "equipment",
-        "label": "裝備與製作",
+        "label": "背包",
         "expanded": false,
         "pages": [
           {
@@ -31513,9 +31502,20 @@
         ]
       },
       {
+        "id": "shop",
+        "label": "商店",
+        "expanded": false,
+        "pages": [
+          {
+            "id": "shop",
+            "label": "商品列表"
+          }
+        ]
+      },
+      {
         "id": "life",
-        "label": "生活技能",
-        "expanded": true,
+        "label": "生活",
+        "expanded": false,
         "pages": [
           {
             "id": "gather",
