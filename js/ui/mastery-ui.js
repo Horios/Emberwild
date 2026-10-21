@@ -257,8 +257,15 @@ characterView=function(){
 const masteryGuideBase=guideView;
 guideView=function(){
   let html=masteryGuideBase();
-  html=html.replace(/每級獲得\s*([\d.]+)\s*能力點[、，]\s*[\d.]+\s*技能點/g,'每級獲得 $1 能力點').replace(/每級增加[^。<]*。/g,'').replace(/技能上限[^。<]*。/g,'').replace(/每級消耗 1 技能點[^。<]*。/g,'').replace(/技能點/g,'');
-  return `<section class="panel"><h2>角色成長與精通</h2><p>角色升級改為較慢的重大階段；技能學會即完整，不再升技能等級。戰士／弓箭手靠對應武器普攻與技能培養武器精通；法師／牧師依實際施放技能的魔法體系培養元素／光暗精通。精通主要用於解鎖技能與二轉條件。</p></section>`+html;
+  html=html.replace(/每級獲得\s*([\d.]+)\s*能力點[、，]\s*[\d.]+\s*技能點/g,'每級獲得 $1 能力點')
+    .replace(/每級增加[^。<]*。/g,'')
+    .replace(/技能上限[^。<]*。/g,'')
+    .replace(/每級消耗 1 技能點[^。<]*。/g,'')
+    .replace(/技能點/g,'')
+    .replace('每 5 級前往新區域','逐步前往適合等級的新區域')
+    .replace('核心技能 5 級','符合技能學習條件的精通')
+    .replace('只保存成長進度，不保存戰鬥中敵人；續玩從整備狀態開始。關閉頁面不會離線戰鬥。','探索中的離線時間會依實際經過時間補算戰鬥與收益，返回遊戲時完成結算。');
+  return `<section class="panel"><h2>角色成長與精通</h2><p>角色升級是重要的成長里程碑，可獲得能力點並逐步開放新挑戰。技能習得後就具備完整效果。戰士與弓箭手透過對應武器的普攻與技能累積武器精通；法師與牧師依實際施放技能的體系累積元素或光暗精通。精通等級是部分技能與二轉的解鎖條件。</p></section>`+html;
 };
 if(state){save();render();}
 })();
