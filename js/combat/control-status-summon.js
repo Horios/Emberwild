@@ -157,8 +157,9 @@
     if(e.__controlSkip){note(combatEnemyName(e)+' 因'+e.__controlSkip+'無法行動。');return;}
     e.turn=(e.turn||0)+1;
     const s=stateFor(e.id,false),rage=s?.rage;
-    let target=null;
-    if(rage&&Number.isInteger(rage.tauntHeroJob))target=living().find(h=>memberKey(h)===rage.tauntHeroJob)||null;
+    const taunt=effects.find(x=>x.kind==='skillTaunt'&&x.target===e.id&&x.until>partyClock);
+    let target=taunt?living().find(h=>memberKey(h)===taunt.source)||null:null;
+    if(!target&&rage&&Number.isInteger(rage.tauntHeroJob))target=living().find(h=>memberKey(h)===rage.tauntHeroJob)||null;
     if(!target){
       const candidates=[...living(),...combatSummons.filter(x=>x.hp>0)];
       if(!candidates.length)return;

@@ -3,10 +3,11 @@
 (()=>{
  'use strict';
  const M=EmberwildSkillSystem,S=__EMBERWILD_SKILLS,copy=M.copy,cache=new WeakMap();
- let creatingSource=null,creatingPreview=false;
+ let creatingSource=null,creatingPreview=false,creatingContext=null;
+ const pending=new WeakSet();
  const owner=()=>party?.members[0],rules=()=>S.system();
  function compatible(id,sk,slot){const g=rules().gems.find(g=>g.kind===id%5);return !!g&&!!sk&&g.skill.types.includes(sk.type)&&(!g.skill.effects.length||g.skill.effects.includes(sk.effect||sk.kind))&&g.skill.slots.includes(slot);}
- function mode(h,g,n){if(g.id!==h.activeSkillEquipmentId||!g.skillId||n===0&&g.skillSockets.firstMode==='base')return 'base';const id=g.skillSockets.gems[n];return id!==null&&compatible(id,S.byId(g.skillId),n)?'skill':'base';}
+ function mode(h,g,n){if(g.id!==h?.activeSkillEquipmentId||!g.skillId||n===0&&g.skillSockets.firstMode==='base')return 'base';const id=g.skillSockets.gems[n];return id!==null&&compatible(id,S.byId(g.skillId),n)?'skill':'base';}
  function refresh(h){
   const base={},ratios={},skills=new Map();
   for(const g of equipment(h)){
@@ -20,22 +21,33 @@
   const result={base,ratios,skills};cache.set(h,result);return result;
  }
  const effectsFor=h=>cache.get(h)||refresh(h);
+ const summaryBase=equipmentAbilitySummary;globalThis.equipmentAbilitySummary=function(g){
+  const out=summaryBase(g),h=owner();
+  for(const [n,id] of (g.skillSockets?.gems||[]).entries()){
+   if(id===null)continue;const d=rules().gems.find(x=>x.kind===id%5),tier=Math.floor(id/5),use=mode(h,g,n);
+   if(use==='base'){const ratio=d.base.unit==='ratio',key=ratio&&d.base.stat!=='crit'?({atk:'attackPct',hp:'hpPct',def:'defensePct'}[d.base.stat]||d.base.stat):d.base.stat,v=d.base.values[tier]*(ratio?100:1);out.numeric[key]=(out.numeric[key]||0)+v;out.values.push(GEMS[id].name+'：'+({atk:'攻擊',hp:'生命',def:'防禦',crit:'暴擊率',speed:'速度'}[d.base.stat]||d.base.stat)+' +'+v+(ratio?'%':''));}
+   else{const key='gemSkill:'+g.skillId+':'+d.skill.key,v=d.skill.values[tier];out.numeric[key]=(out.numeric[key]||0)+v;out.values.push(GEMS[id].name+'：'+S.byId(g.skillId).name+' '+({effect:'效果',cooldown:'冷卻縮短機率',procChance:'觸發率',heal:'治療',shield:'護盾'}[d.skill.key]||d.skill.key)+' +'+Number((v*100).toFixed(2))+'%');}
+  }
+  return out;
+ };
  function skillRate(h,id,key){return effectsFor(h).skills.get(id)?.[key]||0;}
  function pool(g,source,ctx){const lv=gearRequiredLevel(g);return rules().equipment.pool.filter(r=>!S.byId(r.skillId)?.disabled&&r.jobs.includes(g.job)&&r.slots.includes(g.slot)&&lv>=r.minLevel&&lv<=r.maxLevel&&(source!=='shop'||r.allowShop)&&(source!=='craft'||r.allowCraft)&&(!r.maps.length||r.maps.includes(ctx.map))&&(!r.monsters.length||r.monsters.includes(ctx.monster))&&(!r.bosses.length||r.bosses.includes(g.boss))&&r.weight>0);}
- function generate(g,{source=creatingSource||'drop',preview=creatingPreview,context={},force=false}={}){
+ function generate(g,{source=creatingSource||'drop',preview=creatingPreview,context=creatingContext||{},force=false}={}){
   if(!g||EmberwildTokens.isToken(g))return g;
   if(force){delete g.skillSockets;delete g.skillId;}
   if(g.skillSockets)return g;
   M.gear(g,{source,system:rules(),random:preview?()=>0:Math.random});
-  const original=typeof itemForm==='function'?itemForm(g):null,form={...original,...rules().equipment.formRules?.find(r=>r.formId===original?.id)},fixed=form?.skillId;
+  const original=typeof itemForm==='function'?itemForm(g):null,formId=original?.id||`job${g.formJob??g.job}-slot${g.slot}-form${g.form??0}`,form={...original,...rules().equipment.formRules?.find(r=>r.formId===formId)},fixed=form?.skillId;
   if(fixed&&S.byId(fixed))g.skillId=fixed;
-  else if(!preview&&form?.allowSkill!==false&&Math.random()<(form?.skillChance??rules().equipment.chanceByDifficulty[g.difficulty||0])){
+  else if(!preview&&source!=='starter'&&form?.allowSkill!==false&&Math.random()<(form?.skillChance??rules().equipment.chanceByDifficulty[context.difficulty??g.difficulty??0])){
    const rows=pool(g,source,{map:g.region??party?.map,monster:context.monster??enemy?.monsterId,...context}),sum=rows.reduce((a,x)=>a+x.weight,0);let n=Math.random()*sum;
    for(const row of rows)if((n-=row.weight)<0){g.skillId=row.skillId;break;}
   }
   return g;
  }
- const baseGear=gear;gear=function(...args){const g=baseGear(...args);return generate(g);};
+ const baseGear=gear;gear=function(...args){const g=baseGear(...args);if(creatingContext){pending.add(g);return g;}return generate(g);};
+ const grantBase=grantConfiguredDrop;grantConfiguredDrop=function(rule,e,...args){const before=creatingContext;creatingContext={map:e.region??party?.map,monster:e.monsterId,difficulty:e.difficulty??0};try{return grantBase(rule,e,...args);}finally{creatingContext=before;}};
+ const addBase=addGear;addGear=function(g,...args){if(pending.has(g)){pending.delete(g);generate(g);}return addBase(g,...args);};
  const baseBoss=bossGear;bossGear=function(...args){return generate(baseBoss(...args),{source:creatingSource||'boss',force:true});};
  const shopBase=createEquipmentShopGear;globalThis.createEquipmentShopGear=function(a,b,opts={}){const old=creatingSource,prev=creatingPreview;creatingSource='shop';creatingPreview=!!opts.preview;try{return generate(shopBase(a,b,opts),{source:'shop',preview:!!opts.preview,force:true});}finally{creatingSource=old;creatingPreview=prev;}};
  const craftBase=craftBoss;craftBoss=function(...args){const old=creatingSource;creatingSource='craft';try{return craftBase(...args);}finally{creatingSource=old;}};

@@ -15,7 +15,7 @@
       (d.supportSkills[job]||[]).forEach((sk,index)=>definitions.push({...copy(sk),id:sk.id||`job${job}-support${index}`,type:'support',jobs:[job],adapter:{job,index,kind:'support'},sources:[{type:sk.partnerId!=null?'companion':index>=2?'advanced':index===0?'quest':'equipment',...(sk.partnerId!=null?{companionId:sk.partnerId}:{})}]}));
     });
     for(const [index,sk] of (d.passiveDefinitions||[]).entries()){const j=d.companions.find(p=>p.id===sk.partnerId)?.job??0;definitions.push({...copy(sk),id:sk.id,type:'passive',jobs:sk.partnerId!=null?[j]:[0,1,2,3],adapter:{job:j,index,kind:'passive'},sources:[{type:sk.partnerId!=null?'companion':'quest',...(sk.partnerId!=null?{companionId:sk.partnerId}:{})}]});}
-    const classRules=d.classes.map((_,job)=>({job,initial:[],advanced:[],slots:{first:{active:3,proc:1,support:1},advanced:{active:3,proc:2,support:2}}}));
+    const classRules=d.classes.map((_,job)=>({job,description:['堅守前線，以嘲諷與減傷保護隊伍。','以群體魔法清理敵群，兼具控制能力。','專注單體射擊，以連射與狙擊擊倒目標。','以聖光攻擊，透過治療與持續恢復支援隊伍。'][job],initial:[],advanced:[],slots:{first:{active:3,proc:1,support:1},advanced:{active:3,proc:2,support:2}}}));
     const names=[['嘲諷','減傷','重擊'],['魔爆','變形','火球'],['連射','狙擊','繩索陷阱'],['聖光','治療','癒合']];
     const descriptions=[['使敵人優先攻擊自己。','降低自身承受的傷害。','對單一敵人造成強力傷害。'],['以魔力爆發攻擊敵方群體。','使單一敵人變形，暫時無法行動；首領免疫。','以高倍率火球攻擊敵方群體，冷卻較長。'],['連續射擊同一敵人，穩定造成傷害。','瞄準單一敵人，造成高倍率爆發傷害。','布設繩索陷阱，降低敵方行動速度。'],['以聖光對單一敵人造成傷害。','恢復生命比例最低的一名存活隊友。','使全隊持續恢復生命。']];
     const templates=[
@@ -70,12 +70,16 @@
   }
   function project(d){
     const s=validate(d.skillSystem);
+    const maps=d.balanceSettings?.maps?.catalog,monsters=d.balanceSettings?.monsters?.catalog,forms=new Set();
+    for(const [job,slots] of (d.equipmentForms||[]).entries())for(const [slot,rows] of slots.entries())for(const [i,row] of rows.entries())forms.add(row.id||`job${job}-slot${slot}-form${i}`);
+    for(const row of s.equipment.pool)if(maps&&row.maps.some(i=>!integer(i,0,maps.length-1))||monsters&&row.monsters.some(id=>!monsters.some(m=>m.id===id))||maps&&row.bosses.some(i=>!integer(i,0,maps.length-1)))throw Error('技能系統：裝備技能池來源引用不存在：'+row.skillId);
+    for(const row of s.equipment.formRules||[])if(forms.size&&!forms.has(row.formId))throw Error('技能系統：固定裝備引用不存在：'+row.formId);
     for(const sk of s.definitions){
       const {adapter,type,jobs,sources,disabled,...row}=copy(sk),{job,index,kind}=adapter;
       if(kind==='passive'){d.passiveDefinitions[index]=row;continue;}
       const list=kind==='core'?d.classes[job].skills:d.supportSkills[job];
       if(index>list.length)throw Error('技能引擎對照不可跳號：'+sk.id);
-      if(kind==='core'){row.activation=type;row.requiredLevel??=1;row.requiresAdvanced=false;}
+      if(kind==='core'){row.activation=type;row.requiredLevel??=1;row.requiresAdvanced=false;row.powerPerLevel??=0;if(type==='proc'){row.procChancePerLevel??=0;row.procBaseChance??=.245;}}
       else row.level??=1;
       list[index]=row;
     }
