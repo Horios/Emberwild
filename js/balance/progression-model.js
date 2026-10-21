@@ -161,7 +161,9 @@
         "offhandHpPerTier": 3
       },
       "enhance": {
-        "statPerLevel": 0.05
+        "statPerLevel": 0.05,
+        "flatStatsPerLevel": {"atk": 0.5, "hp": 1, "def": 0.2},
+        "flatStatsPerEquipmentLevel": {"atk": 0.02, "hp": 0.08, "def": 0.015}
       }
     },
     "monsters": {
@@ -322,14 +324,23 @@
     return Math.max(1,Math.round(base*xpLevelGapFactor(settings,playerLevel,level)));
   }
   function xpShare(xp,count){return Math.max(1,Math.round(xp/Math.max(1,count)));}
-  function gearStats(raw,effects,power,plus,enhancePerLevel){
+  // Refinement adds fixed stats based only on the item's required level. T grade
+  // applies to the base first; it never multiplies these refinement gains.
+  function enhancedGearStats(base,plus,equipmentLevel,flat=defaults.settings.equipment.enhance.flatStatsPerLevel,growth=defaults.settings.equipment.enhance.flatStatsPerEquipmentLevel){
+    const levels=Math.max(0,Number(plus)||0),itemLevels=Math.max(0,(Number(equipmentLevel)||1)-1);
+    return Object.fromEntries(['hp','atk','def'].map(k=>{
+      const value=Math.max(0,Number(base[k])||0),gain=(Number(flat[k])||0)+itemLevels*(Number(growth[k])||0);
+      return [k,value>0?value+Math.round(levels*gain):0];
+    }));
+  }
+  function gearStats(raw,effects,power,plus,equipmentLevel=1,flat,growth){
     const rounded=v=>Object.fromEntries(['hp','atk','def'].map(k=>[k,Math.max(0,Math.round(v[k]||0))]));
     const body=rounded({hp:raw.hp*(1+(effects.hp||0)/100),atk:raw.atk*(1+(effects.atk||0)/100),def:raw.def*(1+(effects.def||0)/100)});
     const graded=rounded(Object.fromEntries(['hp','atk','def'].map(k=>[k,body[k]*power])));
-    const total=rounded(Object.fromEntries(['hp','atk','def'].map(k=>[k,graded[k]*(1+plus*enhancePerLevel)])));
+    const total=enhancedGearStats(graded,plus,equipmentLevel,flat,growth);
     const grade=Object.fromEntries(['hp','atk','def'].map(k=>[k,graded[k]-body[k]])),enhance=Object.fromEntries(['hp','atk','def'].map(k=>[k,total[k]-graded[k]]));
     return {raw:rounded(raw),body,grade,enhance,total};
   }
   function validSteps(steps){return Array.isArray(steps)&&steps.length<=12&&steps.every(s=>s&&Number.isInteger(s.every)&&s.every>=1&&s.every<=60&&['hp','atk','def'].every(k=>Number.isSafeInteger(s[k])&&s[k]>=0));}
-  return {defaults,applyDefaults,applyClassDefaults,naturalStats,encounterLevelLead,baseMonsterStats,scaleMonsterStats,monsterStats,requiredXp,enemyXp,xpLevelGapFactor,xpShare,gearStats,validSteps};
+  return {defaults,applyDefaults,applyClassDefaults,naturalStats,encounterLevelLead,baseMonsterStats,scaleMonsterStats,monsterStats,requiredXp,enemyXp,xpLevelGapFactor,xpShare,gearStats,enhancedGearStats,validSteps};
 });

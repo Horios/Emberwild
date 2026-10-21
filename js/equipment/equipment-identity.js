@@ -355,8 +355,8 @@
     if(g.boss!==undefined)return (bossProfileForGear(g)?.effects||[]).map(e=>{
       const key={gearAtkPct:'atk',gearHpPct:'hp',gearDefPct:'def'}[e.key];
       // New BOSS bases reference the matching standard shop form. Their exclusive
-      // percent effects are affixes applied once, outside that immutable base.
-      if(g.baseRuleVersion===1&&key)return {key:{atk:'flatAttack',hp:'flatHp',def:'flatDefense'}[key],value:Math.round((g.baseSnapshot?.base[key]||0)*(1+(g.plus||0)*GS('equipment.enhance.statPerLevel',.05))*e.value/100),ruleEffect:e,source:'boss'};
+      // percent effects apply once to that base, never to fixed refinement gains.
+      if(g.baseRuleVersion===1&&key)return {key:{atk:'flatAttack',hp:'flatHp',def:'flatDefense'}[key],value:Math.round((g.baseSnapshot?.base[key]||0)*e.value/100),ruleEffect:e,source:'boss'};
       return {...e,source:'boss'};
     });
     const out=baseEffectEntries(g),p=prefixById(g.prefixId),s=suffixById(g.suffixId);
@@ -416,6 +416,10 @@
     const effects=identityEffectEntriesForGear(g);
     return effects.filter(e=>e.key===key).reduce((n,e)=>n+(Number(e.value)||0),0);
   }
+  function enhancedBaseStats(g,base){
+    const defaults=EmberwildProgression.defaults.settings.equipment.enhance;
+    return EmberwildProgression.enhancedGearStats(base,g.plus||0,gearRequiredLevel(g),GS('equipment.enhance.flatStatsPerLevel',defaults.flatStatsPerLevel),GS('equipment.enhance.flatStatsPerEquipmentLevel',defaults.flatStatsPerEquipmentLevel));
+  }
   function gearStatBreakdown(g){
     if(EmberwildTokens.isToken(g)){const zero={atk:0,hp:0,def:0};return {raw:{...zero},body:{...zero},grade:{...zero},enhance:{...zero},total:{...zero},mult:g.qualityMultipliers[g.rar],powerTier:1,prefix:null,suffix:null,bossProfile:null};}
     ensureGearIdentityMeta(g);
@@ -424,10 +428,10 @@
     // Persist the generated base, before enhancement and random affixes. Changing
     // published T rules or rerolling affixes must never rewrite an owned base.
     let integers;
-    if(g.starterPack){integers=EmberwildProgression.gearStats(raw,{atk:baseStatPct(g,'gearAtkPct'),hp:baseStatPct(g,'gearHpPct'),def:baseStatPct(g,'gearDefPct')},mult,g.plus||0,GS('equipment.enhance.statPerLevel',.05));}
+    if(g.starterPack){integers=EmberwildProgression.gearStats(raw,{atk:baseStatPct(g,'gearAtkPct'),hp:baseStatPct(g,'gearHpPct'),def:baseStatPct(g,'gearDefPct')},mult,0);const total=enhancedBaseStats(g,integers.total);integers.enhance=Object.fromEntries(['hp','atk','def'].map(k=>[k,total[k]-integers.total[k]]));integers.total=total;}
     else{
-      if(!g.baseSnapshot){const b=EmberwildProgression.gearStats(raw,{atk:baseStatPct(g,'gearAtkPct'),hp:baseStatPct(g,'gearHpPct'),def:baseStatPct(g,'gearDefPct')},mult,0,0);g.baseSnapshot={version:1,raw:b.raw,body:b.body,base:b.total,mult};}
-      const b=g.baseSnapshot,total=Object.fromEntries(['hp','atk','def'].map(k=>[k,Math.round(b.base[k]*(1+(g.plus||0)*GS('equipment.enhance.statPerLevel',.05)))]));
+      if(!g.baseSnapshot){const b=EmberwildProgression.gearStats(raw,{atk:baseStatPct(g,'gearAtkPct'),hp:baseStatPct(g,'gearHpPct'),def:baseStatPct(g,'gearDefPct')},mult,0);g.baseSnapshot={version:1,raw:b.raw,body:b.body,base:b.total,mult};}
+      const b=g.baseSnapshot,total=enhancedBaseStats(g,b.base);
       integers={raw:{...b.raw},body:{...b.body},grade:Object.fromEntries(['hp','atk','def'].map(k=>[k,b.base[k]-b.body[k]])),enhance:Object.fromEntries(['hp','atk','def'].map(k=>[k,total[k]-b.base[k]])),total};
     }
     return {...integers,mult,powerTier:g.powerTier||1,prefix:prefixById(g.prefixId),suffix:suffixById(g.suffixId),bossProfile:bossProfileForGear(g)};

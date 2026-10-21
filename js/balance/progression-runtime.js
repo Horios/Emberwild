@@ -27,6 +27,7 @@
     const out=validateBase(cfg),x=out.rewards.xp.kindMultiplier;
     if(!x||['normal','elite','boss'].some(k=>!Number.isFinite(x[k])||x[k]<=0))throw Error('EXP 遭遇倍率必須大於 0');
     if(out.difficulty.modes.some(d=>!Number.isFinite(d.xpMultiplier)||d.xpMultiplier<=0))throw Error('難度 EXP 倍率必須大於 0');
+    for(const field of ['flatStatsPerLevel','flatStatsPerEquipmentLevel'])if(['atk','hp','def'].some(k=>!Number.isFinite(out.equipment.enhance[field]?.[k])||out.equipment.enhance[field][k]<0))throw Error('裝備精煉成長必須為非負有限數值');
     const p=out.progression.xpLevelGap;
     if(!p||typeof p.enabled!=='boolean'||!Number.isInteger(p.freeLevels)||p.freeLevels<0||!Number.isInteger(p.midGap)||p.midGap<=p.freeLevels||!Number.isInteger(p.highGap)||p.highGap<=p.midGap||![p.midMultiplier,p.highMultiplier,p.minimumMultiplier].every(v=>Number.isFinite(v)&&v>0&&v<=1)||p.highMultiplier>p.midMultiplier||p.minimumMultiplier>p.highMultiplier)throw Error('經驗等級差懲罰設定無效');
     const interval=out.monsters.encounter.levelLeadInterval;
@@ -38,6 +39,8 @@
   balanceReference=function(){
     const out=referenceBase();out.balancePaths??={};out.legacySettings??={};
     Object.assign(out.balancePaths,{
+      'balanceSettings.equipment.enhance.flatStatsPerLevel':'LV1 裝備每次精煉固定增加的 atk/hp/def。只增加基底原有屬性，累計精煉等級後取整。',
+      'balanceSettings.equipment.enhance.flatStatsPerEquipmentLevel':'每增加 1 裝備需求等級，每次精煉再增加的固定 atk/hp/def；與 flatStatsPerLevel 相加。不受 T 級、基底數值或角色等級影響。',
       'classes[].initialStats':'LV1 裸裝自然能力，與舊 hp/atk/def 同步。',
       'classes[].growthPerLevel':'各職業每級自然增加量；HP／攻擊／防禦取整。',
       'classes[].growthSteps':'整數階梯：每 every 級額外增加 hp/atk/def；以 (LV−1) 計算。',
@@ -48,6 +51,7 @@
       'balanceSettings.progression.xpCurve':'升級需求多項式，最後乘 skills.mastery.characterXpMultiplier；主角每隻怪取得 round(怪物總 EXP / 出戰人數) 一次，夥伴等級同步主角，不獨立累積 EXP。',
       'balanceSettings.progression.xpLevelGap':'主角等級高於怪物 freeLevels 級內無懲罰；超出後線性遞減至 midGap/midMultiplier、highGap/highMultiplier，再降至 minimumMultiplier 並維持。所有怪物種類適用；在隊伍分配與 EXP 券之前計算，不影響金錢或掉落。'
     });
+    out.legacySettings['balanceSettings.equipment.enhance.statPerLevel']={status:'tokens-only',replacement:'balanceSettings.equipment.enhance.flatStatsPerLevel',note:'只保留信物百分比強化；一般裝備、BOSS 裝及新手裝使用固定值精煉。'};
     out.legacySettings['balanceSettings.progression.statsPerLevel']={status:'fallback',replacement:'classes[].growthPerLevel',note:'只有缺少該職業獨立成長的舊 JSON 使用。'};
     return out;
   };
