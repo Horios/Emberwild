@@ -49,7 +49,7 @@
   refreshBattleBuffTimers=function(){
     if(!party)return;
     const summary=$('battle-effect-summary');if(summary)summary.textContent=effectSummaryText();
-    const body=$('battle-effect-modal-rows');if(body)body.innerHTML=rowsHtml();
+    const body=$('battle-effect-modal-rows');if(body&&!globalThis.isEmberwildUIInteracting?.()){const next=rowsHtml();if(body.innerHTML!==next)body.innerHTML=next;}
     refreshSupplyStatus();
   };
 
