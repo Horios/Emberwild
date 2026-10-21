@@ -65,16 +65,27 @@ test('alchemy spends five tier-one gems and ten tier-two gems in the existing fi
  r.run('playerHero().gems[0]=5;setTab("alchemy");');
  assert.match(r.elements.get('app').innerHTML,/赤焰石・1階 ×5/);
  assert.equal(r.run("startLifeWork('gem_0')"),true);
- r.advance(4999);r.run('tick()');console.log('DEBUG-FIRST',r.run('JSON.stringify(__EMBERWILD_LIFE_SKILLS.jobs)'));assert.equal(r.run('playerHero().gems[0]'),5);
- r.advance(1);r.run('tick()');console.log('DEBUG-ALCH',r.run('JSON.stringify({gems:playerHero().gems.slice(0,11),jobs:__EMBERWILD_LIFE_SKILLS.jobs,materials:playerHero().materials,logs:globalThis.__DEBUG_GEM_ALCHEMY||[],errors:globalThis.__EMBERWILD_BOOT_SAVE_ERROR})'));assert.equal(r.run('playerHero().gems[0]'),0);
+ // The combat tick performs asynchronous offline catch-up after a simulated
+ // five-second clock jump. Exercise the life-work heartbeat directly here.
+ r.advance(4999);r.run('tickLifeSkills()');
+ assert.equal(r.run('playerHero().gems[0]'),5);
+ assert.equal(r.run('__EMBERWILD_LIFE_SKILLS.jobs.work.elapsed'),4999);
+ r.advance(1);r.run('tickLifeSkills()');
+ assert.equal(r.run('playerHero().gems[0]'),0);
  assert.equal(r.run('playerHero().gems[5]'),1);
+ assert.equal(r.run('__EMBERWILD_LIFE_SKILLS.jobs.work'),null);
  r.run('playerHero().gems[5]=10;');
  assert.equal(r.run("startLifeWork('gem_5')"),true);
- r.advance(5000);r.run('tick()');
+ r.advance(5000);r.run('tickLifeSkills()');
  assert.equal(r.run('playerHero().gems[5]'),0);
  assert.equal(r.run('playerHero().gems[10]'),1);
  assert.equal(r.run("startLifeWork('gem_10')"),false,'no fourth tier recipe');
+ const persisted=loadRuntime(root,'index.html',Object.fromEntries(r.values),r.now);
+ persisted.run('continueFromTitle();closeModal()');
+ assert.equal(persisted.run('playerHero().gems[0]'),0);
+ assert.equal(persisted.run('playerHero().gems[10]'),1);
  assert.deepEqual(r.errors,[]);
+ assert.deepEqual(persisted.errors,[]);
 });
 
 test('existing saves migrate gem inventory and attached old gems without losing quantities',()=>{
