@@ -15,7 +15,8 @@
   // Direct calls and post-render updates always read the current account state.
   let buildingPage=false,pageCounts=null,pageRefreshed=false;
   const pageBadgeCounts=()=>buildingPage?(pageCounts??=counts()):counts();
-  globalThis.numberBadgeHTML=function(id){if(!Object.hasOwn(labels,id))return '';const n=settings()[id]?pageBadgeCounts()[id]:0;return `<span id="navReminder-${id}" class="number-badge" ${n?'':'hidden'} aria-label="${labels[id]}提醒 ${n}">${n||''}</span>`;};
+  globalThis.numberReminderCount=id=>Object.hasOwn(labels,id)&&settings()[id]?(pageBadgeCounts()[id]||0):0;
+  globalThis.numberBadgeHTML=function(id){if(!Object.hasOwn(labels,id))return '';const n=numberReminderCount(id);return `<span id="navReminder-${id}" class="number-badge" ${n?'':'hidden'} aria-label="${labels[id]}提醒 ${n}">${n||''}</span>`;};
   globalThis.numberReminderOptionsView=function(){return `<section class="panel number-reminder-options"><h2>數字提醒開關</h2><p class="small">各入口的紅色數字可分別開關；關閉不影響信件、成就、裝備或任務功能。</p><div class="number-reminder-settings">${Object.entries(labels).map(([id,label])=>`<label><input type="checkbox" data-number-reminder="${id}" onchange="setNumberReminder('${id}',this.checked)" ${settings()[id]?'checked':''}> ${label}</label>`).join('')}</div></section>`;};
   globalThis.setNumberReminder=function(id,enabled){if(!party||!Object.hasOwn(labels,id)||typeof enabled!=='boolean')return false;const old={...settings()};party.numberReminders[id]=enabled;if(!save()){party.numberReminders=old;lastDialogHTML='';render();return false;}render();return true;};
   const svg=name=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${(__EMBERWILD_LUCIDE.nodes[name]||[]).map(([tag,attrs])=>`<${tag} ${Object.entries(attrs).map(([key,value])=>`${key}="${esc(value)}"`).join(' ')}></${tag}>`).join('')}</svg>`;
