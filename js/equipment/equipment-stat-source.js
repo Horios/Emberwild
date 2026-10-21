@@ -341,7 +341,7 @@ render=function(){update12RenderBase();if(!state)return;const after=GS('progress
 guideView=function(){
  const g=GAMEPLAY_SETTINGS,p=g.progression,e=g.equipment,c=g.combat,x=p.xpLevelGap,drop=e.dropLevelGap;
  const xpHint=x?.enabled?`<p>挑戰低等怪物時，高於怪物 ${x.freeLevels} 級以內仍可獲得完整經驗；高出 ${x.midGap} 級時剩 ${Math.round(x.midMultiplier*100)}%、高出 ${x.highGap} 級時剩 ${Math.round(x.highMultiplier*100)}%，高出 ${x.highGap+1} 級以上剩 ${Math.round(x.minimumMultiplier*100)}%。中間等級差逐級遞減，BOSS 也適用。</p>`:'';
- const dropHint=drop?.enabled?`<p>角色高於地圖最高等級 ${drop.freeLevels} 級後，普通怪與菁英怪的裝備掉落率會逐漸降低，最低為原本的 ${Math.round(drop.minimumMultiplier*100)}%。素材與 BOSS 裝備不受這項限制。</p>`:'';
+ const dropHint=drop?.enabled?`<p>角色高於地圖最高等級 ${drop.freeLevels} 級後，普通怪與菁英怪的裝備掉落率會逐漸降低，最低為基礎掉落率的 ${Math.round(drop.minimumMultiplier*100)}%。素材與 BOSS 裝備不受這項限制。</p>`:'';
  return heading('FIELD NOTES / 冒險指南','遊戲系統說明')+`<section class="panel guide-scroll">
  <h2>角色成長與隊伍</h2>
  <p>主角透過探索獲得經驗並升級，夥伴等級與主角同步。最多三人出戰，其他夥伴可以留在候補。每次升級獲得 ${p.levelRewards.abilityPoints} 點能力點；LV${p.advance.level} 可以二轉。擊敗界限突破首領後，等級上限由 LV${p.levelCaps.beforeClear} 提升至 LV${p.levelCaps.afterClear}。</p>
