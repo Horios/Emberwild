@@ -73,6 +73,7 @@
   let draggingId=null;
   function clearDrag(){
     draggingId=null;
+    globalThis.__EMBERWILD_NAVIGATION_DRAGGING=false;
     document.querySelectorAll?.('#app>.layout>aside nav .game-nav-group').forEach(group=>group.classList.remove('nav-drop-before','nav-drop-after','nav-dragging'));
   }
   function dragGroup(target){return target?.closest?.('#app>.layout>aside nav details[data-nav-group]')||null;}
@@ -84,6 +85,7 @@
     if(!event.target.closest?.('#app>.layout>aside nav [data-nav-drag]'))return;
     const group=dragGroup(event.target);if(!group)return;
     draggingId=group.dataset.navGroup;
+    globalThis.__EMBERWILD_NAVIGATION_DRAGGING=true;
     group.classList.add('nav-dragging');
     if(event.dataTransfer){event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',draggingId);}
   });
