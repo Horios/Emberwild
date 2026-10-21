@@ -90,8 +90,13 @@
  };
  function virtual(at,fn){const prev=Date.now;Date.now=()=>at;try{return fn();}finally{Date.now=prev;}}
  function quiet(fn){
-  const originals={render,note,toast,refreshGlobalJournal},fake={open:false,innerHTML:'',showModal(){},close(){}};
-  globalThis.__EMBERWILD_OFFLINE_SILENT=true;globalThis.__EMBERWILD_OFFLINE_RULE_CACHE={};render=()=>{};note=()=>{};toast=()=>{};refreshGlobalJournal=()=>{};
+  // Keep the modal DOM contract (dataset/classList) for boss reward cleanup,
+  // while leaving replay dialogs detached and unable to pause the event loop.
+  const originals={render,note,toast,refreshGlobalJournal},fake=document.createElement('dialog');
+  fake.showModal=()=>{};fake.close=()=>{};
+  globalThis.__EMBERWILD_OFFLINE_SILENT=true;globalThis.__EMBERWILD_OFFLINE_RULE_CACHE={};render=()=>{};toast=()=>{};refreshGlobalJournal=()=>{};
+  // Live ticks use this same event loop; only offline replay suppresses reports.
+  if(jobOffline)note=()=>{};
   globalThis.__EMBERWILD_SIMULATION_MODAL=fake;
   try{return fn();}finally{({render,note,toast,refreshGlobalJournal}=originals);globalThis.__EMBERWILD_SIMULATION_MODAL=null;globalThis.__EMBERWILD_OFFLINE_RULE_CACHE=null;globalThis.__EMBERWILD_OFFLINE_SILENT=false;}
  }
