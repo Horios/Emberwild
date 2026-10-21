@@ -44,6 +44,7 @@ test('all core skills of all classes respect each gem compatibility and three-ti
     'h.sockets[i]=4;h.shield=20;applyGemAfterSkill(h,i,{atk:battleStats(h).atk});const shieldAdded=h.shield-20;'+
     'rows.push({skill:sk[0],isActive,isProc,compatible:[0,1,2,3,4].map(g=>gemCompatible(g,h.job,i)),base,power,baseline,procs,baseCooldown,cdOn,cdOff,lifeHeal,shieldAdded});h.sockets[i]=null;'+
    '}Math.random=originalRandom;return rows;})())'));
+  if(job===0)console.log('DEBUG-ALL',JSON.stringify(records.slice(0,3)));
   assert(records.length>0,'no core skills for class '+job);
   for(const x of records){
    assert.deepEqual(x.compatible,[true,x.isActive,x.isProc,true,true],job+' '+x.skill+' compatibility');
@@ -65,7 +66,7 @@ test('alchemy spends five tier-one gems and ten tier-two gems in the existing fi
  assert.match(r.elements.get('app').innerHTML,/赤焰石・1階 ×5/);
  assert.equal(r.run("startLifeWork('gem_0')"),true);
  r.advance(4999);r.run('tick()');assert.equal(r.run('playerHero().gems[0]'),5);
- r.advance(1);r.run('tick()');assert.equal(r.run('playerHero().gems[0]'),0);
+ r.advance(1);r.run('tick()');console.log('DEBUG-ALCH',r.run('JSON.stringify({gems:playerHero().gems.slice(0,11),jobs:__EMBERWILD_LIFE_SKILLS.jobs,materials:playerHero().materials})'));assert.equal(r.run('playerHero().gems[0]'),0);
  assert.equal(r.run('playerHero().gems[5]'),1);
  r.run('playerHero().gems[5]=10;');
  assert.equal(r.run("startLifeWork('gem_5')"),true);
@@ -93,6 +94,7 @@ test('a successful real core cast applies lowest-HP life gem and additive guard 
   'foes=[foe];h.sockets[0]=3;const before=h.hp;const a=castPartySkill(h,0,battleStats(h));const recovered=h.hp-before;'+
   'h.sockets[0]=4;h.shield=55;const b=castPartySkill(h,0,battleStats(h));return {a,b,recovered,shieldAdded:h.shield-55};'+
   '})())'));
+ console.log('DEBUG-CAST',values,r.run('JSON.stringify({hasGem:gemRate(playerHero(),0,4),members:party.active,active:living().length,socket:playerHero().sockets[0],hp:playerHero().hp})'));
  assert.equal(values.a,true);
  assert.equal(values.b,true);
  assert(values.recovered>0,'cast life gem');
