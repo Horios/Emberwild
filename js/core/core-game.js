@@ -664,7 +664,7 @@ function transferGear(id,job){const item=findGear(id),target=partyMember(job);if
 const stablePartyRender=render;
 let previousViewKey=null;
 const viewPositions=new Map();
-const SCROLL_REGIONS='.layout>main,.layout>aside,.current-events,.history-events,.unit-effects,.unit-skills,.inventory-table,.buff-table-scroll,.compact-map-list,.member-content,.member-skill-content,.member-equipment-content,.page-owner-content,.inline-equipment-list,.worn-overview,.worn-character-list,.worn-detail-pane,.guide-scroll,.forge-detail-pane,.forge-gear-list,.player-skill-page';
+const SCROLL_REGIONS='.layout>main,.layout>aside,.current-events,.history-events,.unit-effects,.unit-skills,.inventory-table,.buff-table-scroll,.compact-map-list,.member-content,.member-skill-content,.member-equipment-content,.page-owner-content,.inline-equipment-list,.worn-overview,.worn-character-list,.worn-detail-pane,.guide-scroll,.forge-detail-pane,.forge-gear-list,.player-skill-page,.layout>aside nav,.layout>aside .mobile-more-pages,.party-picker,.party-tabs,.journal-content,.journal-loot-list,.layout>main .inventory-list-scroll,.layout>main .shop-catalog-scroll,.layout>main .account-material-groups,.layout>main .companion-management-page,.layout>main .partner-owned-list,.layout>main .character-ability-scroll,.layout>main .squad-allies,.layout>main .squad-enemies,.layout>main .expedition-control-card,.layout>main .expedition-tools>details,.layout>main .initiative-panel,.layout>main .last-actions,.layout>main .roster-page,.layout>main .shared-shop-grid,.mobile-journal-body,.mobile-loot-body,.layout>main .forge-layout,.layout>main .material-panel,.layout>main .destination-panel';
 render=function(){
  if(document.querySelectorAll&&previousViewKey){
   viewPositions.set(previousViewKey,{
