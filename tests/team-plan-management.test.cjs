@@ -2,9 +2,9 @@ const test=require('node:test'),assert=require('node:assert/strict'),path=requir
 const {loadRuntime}=require('./headless-runtime.cjs'),root=path.resolve(__dirname,'..');
 const json=(r,code)=>JSON.parse(r.run(`JSON.stringify(${code})`));
 function game(){const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);closeModal();');return r;}
-function configured(){const r=game();r.run(`playerHero().lv=5;save();allocate(0,3);recruitCompanion(10);const token=__EMBERWILD_TOKEN_TEST.makeToken('berserk');playerHero().bag.push(token);equipCompanionToken(token.id,10);playerHero().gems[0]=2;socket(0,0);copyTeamPlan();`);return r;}
+function configured(){const r=game();r.run(`playerHero().lv=5;save();allocate(0,3);recruitCompanion(10);const token=__EMBERWILD_TOKEN_TEST.makeToken('berserk');playerHero().bag.push(token);equipCompanionToken(token.id,10);playerHero().gems[0]=1;const gemGear=gear(1,1,0,0);gemGear.skillSockets={version:1,count:1,gems:[0],firstMode:'base'};playerHero().bag.push(gemGear);copyTeamPlan();`);return r;}
 
-test('clear active and inactive plans releases shared gems once and preserves permanent progression, inventory and companions',()=>{
+test('clearing plans preserves equipment-owned gems, permanent progression, inventory and companions',()=>{
  const r=configured(),out=json(r,`(()=>{
   const before=packParty(),first=structuredClone(before.buildSystem.plans[0]);
   const inactive=clearTeamPlan('team-2'),afterInactive=packParty();
@@ -16,13 +16,13 @@ test('clear active and inactive plans releases shared gems once and preserves pe
  assert.equal(out.afterInactive.members[0].gems[0],1);
  assert.deepEqual(out.after.buildSystem.plans.map(p=>p.job),[null,null]);
  assert.deepEqual(out.after.buildSystem.permanent,{...out.before.buildSystem.permanent,gemInstances:{}});
- assert.equal(out.after.members[0].gems[0],2);
+ assert.equal(out.after.members[0].gems[0],1);
  assert.deepEqual(out.after.members.map(h=>h.bag),out.before.members.map(h=>h.bag));
  assert.deepEqual(out.after.members.map(h=>h.companionId),out.before.members.map(h=>h.companionId));
  assert.deepEqual(out.after.buildSystem,out.reloaded.buildSystem);assert.deepEqual(r.errors,[]);
 });
 
-test('deleting an active plan switches to the first plan; deleting the last gem reference refunds exactly once and frees a slot',()=>{
+test('deleting an active plan switches to the first plan, preserves equipment gems and frees a plan slot',()=>{
  const r=configured(),out=json(r,`(()=>{
   const before=packParty();switchTeamPlan('team-2');const active=deleteTeamPlan('team-2'),afterActive=packParty();
   copyTeamPlan();clearTeamPlan('team-1');const deleted=deleteTeamPlan('team-3'),after=packParty(),repeat=deleteTeamPlan('team-3');
@@ -31,7 +31,7 @@ test('deleting an active plan switches to the first plan; deleting the last gem 
  assert(out.active&&out.deleted);assert.equal(out.repeat,false);
  assert.equal(out.afterActive.buildSystem.activeId,'team-1');
  assert.deepEqual(out.afterActive.buildSystem.plans,[out.before.buildSystem.plans[0]]);
- assert.equal(out.afterActive.members[0].gems[0],1);assert.equal(out.after.members[0].gems[0],2);
+ assert.equal(out.afterActive.members[0].gems[0],1);assert.equal(out.after.members[0].gems[0],1);
  assert.deepEqual(out.after.buildSystem.permanent.gemInstances,{});
  assert.deepEqual(out.ids,['team-1','team-4']);
  assert.deepEqual(out.after.members[0].bag,out.before.members[0].bag);assert.deepEqual(r.errors,[]);
@@ -84,7 +84,7 @@ test('rendered plan controls protect the first plan, and journal refresh retains
  assert.match(out.roster,/onclick="deleteTeamPlan\('team-1'\)" disabled/);
  assert.match(out.roster,/onclick="deleteTeamPlan\('team-2'\)"\s+>/);
  assert.match(out.roster,/onclick="clearTeamPlan\('team-1'\)"/);
- for(const html of [out.journal,out.refreshed])assert.match(html,/onclick="toggleBattle\(\)" disabled title="請先為本隊選擇主角職業"/);
+ assert.match(out.journal,/globalBattleJournal/);for(const html of [out.journal,out.refreshed])assert(!html.includes('onclick="toggleBattle()"'));
  assert(!out.battle.includes('onclick="toggleBattle()"'));
  assert(!out.ready.includes('onclick="toggleBattle()" disabled'));assert.deepEqual(r.errors,[]);
 });
