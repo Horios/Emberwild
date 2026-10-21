@@ -189,7 +189,7 @@
 
   if(typeof guideView==='function'){
     const baseGuide=guideView;
-    guideView=function(){return `<section class="panel"><h2>自動治療藥水</h2><p>每名角色可設定自動喝藥開關、HP 百分比門檻與指定治療藥水。判定只發生在該角色回合開始時；使用治療藥水不會取消該回合原本的攻擊。治療藥水使用後依品項進入回合冷卻，冷卻期間不會再喝。治療藥水不提供手動使用按鈕。</p></section>`+baseGuide();};
+    guideView=function(){return `<section class="panel"><h2>自動治療藥水</h2><p>每名角色可設定自動喝藥開關、HP 百分比門檻與指定治療藥水。判定只發生在該角色回合開始時；使用治療藥水不會取消該回合的攻擊。治療藥水使用後依品項進入回合冷卻，冷卻期間不會再喝。治療藥水不提供手動使用按鈕。</p></section>`+baseGuide();};
   }
 
   if(typeof save==='function'){
