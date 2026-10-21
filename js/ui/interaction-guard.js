@@ -3,7 +3,7 @@
   const gameRender=render,gameRefreshJournal=refreshGlobalJournal;
   const pointers=new Set();
   const scope='#app, #modal, #utilityNavigation';
-  let interacting=false,pendingRender=false,pendingJournal=false,releaseTimer=null,activeSelect=null,scrollHoldUntil=0;
+  let interacting=false,pendingRender=false,pendingJournal=false,releaseTimer=null,activeSelect=null,scrollHoldUntil=0,flushing=false;
 
   function isTextEditor(node){
     if(!node?.matches?.('input, textarea, [contenteditable="true"], [contenteditable=""], [role="textbox"]'))return false;
@@ -27,14 +27,19 @@
     if(remaining>0){scheduleRelease(remaining+10);return;}
     clearTimeout(releaseTimer);releaseTimer=null;
     interacting=false;
-    if(pendingRender){
-      pendingRender=false;pendingJournal=false;
-      gameRender();
-      globalThis.__EMBERWILD_AFTER_RENDER?.();
-    }else if(pendingJournal){
-      pendingJournal=false;
-      gameRefreshJournal();
-    }
+    // Resume through the latest render wrapper, not the startup snapshot:
+    // later modules add inventory, navigation, dialogue, mobile and log hooks.
+    flushing=true;
+    try{
+      if(pendingRender){
+        pendingRender=false;pendingJournal=false;
+        render();
+        globalThis.__EMBERWILD_AFTER_RENDER?.();
+      }else if(pendingJournal){
+        pendingJournal=false;
+        refreshGlobalJournal();
+      }
+    }finally{flushing=false;}
   }
   function scheduleRelease(delay){
     clearTimeout(releaseTimer);
@@ -56,11 +61,11 @@
   }
 
   render=function(...args){
-    if(busy()){pendingRender=true;return;}
+    if(!flushing&&busy()){pendingRender=true;return;}
     return gameRender(...args);
   };
   refreshGlobalJournal=function(...args){
-    if(busy()){pendingJournal=true;return;}
+    if(!flushing&&busy()){pendingJournal=true;return;}
     return gameRefreshJournal(...args);
   };
 
