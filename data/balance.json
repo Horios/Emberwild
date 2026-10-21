@@ -31445,8 +31445,8 @@
       },
       {
         "id": "adventure",
-        "label": "探索",
-        "expanded": true,
+        "label": "冒險",
+        "expanded": false,
         "pages": [
           {
             "id": "battle",
