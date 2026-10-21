@@ -130,6 +130,15 @@
         "multiplierBase": 1,
         "multiplierPerLevel": 0
       },
+      "xpLevelGap": {
+        "enabled": true,
+        "freeLevels": 5,
+        "midGap": 10,
+        "midMultiplier": 0.5,
+        "highGap": 15,
+        "highMultiplier": 0.1,
+        "minimumMultiplier": 0.05
+      },
       "statsPerPoint": {
         "hp": 3,
         "attack": 1,
@@ -295,10 +304,22 @@
     const c=settings.progression.xpCurve,m=settings.skills?.mastery?.characterXpMultiplier??1;
     return Math.max(1,Math.round(Math.round((c.base+level*c.linear+level*level*c.quadratic)*(c.multiplierBase+level*c.multiplierPerLevel))*m));
   }
-  function enemyXp(settings,level,kind='normal',mode=0){
+  // Same-level and higher-level monsters retain their existing EXP. The
+  // reduction is applied once, before sharing the reward with party members.
+  function xpLevelGapFactor(settings,playerLevel,enemyLevel){
+    const cfg=settings.progression?.xpLevelGap;
+    if(!cfg?.enabled||!Number.isFinite(playerLevel)||!Number.isFinite(enemyLevel))return 1;
+    const gap=Math.max(0,playerLevel-enemyLevel);
+    if(gap<=cfg.freeLevels)return 1;
+    if(gap<=cfg.midGap)return 1-(1-cfg.midMultiplier)*(gap-cfg.freeLevels)/(cfg.midGap-cfg.freeLevels);
+    if(gap<=cfg.highGap)return cfg.midMultiplier-(cfg.midMultiplier-cfg.highMultiplier)*(gap-cfg.midGap)/(cfg.highGap-cfg.midGap);
+    return cfg.minimumMultiplier;
+  }
+  function enemyXp(settings,level,kind='normal',mode=0,playerLevel=null){
     const r=settings.rewards,x=r.xp,k=x.kindMultiplier||r.kindMultiplier,key=kind==='final'?'boss':kind;
     const difficulty=settings.difficulty.modes[mode];
-    return Math.max(1,Math.round((x.base+level*x.perLevel)*(k[key]??1)*(difficulty?.xpMultiplier??difficulty?.reward??1)));
+    const base=(x.base+level*x.perLevel)*(k[key]??1)*(difficulty?.xpMultiplier??difficulty?.reward??1);
+    return Math.max(1,Math.round(base*xpLevelGapFactor(settings,playerLevel,level)));
   }
   function xpShare(xp,count){return Math.max(1,Math.round(xp/Math.max(1,count)));}
   function gearStats(raw,effects,power,plus,enhancePerLevel){
@@ -310,5 +331,5 @@
     return {raw:rounded(raw),body,grade,enhance,total};
   }
   function validSteps(steps){return Array.isArray(steps)&&steps.length<=12&&steps.every(s=>s&&Number.isInteger(s.every)&&s.every>=1&&s.every<=60&&['hp','atk','def'].every(k=>Number.isSafeInteger(s[k])&&s[k]>=0));}
-  return {defaults,applyDefaults,applyClassDefaults,naturalStats,encounterLevelLead,baseMonsterStats,scaleMonsterStats,monsterStats,requiredXp,enemyXp,xpShare,gearStats,validSteps};
+  return {defaults,applyDefaults,applyClassDefaults,naturalStats,encounterLevelLead,baseMonsterStats,scaleMonsterStats,monsterStats,requiredXp,enemyXp,xpLevelGapFactor,xpShare,gearStats,validSteps};
 });
