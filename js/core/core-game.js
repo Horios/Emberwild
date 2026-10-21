@@ -125,7 +125,18 @@ function battleHealthMeter(hp,max,shield=0){
 function pixel(index,extra=''){return '';}
 function enemyArt(e){if(!e)return pixel(6);if(e.kind==='final')return pixel(7);if(/史萊姆/.test(e.name))return pixel(4);if(/狼|獵犬/.test(e.name))return pixel(5);if(/樹|古木/.test(e.name))return pixel(6);return `<span class="monster-symbol">${e.icon}</span>`;}
 
-function render(){if(!state){$('app').innerHTML=`<section class="start"><span class="eyebrow">EMBERWILD · 選擇你的遠征者</span><p>一場沒有主線束縛的遠征。探索、收集、雕琢你的技能。<br>LV30 挑戰 40 級噬日者，通關後解鎖 LV60 與覺醒地圖。</p><div class="cards">${CLASSES.map((c,i)=>`<article class="card"><div class="class-art">${pixel(i)}</div><h2>${c.name}</h2><span class="tag">${c.main} · LV15 ${c.advanced}</span><p>${c.desc}</p><p class="small">生命 ${c.hp} / 攻擊 ${c.atk} / 防禦 ${c.def}</p><button class="primary" onclick="requestHeroName(${i},true)">選擇${c.name}</button></article>`).join('')}</div><p class="small">自動存檔 · 無離線戰鬥</p></section>`;return;}
+function creationSkillPreview(job){
+  const skills=CLASSES[job].skills.filter(sk=>sk[6]?.partnerId==null).slice(0,3);
+  if(!skills.length)return '';
+  return `<section class="creation-skill-preview" aria-label="${esc(CLASSES[job].name)}技能預覽"><h3>技能預覽</h3><ul>${skills.map(sk=>{
+    const meta=sk[6]||{},type=meta.activation||sk[1],requirements=[`LV${sk[2]}`];
+    if(meta.requiresAdvanced)requirements.push('二轉');
+    if(meta.requiredMastery&&meta.requiredMasteryLevel>0)requirements.push(`${globalThis.__EMBERWILD_MASTERY?.masteryLabels?.[meta.requiredMastery]||meta.requiredMastery}熟練 ${meta.requiredMasteryLevel}`);
+    return `<li><b>${esc(sk[0])}</b><span class="creation-skill-meta">${esc(({active:'主動',proc:'普攻觸發',passive:'被動'})[type]||type)} · ${esc(requirements.join('／'))}</span>${meta.description?`<p>${esc(meta.description)}</p>`:''}</li>`;
+  }).join('')}</ul></section>`;
+}
+
+function render(){if(!state){$('app').innerHTML=`<section class="start"><span class="eyebrow">EMBERWILD · 選擇你的遠征者</span><div class="cards">${CLASSES.map((c,i)=>`<article class="card"><div class="class-art">${pixel(i)}</div><h2>${c.name}</h2><span class="tag">${c.main} · LV${GS('progression.advance.level',15)} 二轉：${c.advanced}</span><p>${c.desc}</p>${creationSkillPreview(i)}<button class="primary" onclick="requestHeroName(${i},true)">選擇${c.name}</button></article>`).join('')}</div></section>`;return;}
 let c=CLASSES[state.job],v=stats();$('wallet').textContent=`◈ ${state.gold.toLocaleString()} 金幣`;
 const legacyNavigation=[['battle','荒野探索'],['statistics','戰鬥統計'],['roster','隊伍編成'],['partnerRoster','夥伴名冊'],['character','角色能力'],['skills','技能'],['equipment','背包'],['worn','裝備與信物'],['forge','裝備強化'],['bossCraft','BOSS 製作'],['story','主要任務'],['quests','委託'],['shop','商店'],['lifeSkills','生活技能'],['guide','冒險指南']].map(([id,name])=>`<button data-page="${id}" class="${tab===id?'active':''}" onclick="setTab('${id}')"><span>${name}</span>${globalThis.numberBadgeHTML?.(id)||''}</button>`).join('');
 const navigationHTML=globalThis.gameNavigationHTML?.(tab)||legacyNavigation;

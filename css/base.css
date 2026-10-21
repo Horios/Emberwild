@@ -232,3 +232,18 @@ header>button,header>label.button{width:86px;height:30px;box-sizing:border-box;t
 
 /* Loot rarity colors used by battle journal and accumulated loot statistics. */
 .loot-rarity-0{color:#dce3de}.loot-rarity-1{color:#9ed9b5}.loot-rarity-2{color:#92caff}.loot-rarity-3{color:#ffe59a}
+
+/* Character creation: equal cards and aligned actions without clipping copy. */
+.start .cards{grid-auto-rows:1fr;align-items:stretch}
+.start .cards>.card{height:auto;max-height:none;min-width:0;overflow:visible;scrollbar-gutter:auto;display:flex;flex-direction:column}
+.start .cards>.card>.tag{line-height:1.6;overflow-wrap:anywhere}
+.start .cards>.card>button{margin-top:auto;align-self:flex-start}
+
+.start .creation-skill-preview{margin:0 0 14px;border-top:1px solid var(--line);padding-top:12px}
+.start .creation-skill-preview h3{font-size:13px;color:var(--gold);margin:0 0 6px}
+.start .creation-skill-preview ul{list-style:none;margin:0;padding:0}
+.start .creation-skill-preview li{padding:8px 0;overflow-wrap:anywhere}
+.start .creation-skill-preview li+li{border-top:1px solid var(--line)}
+.start .creation-skill-preview b{font-size:13px}
+.start .creation-skill-meta{display:block;font-size:11px;color:var(--muted);line-height:1.6;margin-top:2px}
+.start .creation-skill-preview p{margin:4px 0 0;font-size:12px;line-height:1.6}
