@@ -9,6 +9,12 @@
   const owned=g=>!!gearWearer(g.id)||!!T()?.references(g.id).length;
   const actionable=(g,mode)=>!!g&&!g.locked&&!owned(g)&&!inlineAffixDrafts.has(affixDraftKey(g))&&(mode!=='sell'||globalThis.__EMBERWILD_CAN_SELL_GEAR?.(g)!==false);
   const bound=(value,limit,lower)=>limit===''||Number.isFinite(Number(limit))&&(lower?value>=Number(limit):value<=Number(limit));
+  function acquiredTime(g){
+    if(g.acquiredAt!==undefined)return g.acquiredAt;
+    // Legacy rewards lack acquiredAt; uid() embeds their creation time in base 36.
+    const match=/^([0-9a-z]+)-[0-9a-z]+-[0-9a-z]{0,6}$/.exec(g.id),time=match?parseInt(match[1],36):NaN;
+    return Number.isSafeInteger(time)&&time>=0?time:null;
+  }
   function rows(){
     if(!state)return [];
     const wearers=new Set(party.members.flatMap(h=>[...h.equipped,h.tokenId]).filter(Boolean));
@@ -26,7 +32,7 @@
         const ok={gt:()=>n>v,gte:()=>n>=v,eq:()=>n===v,lte:()=>n<=v,lt:()=>n<v,range:()=>filter.upper!==''&&Number.isFinite(u)&&n>=v&&n<=u}[filter.op];
         if(!ok||!ok())return;
       }
-      const value=sort==='acquired'?(g.acquiredAt??null):sort==='level'?level:sort==='tier'?t:sort==='quality'?gearQualityRank(g):sort==='price'?equipmentSellPrice(g):stats[sort]===0?null:stats[sort];
+      const value=sort==='acquired'?acquiredTime(g):sort==='level'?level:sort==='tier'?t:sort==='quality'?gearQualityRank(g):sort==='price'?equipmentSellPrice(g):stats[sort]===0?null:stats[sort];
       result.push({g,index,stats,value});
     });
     result.sort((a,b)=>{
@@ -100,3 +106,4 @@
   const round=pacedRound;pacedRound=function*(){if(blocked())return;try{yield* round();}finally{if(full())running=false;}};
   globalThis.__EMBERWILD_GEAR_INVENTORY={rows,filters:()=>({...filter}),sort:()=>({key:sort,direction}),selection:()=>[...selected],actionable,quote,review:()=>review};
 })();
+

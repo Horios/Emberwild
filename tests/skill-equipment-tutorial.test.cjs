@@ -5,6 +5,19 @@ function game(job=0){const r=loadRuntime(root);r.run(`selectSaveSlot(1);start(${
 function gift(r){assert.equal(r.run('claim()'),true);r.run("globalThis.charm=state.bag.find(g=>g.storyRewardKey==='initiation_charm')");}
 function equip(r){r.run("equipGear(charm.id)");assert.equal(r.run('selectSkillEquipment(charm.id)'),true);assert.equal(r.run("configureSkill('proc',0,'tutorial_echo')"),true);}
 function finish(r){gift(r);equip(r);assert.equal(r.run('claim()'),true);assert.equal(r.run('socketEquipmentGem(charm.id,0,0)'),true);assert.equal(r.run('claim()'),true);assert.equal(r.run('socketEquipmentGem(charm.id,1,0)'),true);assert.equal(r.run('claim()'),true);}
+test('tutorial reward sorts between earlier and later gear in both directions, including legacy rewards after reload',()=>{
+ const r=game();
+ const ids=()=>JSON.parse(r.run('JSON.stringify(sortedFilteredGear().map(g=>g.id).filter(id=>[earlierId,charmId,laterId].includes(id)))'));
+ r.advance(100);r.run("globalThis.earlier=gear(1,0,0,0);addGear(earlier);globalThis.earlierId=earlier.id");
+ r.advance(100);gift(r);assert.equal(r.run('charm.acquiredAt'),r.now);r.run('globalThis.charmId=charm.id');
+ r.advance(100);r.run("globalThis.later=gear(1,0,0,0);addGear(later);globalThis.laterId=later.id;setGearInventorySort('acquired')");
+ const expected=JSON.parse(r.run('JSON.stringify([laterId,charmId,earlierId])'));
+ const check=()=>{r.run("setGearInventorySort('acquired')");assert.deepEqual(ids(),expected);r.run('toggleGearInventoryDirection()');assert.deepEqual(ids(),[...expected].reverse());r.run('toggleGearInventoryDirection()');};
+ check();r.run('save();loadParty(JSON.parse(JSON.stringify(packParty())))');check();assert.equal(r.run('findGear(charmId).acquiredAt'),r.now-100);
+ r.run('delete findGear(charmId).acquiredAt;save();loadParty(JSON.parse(JSON.stringify(packParty())))');check();assert.equal(r.run('findGear(charmId).acquiredAt'),undefined);
+ r.advance(100);r.run('state.bag=state.bag.filter(g=>g.id!==charmId)');assert.equal(r.run("recoverStoryRewards('skill_equipment_intro')"),true);assert.equal(r.run("state.bag.find(g=>g.storyRewardKey==='initiation_charm').acquiredAt"),r.now);
+ assert.deepEqual(r.errors,[]);
+});
 for(let job=0;job<4;job++)test(`job ${job}: ordinary two-socket gear, actual proc cast, gems, unique permanent support and reload`,()=>{
  const r=game(job);gift(r);assert.equal(r.run('charm.skillSockets.count'),2);assert.equal(r.run('gearRequiredLevel(charm)'),1);assert.equal(r.run('gearWearableJobs(charm).includes(state.job)'),true);equip(r);assert.equal(r.run('__EMBERWILD_SKILLS.validCast(state,EmberwildSkillSystem.adapterFor(__EMBERWILD_SKILLS.byId("tutorial_echo"),state.job).index,"core")'),true);
  r.run(`running=false;spawnGroup();globalThis.target=foes[0];target.hp=target.maxhp=100000;target.def=0;foes=[target];enemy=target;Math.random=()=>.3;globalThis.beforeHP=target.hp;castPartySkill(state,state.procSlots[0],battleStats(state))`);assert(r.run('target.hp<beforeHP'),'proc damages actual foe');r.run('globalThis.procCasts=0;globalThis.castOriginal=castPartySkill;castPartySkill=function(h,i,v){if(i===state.procSlots[0])procCasts++;return castOriginal(h,i,v)};performHeroBasic(state);castPartySkill=castOriginal');assert.equal(r.run('procCasts'),1);r.run('running=false;foes=[];enemy=null');
@@ -27,3 +40,4 @@ test('reward save failure rolls back gear, gems, support receipt and stage toget
 test('data validator rejects invalid gem slots, rewards and conditions, preserves configured mappings',()=>{
  assert.deepEqual(M.issues(seed.story,{skills:seed.skillSystem.definitions,forms:seed.equipmentForms}),[]);const s=structuredClone(seed.skillSystem);s.gems[0].skill.slots=[0,1];assert.throws(()=>K.validate(s),/寶石/);const d=structuredClone(seed.story),q=d.quests.find(q=>q.id===qid);q.rewards.items[0].key='class0-initial0';assert(M.issues(d,{skills:seed.skillSystem.definitions}).some(e=>e.includes('技能獎勵')));q.stages[3].conditions.conditions[0].slot=3;assert(M.issues(d).some(e=>e.includes('孔位')));
 });
+
