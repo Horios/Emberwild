@@ -17,4 +17,4 @@ jobs:
         with:
           node-version: '20'
       - name: Test gem effects, alchemy and save migration
-        run: node --test --test-concurrency=1 tests/core-catalog-split.test.cjs tests/core-services-split.test.cjs tests/skill-gems.test.cjs tests/equipment-skill-system.test.cjs tests/skill-equipment-tutorial.test.cjs tests/skill-system-model.test.cjs
+        run: node --test --test-concurrency=1 tests/core-catalog-split.test.cjs tests/core-services-split.test.cjs tests/core-ui-split.test.cjs tests/skill-gems.test.cjs tests/equipment-skill-system.test.cjs tests/skill-equipment-tutorial.test.cjs tests/skill-system-model.test.cjs
