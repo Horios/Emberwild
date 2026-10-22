@@ -34,7 +34,6 @@
   function setStock(key,type,n){if(type==='gem'){const id=Number(key);if(!Number.isInteger(id)||id<0||id>=GEMS.length||!Number.isSafeInteger(n)||n<0||n>LIMIT)return false;(globalThis.__DEBUG_GEM_ALCHEMY??=[]).push({key,type,n,before:playerHero().gems[id],at:Date.now()});playerHero().gems[id]=n;return true;}if(type==='item')return stock.set(key,n);setMaterialCount(key,n);return true;}
   const productName=r=>r.outputType==='gem'?GEMS[Number(r.output)]?.name:globalThis.__EMBERWILD_ITEM_NAME?.(r.outputType,r.output,itemFor(r.output,r.outputType)?.name||r.output)||itemFor(r.output,r.outputType)?.name||r.output;
   const inputName=([key,n,type='material'])=>type==='gem'?GEMS[Number(key)]?.name:globalThis.__EMBERWILD_ITEM_NAME?.(type,key,itemFor(key,type)?.name||key)||itemFor(key,type)?.name||key;
-  const productIcon=r=>itemFor(r.output,r.outputType)?inventoryItemIcon(itemFor(r.output,r.outputType)):inventoryMaterialIcon(r.output);
   const outputCount=r=>stockCount(r.output,r.outputType);
   const succeeds=chance=>chance===1||chance>0&&Math.random()<chance;
   const outputReady=r=>(r.outputType!=='item'||!!itemFor(r.output,r.outputType))&&outputCount(r)+r.quantity<=LIMIT;

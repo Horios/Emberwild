@@ -10,8 +10,15 @@
   if(x.healAmount===undefined&&x.healFraction!==undefined){x.healAmount=d?.healAmount??50;if(d){x.cost=d.cost;x.shopAvailable=d.shopAvailable;x.requiredVip=d.requiredVip;}delete x.healFraction;}
   delete x.healFraction;x.shopAvailable??=d?.shopAvailable??true;x.requiredVip??=d?.requiredVip??0;
  }return items;}
+ const DEFAULT_DROP_BANDS=[
+  {minLevel:1,maxLevel:19,kinds:['normal','elite'],chance:0.02},
+  {minLevel:20,maxLevel:39,kinds:['normal','elite'],chance:0.01},
+  {minLevel:40,maxLevel:59,kinds:['normal','elite'],chance:0.01},
+  {minLevel:60,maxLevel:0,kinds:['elite'],chance:0.005}
+ ];
+ const DIFFICULTY_COUNT=3;
  function dropDefaults(catalog){const sources=(catalog||[]).filter(m=>['normal','elite'].includes(m.kind)).map(m=>m.id);
-  return defaults.map((x,i)=>({id:'healing_'+x.id,name:x.name,enabled:true,type:'item',key:x.id,kinds:i===3?['elite']:['normal','elite'],chanceByDifficulty:Array(3).fill(i===0?.02:i<3?.01:.005),quantityMin:1,quantityMax:1,sources:[...sources],minLevel:[1,20,40,60][i],maxLevel:[19,39,59,0][i],independent:true}));
+  return defaults.map((x,i)=>{const band=DEFAULT_DROP_BANDS[i];return {id:'healing_'+x.id,name:x.name,enabled:true,type:'item',key:x.id,kinds:[...band.kinds],chanceByDifficulty:Array(DIFFICULTY_COUNT).fill(band.chance),quantityMin:1,quantityMax:1,sources:[...sources],minLevel:band.minLevel,maxLevel:band.maxLevel,independent:true};});
  }
  function migrateDrops(settings){const entries=settings?.drops?.entries;if(!Array.isArray(entries))return;
   const old=entries.findIndex(x=>x.id==='potion_all'&&x.type==='potion');if(old<0)return;

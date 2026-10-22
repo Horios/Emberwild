@@ -8,7 +8,6 @@
   const clone=v=>JSON.parse(JSON.stringify(v));
   const isHealPotion=item=>item?.type===HEAL_POTION_TYPE;
   const healPotionItems=()=>SHOP.filter(isHealPotion);
-  const pct=v=>Math.round(Number(v)*10000)/100;
   const validId=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,100}$/.test(id);
 
   function addDefaultHealPotionsTo(items){

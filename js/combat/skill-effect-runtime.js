@@ -5,7 +5,6 @@
   const configured=def=>schema.EFFECTS.includes(def?.effect)&&(['cleanse','dispel','revive'].includes(def.effect)||(def.commonEffectKeys||[]).length>0);
   const options=meta=>({...meta,target:meta.commonEffectKeys?.includes('target')?meta.target:undefined});
   const isHero=t=>t&&Object.prototype.hasOwnProperty.call(t,'job');
-  const key=t=>isHero(t)?heroKey(t):t.id;
   const name=t=>isHero(t)?characterName(t):combatEnemyName(t);
   const maxHp=t=>status().maxHp(t);
   function members(caster,fallen=false){

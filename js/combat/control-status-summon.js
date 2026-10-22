@@ -12,7 +12,6 @@
     {job:2,controlId:'archer-morph-trap',name:'變形陷阱',level:12,cooldown:7,power:1.0,effect:'summonMorphTrap',element:'physical',maxTargets:1,description:'召喚 1 點生命的變形陷阱。陷阱被擊破時，使攻擊者進入變形狀態。',trapHp:1,duration:3,bossDuration:0},
     {job:3,controlId:'priest-implant-fear',name:'植入恐怖',level:10,cooldown:6,power:0,effect:'fear',element:'shadow',maxTargets:1,description:'植入恐怖，使敵人傷害降低並有機率無法行動。BOSS 的失去行動機率降低。',duration:3,damageReduction:.20,skipChance:.30,bossSkipChance:.15}
   ];
-  const CONTROL_LABELS={polymorph:'變形',freeze:'冰凍',frost:'結霜',rage:'狂暴',summonMorphTrap:'變形陷阱',summonFreezeTrap:'冰凍陷阱',fear:'畏懼',tauntRage:'嘲諷／狂暴'};
   let controlStates=Object.create(null),combatSummons=[];
 
   function clamp01(v,fallback=0){v=Number(v);return Number.isFinite(v)?Math.max(0,Math.min(1,v)):fallback;}

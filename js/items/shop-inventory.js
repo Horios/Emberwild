@@ -1,7 +1,6 @@
 /* Shop pools, compact descriptions/effects, daily refresh prices and account inventory. */
 (function installShopInventoryOverhaul(){
   const clone=v=>JSON.parse(JSON.stringify(v));
-  const pctText=v=>Math.round((Number(v)||0)*10000)/100;
   const catalog=globalThis.EmberwildShopCatalog;
   const catalogOptions=items=>({items:items||SHOP,rerollItem:globalThis.__EMBERWILD_EQUIPMENT_POWER?.rerollItem,equipmentForms:ITEM_FORMS,maps:GAMEPLAY_SETTINGS.maps.catalog,classes:CLASSES});
   let SHOP_SETTINGS=catalog.validate(undefined,catalogOptions());

@@ -215,7 +215,6 @@
     return success;
   };
 
-  const compressionUseSupplyBase=useSupply;
   useSupply=function(id){
     const item=SHOP.find(x=>x.id===id);if(!item||(state.consumables[id]||0)<1)return;
     const previous=state[item.type],count=state.consumables[id],previousHp=state.hp;let buff;
