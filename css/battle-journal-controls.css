@@ -1,0 +1,11 @@
+.battle-speed-buttons{display:flex;gap:4px;min-width:0;flex-wrap:wrap}
+.battle-speed-buttons button{flex:1;white-space:nowrap;padding:3px 5px!important}
+.battle-speed-buttons button:disabled{opacity:.5}
+.journal-realtime-status{font-size:11px;line-height:1.65;border-top:1px solid var(--line);padding-top:5px;margin:5px 0}
+.journal-boost-row{display:flex;gap:3px;align-items:baseline;flex-wrap:wrap}
+.journal-boost-row small{font-size:10px;color:var(--muted)}
+.journal-boost-row details{width:100%;color:var(--muted);font-size:10px}
+.journal-boost-row summary{cursor:pointer}
+.journal-filter{display:flex;align-items:center;gap:6px;font-size:11px;margin-top:5px;color:var(--muted)}
+.journal-filter select{min-width:0;flex:1;height:27px;padding:2px 5px;font-size:11px}
+.global-journal-head .journal-actions{flex-wrap:wrap}

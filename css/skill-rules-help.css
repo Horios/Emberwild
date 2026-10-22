@@ -1,0 +1,7 @@
+
+.skill-rules-help{position:relative;display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;margin-left:5px;border:1px solid #65767a;border-radius:50%;color:var(--muted);font-size:11px;font-weight:700;line-height:1;vertical-align:2px;cursor:help;outline:none}
+.skill-rules-help:hover,.skill-rules-help:focus-visible{color:#eef2ef;border-color:#9aaeb1}
+.layout>main>.heading{position:relative;z-index:30;overflow:visible}
+.layout>main>.heading h1{overflow:visible}
+.skill-rules-help::after{content:attr(data-tooltip);display:block;position:absolute;left:0;top:calc(100% + 8px);z-index:10000;width:430px;max-width:min(430px,78vw);padding:9px 11px;border:1px solid #65767a;border-radius:5px;background:#0e1518;color:#eef2ef;font-size:12px;font-weight:400;line-height:1.6;letter-spacing:0;white-space:pre-line;text-align:left;box-shadow:0 5px 18px #0009;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease}
+.skill-rules-help:hover::after,.skill-rules-help:focus-visible::after{opacity:1;visibility:visible}

@@ -1,0 +1,105 @@
+name: Deploy production and preview
+run-name: 'Pages · ${{ github.event.inputs.preview_commit || github.sha }}'
+
+on:
+  push:
+    branches:
+      - main
+      - chatgpt-dev
+  workflow_dispatch:
+    inputs:
+      preview_commit:
+        description: Preview commit requesting this deployment
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  request-deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/chatgpt-dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request Pages deployment from main context
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-preview.yml --ref main --repo "$GITHUB_REPOSITORY" --field preview_commit="$GITHUB_SHA"
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout production source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: production
+          fetch-depth: 1
+
+      - name: Checkout preview source
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt-dev
+          path: preview-source
+          fetch-depth: 1
+
+      - name: Assemble Pages artifact
+        run: |
+          set -euo pipefail
+          test -f production/index.html
+          test -f preview-source/index.html
+          mkdir -p _site/preview
+          cp production/index.html _site/index.html
+          cp preview-source/index.html _site/preview/index.html
+          cp -R production/css production/js production/data _site/
+          cp -R preview-source/css preview-source/js preview-source/data _site/preview/
+          PRODUCTION_COMMIT=$(git -C production rev-parse HEAD)
+          PREVIEW_COMMIT=$(git -C preview-source rev-parse HEAD)
+          PRODUCTION_BALANCE=$(git -C production rev-parse HEAD:data/balance.json)
+          PREVIEW_BALANCE=$(git -C preview-source rev-parse HEAD:data/balance.json)
+          export PRODUCTION_COMMIT PREVIEW_COMMIT PRODUCTION_BALANCE PREVIEW_BALANCE
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, os
+          for prefix, branch, env in [("", "main", "PRODUCTION"), ("preview/", "chatgpt-dev", "PREVIEW")]:
+              Path("_site/" + prefix + "data/build.json").write_text(json.dumps({"branch": branch, "commit": os.environ[env + "_COMMIT"], "balanceBlob": os.environ[env + "_BALANCE"]}), encoding="utf-8")
+
+          path = Path("_site/preview/index.html")
+          html = path.read_text(encoding="utf-8")
+          if "<title>" not in html or "<body>" not in html:
+              raise SystemExit("Preview HTML is missing the expected <title> or <body> tag.")
+
+          html = html.replace("<title>", "<title>測試版｜", 1)
+          banner = (
+              '<div id="preview-build-banner" '
+              'style="position:fixed;top:8px;right:8px;z-index:2147483647;'
+              'padding:6px 10px;border-radius:4px;background:#8b3a2b;color:#fff;'
+              'font:700 12px/1.2 system-ui,sans-serif;box-shadow:0 1px 4px #0008;">'
+              '測試版本 · chatgpt-dev</div>'
+          )
+          html = html.replace("<body>", "<body>" + banner, 1)
+          path.write_text(html, encoding="utf-8")
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

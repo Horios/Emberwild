@@ -1,0 +1,8 @@
+
+.pending-quality-groups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:7px}
+.pending-quality-group{border:1px solid var(--line);background:#141c1f;padding:8px;min-height:82px}
+.pending-quality-group .row{align-items:flex-start}.pending-quality-group .actions{margin-top:6px;gap:4px}.pending-quality-group button{padding:4px 7px;font-size:11px}
+.account-sell-list{display:grid;gap:4px}.account-sell-row{display:grid;grid-template-columns:minmax(180px,1.5fr) 110px 90px minmax(190px,auto);align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+.account-sell-row .sell-controls{display:flex;align-items:center;gap:5px;justify-content:flex-end}.account-sell-row input{width:72px;padding:5px 6px}
+.inventory-detail-actions .sell-gear-button{border-color:#796b45;color:#e3c77f}.bulk-sell-actions{margin-top:4px}
+@media(max-width:900px){.pending-quality-groups{grid-template-columns:repeat(2,minmax(0,1fr))}.account-sell-row{grid-template-columns:minmax(130px,1fr) 90px}.account-sell-row .sell-controls{grid-column:1/-1;justify-content:flex-start}}
