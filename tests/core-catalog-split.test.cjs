@@ -10,8 +10,8 @@ test('static catalog and defaults load ahead of core, exactly once',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const scripts=[...html.matchAll(/<script\b[^>]*data-balance-src="([^"]+)"[^>]*><\/script>/g)].map(m=>m[1].split('?')[0]);
   const coreIndex=scripts.indexOf('js/core/core-game.js');
-  assert(coreIndex>=8);
-  assert.deepEqual(scripts.slice(coreIndex-8,coreIndex),[
+  assert(coreIndex>=9);
+  assert.deepEqual(scripts.slice(coreIndex-9,coreIndex),[
     'js/core/game-catalog.js',
     'js/balance/game-balance-defaults.js',
     'js/balance/gameplay-defaults.js',
@@ -19,7 +19,8 @@ test('static catalog and defaults load ahead of core, exactly once',()=>{
     'js/skills/skill-presentation-metadata.js',
     'js/balance/gameplay-settings-schema.js',
     'js/ui/core-screen-views.js',
-    'js/ui/core-equipment-views.js'
+    'js/ui/core-equipment-views.js',
+    'js/ui/core-battle-journal.js'
   ]);
   assert.equal(scripts.filter(s=>s==='js/core/core-game.js').length,1);
   const core=fs.readFileSync(path.join(root,'js/core/core-game.js'),'utf8');

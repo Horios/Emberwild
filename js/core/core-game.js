@@ -1381,27 +1381,27 @@ function addExpeditionLoot(name,n,rar=itemRarity(name)){if(n<=0)return;const old
 const journalRewardGroupKill=rewardGroupKill;
 rewardGroupKill=function(e){if(e.rewarded)return;const before=combatLootSnapshot();journalRewardGroupKill(e);const h=party.members[0];expeditionLoot.kills++;for(const [key,name] of [['gold','金幣'],['ore','鍛鐵'],['dust','寶石粉塵'],['potions','治療藥水']])addExpeditionLoot(name,h[key]-before[key]);h.gems.forEach((n,i)=>addExpeditionLoot(GEMS[i].name,n-before.gems[i]));for(const [name,n] of Object.entries(h.materials))addExpeditionLoot(name,n-(before.materials[name]||0));for(const g of h.bag)if(!before.gear.has(g.id))addExpeditionLoot(equipmentDisplayName(g),1,typeof gearQualityRank==='function'?gearQualityRank(g):Math.max(0,Math.min(3,Number(g.rar)||0)));};
 const journalResetSession=resetSession;resetSession=function(){journalResetSession();expeditionLoot={kills:0,items:new Map()};};
-function sharedBattleJournal(){if(!party)return '';const paused=$('modal').open;return `<section id="globalBattleJournal" class="global-battle-journal" aria-label="全隊共通戰報"><div class="global-journal-head"><div class="row"><h2>全隊戰報</h2><span class="tag">${running?(paused?'視窗暫停':'探索中'):'已暫停'} · ${battleRate}×</span></div><p>${esc(MAPS[party.map].name)} · ${MODES[party.difficulty||0].name}<br>存活隊員 ${living().length}/${heroes().length} · 敵人 ${foes.filter(e=>e.hp>0).length}/${foes.length}</p><button onclick="toggleBattle()">${running?'暫停戰鬥':'開始探索'}</button> <button onclick="setTab('battle')">查看戰場</button></div><div id="liveLog" role="log" aria-label="即時戰鬥紀錄">${logContent()}</div><section class="journal-loot"><h3>累積戰利品 · 擊敗 ${expeditionLoot.kills} 隻</h3><div class="small">本次開啟遊戲累計</div><div id="journalLootList" class="journal-loot-list">${[...expeditionLoot.items].map(([name,item])=>`<div class="journal-loot-row"><span class="loot-rarity-${item.rar??0}">${esc(name)}</span><b>+${(item.count??item).toLocaleString()}</b></div>`).join('')||'<p class="small">尚無戰利品。</p>'}</div></section></section>`;}
+
 const journalRender=render;render=function(){const live=$('liveLog'),list=$('journalLootList'),detail=live?.querySelector?.('details'),history=live?.querySelector?.('.history-events'),current=live?.querySelector?.('.current-events');const position={open:detail?.open,loot:list?.scrollTop||0,history:history?.scrollTop||0,current:current?.scrollTop||0};journalRender();const next=$('liveLog');if(next?.querySelector){const d=next.querySelector('details'),h=next.querySelector('.history-events'),c=next.querySelector('.current-events');if(d)d.open=!!position.open;if(h)h.scrollTop=position.history;if(c)c.scrollTop=position.current;}const l=$('journalLootList');if(l)l.scrollTop=position.loot;};
 
 // Update the common journal without replacing controls the player is using.
-function isEditingControl(){return !!document.activeElement?.matches?.('input,select,textarea,[contenteditable="true"]');}
-function refreshGlobalJournal(){
- const panel=$('globalBattleJournal');if(!party||!panel)return;
- const live=$('liveLog'),list=$('journalLootList'),detail=live?.querySelector?.('details'),history=live?.querySelector?.('.history-events'),current=live?.querySelector?.('.current-events');
- const saved={open:detail?.open,loot:list?.scrollTop||0,history:history?.scrollTop||0,current:current?.scrollTop||0};
- const fresh=document.createElement('template');fresh.innerHTML=sharedBattleJournal();
- // Keep the log, scroll containers, disclosures and controls mounted. Update only
- // information that actually changed; the log appends through appendBattleLogLine.
- for(const selector of ['.journal-title-row','.journal-summary','.journal-actions','.journal-filter','#journalRealtimeStatus','#journalLootList']){
-  const before=panel.querySelector(selector),after=fresh.content.querySelector?.(selector);
-  if(before&&after&&before.innerHTML!==after.innerHTML)before.innerHTML=after.innerHTML;
- }
- const oldSummary=panel.querySelector('.journal-loot-compact>summary,.mobile-loot-content>h3'),newSummary=fresh.content.querySelector?.('.journal-loot-compact>summary,.mobile-loot-content>h3');
- if(oldSummary&&newSummary&&oldSummary.textContent!==newSummary.textContent)oldSummary.textContent=newSummary.textContent;
- syncBattleLogHeader(live);
- const wallet=$('wallet');if(wallet)wallet.textContent='全隊金幣 '+party.members[0].gold.toLocaleString();
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // Update 09: data-driven test balance JSON and real multi-target core attacks.
@@ -1589,92 +1589,92 @@ solo.validateSave=dynamicValidateSave;validateSave=dynamicValidateSave;
 const BATTLE_LOG_VISIBLE_ROWS=12;
 let battleLogGeneration=0,battleLogSequence=0,battleReportPaused=false,battleLogFilter='all';
 const BATTLE_LOG_FILTERS={all:'全部顯示',playerDamage:'玩家造成傷害',enemyDamage:'怪物造成傷害',exp:'獲得經驗',item:'獲得物品'};
-function battleLogMatches(event){return battleLogFilter==='all'||event.type===battleLogFilter;}
-function battleLogEntryClass(event){return ['playerDamage','enemyDamage'].includes(event.type)?'event-damage':['exp','item'].includes(event.type)?'event-loot':'';}
-function lootRarityFromText(t){if(/極稀有|傳說/.test(t))return 3;if(/稀有/.test(t))return 2;if(/精良/.test(t))return 1;if(/獲得 /.test(t))return 0;return null;}
-function battleLogTextHTML(event){const t=event?.text??event,rar=event?.type==='item'?lootRarityFromText(t):null;if(rar===null)return esc(t);const m=String(t).match(/^(.*?獲得(?:極稀有道具：)?\s*)(.*)$/);return m?esc(m[1])+`<span class="loot-rarity-${rar}">${esc(m[2])}</span>`:esc(t);}
-function battleLogRowsHTML(){
- const ordered=logs.map(e=>typeof e==='string'?{text:e,type:'system'}:e).filter(battleLogMatches).reverse(), blanks=Math.max(0,BATTLE_LOG_VISIBLE_ROWS-ordered.length);
- return Array.from({length:blanks},()=>'<div class="battle-log-line battle-log-empty" aria-hidden="true">&nbsp;</div>').join('')+ordered.map(e=>`<div class="battle-log-line ${battleLogEntryClass(e)}" data-event-type="${e.type}">${battleLogTextHTML(e)}</div>`).join('');
-}
+
+
+
+
+
+
+
+
 logContent=function(){return `<div class="row battle-log-head"><h2>戰鬥紀錄</h2><span class="tag battle-log-round">回合 ${round}</span></div><div class="battle-log-stream" role="log" aria-live="polite" aria-label="戰鬥紀錄">${battleLogRowsHTML()}</div>`;};
-function isBattleLogAtBottom(stream){
- return !stream||stream.scrollHeight-stream.clientHeight-stream.scrollTop<=2;
-}
-function ensureBattleLogScrollState(stream){
- if(!stream||stream.dataset.scrollStateReady==='1')return;
- stream.dataset.scrollStateReady='1';
- stream.dataset.autoScroll=battleReportPaused?'0':'1';
- stream.addEventListener('scroll',()=>{
-  const follow=isBattleLogAtBottom(stream)?'1':'0';
-  if(battleReportPaused)stream.dataset.reportAutoScroll=follow;
-  else stream.dataset.autoScroll=follow;
- },{passive:true});
-}
-function forceBattleLogBottom(stream){
- if(!stream)return;
- ensureBattleLogScrollState(stream);
- if(battleReportPaused)return;
- stream.dataset.autoScroll='1';
- const pin=()=>{if(!battleReportPaused&&stream.isConnected&&stream.dataset.autoScroll==='1')stream.scrollTop=Math.max(0,stream.scrollHeight-stream.clientHeight);};
- pin();
- queueMicrotask(pin);
- requestAnimationFrame(()=>{pin();requestAnimationFrame(pin);});
-}
-function scrollBattleLogToBottom(root=document){
- const streams=[];
- if(root?.matches?.('.battle-log-stream'))streams.push(root);
- root?.querySelectorAll?.('.battle-log-stream').forEach(stream=>streams.push(stream));
- streams.forEach(forceBattleLogBottom);
-}
-function appendBattleLogLine(t){
- if(battleReportPaused||!battleLogMatches(t))return;
- document.querySelectorAll('.battle-log-stream').forEach(stream=>{
-  ensureBattleLogScrollState(stream);
-  const shouldPin=stream.dataset.autoScroll!=='0';
-  const oldScrollTop=stream.scrollTop;
-  const blank=stream.querySelector('.battle-log-empty');if(blank)blank.remove();
-  const line=document.createElement('div');line.className='battle-log-line '+battleLogEntryClass(t);line.dataset.eventType=t.type;line.innerHTML=battleLogTextHTML(t);stream.appendChild(line);
-  const real=[...stream.children].filter(el=>!el.classList.contains('battle-log-empty'));
-  while(real.length>65){const first=real.shift();first?.remove();}
-  if(shouldPin){
-   forceBattleLogBottom(stream);
-  }else{
-   // While the player is reading older entries, keep the scrollbar at the exact
-   // position they chose. Do not compensate for old rows pruned from the top,
-   // otherwise several new combat messages can walk scrollTop all the way to 0.
-   const restore=()=>{
-    const max=Math.max(0,stream.scrollHeight-stream.clientHeight);
-    stream.scrollTop=Math.min(oldScrollTop,max);
-    stream.dataset.autoScroll='0';
-   };
-   restore();
-   queueMicrotask(restore);
-   requestAnimationFrame(restore);
-  }
- });
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const stableBattleLogNote=note;
 note=function(t,type='system'){if(battleReportPaused)return;stableBattleLogNote(t);const event={id:++battleLogSequence,text:String(t),type:Object.hasOwn(BATTLE_LOG_FILTERS,type)&&type!=='all'?type:'system'};logs[0]=event;appendBattleLogLine(event);};
-function toggleBattleReport(){battleReportPaused=!battleReportPaused;document.querySelectorAll('.battle-log-stream').forEach(s=>{ensureBattleLogScrollState(s);if(battleReportPaused){s.dataset.reportAutoScroll=s.dataset.autoScroll;s.dataset.autoScroll='0';}else{s.dataset.autoScroll=s.dataset.reportAutoScroll||'1';if(s.dataset.autoScroll==='1')forceBattleLogBottom(s);}});save();render();}
-function setBattleLogFilter(type){if(!Object.hasOwn(BATTLE_LOG_FILTERS,type))return;battleLogFilter=type;battleLogGeneration++;save();render();}
-function battleJournalFilter(){return `<label class="journal-filter">顯示 <select aria-label="戰報篩選" onchange="setBattleLogFilter(this.value)">${Object.entries(BATTLE_LOG_FILTERS).map(([type,label])=>`<option value="${type}" ${battleLogFilter===type?'selected':''}>${label}</option>`).join('')}</select></label>`;}
+
+
+
 const stableBattleLogResetSession=resetSession;
 resetSession=function(){battleLogGeneration++;stableBattleLogResetSession();};
-function syncBattleLogHeader(live){if(battleReportPaused)return;const tag=live?.querySelector?.('.battle-log-round');if(tag)tag.textContent='回合 '+round;}
-function markBattleLogGeneration(live){if(live)live.dataset.logGeneration=String(battleLogGeneration);}
-function captureBattleLogScroll(live){
- const stream=live?.querySelector?.('.battle-log-stream');
- return stream?{stream,top:stream.scrollTop,left:stream.scrollLeft,autoScroll:stream.dataset.autoScroll}:null;
-}
-function restoreBattleLogScroll(position){
- if(!position?.stream.isConnected)return;
- const {stream,top,left,autoScroll}=position;
- ensureBattleLogScrollState(stream);
- stream.scrollLeft=left;
- if(!battleReportPaused&&autoScroll!=='0')forceBattleLogBottom(stream);
- else{stream.scrollTop=Math.min(top,Math.max(0,stream.scrollHeight-stream.clientHeight));stream.dataset.autoScroll=autoScroll??'0';}
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const stableBattleLogRender=render;
 render=function(){
  const oldLive=$('liveLog'),canKeep=oldLive&&oldLive.dataset.logGeneration===String(battleLogGeneration);
