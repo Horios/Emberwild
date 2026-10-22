@@ -45,6 +45,7 @@ test('potion descriptions describe their fixed HP role without obsolete low-pric
  const rows=published.inventoryIcons.filter(x=>x.kind==='item'&&x.key.startsWith('heal_'));
  assert.equal(rows.length,4);
  assert(rows.every(x=>x.description.includes('固定生命值')&&!/價格低廉|日常探索/.test(x.description)));
+ for(const row of rows)assert.equal(require('../js/ui/inventory-icon-model.js').descriptionDefaults['item:'+row.key],row.description);
  const r=game();
  assert.match(r.run('supplyDetail(SHOP.find(s=>s.id==="heal_small"))'),/HP/);
  assert.deepEqual(r.errors,[]);
