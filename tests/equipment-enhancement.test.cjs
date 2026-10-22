@@ -34,6 +34,86 @@ test('actual enhancement, preview, combat stats and an existing +10 save use the
   assert.deepEqual(r.errors,[]);
 });
 
+test('forge shows only the next refinement gains for the selected base, excluding affixes and rounding zeroes honestly',()=>{
+  const r=game(),out=json(r,`(()=>{
+    const rows=[];
+    state.ore=100000;state.dust=100000;state.materials['以太鍛鐵']=10000;
+    for(const level of [1,10,30])for(let slot=0;slot<4;slot++)for(const plus of [0,1,2,9]){
+      const g=createEquipmentShopGear('equipment_lv1','job0-slot'+slot+'-form0');
+      Object.assign(g,{equipmentLevel:level,plus,affix:[]});state.bag.push(g);openForge(g.id);
+      const section=()=>forgeView().split('<section class="forge-action"><h3>強化基礎能力</h3>')[1].split('</section>')[0];
+      const clean=section();
+      g.affix=[{type:0,value:999,rank:3},{type:12,element:'fire',value:15,rank:2}];
+      const decorated=section(),before=gearBaseStats(g),total=equipmentTotalSummaryText(g);
+      enhance(g.id);const after=gearBaseStats(g);
+      rows.push({level,slot,plus,clean,decorated,total,before,after,actualPlus:g.plus});
+    }
+    const g=findGear(forgeSelection);g.plus=RULES.enhanceMax;
+    return {rows,max:forgeView()};
+  })()`);
+  assert.equal(out.rows.length,48);
+  for(const row of out.rows){
+    const label=JSON.stringify({level:row.level,slot:row.slot,plus:row.plus});
+    assert.equal(row.decorated,row.clean,label);
+    assert.equal(row.actualPlus,row.plus+1,label);
+    const preview=row.decorated.match(/本次增加：([^<]+)/)[1];
+    const shown={atk:0,hp:0,def:0};
+    for(const [,name,value] of preview.matchAll(/(攻擊|生命|防禦) \+(\d+)/g))shown[{攻擊:'atk',生命:'hp',防禦:'def'}[name]]=Number(value);
+    for(const key of ['atk','hp','def'])assert.equal(shown[key],row.after[key]-row.before[key],label+' '+key);
+    assert.doesNotMatch(row.decorated,/累計|999|火屬性|詞綴/,label);
+    assert.match(row.total,/火 屬性傷害 \+15%/,label);
+    if(row.slot===1)assert.doesNotMatch(preview,/攻擊/,label);
+    if(Object.values(shown).every(n=>n===0))assert.equal(preview,'本次取整後無能力增加',label);
+  }
+  assert.match(out.rows.find(row=>row.level===1&&row.slot===1&&row.plus===1).decorated,/本次增加：生命 \+1<\/p>/);
+  assert.match(out.rows.find(row=>row.level===1&&row.slot===0&&row.plus===0).decorated,/本次增加：攻擊 \+1<\/p>/);
+  assert.match(out.rows.find(row=>row.level===1&&row.slot===0&&row.plus===1).decorated,/本次取整後無能力增加/);
+  assert.match(out.max,/已達 \+10 強化上限/);assert.doesNotMatch(out.max,/本次增加：|累計/);
+  assert.deepEqual(r.errors,[]);
+});
+
+test('every published equipment form, starter weapon and BOSS slot has matching actual and described refinement gains',()=>{
+  const r=game(),out=json(r,`(()=>{
+    const rows=[],fixtures=[];
+    for(let job=0;job<4;job++){
+      start(job);closeModal();claimMailboxAttachments(1);
+      fixtures.push(...state.bag.map(g=>structuredClone(g)));
+      for(let slot=0;slot<4;slot++)for(let form=0;form<ITEM_FORMS[job][slot].length;form++){
+        const g=gear(2,slot,0,job);Object.assign(g,{formJob:job,form,prefixId:'',suffixId:'',affix:[]});delete g.baseSnapshot;fixtures.push(g);
+      }
+      for(let region=0;region<6;region++)fixtures.push(bossGear(region,job,region%3));
+    }
+    const originalBag=state.bag.slice();setForgeWearFilter('unequipped');
+    for(const fixture of fixtures){
+      const g=structuredClone(fixture);g.id='refinement-fixture';g.plus=0;
+      state.bag.splice(0,state.bag.length,...originalBag,g);forgeSelection=g.id;
+      state.ore=100000;state.dust=100000;state.materials['以太鍛鐵']=10000;
+      const fixed=JSON.stringify({affix:g.affix,prefix:g.prefixId,suffix:g.suffixId});
+      for(let plus=0;plus<RULES.enhanceMax;plus++){
+        const before=equipmentStatContributions(g).total;
+        const html=forgeView().split('<section class="forge-action"><h3>強化基礎能力</h3>')[1].split('</section>')[0];
+        enhance(g.id);
+        rows.push({name:gearName(g),job:g.job,slot:g.slot,plus,html,before,after:equipmentStatContributions(g).total,actualPlus:g.plus,fixed:fixed===JSON.stringify({affix:g.affix,prefix:g.prefixId,suffix:g.suffixId})});
+      }
+    }
+    return {rows,fixtures:fixtures.length};
+  })()`);
+  assert(out.fixtures>=56);assert.equal(out.rows.length,out.fixtures*10);
+  for(const row of out.rows){
+    const label=row.name+' +'+row.plus,shown={atk:0,hp:0,def:0};
+    const preview=row.html.match(/本次增加：([^<]+)/)[1];
+    for(const [,name,value] of preview.matchAll(/(攻擊|生命|防禦) \+(\d+)/g))shown[{攻擊:'atk',生命:'hp',防禦:'def'}[name]]=Number(value);
+    assert.equal(row.actualPlus,row.plus+1,label);assert.equal(row.fixed,true,label);
+    const allowed=[['atk'],['hp','def'],['atk','hp'],['atk','hp']][row.slot];
+    for(const key of ['atk','hp','def']){
+      assert.equal(shown[key],row.after[key]-row.before[key],label+' '+key);
+      if(!allowed.includes(key))assert.equal(shown[key],0,label+' unexpected '+key);
+    }
+    assert.equal(row.after.speed,row.before.speed,label+' speed');
+  }
+  assert.deepEqual(r.errors,[]);
+});
+
 test('all slots and T grades stay monotonic and additive; BOSS percentages do not multiply refinement gains',()=>{
   const r=game(),out=json(r,`(()=>{
     const issues=[];let checked=0;
