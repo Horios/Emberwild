@@ -10,11 +10,14 @@ test('static catalog and defaults load ahead of core, exactly once',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const scripts=[...html.matchAll(/<script\b[^>]*data-balance-src="([^"]+)"[^>]*><\/script>/g)].map(m=>m[1].split('?')[0]);
   const coreIndex=scripts.indexOf('js/core/core-game.js');
-  assert(coreIndex>=3);
-  assert.deepEqual(scripts.slice(coreIndex-3,coreIndex),[
+  assert(coreIndex>=6);
+  assert.deepEqual(scripts.slice(coreIndex-6,coreIndex),[
     'js/core/game-catalog.js',
     'js/balance/game-balance-defaults.js',
-    'js/balance/gameplay-defaults.js'
+    'js/balance/gameplay-defaults.js',
+    'js/core/save-validation.js',
+    'js/skills/skill-presentation-metadata.js',
+    'js/balance/gameplay-settings-schema.js'
   ]);
   assert.equal(scripts.filter(s=>s==='js/core/core-game.js').length,1);
   const core=fs.readFileSync(path.join(root,'js/core/core-game.js'),'utf8');

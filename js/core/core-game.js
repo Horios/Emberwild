@@ -402,126 +402,126 @@ function gearDesc(g) {
   const v=gearBaseStats(g);
   return ['atk','hp','def'].filter(k=>v[k]).map(k=>`${{atk:'攻擊',hp:'生命',def:'防禦'}[k]} +${Math.round(v[k])}`).join(' / ');
 }
-function migrateLegacyEquipmentSlotsInSave(s){
- if(!s||!Array.isArray(s.bag))return s;
- const movedToAccessory=new Set();
- for(const g of s.bag){
-  if(g?.boss!==undefined){
-    // BOSS equipment has its own fixed identity/profile and must not retain the
-    // random base-form metadata produced by gear() before it becomes boss gear.
-    const expectedSlot=bossEquipmentSlot(g.boss);
-    if(Number.isInteger(expectedSlot)&&g.slot!==expectedSlot){g.slot=expectedSlot;movedToAccessory.add(g.id);}
-    delete g.form;
-    delete g.formJob;
-    delete g.weaponType;
-    continue;
-  }
-  if(g?.slot!==2||!Number.isInteger(g.form)||g.form<1)continue;
-  // Older saves used one mixed third equipment slot. After it was split into
-  // off-hand + accessories, form 0 stayed in slot 2 and form 1+ moved to slot 3.
-  // Some transitional saves already had formJob, so the old migration's
-  // "formJob is undefined" check missed them.
-  if(itemForm(g))continue;
-  const candidate={...g,slot:3,form:g.form-1};
-  if(itemForm(candidate)){g.slot=3;g.form=candidate.form;movedToAccessory.add(g.id);}
- }
- if(!Array.isArray(s.equipped))return s;
- if(s.equipped.length===3){
-  const oldEquipped=[...s.equipped];
-  s.equipped=[oldEquipped[0]??null,oldEquipped[1]??null,null,null,null];
-  const oldThird=oldEquipped[2];
-  if(oldThird!==null&&oldThird!==undefined){
-   const gear=s.bag.find(g=>g.id===oldThird),positions=gearEquipPositions(gear);
-   if(positions.length)s.equipped[positions[0]]=oldThird;
-  }
-  return s;
- }
- if(s.equipped.length===5&&movedToAccessory.size){
-  for(let position=0;position<s.equipped.length;position++){
-   const id=s.equipped[position];
-   if(!movedToAccessory.has(id))continue;
-   const gear=s.bag.find(g=>g.id===id),positions=gearEquipPositions(gear);
-   if(positions.includes(position))continue;
-   s.equipped[position]=null;
-   const target=positions.find(p=>s.equipped[p]===null||s.equipped[p]===undefined);
-   if(target!==undefined)s.equipped[target]=id;
-  }
- }
- return s;
-}
-// Validate a private copy; migrations never modify an untrusted caller object.
-function validateSave(input,{companion=false}={}) {
-  const fail=message=>{throw Error(message);};
-  const int=(v,min=0,max=1e12)=>Number.isSafeInteger(v)&&v>=min&&v<=max;
-  const num=(v,min=0,max=1e12)=>Number.isFinite(v)&&v>=min&&v<=max;
-  const array=(v,n)=>Array.isArray(v)&&v.length===n;
-  const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
-  if(!object(input)||![1,2].includes(input.version))fail('存檔版本不符');
-  const s=migrateLegacyEquipmentSlotsInSave(JSON.parse(JSON.stringify(input))),legacy=s.version===1;
-  if(Array.isArray(s.gems)&&s.gems.length===3){s.gems=[...s.gems,...Array(GEMS.length-3).fill(0)];if(Array.isArray(s.sockets))s.sockets=s.sockets.map((v,i)=>v===1&&CLASSES[s.job]?.skills?.[i]?.[1]==='proc'?2:v===2&&CLASSES[s.job]?.skills?.[i]?.[1]==='active'?3:v);}
-  delete s.sp;
-  if(!int(s.job,0,3)||!int(s.lv,1,RULES.maxLevel)||!int(s.map,0,MAPS.length-1))fail('角色或地圖無效');
-  if(s.avatarId!==undefined&&s.avatarId!==null&&s.avatarId!==''&&!['guardian','mage','ranger','healer','wanderer','phoenix'].includes(s.avatarId))fail('角色圖示無效');
-  for(const k of ['gold','ore','dust','ap','totalKills','repeat','potions','xp'])if(!int(s[k]))fail('資源數值無效');
-  for(const k of ['hp','shield'])if(!num(s[k]))fail('生命資料無效');
-  const skillCount=CLASSES[s.job].skills.length,MAX_SAVE_SKILLS=64;
-  // Boot-time validation runs before some late modules append their built-in skills.
-  // Preserve a bounded trailing skill/socket segment here and validate it again after
-  // those modules are installed; otherwise a save written by the same build cannot reload.
-  if(Array.isArray(s.skills)&&s.skills.length<skillCount)while(s.skills.length<skillCount)s.skills.push(0);
-  if(Array.isArray(s.sockets)&&s.sockets.length<skillCount)while(s.sockets.length<skillCount)s.sockets.push(null);
-  if(!array(s.stats,3)||!s.stats.every(v=>int(v,0,100000)))fail('能力值陣列無效');
-  if(!Array.isArray(s.skills)||s.skills.length<skillCount||s.skills.length>MAX_SAVE_SKILLS||!s.skills.every(v=>int(v,0,RULES.skillMax)))fail('技能陣列無效');
-  if(!array(s.gems,GEMS.length)||!s.gems.every(v=>int(v,0,1e9)))fail('寶石陣列無效');
-  for(const k of ['advanced','won','autoPotion'])if(typeof s[k]!=='boolean')fail('角色狀態無效');
-  if(!int(s.tutorial,0,3)||s.advanced&&s.lv<GS('progression.advance.level',15)||s.won&&s.lv<GS('progression.levelCaps.beforeClear',30))fail('角色進度無效');
-  for(let i=0;i<skillCount;i++)if(!companion&&s.skills[i]>0&&(s.lv<CLASSES[s.job].skills[i][2]||skillRequiresAdvanced(CLASSES[s.job].skills[i],i)&&!s.advanced))fail('尚未解鎖的技能');
-  if(!array(s.active,(s.skillLoadout||companion)?globalThis.__EMBERWILD_SKILLS?.slotCounts(s).active??2:2)||!s.active.every(i=>i===null||int(i,0,s.skills.length-1)&&s.skills[i]>0&&(i>=skillCount||CLASSES[s.job].skills[i][1]==='active'))||new Set(s.active.filter(i=>i!==null)).size!==s.active.filter(i=>i!==null).length)fail('主動槽無效');
-  // Unknown trailing active slots belong to late-installed skills. Do not expose them
-  // to early renderers; the original boot bytes are rehydrated after those skills exist.
-  if(s.active.some(i=>i!==null&&i>=skillCount))s.active=s.active.map(i=>i!==null&&i>=skillCount?null:i);
-  if(!Array.isArray(s.sockets)||s.sockets.length!==s.skills.length||s.sockets.length>MAX_SAVE_SKILLS||!s.sockets.every((v,i)=>v===null||int(v,0,GEMS.length-1)&&s.skills[i]>0))fail('寶石插槽無效');
-  if(!Array.isArray(s.bag)||s.bag.length>EmberwildGearInventory.SAVE_LIMIT)fail('背包無效');
-  for(const g of s.bag)if(g?.acquiredAt!==undefined&&(!Number.isSafeInteger(g.acquiredAt)||g.acquiredAt<0))fail('裝備取得時間無效');
-  const ids=new Set();
-  for(const g of s.bag) {
-    if(EmberwildTokens.isToken(g)){EmberwildTokens.validateItem(g,RULES.enhanceMax);if(ids.has(g.id))fail('信物 ID 重複');ids.add(g.id);continue;}
-    // Types 16/17/18 are persisted by later gameplay modules, so boot-time validation must accept them before those modules execute.
-    if(!object(g)||typeof g.id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(g.id)||ids.has(g.id)||typeof g.name!=='string'||g.name.length>80||/[<>]/.test(g.name)||!int(g.tier,1,12)||!int(g.slot,0,3)||!int(g.rar,0,3)||!int(g.plus,0,RULES.enhanceMax)||!Array.isArray(g.affix)||g.affix.length>2)fail('裝備資料無效');
-    ids.add(g.id);
-    if(g.equipmentLevel!==undefined&&!int(g.equipmentLevel,1,RULES.maxLevel))fail('裝備等級無效');
-    if(g.baseRuleVersion!==undefined&&![0,1].includes(g.baseRuleVersion))fail('裝備基底版本無效');
-    for(const key of ['canEnhance','canReroll'])if(g[key]!==undefined&&typeof g[key]!=='boolean')fail('裝備培養設定無效');
-    if(g.equipmentSource!==undefined&&g.equipmentSource!=='shop')fail('裝備取得來源無效');
-    if(g.baseSnapshot!==undefined){const b=g.baseSnapshot;if(!object(b)||b.version!==1||!num(b.mult,.01,100)||['raw','body','base'].some(key=>!object(b[key])||['atk','hp','def'].some(k=>!int(b[key][k],0,1e9))))fail('裝備基底快照無效');}
-    if(g.rerolled!==undefined&&typeof g.rerolled!=='boolean')fail('洗鍊紀錄無效');
-    if(g.affixLock!==undefined&&(!int(g.affixLock,0,1)||g.affixLock>=g.affix.length))fail('潛能鎖定資料無效');
-    if(!legacy&&!int(g.job,0,3))fail('裝備職業無效');
-    if(g.boss!==undefined&&!int(g.boss,0,5))fail('首領裝備無效');
-    if(g.difficulty!==undefined&&!int(g.difficulty,0,2))fail('裝備難度無效');
-    if(g.region!==undefined&&(!int(g.region,0,MAPS.length-1)||g.region===6||g.boss===undefined||regionFamily(g.region)!==g.boss||regionTier(g.region)!==g.tier))fail('裝備來源無效');
-    for(const a of g.affix)if(!object(a)||!int(a.type,0,legacy?3:18)||!num(a.value,0,RULES.affixMax)||!legacy&&!int(a.rank,0,3)||[4,5].includes(a.type)&&!int(a.skill,0,MAX_SAVE_SKILLS-1)||[12,14].includes(a.type)&&!['fire','ice','wind','light','shadow'].includes(a.element)||a.type===13&&!['beast','plant','undead','construct','demon','spirit'].includes(a.race))fail('詞條資料無效');
-  }
-  if(!array(s.equipped,5)||new Set(s.equipped.filter(Boolean)).size!==s.equipped.filter(Boolean).length||!s.equipped.every((id,i)=>id===null||s.bag.some(g=>g.id===id&&gearEquipPositions(g).includes(i)&&(legacy||gearWearableJobs(g).includes(s.job))&&s.lv>=gearRequiredLevel(g))))fail('穿戴資料無效');
-  for(const k of ['materials','kills'])if(!object(s[k])||Object.entries(s[k]).some(([key,n])=>key.length>80||/[<>]/.test(key)||['__proto__','constructor','prototype'].includes(key)||!int(n,0,1e9)))fail('素材資料無效');
-  for(const k of ['claimed','discovered'])if(!Array.isArray(s[k])||s[k].length>200||!s[k].every(v=>typeof v==='string'&&v.length<100))fail('圖鑑資料無效');
-  // A v1 save has no commission board; ignore unknown extension fields.
-  if(legacy)delete s.board;
-  migrate(s);
-  const b=s.board,questIds=new Set();
-  if(!object(b)||!int(b.next,0,8.64e15)||!int(b.serial)||!Array.isArray(b.tasks)||b.tasks.length>12||!EmberwildCommissions.validBoard(b))fail('委託看板無效');
-  for(const q of b.tasks) {
-    if(q.designVersion===1){
-      if(!object(q)||typeof q.id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(q.id)||questIds.has(q.id)||!int(q.map,0,MAPS.length-1)||q.map===6||!EmberwildQuestDesign.validSnapshot(q))fail('委託設計內容無效');
-      questIds.add(q.id);continue;
-    }
-    if(!object(q)||typeof q.id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(q.id)||questIds.has(q.id)||!int(q.map,0,MAPS.length-1)||q.map===6||!EmberwildCommissions.validSource(q,MAPS)||!int(q.n,1,100)||!['gear','gem'].includes(q.kind)||!int(q.gem,0,GEM_KINDS-1)||!int(q.slot,0,3)||![2,3].includes(q.rar)||typeof q.done!=='boolean')fail('委託內容無效');
-    questIds.add(q.id);
-  }
-  if(!int(s.difficulty,0,2)||!array(s.modeClears,3)||!s.modeClears.every(v=>int(v)))fail('難度資料無效');
-  if(s.lv>levelCap(s)||!solo.canVisit(s.map,s))fail('尚未解鎖此等級或區域');
-  return s;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function chooseMap(mi) { if(!canVisit(mi))return;resetEncounter();state.map=mi;save();render(); }
 function changeDifficulty(value) {
   const mode=Number(value);
@@ -1253,48 +1253,48 @@ validateParty=function(data){
 const auditPackParty=packParty;
 packParty=function(){const data=auditPackParty(),ids=new Set(party.sharedGear.items.map(g=>g.id));const pendingAffixes={};for(const [key,list] of inlineAffixDrafts){const id=key.slice(7);if(ids.has(id))pendingAffixes[id]=list;}return {...data,pendingAffixes};};
 
-// Presentation metadata only. New mechanics must be implemented in combat before
-// supplying metadata here; names/elements never imply AoE, casting or control.
-const SKILL_CONTROL_LABELS=Object.freeze({stun:'暈眩',freeze:'冰凍',silence:'沉默',root:'定身'});
-const SKILL_STATUS_LABELS=Object.freeze({...SKILL_CONTROL_LABELS,burn:'燃燒',poison:'中毒'});
-const SKILL_TYPE_RULES=[
- {id:'trigger',label:'觸發',match:m=>m.activation==='proc'},
- {id:'instant',label:'瞬發',match:m=>!['passive','proc'].includes(m.activation)&&!(m.castTimeSeconds>0)},
- {id:'cast',label:'吟唱',match:m=>m.castTimeSeconds>0},
- {id:'burst',label:'爆發',match:m=>m.delivery==='burst'},
- {id:'duration',label:'持續',match:m=>m.effects.some(e=>e.durationSeconds>0||e.periodic)},
- {id:'area',label:'範圍',match:m=>['allies','enemies','area'].includes(m.target)||m.maxTargets>1},
- {id:'control',label:'控制',match:m=>m.effects.some(e=>Object.hasOwn(SKILL_CONTROL_LABELS,e.kind))},
- {id:'support',label:'輔助',match:m=>m.effects.some(e=>['buff','debuff'].includes(e.kind))},
- {id:'heal',label:'治療',match:m=>m.effects.some(e=>['heal','drain','regen'].includes(e.kind))},
- {id:'shield',label:'護盾',match:m=>m.effects.some(e=>e.kind==='shield')},
- {id:'passive',label:'被動',match:m=>m.activation==='passive'}
-];
-function skillMechanics(job,index,group='core'){
- const sk=group==='support'?SUPPORT[job]?.[index]:CLASSES[job]?.skills?.[index];
- if(!sk)return {activation:'active',castTimeSeconds:0,target:'enemy',maxTargets:1,effects:[]};
- if(group==='support'){
-  const meta=sk.mechanics&&typeof sk.mechanics==='object'&&!Array.isArray(sk.mechanics)?sk.mechanics:{};
-  const fallbackEffects=[{kind:['fracture','weaken','vulnerable'].includes(sk.kind)?'debuff':'buff',durationSeconds:sk.duration},...(sk.kind==='regen'?[{kind:'regen',periodic:true,durationSeconds:sk.duration}]:[])];
-  return {...meta,activation:meta.activation??'active',castTimeSeconds:Number(meta.castTimeSeconds)||0,target:meta.target??sk.target,maxTargets:Math.max(1,Number(meta.maxTargets)||1),effects:Array.isArray(meta.effects)?meta.effects:fallbackEffects};
- }
- const meta=sk[6]&&typeof sk[6]==='object'&&!Array.isArray(sk[6])?sk[6]:{};
- return {...meta,activation:meta.activation??sk[1],castTimeSeconds:Number(meta.castTimeSeconds)||0,target:meta.target??(sk[5]==='heal'?'weakest':sk[5]==='shield'?'self':'enemy'),maxTargets:Math.max(1,Number(meta.maxTargets)||1),effects:Array.isArray(meta.effects)?meta.effects:[{kind:sk[5]}]};
-}
-function skillTypeTags(mechanics){
- const tags=SKILL_TYPE_RULES.filter(rule=>rule.match(mechanics)).map(({id,label})=>({id,label}));
- const secondary=[...new Set(mechanics.effects.map(e=>e.kind))].filter(kind=>Object.hasOwn(SKILL_STATUS_LABELS,kind)).slice(0,2);
- return [...tags,...secondary.map(id=>({id,label:SKILL_STATUS_LABELS[id],secondary:true}))];
-}
-function skillTypeBadges(job,index,group='core'){
- return `<span class="skill-type-tags" aria-label="技能類型">${skillTypeTags(skillMechanics(job,index,group)).map(tag=>`<span class="skill-type-tag${tag.secondary?' skill-type-secondary':''}">【${esc(tag.label)}】</span>`).join('')}</span>`;
-}
-function skillMechanicsDetails(job,index,group='core'){
- const m=skillMechanics(job,index,group),details=[],timeUnit='戰鬥回合';
- if(m.castTimeSeconds>0)details.push('吟唱時間：'+m.castTimeSeconds+' '+timeUnit);
- for(const effect of m.effects)if(Object.hasOwn(SKILL_CONTROL_LABELS,effect.kind))details.push('控制效果：'+SKILL_CONTROL_LABELS[effect.kind]+' · 持續 '+effect.durationSeconds+' '+timeUnit);
- return details.length?`<p class="skill-mechanics-details">${details.map(esc).join('<br>')}</p>`:'';
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Account-wide rare consumable; drop rates do not scale with difficulty.
 function radiantDropChance(kind){
@@ -1772,31 +1772,31 @@ shopView=function(){ensureMarket();const h=pageHero('shop');return `<div class="
 EmberwildProgression.applyDefaults(GAMEPLAY_SETTINGS_DEFAULTS);
 GAMEPLAY_SETTINGS_DEFAULTS.equipment.baseStats.offhandAttackPerTier??=GAMEPLAY_SETTINGS_DEFAULTS.equipment.baseStats.accessoryAttackPerTier;GAMEPLAY_SETTINGS_DEFAULTS.equipment.baseStats.offhandHpPerTier??=GAMEPLAY_SETTINGS_DEFAULTS.equipment.baseStats.accessoryHpPerTier;
 GAMEPLAY_SETTINGS_DEFAULTS.maps={levelRanges:MAPS.map(m=>({min:m.min,max:m.max}))};
-function cloneGameplaySettings(v){return JSON.parse(JSON.stringify(v));}
-function mergeGameplayShape(def,src){
-  if(Array.isArray(def))return def.map((v,i)=>mergeGameplayShape(v,Array.isArray(src)?src[i]:undefined));
-  if(def&&typeof def==='object'){const out={};for(const k of Object.keys(def))out[k]=mergeGameplayShape(def[k],src&&typeof src==='object'?src[k]:undefined);return out;}
-  if(typeof def==='number')return typeof src==='number'&&Number.isFinite(src)?src:def;
-  return typeof src===typeof def?src:def;
-}
-function gameplayAt(root,path){return String(path).split('.').reduce((v,k)=>v?.[k],root);}
-function validateGameplaySettings(cfg){
-  const probs=[
-   'equipment.lootOwnerSameJobChance','equipment.difficultyAffix.hardChance','equipment.difficultyAffix.hellChance','equipment.difficultyAffix.hardFineThreshold','equipment.difficultyAffix.hardRareThreshold','equipment.difficultyAffix.hellFineThreshold','equipment.difficultyAffix.hellRareThreshold','equipment.difficultyAffix.skillChance',
-   'monsters.encounter.bossChance','monsters.encounter.eliteChance','rewards.equipmentQuality.rareChance','rewards.equipmentQuality.fineConditionalChance','rewards.potionDropChance','rewards.postVictoryHeal','rewards.radiant.normalElite','rewards.radiant.bossFinal','rewards.ether.eliteBase','rewards.ether.elitePerTier','rewards.ether.eliteCap','rewards.ether.bossRepeat','combat.autoPotionThreshold','combat.defeatGoldLoss','combat.supply.wardResistance','combat.supply.elementTonicDamage'
-  ];
-  for(const p of probs){const n=gameplayAt(cfg,p);if(!Number.isFinite(n)||n<0||n>1)throw Error('平衡設定機率需介於 0~1：'+p);}
-  for(const mode of cfg.difficulty.modes)for(const p of [...mode.equipmentChance,...mode.gemChance,mode.bossGearChance,mode.legendaryGearChance])if(!Number.isFinite(p)||p<0||p>1)throw Error('難度掉落率需介於 0~1');
-  for(const p of cfg.difficulty.materialChance)if(!Number.isFinite(p)||p<0||p>1)throw Error('素材掉落率需介於 0~1');
-  if(cfg.monsters.encounter.bossChance+cfg.monsters.encounter.eliteChance>1)throw Error('BOSS 與菁英遭遇率合計不可超過 1');
-  if(cfg.combat.groupSize.min<1||cfg.combat.groupSize.max<cfg.combat.groupSize.min)throw Error('群怪數量範圍無效');
-  if(cfg.equipment.enhance.maxLevel<0||!Number.isInteger(cfg.equipment.enhance.maxLevel))throw Error('強化上限必須是非負整數');
-  if(cfg.progression.levelCaps.beforeClear<1||cfg.progression.levelCaps.afterClear<cfg.progression.levelCaps.beforeClear)throw Error('等級上限設定無效');
-  if(cfg.rewards.ether.firstBossMax<cfg.rewards.ether.firstBossMin)throw Error('首次 BOSS 以太鍛鐵範圍無效');
-  cfg.maps.levelRanges.forEach((m,i)=>{if(!Number.isFinite(m.min)||!Number.isFinite(m.max)||m.min<1||m.max<m.min)throw Error('地圖等級範圍無效：'+i);});
-  return cfg;
-}
-function normalizeGameplaySettings(input){return validateGameplaySettings(mergeGameplayShape(GAMEPLAY_SETTINGS_DEFAULTS,input||{}));}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 let GAMEPLAY_SETTINGS=normalizeGameplaySettings();
 globalThis.__EMBERWILD_GAMEPLAY_SETTINGS=GAMEPLAY_SETTINGS;
 function applyGameplaySettingsSideEffects(){
