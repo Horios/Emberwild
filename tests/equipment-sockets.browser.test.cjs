@@ -19,6 +19,21 @@ test('equipment sockets: horizontal icons, icon gem choices, modes and disabled 
    assert.equal(boxes.length,3);assert(boxes.every(b=>b.y===boxes[0].y));assert(boxes[2].x>boxes[1].x&&boxes[1].x>boxes[0].x);
    assert(boxes[2].right<=width,'socket row fits viewport');
    assert.equal(await editor.locator('[data-equipment-gem] svg').count(),15);
+   const bottom=await editor.evaluate(el=>{
+    const wrap=el.closest('.inventory-detail-wrap'),main=el.closest('main');
+    wrap.scrollTop=wrap.scrollHeight;main.scrollTop=main.scrollHeight;
+    const footer=el.lastElementChild.getBoundingClientRect(),pane=wrap.getBoundingClientRect(),viewport=main.getBoundingClientRect();
+    return {overflow:getComputedStyle(wrap).overflowY,at:wrap.scrollTop,max:wrap.scrollHeight-wrap.clientHeight,footerTop:footer.top,footerBottom:footer.bottom,paneTop:pane.top,paneBottom:pane.bottom,mainTop:viewport.top,mainBottom:viewport.bottom};
+   });
+   if(width>760){
+    assert.equal(bottom.overflow,'auto');assert(bottom.max>0,'long gem detail has its own scroll range');
+    assert(Math.abs(bottom.at-bottom.max)<=1,'detail reaches its true bottom');
+    assert(bottom.footerTop>=bottom.paneTop&&bottom.footerBottom<=bottom.paneBottom+1,'last socket instructions fit inside detail viewport');
+   }else{
+    assert.equal(bottom.overflow,'visible');
+    assert(bottom.footerTop>=bottom.mainTop&&bottom.footerBottom<=bottom.mainBottom+1,'mobile main scroll reaches the last socket instructions');
+   }
+
    assert.equal(await editor.locator('.equipment-socket-list select').count(),0);
    assert(await mode.evaluate(el=>el.closest('.equipment-socket-mode').previousElementSibling.classList.contains('equipment-socket-list')));
    assert.equal(await mode.isDisabled(),false);
