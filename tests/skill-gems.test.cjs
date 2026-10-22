@@ -141,3 +141,29 @@ test('actual equipped and configured casts heal the lowest-HP ally and add guard
  assert(row.wantHeal>0);assert.equal(row.recovered,row.wantHeal,row.id+' heals once');assert.equal(row.shieldAdded,row.wantShield,row.id+' shields once');assert.equal(row.casterShield,0);assert.equal(row.bad,false);assert.equal(row.afterFailed,55+row.wantShield);}
  assert.deepEqual(r.errors,[]);
 });
+
+test('socket icon editor keeps mode below the row and rejects skillless mode changes at the operation boundary',()=>{
+ const r=game(0);
+ const out=json(r,`(()=>{
+  const h=playerHero(),g=findGear(h.equipped[0]);delete g.skillId;
+  g.skillSockets={version:1,count:3,gems:[null,0,null],firstMode:'skill'};
+  h.activeSkillEquipmentId=g.id;
+  const invalid=setEquipmentGemMode(g.id,'skill'),noSkill=__EMBERWILD_SKILL_SYSTEM_UI.sockets(g);
+  g.skillId='class0-initial0';
+  const active=__EMBERWILD_SKILL_SYSTEM_UI.sockets(g);
+  selectEquipmentSocket(g.id,2);const selected=__EMBERWILD_SKILL_SYSTEM_UI.sockets(g);
+  return {invalid,noSkill,active,selected,invalidSlot:selectEquipmentSocket(g.id,3)};
+ })()`);
+ assert.equal(out.invalid,false);assert.equal(out.invalidSlot,false);
+ assert.match(out.noSkill,/無附帶技能，僅提供基礎數值/);
+ assert.match(out.noSkill,/<select aria-label="第一孔效果模式"[^>]*disabled/);
+ assert.match(out.noSkill,/<option value="skill"[^>]*disabled/);
+ assert.equal((out.active.match(/data-equipment-socket=/g)||[]).length,3);
+ assert.equal((out.active.match(/data-equipment-gem=/g)||[]).length,15);
+ assert(out.active.indexOf('equipment-socket-list')<out.active.indexOf('equipment-socket-mode'));
+ assert.match(out.active,/data-equipment-gem="0"[^>]*title="技能效果 \+2%/,'empty first socket previews the intended skill bonus');
+ assert.match(out.selected,/aria-label="第 3 孔寶石"/);
+ assert.match(out.selected,/data-equipment-gem="0"[^>]*title="攻擊 \+2/);
+ assert.match(out.selected,/<svg/);
+ assert.deepEqual(r.errors,[]);
+});

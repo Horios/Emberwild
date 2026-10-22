@@ -83,7 +83,7 @@
   if(next!==null&&n===0&&g.skillId&&g.skillSockets.firstMode==='skill'&&!compatible(next,S.byId(g.skillId),n)){toast('此寶石不適用於裝備技能');return false;}
   return transaction(()=>{if(old!==null)h.gems[old]++;if(next!==null)h.gems[next]--;g.skillSockets.gems[n]=next;});
  };
- globalThis.setEquipmentGemMode=function(id,value){const h=owner(),g=equipment(h).find(g=>g.id===id);if(!g||h.activeSkillEquipmentId!==id||!g.skillSockets?.count||!['skill','base'].includes(value))return false;if(value==='skill'&&g.skillSockets.gems[0]!==null&&!compatible(g.skillSockets.gems[0],S.byId(g.skillId),0)){toast('第一孔寶石不相容，請先更換寶石或保留基礎模式');return false;}return transaction(()=>{g.skillSockets.firstMode=value;});};
+ globalThis.setEquipmentGemMode=function(id,value){const h=owner(),g=equipment(h).find(g=>g.id===id);if(!g||!S.byId(g.skillId)||h.activeSkillEquipmentId!==id||!g.skillSockets?.count||!['skill','base'].includes(value))return false;if(value==='skill'&&g.skillSockets.gems[0]!==null&&!compatible(g.skillSockets.gems[0],S.byId(g.skillId),0)){toast('第一孔寶石不相容，請先更換寶石或保留基礎模式');return false;}return transaction(()=>{g.skillSockets.firstMode=value;});};
  function refund(g,h=owner()){for(const id of g.skillSockets?.gems||[])if(id!==null)h.gems[id]++;}
  globalThis.__EMBERWILD_EQUIPMENT_SKILLS={refresh,generate,compatible,mode,effectsFor,skillRate,refund,supportCooldownOnCast};
  S.refreshAll();
