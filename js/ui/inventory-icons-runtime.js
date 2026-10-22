@@ -52,8 +52,9 @@
   globalThis.inventoryMaterialDescription=name=>description('material',name);
   globalThis.lifeMaterialDescription=name=>description('material',name);
   function gearKey(g){return g.boss!==undefined?'boss:'+g.region+':'+g.job:'form:'+equipmentFormGroup(g)+':'+g.slot+':'+g.form;}
+  globalThis.__EMBERWILD_GEAR_SKILL_ICON=(g,glyph)=>!globalThis.EmberwildTokens?.isToken(g)&&globalThis.__EMBERWILD_SKILLS?.byId(g?.skillId)?'<span class="equipment-skill-icon" role="img" aria-label="附帶裝備技能" title="附帶裝備技能">'+glyph+'<span class="equipment-skill-star" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m14 2 2.8 6.2L23 11l-6.2 2.8L14 20l-2.8-6.2L5 11l6.2-2.8Z"/><path d="m4 15 1.3 2.7L8 19l-2.7 1.3L4 23l-1.3-2.7L0 19l2.7-1.3Z"/></svg></span></span>':glyph;
   const gearNameHTML=equipmentNameHTML;
-  equipmentNameHTML=function(g){const key=gearKey(g),row=lookup.get('equipment:'+key);if(!row)return gearNameHTML(g);const glyph=globalThis.__EMBERWILD_INVENTORY_ICON('equipment',key,'lucide:'+(['sword','shirt','shield','gem'][g.slot]),{size:22});return '<span class="inventory-item-icon" style="display:inline-flex;vertical-align:middle;margin-right:6px">'+glyph+'</span>'+gearNameHTML(g);};
+  equipmentNameHTML=function(g){if(globalThis.EmberwildTokens?.isToken(g))return gearNameHTML(g);const key=gearKey(g),glyph=globalThis.__EMBERWILD_INVENTORY_ICON('equipment',key,'lucide:'+(['sword','shirt','shield','gem'][g.slot]),{size:22});return '<span class="inventory-item-icon" style="display:inline-flex;vertical-align:middle;margin-right:6px">'+globalThis.__EMBERWILD_GEAR_SKILL_ICON(g,glyph)+'</span>'+gearNameHTML(g);};
   const attributes=globalThis.equipmentAttributeDetailsHTML;
   globalThis.equipmentAttributeDetailsHTML=function(g,...args){const id=globalThis.__EMBERWILD_GEAR_CATALOGUE_KEY(g),text=description(id.kind,id.key);return (text?'<p class="small">'+esc(text)+'</p>':'')+attributes(g,...args);};
   globalThis.__EMBERWILD_INVENTORY_ICONS={version:2,entries:()=>M.entries(exportableBalance())};
