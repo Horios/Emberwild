@@ -12,3 +12,21 @@
 .gear-management-panel .inventory-quality-tag{font-size:14px;font-weight:600;line-height:1.5;padding:5px 10px;text-align:center}
 .gear-selection{display:flex;align-items:center;justify-content:center;min-width:40px;min-height:44px;cursor:pointer}.gear-selection input{width:20px;height:20px}.gear-overflow-note{color:var(--gold);border:1px solid currentColor;padding:10px}
 @media(max-width:760px){#app .gear-management-panel .inventory-master-detail{display:flex;flex-direction:column;height:auto;min-height:0;max-height:none}#app .gear-management-panel .inventory-master-pane,#app .gear-management-panel .inventory-detail-wrap{width:100%;box-sizing:border-box;overflow:visible}#app .gear-management-panel .inventory-master-pane{height:clamp(280px,40dvh,420px);flex:none;overflow:hidden}#app .gear-management-panel .inventory-detail-wrap{max-height:none}.gear-basic-filters,.gear-numeric-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.gear-management-row{gap:5px;padding:8px 5px}.gear-batch-controls button{min-height:44px;flex:1 1 42%}.gear-sort-controls button{min-height:44px}.gear-management-panel{overflow:visible}#app .gear-management-panel .inventory-list-scroll{overflow-y:auto;overflow-x:hidden}}
+
+/* Compact, persistent filter/sort disclosures; inventory details use page scrolling. */
+.gear-management-panel .gear-control-fold{border:1px solid var(--line);border-radius:5px;min-width:0}
+.gear-management-panel .gear-control-fold>summary{cursor:pointer;padding:7px 10px;font-size:12px;font-weight:600}
+.gear-management-panel .gear-control-fold[open]>summary{border-bottom:1px solid var(--line)}
+.gear-management-panel .gear-control-fold-body{padding:8px 10px}
+.gear-management-panel .gear-numeric-fold{margin-top:8px;border-top:1px solid var(--line);padding-top:5px}
+.gear-management-panel .gear-numeric-fold>summary{cursor:pointer;font-size:12px;padding:5px 0}
+.gear-management-panel .gear-numeric-fold>.small{font-size:11px;margin:6px 0}
+.gear-management-panel .gear-management-actions{display:flex;justify-content:flex-start}
+.gear-management-panel .gear-basic-filters,.gear-management-panel .gear-numeric-filters{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+.gear-management-panel .gear-management-controls input,.gear-management-panel .gear-management-controls select{min-height:32px;font-size:12px}
+.gear-management-panel .gear-management-controls label{font-size:11px}
+#app .gear-management-panel .inventory-master-detail{height:auto;max-height:none;min-height:0;grid-template-rows:minmax(0,auto);align-items:start}
+#app .gear-management-panel .inventory-master-pane{height:clamp(300px,55dvh,520px)}
+#app .gear-management-panel .inventory-detail-wrap{overflow:visible;max-height:none;scrollbar-gutter:auto;padding-bottom:12px}
+#app .gear-management-panel .inventory-detail-pane{overflow:visible}
+@media(max-width:760px){#app .gear-management-panel .inventory-master-pane{height:clamp(250px,38dvh,380px)}.gear-management-panel .gear-basic-filters,.gear-management-panel .gear-numeric-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}

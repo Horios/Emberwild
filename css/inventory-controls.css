@@ -44,3 +44,9 @@
 .compact-inventory-panel .inventory-sortbar select,.compact-inventory-panel .filters select{min-width:0;max-width:100%}
 .compact-inventory-panel .bulk-salvage-actions{display:flex;flex-wrap:wrap;height:auto;gap:5px}
 .compact-inventory-panel .bulk-salvage-actions button{flex:0 1 auto;width:auto!important;max-width:100%;height:auto!important;white-space:normal}
+
+/* Backpack: keep one document scroll and the long gear list scroll;
+   do not stack a scrolling character panel around a scrolling detail pane. */
+.layout>main:has(.gear-management-panel){overflow-y:auto;scrollbar-gutter:stable}
+.page-owner-panel:has(.gear-management-panel){height:auto;max-height:none;min-height:0;overflow:visible}
+.page-owner-content:has(>.gear-management-panel){flex:none;height:auto;min-height:0;max-height:none;overflow:visible;scrollbar-gutter:auto}

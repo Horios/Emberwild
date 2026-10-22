@@ -5,7 +5,7 @@
  const labels={active:'主動',proc:'觸發',support:'輔助',passive:'被動'},sources={class:'職業',advanced:'二轉',quest:'任務',equipment:'裝備',companion:'夥伴'};
  function detail(sk,h=state){
   const a=EmberwildSkillSystem.adapterFor(sk,h.job);
-  if(sk.systemEffect)return `${sk.description} 持續 ${sk.duration} 回合 · 冷卻 ${sk.cooldown} 回合${['guard','slow'].includes(sk.systemEffect)?' · '+Math.round(sk.power*100)+'%':sk.systemEffect==='regen'?' · 每回合最大生命 '+Math.round(sk.power*10000)/100+'%':''}`;
+  if(sk.systemEffect)return `持續 ${sk.duration} 回合 · 冷卻 ${sk.cooldown} 回合${['guard','slow'].includes(sk.systemEffect)?' · '+Math.round(sk.power*100)+'%':sk.systemEffect==='regen'?' · 每回合最大生命 '+Math.round(sk.power*10000)/100+'%':''}`;
   return a.kind==='core'?coreSkillDetail(a.job,a.index,h):supportSkillDetail(a.job,a.index,h);
  }
  function icon(sk){return __EMBERWILD_MASTERY_UI.skillIcon(sk.adapter.job,sk.adapter.kind,sk.adapter.index);}
