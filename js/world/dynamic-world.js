@@ -119,6 +119,7 @@
 
   const worldMergeDynamic=new Set(['maps.catalog','monsters.catalog','drops.entries','economy.materialPrices','equipment.salvage.extraRewards']);
   mergeGameplayShape=function mergeGameplayShapeWorld(def,src,path=''){
+    if(/^drops\.entries\.\d+$/.test(path)&&src&&typeof src==='object')return cloneGameplaySettings(src);
     if(Array.isArray(def)){
       const sk=/^(drops\.entries\.\d+\.(sources|kinds))$/.test(path),monsterSkills=/^monsters\.catalog\.\d+\.skillAssignments$/.test(path),dynamic=worldMergeDynamic.has(path)||sk||monsterSkills;
       if(dynamic){if(!Array.isArray(src))return cloneGameplaySettings(def);if(sk||monsterSkills||!def.length)return cloneGameplaySettings(src);const template=def[0];return src.map((v,i)=>mergeGameplayShapeWorld(def[i]===undefined?template:def[i],v,path+'.'+i));}
@@ -165,6 +166,7 @@
       if(!Array.isArray(drops))throw Error('掉落表必須是陣列');if(!Array.isArray(cat)||!cat.length)throw Error('掉落表需要有效怪物設計清單');
       const monsterById=new Map(cat.map(m=>[m.id,m])),dropIds=new Set(),types=new Set(['sourceMaterial','material','ore','dust','gem','potion','item','gear','gearLegendary','bossGear','equipment','token']),encKinds=new Set(['normal','elite','boss','final']);
       for(const [i,d] of drops.entries()){
+        const potionIssues=EmberwildHealingPotions.dropIssues(d);if(potionIssues.length)throw Error(potionIssues.join('；'));
         if(!d||typeof d.id!=='string'||!/^[a-zA-Z0-9_-]{1,120}$/.test(d.id)||dropIds.has(d.id))throw Error('掉落規則 ID 無效或重複：'+i);dropIds.add(d.id);
         if(typeof d.name!=='string'||!d.name.trim()||typeof d.enabled!=='boolean'||!types.has(d.type)||!Array.isArray(d.kinds)||!d.kinds.length||d.kinds.some(k=>!encKinds.has(k))||!Array.isArray(d.chanceByDifficulty)||d.chanceByDifficulty.length!==3||d.chanceByDifficulty.some(v=>!Number.isFinite(v)||v<0||v>1)||!Number.isInteger(d.quantityMin)||!Number.isInteger(d.quantityMax)||d.quantityMin<1||d.quantityMax<d.quantityMin||d.quantityMax>999||!Array.isArray(d.sources)||!d.sources.length||d.sources.some(id=>!monsterById.has(id)))throw Error('掉落規則資料無效：'+d.id);
         if(d.type==='material'&&(typeof d.key!=='string'||!d.key.trim()))throw Error('材料掉落需要材料名稱：'+d.id);

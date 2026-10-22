@@ -47,7 +47,7 @@
     const mi=party?.map??0,cat=GAMEPLAY_SETTINGS?.monsters?.catalog||[];let pool=cat.filter(x=>x?.mapIndex===mi&&x?.enabled!==false&&typeof x?.material==='string'&&x.material.trim()).map(x=>x.material.trim());
     if(!pool.length)pool=(MAPS?.[mi]?.mobs||[]).map(x=>x?.[2]).filter(Boolean);return [...new Set(pool.length?pool:['鍛鐵'])];
   }
-  function unitPrice(rule){return rule.unitPrice===null?Number(SHOP.find(x=>x.id===rule.key)?.cost)||0:rule.unitPrice;}
+  function unitPrice(rule){const item=rule.type==='item'?SHOP.find(x=>x.id===rule.key):null;if(isHealPotion(item))return item.cost;return rule.unitPrice===null?Number(SHOP.find(x=>x.id===rule.key)?.cost)||0:rule.unitPrice;}
   function weightedRule(){
     const rows=SHOP_SETTINGS.randomOffers.entries.filter(x=>x.enabled&&x.selection==='weighted'),total=rows.reduce((n,x)=>n+x.weight,0);
     if(!rows.length)return null;let roll=Math.random()*total;for(const rule of rows){roll-=rule.weight;if(roll<=0)return rule;}return rows[rows.length-1];
@@ -73,7 +73,7 @@
     const old=clone(party.market),gold=state.gold,count=party.market.refreshCount||0;state.gold-=cost;const next=generateMarket();next.refreshCount=count+1;next.dayKey=localDayKey();party.market=next;
     if(!save()){party.market=old;state.gold=gold;return;}render();toast(`商品已刷新；下次刷新 ${currentRefreshCost()} 金幣`);
   };
-  function resolvedOffer(offer){return offer?.ruleId==='__gear_tier_reroll__'?{...offer,kind:'item',key:'power_tier_reroll'}:offer;}
+  function resolvedOffer(input){const offer=input?.ruleId==='__gear_tier_reroll__'?{...input,kind:'item',key:'power_tier_reroll'}:input,item=offer?.kind==='item'?SHOP.find(x=>x.id===offer.key):null;return isHealPotion(item)?{...offer,price:Math.round(item.cost*offer.qty)}:offer;}
   function marketRule(offer){return SHOP_SETTINGS.randomOffers.entries.find(x=>x.id===offer?.ruleId)||null;}
   function marketOfferIsListed(input){
     const offer=resolvedOffer(input),matches=rule=>rule?.enabled&&rule.type===offer.kind&&(rule.type==='item'?rule.key===offer.key:rule.type==='gem'?rule.key==='random'||rule.key===offer.key:rule.type==='material'?rule.key==='region'||rule.key===offer.key:true);
@@ -108,7 +108,10 @@
     const item=offerItem(offer);if(!item)return null;
     ensureHealingPotionState();const object=isHealPotion(item)?party.members[0].healingPotions:state.consumables;return {object,key:item.id,limit:1e9};
   }
+  globalThis.healingPotionShopLock=item=>EmberwildHealingPotions.lockReason(item,party?.story?.vip||0);
   function purchase(offer,name,onSold){
+    const locked=healingPotionShopLock(offerItem(offer));if(locked)return toast(locked);
+    const item=offerItem(offer);if(isHealPotion(item))offer={...offer,price:Math.round(item.cost*offer.qty)};
     if(offer.kind==='equipment'){
       const price=globalThis.shopPayablePrice?.(offer.price)??offer.price;
       if(state.gold<price)return toast('金幣不足');
@@ -133,11 +136,12 @@
   function fixedOffer(rule){return {kind:rule.type,key:rule.key,qty:rule.quantity,price:Math.min(1e9,Math.round(rule.quantity*unitPrice(rule)))};}
   globalThis.buyFixedShopOffer=function(id){const rule=SHOP_SETTINGS.fixedOffers.entries.find(x=>x.id===id&&x.enabled);if(!rule)return;const offer=fixedOffer(rule);purchase(offer,offerName(offer,rule));};
   buySupply=function(id){const rule=SHOP_SETTINGS.fixedOffers.entries.find(x=>x.enabled&&x.type==='item'&&x.key===id);if(!rule)return toast('此商品目前未上架');return buyFixedShopOffer(rule.id);};
+  buyPotion=function(){return buySupply('heal_standard');};
   globalThis.buyHealingPotion=function(id){if(!isHealPotion(SHOP.find(x=>x.id===id)))return;return buySupply(id);};
   function productRow(input,rule,random){
     const offer=resolvedOffer(input),name=offerName(offer,rule),description=offerDescription(offer,rule),effect=offerEffect(offer),slot=stockSlot(offer),stock=Number(slot?.object?.[slot.key])||0;
     const kind=['ore','dust'].includes(offer.kind)?'material':offer.kind,key=offer.kind==='ore'?'鍛鐵':offer.kind==='dust'?'粉塵':offer.key;
-    return `<article class="shop-product-row icon-product ${random?'random-shop-row':'fixed-shop-row'}"><div class="shop-product-visual">${itemSlotHTML(kind,key,{count:offer.qty,extra:description+' '+effect,context:'shop',detailLabel:'商品數量',price:globalThis.shopPayablePrice?.(offer.price)??offer.price,shopType:random?'market':'fixed',shopId:random?input.id:rule.id,sold:!!input.sold})}<span class="shop-product-stock">庫存<br><b>${stock.toLocaleString()}</b></span></div><small class="shop-product-label">${esc(name)}</small></article>`;
+    return `<article class="shop-product-row icon-product ${random?'random-shop-row':'fixed-shop-row'}"><div class="shop-product-visual">${itemSlotHTML(kind,key,{count:offer.qty,extra:description+' '+effect,context:'shop',detailLabel:'商品數量',price:globalThis.shopPayablePrice?.(offer.price)??offer.price,shopType:random?'market':'fixed',shopId:random?input.id:rule.id,sold:!!input.sold,lockedReason:healingPotionShopLock(offerItem(offer))})}<span class="shop-product-stock">庫存<br><b>${stock.toLocaleString()}</b></span></div><small class="shop-product-label">${esc(name)}</small></article>`;
   }
   marketCards=function(){const offers=party.market?.offers?.filter(marketOfferIsListed)||[];return offers.length?offers.map(o=>productRow(o,marketRule(resolvedOffer(o)),true)).join(''):'<div class="shop-empty">本批沒有隨機商品。</div>';};
   const baseValidateParty=validateParty;

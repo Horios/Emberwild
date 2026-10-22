@@ -106,7 +106,7 @@
     if(raw){try{legacyBalance=JSON.parse(raw);}catch{}}
     if(!raw || legacyBalance?.timeUnits?.itemDuration!=='battleRounds'){
       const ref=legacyBalance||{balanceSettings:GAMEPLAY_SETTINGS};
-      for(const item of SHOP)if(!api.isItem(item)&&!api.isElementalItem(item))item.duration=turnsFromLegacySeconds(item.duration,ref);
+      for(const item of SHOP)if(item.type!=='healPotion'&&!api.isItem(item)&&!api.isElementalItem(item))item.duration=turnsFromLegacySeconds(item.duration,ref);
       // Migrate the complete input; later module fields are not exportable yet.
       if(raw)localStorage.setItem(BALANCE_KEY,JSON.stringify(normalizeTurnConfig(legacyBalance)));
     }

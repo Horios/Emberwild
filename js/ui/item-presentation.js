@@ -79,6 +79,7 @@
   };
   function shopInlineControls(o){
     const id=attr(JSON.stringify(o.shopId)),price=Number(o.price)||0,disabled=o.sold||state.gold<price,off=disabled?'disabled':'';
+    if(o.lockedReason)return `<span class="shop-inline-controls"><span class="small">${price.toLocaleString()} 金幣 · ${attr(o.lockedReason)}</span></span>`;
     let action='';
     if(o.shopType==='equipment')action=`<input type="number" min="1" max="100" step="1" value="1" aria-label="購買份數"><button onclick="buyEquipmentShopOffer(${id},Number(this.previousElementSibling.value))" ${off}>購買</button>`;
     else if(o.shopType==='life')action=`<button onclick="buyLifeMaterial(${id},1)" ${off}>購買 1 份</button><button onclick="buyLifeMaterial(${id},10)" ${o.sold||state.gold<(globalThis.lifeMaterialPurchasePrice?.(o.shopId,10)??price*10)?'disabled':''}>購買 10 份</button>`;

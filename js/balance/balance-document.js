@@ -63,6 +63,7 @@
   if(complete)for(const k of REQUIRED)if(d[k]===undefined)add(k,'缺少必要設定');
   const arrays=['classes','supportSkills','equipmentForms','items','statusDefinitions','companions','passiveDefinitions'];
   for(const k of arrays)if(d[k]!==undefined&&!Array.isArray(d[k]))add(k,'必須為陣列');
+  if(root.EmberwildHealingPotions){for(const [i,item] of array(d.items).entries())if(item.type==='healPotion'&&item.healFraction===undefined)for(const reason of root.EmberwildHealingPotions.issues(item))add('items.'+i,reason,item);for(const [i,rule] of array(d.balanceSettings?.drops?.entries).entries())for(const reason of root.EmberwildHealingPotions.dropIssues(rule))add('balanceSettings.drops.entries.'+i,reason,rule);}
   const chanceKey=/^(?:chance|.*Chance|.*ChancePerLevel|healFraction|critChance)$/;
   const nonnegative=/^(?:hp|atk|def|cost|sellPrice|unitPrice|cooldown|duration|durationMinutes|periodMs|requiredLevel|requiredMasteryLevel|power|powerPerLevel|quantity|quantityMin|quantityMax|minLevel|maxLevel|weight|hitCount|delayTurns|intervalTurns)$/;
   const enums={activation:['active','proc'],availability:['visible','locked','hidden'],kind:null};
@@ -117,7 +118,7 @@
  }
  function migrate(input,defaults){
   const errors=inspect(input,{complete:input?.schemaVersion!==undefined});if(errors.length)throw Object.assign(Error(errors.map(x=>x.system+' '+x.object+' '+x.field+'：'+x.reason).join('\n')),{issues:errors});
-  const d=copy(input);if(d.schemaVersion===undefined){if(!defaults)throw Error('舊 JSON 需要有效的遷移基準');for(const k of REQUIRED)if(d[k]===undefined)d[k]=copy(defaults[k]);d.schemaVersion=VERSION;}
+  const d=root.EmberwildHealingPotions?root.EmberwildHealingPotions.migrate(copy(input)):copy(input);if(d.schemaVersion===undefined){if(!defaults)throw Error('舊 JSON 需要有效的遷移基準');for(const k of REQUIRED)if(d[k]===undefined)d[k]=copy(defaults[k]);d.schemaVersion=VERSION;}
   d.lifeSkills=normalizeLife(d.lifeSkills,array(d.items));
   if(root.EmberwildInventoryIcons)Object.assign(d, root.EmberwildInventoryIcons.migrateDescriptions(d,{hydrate:true}));
   const full=inspect(d);if(full.length)throw Object.assign(Error(full.map(x=>x.system+' '+x.object+' '+x.field+'：'+x.reason).join('\n')),{issues:full});return d;
@@ -127,5 +128,5 @@
   function types(v,b,p){if(b===null||b===undefined||v===undefined)return;if(v===null){if(['mastery','requiredMastery','partnerId','unitPrice','control'].includes(p.split('.').at(-1)))return;typeErrors.push(issue(p,'此欄位不可為 null'));return;}if(Array.isArray(b)){if(!Array.isArray(v)){typeErrors.push(issue(p,'必須為陣列'));return;}for(let i=0;i<v.length;i++)types(v[i],b[i]??b[0],p+'.'+i);return;}if(typeof b==='object'){if(!v||typeof v!=='object'||Array.isArray(v)){typeErrors.push(issue(p,'必須為物件'));return;}for(const k of Object.keys(v))types(v[k],b[k],p+'.'+k);return;}if(!/\.(key|value)$/.test(p)&&typeof v!==typeof b)typeErrors.push(issue(p,'型別必須為 '+typeof b));}
   if(defaults)types(d,defaults,'$');if(typeErrors.length)throw Object.assign(Error(typeErrors.map(x=>x.system+' '+x.object+' '+x.field+'：'+x.reason).join('\n')),{issues:typeErrors});
 if(domainValidate){try{domainValidate(copy(d));}catch(e){throw Object.assign(Error(e.message),{issues:e.issues||[issue('domain',e.message)]});}}return d;}
- const api={equipmentGemModeVersion:2,storyEquipmentLessonsVersion:1,skillSystemVersion:1,questEncountersVersion:1,consumableClockVersion:1,equipmentAcquisitionVersion:1,storyVersion:1,starterMailVersion:1,monsterDesignVersion:1,iconColorTemplatesVersion:1,inventoryIconsVersion:2,VERSION,SCHEMA,REQUIRED,copy,inspect,migrate,validate,lifeDefaults,normalizeLife,lifeIssues,itemDetailsVersion:2,lifeShopMaterialsVersion:1,lifeProductsVersion:1};root.EmberwildBalanceDocument=api;if(typeof module==='object'&&module.exports)module.exports=api;
+ const api={healingPotionVersion:1,equipmentGemModeVersion:2,storyEquipmentLessonsVersion:1,skillSystemVersion:1,questEncountersVersion:1,consumableClockVersion:1,equipmentAcquisitionVersion:1,storyVersion:1,starterMailVersion:1,monsterDesignVersion:1,iconColorTemplatesVersion:1,inventoryIconsVersion:2,VERSION,SCHEMA,REQUIRED,copy,inspect,migrate,validate,lifeDefaults,normalizeLife,lifeIssues,itemDetailsVersion:2,lifeShopMaterialsVersion:1,lifeProductsVersion:1};root.EmberwildBalanceDocument=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);
