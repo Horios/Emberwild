@@ -18,24 +18,24 @@ function GS(path,fallback){
 function gearRequiredLevelByTier(tier){return Math.max(1,Math.round(GS('equipment.requiredLevel.base',1)+(Number(tier)-1)*GS('equipment.requiredLevel.perTier',5)));}
 function gearRequiredLevel(g){return Number.isInteger(g?.equipmentLevel)?g.equipmentLevel:gearRequiredLevelByTier(g?.tier||1);}
 
-const CLASSES=[{name:'戰士',advanced:'破曉騎士',icon:'',desc:'堅守前線，以重擊與護盾承受攻勢。',hp:155,atk:19,def:9,main:'力量',skills:[['裂地斬','active',1,3,2.4,'damage'],['堅毅壁壘','active',4,6,1.6,'shield'],['反擊之刃','proc',7,0,.9,'damage'],['浴血重擊','proc',11,0,.45,'drain'],['聖鋼裁決','active',15,4,3.8,'damage'],['不屈戰意','proc',20,0,1.1,'shield']]},{name:'法師',advanced:'星火賢者',icon:'',desc:'法術普攻，以高倍率魔法突破敵人防線。',hp:105,atk:26,def:4,main:'智力',skills:[['火焰箭','active',1,3,2.8,'damage'],['冰霜護幕','active',4,5,1.5,'shield'],['餘燼爆發','proc',7,0,1.3,'damage'],['奧術汲取','proc',11,0,.5,'drain'],['隕星墜落','active',15,5,5.6,'damage'],['魔力迴響','proc',20,0,1.9,'damage']]},{name:'弓箭手',advanced:'逐風遊俠',icon:'',desc:'高暴擊遠程射擊，連續觸發追擊。',hp:120,atk:23,def:5,main:'敏捷',skills:[['穿透箭','active',1,3,2.6,'damage'],['林間休憩','active',4,5,1.3,'heal'],['連射','proc',7,0,1.2,'damage'],['獵手印記','proc',11,0,1.5,'damage'],['疾風箭雨','active',15,4,4,'damage'],['生命之箭','proc',20,0,.8,'drain']]},{name:'牧師',advanced:'晨光主教',icon:'',desc:'聖光普攻，治癒與庇護維持長期作戰。',hp:130,atk:20,def:7,main:'精神',skills:[['聖光審判','active',1,3,2.5,'damage'],['治癒禱言','active',4,4,1.8,'heal'],['懲戒','proc',7,0,1.1,'damage'],['生命泉源','proc',11,0,.8,'heal'],['黎明聖印','active',15,4,3.8,'damage'],['神聖庇護','proc',20,0,1.4,'shield']]}];
-const MAPS=[{name:'苔光林地',min:1,max:5,icon:'',color:'#34483a',mobs:[['苔原史萊姆','','黏稠凝膠'],['林間野狼','','完整狼牙'],['迷路樹精','','活性樹芯']],boss:['古木守望者','','古木年輪']},{name:'風蝕礦坑',min:6,max:10,icon:'',color:'#494333',mobs:[['洞穴蝙蝠','','薄翼膜'],['岩背蜥蜴','','堅硬石鱗'],['礦坑魔偶','','魔偶齒輪']],boss:['礦脈巨人','','礦脈之心']},{name:'暮色沼澤',min:11,max:15,icon:'≋',color:'#3d394b',mobs:[['劇毒蛙','','劇毒腺體'],['幽光飛蛾','','微光鱗粉'],['沼地亡魂','','怨念碎片']],boss:['泥沼女巫','‍','女巫符印']},{name:'霜眠山脊',min:16,max:20,icon:'△',color:'#364956',mobs:[['霜牙雪狼','','霜牙'],['冰晶妖精','','冰晶翅片'],['雪原巨熊','‍','厚暖熊皮']],boss:['凜冬巨獸','','永凍結晶']},{name:'熔火遺跡',min:21,max:25,icon:'',color:'#57392e',mobs:[['熔岩蟲','','灼熱甲殼'],['火羽渡鴉','‍','不熄火羽'],['失控鎧甲','','焦黑鋼片']],boss:['熔爐暴君','','熔核']},{name:'星隕荒原',min:26,max:30,icon:'',color:'#3c3c53',mobs:[['虛空獵犬','','虛空尖牙'],['星塵水母','','星塵觸鬚'],['墜星魔像','','隕鐵核心']],boss:['星隕監視者','','星隕稜鏡']},{name:'終焉王座',min:40,max:40,icon:'',color:'#4a2c3b',mobs:[],boss:['噬日者・厄爾','','日蝕王冠']}];
-// Each gem ID identifies one of five independent effects at one of three tiers.
-const GEM_NAMES=['赤焰石','疾風石','靈巧石','生息石','守護石'];
-const GEM_COLORS=['#ec5555','#51b878','#a57be4','#e9eef7','#559ff0'];
-const GEM_RATES=[[.02,.04,.06],[.05,.10,.15],[.01,.02,.03],[.03,.06,.09],[.01,.02,.03]];
-const GEM_KINDS=GEM_NAMES.length;
-const GEMS=Array.from({length:GEM_KINDS*3},(_,id)=>{
- const kind=id%GEM_KINDS,tier=Math.floor(id/GEM_KINDS),pct=Number((GEM_RATES[kind][tier]*100).toFixed(3));
- const desc=[
-  '技能效果 +'+pct+'%（加算型增幅）',
-  '主動技能施放後 '+pct+'% 機率減少 1 回合冷卻（最低 1）',
-  '普攻觸發技能發動率 +'+pct+' 個百分點',
-  '技能成功發動後，使生命比例最低的存活隊友恢復施放者攻擊力 '+pct+'% 的生命',
-  '技能成功發動後，使生命比例最低的存活隊友獲得施放者防禦力 '+pct+'% 的護盾（可與其他護盾累加）'
- ][kind];
- return {name:GEM_NAMES[kind]+'・'+(tier+1)+'階',desc,icon:'',color:GEM_COLORS[kind],kind,tier:tier+1};
-});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function gemCompatible(id,job,skill){
  const sk=CLASSES[job]?.skills?.[skill];if(!sk||!Number.isInteger(id)||id<0||id>=GEMS.length)return false;
  return id%GEM_KINDS===0?Number(sk[4])>0:id%GEM_KINDS===1?sk[1]==='active':id%GEM_KINDS===2?sk[1]==='proc':['active','proc'].includes(sk[1]);
@@ -66,7 +66,7 @@ function applyGemAfterSkill(h,i,v){
  }
 }
 
-const SLOTS=['武器','護甲','副手','飾品'];const RARITY=['普通','精良','稀有','傳說'];const AFFIX=['攻擊','生命','防禦','暴擊'];
+
 // Preview has a separate copy so the older production client cannot discard
 // the new permanent/build extension when it saves its single-team projection.
 const IS_PREVIEW=/(?:^|\/)preview(?:\/|$)/.test(location.pathname);
@@ -219,7 +219,7 @@ function findGear(id){return state.bag.find(g=>g.id===id);}function equipGear(id
 let pendingAffix=null;
 function acceptAffix(){if(pendingAffix){let g=findGear(pendingAffix.id);if(g)g.affix=pendingAffix.affix;}pendingAffix=null;clampVitals();save();closeModal();render();}function closeModal(){const m=$('modal');m.close();delete m.dataset.view;pendingAffix=null;}
 function salvage(id){if(state.equipped.includes(id))return;let g=findGear(id);if(!g)return;state.ore+=g.tier*(3+g.rar*2+g.plus);state.dust+=1+g.rar;state.bag=state.bag.filter(x=>x.id!==id);save();render();}
-const QUESTS=[{id:'wolves',title:'縫補獵人的披肩',desc:'林間野狼的狼牙，是獵人交換皮革的憑證。',mat:'完整狼牙',n:5,gold:300,ore:20},{id:'witch',title:'淨化沼澤',desc:'採集女巫符印，協助營地研究暮色詛咒。',mat:'女巫符印',n:2,gold:800,ore:55},{id:'stars',title:'鍛造師的最後一課',desc:'取得星隕監視者的稜鏡，準備迎戰噬日者。',mat:'星隕稜鏡',n:3,gold:2000,ore:120}];
+
 function questView(){let m=MAPS[state.map===6?5:state.map],repeatMat=m.mobs[0][2];return heading('JOURNAL / 委託手札','荒野裡的小小約定。')+`<div class="cards">${QUESTS.map(q=>`<article class="card"><span class="tag">一次性支線</span><h2 style="margin-top:15px">${q.title}</h2><p>${q.desc}</p><p>${q.mat}　${state.materials[q.mat]||0} / ${q.n}</p><p class="gold">${q.gold} 金幣 · ${q.ore} 鍛鐵 · 隨機寶石 ×1</p><button class="primary" onclick="claimQuest('${q.id}')" ${state.claimed.includes(q.id)||(state.materials[q.mat]||0)<q.n?'disabled':''}>${state.claimed.includes(q.id)?'已完成':'交付材料'}</button></article>`).join('')}<article class="card"><span class="tag">可重複 · ${m.name}</span><h2 style="margin-top:15px">營地物資募集</h2><p>收集本地常見怪物的材料。切換地圖後會更新募集品項。</p><p>${repeatMat}　${state.materials[repeatMat]||0} / 8</p><p class="gold">${regionTier(questRegion())*150} 金幣 · 15 鍛鐵 · 3 粉塵</p><button class="primary" onclick="claimRepeat()" ${(state.materials[repeatMat]||0)<8?'disabled':''}>交付材料</button><p class="small">累計完成 ${state.repeat} 次</p></article></div>`;}
 function claimQuest(id){let q=QUESTS.find(q=>q.id===id);if(!q||state.claimed.includes(id)||(state.materials[q.mat]||0)<q.n)return;state.materials[q.mat]-=q.n;state.gold+=q.gold;state.ore+=q.ore;state.gems[rand(GEM_KINDS)]++;state.claimed.push(id);save();render();toast('委託完成，已領取獎勵');}
 function guideView(){return heading('FIELD NOTES / 冒險指南','你的遠征，由你安排。')+`<section class="panel"><h2>完整遊戲流程</h2><p>選擇職業 → 完成三步教學 → 每 5 級前往新區域 → 收集專屬材料、裝備與寶石 → LV15 完成二轉 → LV30 打造星隕裝備與技能組合 → 挑戰 LV40 噬日者。</p><h3>戰鬥與越級</h3><p>1倍速每回合至少 6 秒。普攻每回合一次；兩個主動技在冷卻完成時各自施放，只有配置於普攻觸發槽的觸發技會在普攻時各自判定，不搶佔普攻。暴擊傷害 150%。傷害以攻擊減去 65% 防禦計算，最低 1。護盾可抵擋單一角色受到的所有來源傷害，沒有生命比例上限；新的護盾不與既有護盾相加，只保留兩者較高值。一般探索只會遇見不高於自己 5 級的敵人；傷害承受會隨越級增加，每級 +12%。噬日者不使用一般越級加成。</p><h3>探索與補給</h3><p>遭遇機率：普通 83%、菁英 12%、地圖首領 5%。首領等級為區域最高級，尚未達到越級條件時改遇普通怪。戰後回滿生命、清空護盾；下一場遭遇開始時技能冷卻重置。戰敗自動停戰並扣除 5% 金幣，不失去經驗或裝備。每次遭遇結束自動回滿生命；暫停不會重置敵人，切換地圖會放棄當前遭遇，但不會回復。</p><h3>掉落與鍛造</h3><p>專屬素材掉率：普通 65%、菁英與首領 100%。裝備掉率：普通 22%、菁英 55%、首領 100%。寶石掉率：普通 4%、菁英 12%、首領 35%。每次擊殺另有 0.15% 獨立機率取得本區傳說裝備。鍛鐵每次擊殺必掉。背包達 720 件時，新掉落裝備自動分解。裝備職業通用：武器會依職業作為近戰、弓箭或法術攻擊來源。</p><h3>終局挑戰</h3><p>噬日者擁有 85,000 生命、850 攻擊、110 防禦，每第 5 回合施放 1.65 倍日蝕打擊；第 46 回合起狂暴。建議完成二轉、分配能力點、核心技能 5 級、三件星隕稀有以上裝備 +10、洗鍊適合的雙詞綴，並為所有技能鑲嵌寶石。備足治療藥水。LV30 僅是挑戰起點；不同職業應調整輸出、治療與護盾組合。</p><h3>存檔</h3><p>每 5 秒與重要操作後存入此瀏覽器。匯出 JSON 可搬移到另一台裝置；匯入會先顯示確認，再覆蓋當前角色。只保存成長進度，不保存戰鬥中敵人；續玩從整備狀態開始。關閉頁面不會離線戰鬥。</p><button class="danger" onclick="confirmNew()">建立新角色</button></section>`;}
@@ -235,9 +235,9 @@ let pendingImport=null;async function importSave(ev){let f=ev.target.files[0];ev
 
 function confirmNew(){running=false;$('modal').innerHTML='<h2>建立新角色？</h2><p>目前角色將被覆蓋。請先匯出 JSON 留存，再開始新旅程。</p><div class="actions"><button onclick="exportSave()">匯出目前角色</button><button class="danger" onclick="newGame()">確認重新開始</button><button onclick="closeModal()">取消</button></div>';$('modal').showModal();}
 // Emberwild 2: progression, commissions and class loot.
-const CLASS_GEAR=[['長劍','板甲','戰旗','飾品'],['法杖','法袍','魔典','飾品'],['長弓','皮甲','箭袋','飾品'],['權杖','聖衣','聖徽','飾品']];
-const BOSS_GEAR=['古木誓約','礦脈共鳴','暮沼咒印','永凍之誓','熔核意志','隕星遺產'];
-const AFFIX_RANK=['普通','精良','稀有','傳說'];let BOARD_INTERVAL=20*60*1000;
+
+
+let BOARD_INTERVAL=20*60*1000;
 let filters={slot:'all',rar:'all',job:'own',effectRank:'all',special:false},motion={player:false,enemy:false,skill:false,heal:false},currentEvents=[],eventHistory=[],encounterId=0;
 const originalNote=note,originalCast=cast,originalGuide=guideView;
 
@@ -301,8 +301,8 @@ function forgeView(){let g=findGear(forgeSelection)||equipment(state)[0]||state.
 
 function battleView(){const m=MAPS[state.map],v=stats(),shown=enemy||lastDefeatedEnemy,c=CLASSES[state.job],dead=state.hp<=0,phase=dead?'戰敗 · 請先戰後恢復':enemy?(running?'交戰中':'戰鬥暫停'):lastDefeatedEnemy?(running?'勝利 · 搜尋下一個敵人':'戰鬥結束'):'整備 · 尚未探索',procCount=c.skills.filter((s,i)=>s[1]==='proc'&&state.skills[i]>0).length;return heading('EXPEDITION / 荒野遠征',m.name,`<span class="tag encounter-status">${phase}</span>`)+`<div class="combat-layout"><section class="panel encounter-panel"><div class="encounter-topline"><span>區域 LV ${m.min}${state.map===6?'':'–'+m.max}</span><span class="round-counter">第 <b>${round}</b> 回合</span><span>${shown?shown.kind==='final'?'終局首領':shown.kind==='boss'?'地圖首領':shown.kind==='elite'?'菁英遭遇':'普通遭遇':'等待出發'}</span></div><div class="battle-arena"><article class="combatant player-combatant"><div class="combatant-label"><b>${esc(characterName(state))}</b><span>LV ${state.lv}</span></div><div class="health-readout"><span>生命</span><b>${Math.ceil(state.hp)} <small>/ ${v.hp}</small></b></div>${battleHealthMeter(state.hp,v.hp,battleShieldValue(state))}<div class="combatant-art"><div class="sprite player-sprite ${running&&motion.player?'attack-pose':''} ${running&&motion.skill?'cast-pose':''}">${pixel(state.job)}</div></div><div class="combatant-foot"><span>攻擊 ${v.atk}</span><span>護盾 ${Math.ceil(state.shield)}</span></div></article><div class="combat-center"><span class="duel-mark"></span><span>${enemy?'交戰':lastDefeatedEnemy?'勝利':'遠征'}</span><small>${running?'自動戰鬥':dead?'需要休息':'等待指令'}</small></div><article class="combatant enemy-combatant"><div class="combatant-label"><b>${shown?esc(shown.name):'未知的相遇'}</b><span>${shown?'LV '+shown.lv:'—'}</span></div><div class="health-readout"><span>生命</span><b>${enemy?Math.ceil(enemy.hp):0} <small>/ ${shown?shown.maxhp:'—'}</small></b></div>${battleHealthMeter(enemy?enemy.hp:0,shown?shown.maxhp:1,battleShieldValue(enemy))}<div class="combatant-art"><div class="sprite enemy-sprite ${running&&enemy&&motion.enemy?'enemy-pose':''}">${enemyArt(enemy)}</div></div><div class="combatant-foot"><span>${shown?'防禦 '+shown.def:'探索時隨機遇敵'}</span><span>${shown?'攻擊 '+shown.atk:''}</span></div></article></div><div class="battle-command"><button class="primary battle-toggle" onclick="toggleBattle()" ${dead?'disabled':''}>${running?'Ⅱ 暫停探索':'▶ 開始自動探索'}</button><span class="small">1 秒／回合 · 對話框開啟時暫停</span></div><section class="battle-loadout"><div class="row"><h3>戰鬥技能</h3><span class="small">${procCount} 項普攻觸發技已啟用</span><button class="text-button" onclick="setTab('skills')">調整配置 ›</button></div><div class="skill-strip">${state.active.map((id,i)=>`<div class="skill-slot ${id!==null&&!cd[id]?'skill-ready':''}"><div class="row"><span class="small">主動槽 ${i+1}</span><span class="skill-cooldown">${id===null?'未配置':cd[id]>0?cd[id]+' 回合':'就緒'}</span></div><b>${id===null?'空的技能槽':c.skills[id][0]}</b><span class="small">${id===null?'前往技能頁選擇主動技能':'技能 Lv.'+state.skills[id]+(state.sockets[id]!==null?' · '+GEMS[state.sockets[id]].name:'')}</span></div>`).join('')}</div></section><section class="supply-bar"><div><b>治療藥水 <span class="gold">×${state.potions}</span></b><label><input type="checkbox" ${state.autoPotion?'checked':''} onchange="state.autoPotion=this.checked;save()"> 生命低於 35% 自動使用</label></div><div class="supply-actions"><button onclick="potion()" ${state.potions<1||state.hp>=v.hp?'disabled':''}>使用藥水</button><button onclick="buyPotion()" ${state.gold<75?'disabled':''}>補給 +5 · 75◈</button></div></section></section><section class="panel combat-journal"><div class="journal-heading"><span class="eyebrow">BATTLE JOURNAL</span><span class="small">即時紀錄</span></div><div id="liveLog" class="journal-content" role="log" aria-live="polite" aria-label="戰鬥紀錄">${logContent()}</div><div class="journal-note">戰鬥事件依普攻、技能與敵方行動順序列出。<br>展開歷史紀錄可回看掉落與升級。</div></section></div><section class="panel destination-panel"><div class="row"><div><span class="eyebrow">WORLD / 目的地</span><h2>選擇探索區域</h2></div><span class="small">切換地圖會停止探索並放棄當前遭遇</span></div><div class="destination-grid">${MAPS.map((x,i)=>`<button class="destination ${state.map===i?'selected':''}" onclick="chooseMap(${i})" ${!canVisit(i)?'disabled':''}><span class="destination-icon">${x.icon}</span><b>${x.name}</b><small>LV ${x.min}${i===6?' · 終局':'–'+x.max}</small></button>`).join('')}</div><details class="region-bestiary"><summary>${m.name} · 怪物與掉落圖鑑</summary><div class="bestiary-grid">${m.mobs.concat([m.boss]).map(x=>`<article class="bestiary-item">${x[1]}<div><b>${x[0]}</b><small>${x[2]}</small></div></article>`).join('')}</div><p class="small">專屬素材：普通怪 65%、菁英與首領 100%。一般裝備 22% 起、技能寶石 4% 起；地圖 BOSS 專屬裝備 25%，或以 5 份素材保底製作。</p></details></section>`;};
 
-const MODES=[{name:'普通',hp:1,atk:1,def:1,xp:1,equip:[.22,.55,1],gem:[.04,.12,.35],boss:.25,ore:1,rare:.0015},{name:'困難',hp:1.8,atk:1.35,def:1.2,xp:1.3,equip:[.38,.75,1],gem:[.08,.22,.5],boss:.4,ore:1.5,rare:.004},{name:'地獄',hp:3,atk:1.8,def:1.45,xp:1.65,equip:[.55,.95,1],gem:[.13,.35,.7],boss:.6,ore:2,rare:.008}];
-const ASCENDED_NAMES=['翠影秘境','深淵礦脈','幽冥水澤','極夜冰川','煉獄熔城','天隕聖域'];
+
+
 for(let i=0;i<6;i++){let original=MAPS[i];let map={...original,name:ASCENDED_NAMES[i],min:31+i*5,max:35+i*5,family:i,mobs:original.mobs.map(x=>['覺醒・'+x[0],x[1],'覺醒'+x[2]]),boss:['覺醒・'+original.boss[0],original.boss[1],'覺醒'+original.boss[2]]};MAPS.push(map);map.mobs.concat([map.boss]).forEach((x,j)=>monsterArtByMaterial.set(x[2],i*4+j));}
 function levelCap(s=state){return s?.won?60:30;}
 function regionTier(mi){return mi===6?6:Math.ceil(MAPS[mi].min/5);}
@@ -310,7 +310,7 @@ function regionFamily(mi){return MAPS[mi].family??(mi>6?mi-7:Math.min(mi,5));}
 function canVisit(mi,s=state){if(!s||!Number.isInteger(mi)||!MAPS[mi])return false;return mi===6?s.lv>=30:MAPS[mi].min>30?s.won&&MAPS[mi].min<=s.lv+5:MAPS[mi].min<=s.lv+5;}
 function bossMaterial(mi,mode=state.difficulty||0){return (mode?'【'+MODES[mode].name+'】':'')+MAPS[mi].boss[2];}
 
-const tierPrefixes=['旅人','礦紋','暮影','霜刻','熔火','星隕','翠影','深淵','幽冥','極夜','煉獄','天隕'];
+
 function gearName(g){return (g.difficulty?'【'+MODES[g.difficulty].name+'】':'')+(g.boss!==undefined?(g.tier>6?'覺醒・':'')+BOSS_GEAR[g.boss]:tierPrefixes[g.tier-1])+CLASS_GEAR[g.job??state?.job??0][g.slot];};
 
 function bossPower(g){return g.boss!==undefined?[1,1.25,1.55][g.difficulty||0]:1;}
@@ -566,14 +566,14 @@ function playerProgressView(context){
 function memberKey(h){return h?.companionId??h?.playerId??h?.job;}
 function partyMember(key){return party?.members.find(h=>memberKey(h)===key);}
 const solo={render,initial,save,validateSave,resetEncounter,stats,canVisit,victory,skillsView,guideView,start,exportSave};
-const SUPPORT=[
- [{name:'戰吼',target:'allies',kind:'attack',value:.18,duration:10,cooldown:16,level:1}, {name:'守護誓言',target:'weakest',kind:'guard',value:.30,duration:8,cooldown:14,level:7}, {name:'破甲怒吼',target:'enemies',kind:'fracture',value:.20,duration:8,cooldown:15,level:15}],
- [{name:'奧術共鳴',target:'allies',kind:'power',value:.20,duration:10,cooldown:17,level:1}, {name:'時間凝滯',target:'enemies',kind:'weaken',value:.18,duration:7,cooldown:14,level:7}, {name:'元素灼印',target:'enemy',kind:'followup',element:'fire',value:.25,duration:10,cooldown:16,level:15}],
- [{name:'鷹眼指引',target:'allies',kind:'critical',value:.10,duration:12,cooldown:18,level:1}, {name:'獵手標記',target:'enemy',kind:'damageAmp',element:'physical',value:.20,duration:10,cooldown:15,level:7}, {name:'風行庇佑',target:'allies',kind:'guard',value:.15,duration:8,cooldown:16,level:15}],
- [{name:'晨光祝福',target:'allies',kind:'regen',value:.025,duration:10,cooldown:16,level:1}, {name:'聖光庇護',target:'weakest',kind:'guard',value:.35,duration:8,cooldown:14,level:7}, {name:'光明祈願',target:'allies',kind:'attack',value:.22,duration:10,cooldown:18,level:15}, {name:'苦痛蔓延',description:'指定攻擊力最高的夥伴，使其下一次單體技能對額外最多 2 名敵人造成 30% 傷害。',target:'rankedAllies',statusTarget:'rankedAllies',statusTargetStat:'attack',statusTargetOrder:'highest',statusTargetIncludeSelf:false,kind:'applyStatus',statusId:'pain-spread',element:'light',value:0,effectPerLevel:0,duration:99,cooldown:16,level:1}]
-];
-const EFFECT_NAMES={attack:'攻擊',guard:'減傷',fracture:'破甲',power:'技能效果',weaken:'攻擊降低',vulnerable:'承傷增加',critical:'暴擊率',regen:'每回合回復生命'};
-const TARGET_NAMES={allies:'我方全體',weakest:'生命比例最低的隊友',enemies:'敵方全體',enemy:'目前集火目標'};
+
+
+
+
+
+
+
+
 function initHero(h){h.name??='';const priorSupportLength=Array.isArray(h.supportLevels)?h.supportLevels.length:0;h.supportLevels??=[1,0,0];while(h.supportLevels.length<SUPPORT[h.job].length)h.supportLevels.push(0);if(h.job===3&&priorSupportLength<4&&SUPPORT[3]?.[3]?.statusId==='pain-spread')h.supportLevels[3]=1;h.supportSlots??=[0,null];return h;}
 initial=function(job){return initHero(solo.initial(job));};
 function createParty(hero){hero.playerId??=hero.job;return {version:3,members:[initHero(hero)],active:[memberKey(hero)],selected:memberKey(hero),map:hero.map,difficulty:hero.difficulty||0,encounterMode:'group',etherBossClaims:[],cleared:hero.won,playTimeMs:0};}
@@ -781,35 +781,35 @@ render=function(){
 // Elemental equipment, parallel regions and expedition supplies.
 const ELEMENTS={physical:'無屬性',fire:'火',ice:'冰',wind:'風',light:'光',shadow:'暗'};
 const RACES={beast:'野獸',plant:'植物',undead:'不死',construct:'構裝',demon:'惡魔',spirit:'精靈'};
-const SKILL_ELEMENTS=[['physical','light','physical','shadow','light','light'],['fire','ice','fire','shadow','fire','wind'],['wind','wind','physical','physical','wind','light'],['light','light','light','light','light','light']];
-const REGION_ELEMENTS=['wind','physical','shadow','ice','fire','shadow'];
-const ORIGINAL_RACES=[['spirit','beast','plant','plant'],['beast','beast','construct','construct'],['beast','spirit','undead','undead'],['beast','spirit','beast','beast'],['beast','beast','construct','demon'],['demon','spirit','construct','construct']];
-const SUPPORT_ELEMENTS=[['physical','light','physical'],['wind','ice','fire'],['wind','physical','wind'],['light','light','light']];
+
+
+
+
 SUPPORT.forEach((list,job)=>list.forEach((sk,i)=>sk.element=SUPPORT_ELEMENTS[job][i]));
 const species=new Map();
 MAPS.forEach((map,mi)=>{const family=regionFamily(mi);map.mobs.concat([map.boss]).forEach((m,i)=>species.set(m[2],{element:mi===6?'shadow':REGION_ELEMENTS[family],race:mi===6?'demon':ORIGINAL_RACES[family][i]||'demon'}));});
-const SIDE_REGIONS=[
- ['赤楓丘陵','fire',[['燼翼火蛾','燼翼粉',10,'spirit'],['赤鬃山狼','赤鬃毛皮',1,'beast'],['焦根樹人','焦根木髓',2,'plant'],['炭殼魔偶','炭殼碎片',6,'construct']],['赤楓炎靈','炎靈心木',3,'spirit']],
- ['潮汐洞窟','ice',[['潮影蝙蝠','潮影翼膜',4,'beast'],['寒潮蜥蜴','寒潮腺體',5,'beast'],['海霧幽魂','海霧結珠',11,'undead'],['鹽晶魔像','鹽晶塊',6,'construct']],['潮汐巨像','深潮齒輪',7,'construct']],
- ['白骨墓園','shadow',[['墓園亡魂','亡者殘響',11,'undead'],['噬骨獵犬','噬骨獠牙',20,'beast'],['墓火飛蛾','墓火鱗片',10,'spirit'],['腐枝守衛','腐枝黑核',2,'plant']],['白骨巫后','巫后骨印',11,'undead']],
- ['雷鳴高地','wind',[['雷牙蒼狼','雷牙',12,'beast'],['風暴妖精','風暴晶羽',13,'spirit'],['雷殼魔偶','雷殼銅片',6,'construct'],['高地巨熊','高地熊膽',14,'beast']],['雷鳴獸王','獸王雷角',15,'beast']],
- ['蒼翠聖所','light',[['聖樹幼靈','聖樹芽核',2,'plant'],['晶光妖精','晶光翼',13,'spirit'],['聖羽渡鴉','聖羽',17,'beast'],['失序聖鎧','聖鎧殘片',18,'construct']],['聖所守護者','聖所徽核',19,'construct']],
- ['幽冥邊境','shadow',[['冥界獵犬','冥犬黑牙',20,'demon'],['幽影水母','幽影觸鬚',21,'spirit'],['黑曜魔像','黑曜脊核',22,'construct'],['游蕩冤魂','邊境魂塵',11,'undead']],['幽冥觀測者','冥視之瞳',23,'demon']]
-];
-const HIGH_REGION_NAMES=['炎晶裂谷','深海祭壇','亡者王庭','風暴浮島','聖光禁林','日蝕深淵'];
+
+
+
+
+
+
+
+
+
 for(let tier=1;tier<=12;tier++){
  const family=(tier-1)%6,def=SIDE_REGIONS[family],high=tier>6,tag=high?'上古・':'',mi=MAPS.length;
  const tuple=x=>[tag+x[0],monsterPixel(x[2],true),(high?'上古':'')+x[1]];
  const map={name:high?HIGH_REGION_NAMES[family]:def[0],min:(tier-1)*5+1,max:tier*5,family,icon:'',color:'#34324a',mobs:def[2].map(tuple),boss:tuple(def[3]),parallel:true};MAPS.push(map);
  [...def[2],def[3]].forEach((m,i)=>{const row=i===4?map.boss:map.mobs[i];monsterArtByMaterial.set(row[2],m[2]);species.set(row[2],{element:def[1],race:m[3]});});
 }
-const ITEM_FORMS=[
- [[{name:'闊刃劍',atk:1.2,critDamage:10},{name:'穿甲槍',atk:.95,pierce:12},{name:'汲血斧',atk:1.08,lifesteal:3}], [{name:'重型板甲',hp:1.15,def:1.25},{name:'決鬥鎧',hp:.9,def:.9,evasion:6}], [{name:'征戰旗',atk:1.2},{name:'守誓印',hp:1.3,exclusive:{attackPct:2}}]],
- [[{name:'炎晶杖',fixedEffects:[{key:'gearAtkPct',value:15},{key:'basicElement',value:'fire'}]},{name:'霜紋杖',fixedEffects:[{key:'attackPct',value:3},{key:'basicElement',value:'ice'}]},{name:'疾風法器',fixedEffects:[{key:'gearAtkPct',value:-5},{key:'attackPct',value:2},{key:'basicElement',value:'wind'}]}], [{name:'秘法袍',hp:1,exclusive:{attackPct:4}},{name:'月影袍',hp:.9,def:1,evasion:6}], [{name:'元素魔典',atk:1.15,elementBonus:8},{name:'回響符環',hp:1.1,exclusive:{attackPct:2}}]],
- [[{name:'狙擊長弓',atk:1.15,critDamage:12},{name:'穿雲弩',atk:1,pierce:12},{name:'風羽短弓',fixedEffects:[{key:'gearAtkPct',value:-5},{key:'evasion',value:4},{key:'basicElement',value:'wind'}]}], [{name:'獵手皮甲',hp:1,def:1.1},{name:'輕羽衣',hp:.9,def:.9,evasion:8}], [{name:'破甲箭袋',atk:1,pierce:8},{name:'鷹眼指環',atk:1.1,critDamage:15}]],
- [[{name:'晨光權杖',fixedEffects:[{key:'gearAtkPct',value:10},{key:'basicElement',value:'light'}]},{name:'淨化槌',atk:1,pierce:10},{name:'祈禱法杖',atk:.95,exclusive:{attackPct:5}}], [{name:'祝禱聖衣',hp:1.15,exclusive:{attackPct:3}},{name:'守護祭袍',hp:1,def:1.2}], [{name:'聖光徽記',atk:1.1,elementBonus:8},{name:'生命念珠',hp:1.25,exclusive:{attackPct:2}}]]
-];
-const EQUIP_POSITION_NAMES=['武器','護甲','副手','飾品 1','飾品 2'];
+
+
+
+
+
+
+
 const GLOBAL_EQUIPMENT_FORM_GROUP=CLASSES.length;
 function normalizeEquipmentFormsArray(forms){
  if(!Array.isArray(forms))return forms;const classCount=CLASSES.length;
@@ -1407,40 +1407,40 @@ function refreshGlobalJournal(){
 // Update 09: data-driven test balance JSON and real multi-target core attacks.
 // Test settings are stored separately from player saves and can add entries that reuse existing mechanics.
 const BALANCE_KEY=environmentStorageKey('emberwild-balance-test-v1'),BALANCE_SCHEMA='emberwild-balance-v1';
-const GAME_BALANCE_DEFAULTS={
-  combat:{
-    elementMultipliers:{neutral:1,same:.8,strong:1.3,weak:.85},
-    statCaps:{crit:.85,pierce:.65,evasion:.45,lifesteal:.25},
-    minimumActiveCooldown:1
-  },
-  affixes:{
-    qualityChance:{normal:.60,fine:.27,rare:.10,legendary:.03},
-    qualityMultiplier:{normal:1,fine:1.4,rare:1.9,legendary:2.6},
-    skillSpecialChance:.40,
-    skillEffectShare:.72,
-    extendedPoolChance:.55,
-    procChancePerPointPercent:6,
-    baseValues:{
-      attackPerTier:{min:3,max:6},
-      hpPerTier:{min:15,max:30},
-      defensePerTier:{min:2,max:4},
-      critPercent:{min:3,max:6,cap:18}
-    },
-    skillEffectPercent:{normal:0,fine:18,rare:30,legendary:45},
-    cooldownReduction:{normal:0,fine:1,rare:1,legendary:2},
-    extendedValues:{
-      critDamage:{normal:5,fine:10,rare:15,legendary:20},
-      pierce:{normal:5,fine:10,rare:15,legendary:20},
-      lifesteal:{normal:1,fine:2,rare:3,legendary:4},
-      evasion:{normal:2,fine:4,rare:6,legendary:8},
-      elementDamage:{normal:5,fine:10,rare:15,legendary:20},
-      raceDamage:{normal:5,fine:10,rare:15,legendary:20},
-      resist:{normal:5,fine:10,rare:15,legendary:20},
-      attackPercent:{normal:0,fine:0,rare:3,legendary:5}
-    },
-    rerollCost:{goldPerTier:80,dustPerRoll:10}
-  }
-};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 let GAME_BALANCE=JSON.parse(JSON.stringify(GAME_BALANCE_DEFAULTS));
 function cloneBalance(v){return JSON.parse(JSON.stringify(v));}
 function qualityChanceText(){const q=GAME_BALANCE.affixes.qualityChance;return `普通 ${Math.round(q.normal*100)}%、精良 ${Math.round(q.fine*100)}%、稀有 ${Math.round(q.rare*100)}%、傳說 ${Math.round(q.legendary*100)}%`;}
@@ -1699,18 +1699,18 @@ refreshGlobalJournal=function(){
 
 // Update 11: JSON-editable hand-written descriptions with mechanics shown separately.
 // description is presentation text only; combat values continue to come from structured fields.
-const CORE_SKILL_DEFAULT_DESCRIPTIONS=[
- ['以沉重武器震裂地面，正面擊潰敵人。','架起堅固防勢，以護盾吸收來襲傷害。','抓住敵人攻勢的空隙，順勢追加一次反擊。','以兇猛重擊奪取敵人的生命力補充自身。','凝聚聖鋼之力，向敵人降下沉重裁決。','在持續作戰中激發意志，為自身形成護盾。'],
- ['射出凝聚火焰的魔法箭，灼穿眼前的敵人。','展開冰霜護幕，以護盾隔絕來襲傷害。','讓殘留的魔力驟然引爆，追加猛烈的法術攻勢。','以奧術迴路抽取敵人的生命力，回補自身。','召來高空隕星，以龐大魔力轟擊戰場。','讓殘存魔力再次共鳴，形成追加的法術打擊。'],
- ['以強勁箭矢貫穿目標，迅速壓制敵人。','藉由短暫喘息恢復傷勢，維持遠征節奏。','趁普攻命中時連續補上箭矢，延續攻勢。','鎖定獵物的破綻，在射擊間追加精準打擊。','引導疾風化作箭雨，覆蓋前方敵群。','將生命之力附著於箭矢，命中後回補自身。'],
- ['以聖光審判敵人，將信念化為直接攻勢。','以禱言治癒傷勢，優先扶起最需要支援的隊友。','在普通攻擊間引發聖光懲戒，追加神聖打擊。','喚起持續湧出的生命力，為受傷隊友提供治療。','刻下黎明聖印，以耀眼聖光壓制敵人。','以神聖力量庇護自身，形成護盾。']
-];
-const SUPPORT_SKILL_DEFAULT_DESCRIPTIONS=[
- ['以戰吼鼓舞隊伍，讓全員更積極地發動攻勢。','將守護誓言施加在最危急的隊友身上，替其承受壓力。','以怒吼動搖敵方防線，讓整個敵群更容易受到傷害。'],
- ['讓奧術能量在隊伍間共鳴，強化技能的發揮。','干擾敵人的時間感，使整個敵群的攻勢變得遲滯。','在集火目標上留下元素印記，放大後續攻擊的效果。'],
- ['以鷹眼般的視野指引隊伍，提高抓住致命破綻的機會。','標記目前鎖定的獵物，使隊伍更容易對其造成有效傷害。','以流動氣流環繞隊伍，減輕敵方攻擊造成的壓力。'],
- ['以晨光祝福全隊，讓生命力在戰鬥中持續回流。','將聖光集中在最危急的隊友身上，形成強力庇護。','向全隊獻上祈願，鼓舞眾人的攻擊意志。']
-];
+
+
+
+
+
+
+
+
+
+
+
+
 function ensureDescriptionMeta(){
  CLASSES.forEach((c,job)=>c.skills.forEach((sk,i)=>{if(!sk[6]||typeof sk[6]!=='object'||Array.isArray(sk[6]))sk[6]={};if(typeof sk[6].description!=='string')sk[6].description=CORE_SKILL_DEFAULT_DESCRIPTIONS[job]?.[i]||'';}));
  SUPPORT.forEach((list,job)=>list.forEach((sk,i)=>{if(typeof sk.description!=='string')sk.description=SUPPORT_SKILL_DEFAULT_DESCRIPTIONS[job]?.[i]||'';}));
@@ -1768,7 +1768,7 @@ shopView=function(){ensureMarket();const h=pageHero('shop');return `<div class="
 
 
 // Update 12: gameplay values formerly fixed in HTML are now exported/imported under balanceSettings.
-const GAMEPLAY_SETTINGS_DEFAULTS={"progression":{"xpCurve":{"base":45,"linear":18,"quadratic":2,"multiplierBase":2.2,"multiplierPerLevel":0.16},"starting":{"gold":150,"ore":12,"dust":0,"skillPoints":2,"abilityPoints":0,"potions":5},"levelCaps":{"beforeClear":30,"afterClear":60},"levelRewards":{"abilityPoints":3,"skillPoints":2},"statsPerLevel":{"hp":20,"attack":4,"defense":2},"statsPerPoint":{"hp":12,"attack":2,"defense":1.3},"baseCrit":{"default":0.07,"archer":0.17},"advance":{"level":15,"gold":500,"ore":20,"materialCount":3,"hpMultiplier":1.18,"attackMultiplier":1.22,"defenseMultiplier":1.15},"regionTierLevels":5,"mapAheadAllowance":5},"skills":{"core":{"maxLevel":10,"initialCap":2,"capLevelsPerStep":3,"effectPerExtraLevel":0.4},"proc":{"baseChance":0.22,"perSkillLevel":0.025},"support":{"maxLevel":5,"effectPerExtraLevel":0.2},"gems":{"craftDust":12,"effectMultiplier":1.18,"cooldownReduction":1,"cooldownProcBonus":0.1,"hybridMultiplier":1.1,"hybridProcBonus":0.05,"hybridActiveHealAttack":0.15}},"equipment":{"bagCapacity":720,"requiredLevel":{"base":1,"perTier":5},"baseStats":{"weaponAttackPerTier":11,"armorHpPerTier":45,"armorDefensePerTier":4,"accessoryAttackPerTier":4,"accessoryHpPerTier":20},"enhance":{"maxLevel":10,"statPerLevel":0.12,"orePerTierPerLevel":2,"dustStartLevel":6,"dustPerTierPerLevelAboveStart":1,"etherStartLevel":10,"etherCost":1},"salvage":{"oreBasePerTier":3,"orePerQualityPerTier":2,"orePerEnhancePerTier":1,"dustBase":1,"dustPerQuality":1},"lootOwnerSameJobChance":0.75,"boss":{"baseLevelBonus":7,"powerByDifficulty":[1,1.25,1.55],"skillEffectByDifficulty":[30,40,55],"affixRankByDifficulty":[2,2,3],"craftGoldPerTier":250,"craftMaterialCount":5},"difficultyAffix":{"hardChance":0.65,"hellChance":0.9,"hardFineThreshold":0.7,"hardRareThreshold":0.95,"hellFineThreshold":0.35,"hellRareThreshold":0.85,"skillChance":0.4,"baseAttackPerTier":5,"baseHpPerTier":25,"defenseBasePerTier":3,"defensePerRankPerTier":1,"critBase":4,"critPerRank":3}},"monsters":{"encounter":{"bossChance":0.05,"eliteChance":0.12},"normal":{"hpBase":42,"hpPerLevel":15,"hpQuadratic":0.7,"attackBase":8,"attackPerLevel":3.3,"defensePerLevel":1.7},"kindMultipliers":{"bossHp":3,"eliteHp":1.65,"bossAttack":1.45,"eliteAttack":1.2},"finalBoss":{"level":40,"hp":180000,"attack":1000,"defense":110},"awakened":{"threshold":30,"hpBaseMultiplier":2,"hpPerLevel":0.1,"attackBaseMultiplier":2,"attackPerLevel":0.06,"defenseMultiplier":1.6}},"difficulty":{"modes":[{"hp":1,"attack":1,"defense":1,"reward":1,"equipmentChance":[0.22,0.55,1],"gemChance":[0.04,0.12,0.35],"bossGearChance":0.25,"ore":1,"legendaryGearChance":0.0015},{"hp":1.8,"attack":1.35,"defense":1.2,"reward":1.3,"equipmentChance":[0.38,0.75,1],"gemChance":[0.08,0.22,0.5],"bossGearChance":0.4,"ore":1.5,"legendaryGearChance":0.004},{"hp":3,"attack":1.8,"defense":1.45,"reward":1.65,"equipmentChance":[0.55,0.95,1],"gemChance":[0.13,0.35,0.7],"bossGearChance":0.6,"ore":2,"legendaryGearChance":0.008}],"materialChance":[0.65,0.8,0.95]},"rewards":{"kindMultiplier":{"normal":1,"elite":1.7,"boss":3},"gold":{"base":12,"perLevel":4},"xp":{"base":15,"perLevel":6},"ore":{"normalKindMultiplier":1,"eliteBossKindMultiplier":3},"equipmentQuality":{"rareChance":0.18,"fineConditionalChance":0.45},"potionDropChance":0.08,"postVictoryHeal":0.12,"radiant":{"normalElite":0.0005,"bossFinal":0.01},"ether":{"eliteBase":0.05,"elitePerTier":0.02,"eliteCap":0.3,"bossRepeat":0.05,"firstBossMin":1,"firstBossMax":2}},"combat":{"defenseEffectiveness":0.65,"baseCritDamage":1.5,"caps":{"fracture":0.75,"guard":0.75,"weaken":0.7,"resistance":0.75},"levelGapDamagePerLevel":0.12,"finalBoss":{"enrageAfterTurn":45,"enrageMultiplier":4,"specialEveryTurns":5,"specialMultiplier":1.65},"autoPotionThreshold":0.35,"defeatGoldLoss":0.05,"groupSize":{"min":3,"max":6},"speed":{"heroBase":[102,108,116,96],"heroPerLevel":0.5,"bonusCap":5,"evasionWeight":10,"critWeight":5,"enemyBase":106,"enemyPerLevel":0.5,"race":{"beast":5,"plant":-4,"undead":-2,"construct":-5,"demon":3,"spirit":4},"kind":{"normal":0,"elite":2,"boss":4,"final":6},"difficultyBonus":2},"pacing":{"actionIntervalMs":900,"roundMinimumMs":6000,"rates":[1,2]},"supply":{"wardResistance":0.25,"elementTonicDamage":0.2}},"quests":{"tutorial":{"killRequirement":3,"skillLevelRequirement":2,"rewardGold":100,"rewardOre":10,"armorTier":1,"armorSlot":1,"armorQuality":1},"side":[{"required":5,"gold":300,"ore":20,"gem":1},{"required":2,"gold":800,"ore":55,"gem":1},{"required":3,"gold":2000,"ore":120,"gem":1}],"repeat":{"required":8,"goldPerTier":150,"ore":15,"dust":3,"gem":1},"board":{"refreshMinutes":20,"refreshGoldPerTier":150,"taskBase":8,"taskRandomRange":9,"taskPerTier":2,"goldPerTier":180,"orePerTier":8,"gemReward":2,"legendaryGearChance":0.2},"market":{"refreshCost":100,"offerCount":6,"oreMin":8,"oreRandomRange":13,"dustMin":3,"dustRandomRange":6,"gemMin":1,"gemRandomRange":2,"materialMin":3,"materialRandomRange":4,"oreUnit":12,"dustUnit":25,"gemUnit":180,"materialUnitPerTier":60},"potion":{"healFraction":0.45,"buyCost":75,"buyQuantity":5}}};
+
 EmberwildProgression.applyDefaults(GAMEPLAY_SETTINGS_DEFAULTS);
 GAMEPLAY_SETTINGS_DEFAULTS.equipment.baseStats.offhandAttackPerTier??=GAMEPLAY_SETTINGS_DEFAULTS.equipment.baseStats.accessoryAttackPerTier;GAMEPLAY_SETTINGS_DEFAULTS.equipment.baseStats.offhandHpPerTier??=GAMEPLAY_SETTINGS_DEFAULTS.equipment.baseStats.accessoryHpPerTier;
 GAMEPLAY_SETTINGS_DEFAULTS.maps={levelRanges:MAPS.map(m=>({min:m.min,max:m.max}))};
