@@ -9,7 +9,7 @@ test('all modules download ahead of the first execution; execution order and pub
   let allStarted;const downloadsStarted=new Promise(resolve=>allStarted=resolve);
   try{
     await r.page.addInitScript(()=>{globalThis.__bootOrder=[];});
-    await r.page.route('http://emberwild.test/js/**',async route=>{
+    await r.page.route('http://localhost/js/**',async route=>{
       const url=new URL(route.request().url()),file=url.pathname.slice(1);
       if(!url.searchParams.has('balance-build'))return route.fallback();
       started.add(file);if(started.size===modules.length)allStarted();
@@ -36,7 +36,7 @@ test('a failed download shows retry, never executes later modules, and preserves
   const r=await openRuntime(root);
   try{
     await r.page.evaluate(()=>localStorage.setItem('emberwild-save-probe','preserve-this'));
-    await r.page.route('http://emberwild.test/js/balance/progression-model.js?*',route=>route.fulfill({status:404,body:'missing'}));
+    await r.page.route('http://localhost/js/balance/progression-model.js?*',route=>route.fulfill({status:404,body:'missing'}));
     await r.page.reload();
     assert.match(await r.page.locator('#app').innerText(),/遊戲資料載入失敗.*下載失敗/s);
     assert.equal(await r.page.getByRole('button',{name:'重新載入',exact:true}).isVisible(),true);
@@ -49,7 +49,7 @@ test('a failed download shows retry, never executes later modules, and preserves
 test('a downloaded module throwing during execution stops boot instead of reporting ready',async()=>{
   const r=await openRuntime(root);
   try{
-    await r.page.route('http://emberwild.test/js/balance/progression-model.js?*',route=>route.fulfill({contentType:'text/javascript',body:'throw Error("boot execution probe");'}));
+    await r.page.route('http://localhost/js/balance/progression-model.js?*',route=>route.fulfill({contentType:'text/javascript',body:'throw Error("boot execution probe");'}));
     await r.page.reload();
     assert.match(await r.page.locator('#app').innerText(),/模組執行失敗.*boot execution probe/);
     assert.equal(await r.page.evaluate(()=>globalThis.__EMBERWILD_BALANCE_READY===true),false);

@@ -2,13 +2,13 @@ const {chromium}=require('playwright');
 const fs=require('node:fs');
 const path=require('node:path');
 async function openRuntime(root,entry='index.html',storage={},options={}) {
-  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--unsafely-treat-insecure-origin-as-secure=http://emberwild.test'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
+  const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
   const page=await browser.newPage();
   const errors=[];
   if(options.clockTime){await page.clock.install({time:options.clockTime});await page.clock.pauseAt(options.clockTime);}
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  await page.route('http://emberwild.test/**',async route=>{
+  await page.route('http://localhost/**',async route=>{
     const url=new URL(route.request().url());
     const pathname=options.pathname?url.pathname.replace(options.pathname,'/'):url.pathname;
     const file=path.resolve(root,pathname==='/'?entry:'.'+decodeURIComponent(pathname));
@@ -17,7 +17,7 @@ async function openRuntime(root,entry='index.html',storage={},options={}) {
     await route.fulfill({status:200,body:fs.readFileSync(file),contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html'});
   });
   await page.addInitScript(s=>{for(const [k,v] of Object.entries(s))localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));},storage);
-  await page.goto('http://emberwild.test'+(options.pathname||'/'),{waitUntil:'load',timeout:30000});
+  await page.goto('http://localhost'+(options.pathname||'/'),{waitUntil:'load',timeout:30000});
   async function waitForBoot(){
     if(entry!=='index.html'||!fs.existsSync(path.join(root,'data/balance.json')))return;
     const deadline=Date.now()+30000;
