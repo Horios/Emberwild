@@ -247,9 +247,12 @@ test('Mobile: messages and loot are sibling panels without shared or nested scro
   assert(await p.evaluate(latestVisible),'opening shows the latest log');
   await p.evaluate(()=>note('新增最新訊息','playerDamage'));
   assert(await p.evaluate(latestVisible),'new messages keep following');
-  await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop=0);await p.waitForTimeout(30);
+  const journalBox=await p.locator('#mobileJournalBody').boundingBox();
+  await p.mouse.move(journalBox.x+journalBox.width/2,journalBox.y+journalBox.height/2);
+  await p.mouse.wheel(0,-3000);await p.waitForTimeout(80);
   const logState=()=>{const body=document.getElementById('mobileJournalBody'),stream=body.querySelector('.battle-log-stream');return {top:body.scrollTop,height:body.scrollHeight,client:body.clientHeight,display:getComputedStyle(body).display,innerTop:stream.scrollTop,auto:stream.dataset.autoScroll,generation:stream.dataset.logGeneration,expectedGeneration:battleLogGeneration};};
   const before=await p.evaluate(logState);
+  assert.equal(before.top,0,'a real wheel gesture can scroll the outer journal to the beginning');
   await p.evaluate(()=>{note('回看時不得拉走畫面','playerDamage');refreshGlobalJournal();});
   const after=await p.evaluate(logState);
   if(after.top!==0)console.log('MOBILE_JOURNAL_SCROLL_DIAGNOSTIC',JSON.stringify({before,after}));
@@ -316,7 +319,9 @@ test('Journal: loot collapse survives immediate redraws, queued toggle events an
     await p.evaluate(()=>clearInterval(globalThis.foldRefresh));
     await p.waitForFunction(()=>!isEmberwildUIInteracting());
     await p.locator(selector).waitFor({state:'visible'});
-    const box=await p.locator(selector).boundingBox();assert(box,width+' click '+i+' has a visible header');
+    const box=await p.evaluate(sel=>{const el=document.querySelector(sel);if(!el)return null;const r=el.getBoundingClientRect(),css=getComputedStyle(el);return css.display!=='none'&&r.width>0&&r.height>0?{x:r.x,y:r.y,width:r.width,height:r.height}:null;},selector);
+    if(!box)console.log('JOURNAL_FOLD_HEADER_DIAG',JSON.stringify(await p.evaluate(sel=>({viewport:innerWidth,matched:matchMedia('(max-width:900px)').matches,node:!!document.querySelector(sel),display:document.querySelector(sel)?getComputedStyle(document.querySelector(sel)).display:null,html:document.getElementById('globalBattleJournal')?.className}),selector)));
+    assert(box,width+' click '+i+' has a visible header');
     await p.evaluate(()=>globalThis.foldRefresh=setInterval(()=>refreshGlobalJournal(),30));
     await p.mouse.click(box.x+box.width/2,box.y+box.height/2,{delay:80});await p.waitForTimeout(60);
     const expected=i%2===0;

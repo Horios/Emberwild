@@ -42,7 +42,15 @@ function ensureBattleLogScrollState(stream){
  if(!stream||stream.dataset.scrollStateReady==='1')return;
  stream.dataset.scrollStateReady='1';
  stream.dataset.autoScroll=battleReportPaused?'0':'1';
- for(const surface of [stream,stream.closest?.('#mobileJournalBody')].filter(Boolean))surface.addEventListener('scroll',()=>{
+ const mobileSurface=stream.closest?.('#mobileJournalBody');
+ if(mobileSurface){
+  // Direct upward gestures cancel queued animation-frame pins immediately.
+  mobileSurface.addEventListener('wheel',event=>{if(event.deltaY<0)stream.dataset.autoScroll='0';},{passive:true});
+  let lastY=null;
+  mobileSurface.addEventListener('touchstart',event=>{lastY=event.touches?.[0]?.clientY??null;},{passive:true});
+  mobileSurface.addEventListener('touchmove',event=>{const y=event.touches?.[0]?.clientY;if(lastY!==null&&Number.isFinite(y)&&y>lastY)stream.dataset.autoScroll='0';lastY=y??null;},{passive:true});
+ }
+ for(const surface of [stream,mobileSurface].filter(Boolean))surface.addEventListener('scroll',()=>{
   if(battleLogScrollSurface(stream)!==surface)return;
   const follow=isBattleLogAtBottom(stream)?'1':'0';
   if(battleReportPaused)stream.dataset.reportAutoScroll=follow;
@@ -54,7 +62,15 @@ function forceBattleLogBottom(stream){
  ensureBattleLogScrollState(stream);
  if(battleReportPaused)return;
  stream.dataset.autoScroll='1';
- const pin=()=>{if(!battleReportPaused&&stream.isConnected&&stream.dataset.autoScroll==='1')battleLogScrollSurface(stream).scrollTop=Math.max(0,battleLogScrollSurface(stream).scrollHeight-battleLogScrollSurface(stream).clientHeight);};
+ let lastPinned=null;
+ const pin=()=>{
+  if(battleReportPaused||!stream.isConnected||stream.dataset.autoScroll!=='1')return;
+  const surface=battleLogScrollSurface(stream);
+  // A deferred pin must not override scrolling away from a prior pin.
+  if(lastPinned!==null&&surface.scrollTop<lastPinned-2){stream.dataset.autoScroll='0';return;}
+  surface.scrollTop=Math.max(0,surface.scrollHeight-surface.clientHeight);
+  lastPinned=surface.scrollTop;
+ };
  pin();
  queueMicrotask(pin);
  requestAnimationFrame(()=>{pin();requestAnimationFrame(pin);});

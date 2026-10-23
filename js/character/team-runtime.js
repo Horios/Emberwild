@@ -151,7 +151,13 @@
       }
     }
     try{return M.validate(next,{classes:d.classes,supports:d.supportSkills,members:party.members,items:player().bag,progression:d.balanceSettings.progression,level:player().lv,config:d.teamSettings,wearable:()=>true});}
-    catch(e){throw Error('平衡設定不相容於已保存的隊伍：'+e.message+'。請先調整配置；原設定保留。');}
+    catch(e){
+      if(String(e.message||'').includes('隊伍技能槽無效')){
+        const p=next.plans.find(x=>e.message.includes(x.id+'/'));
+        if(p)console.warn('BALANCE_STAGE_SKILL_DIAG',JSON.stringify({plan:p.id,job:p.job,active:p.active,proc:p.procSlots,support:p.supportSlots,learned:p.active.map(i=>i===null?null:p.skills[i]),types:p.active.map(i=>i===null?null:d.classes[p.job]?.skills[i]?.activation),loadout:p.skillLoadout,permanent:p.active.map(i=>i===null?null:next.permanent.unlocks[p.job+':core:'+i])}));
+      }
+      throw Error('平衡設定不相容於已保存的隊伍：'+e.message+'。請先調整配置；原設定保留。');
+    }
   }
   const balanceBase=applyBalanceConfig;
   // Re-enter the final adapters without staging a build or committing another save.
