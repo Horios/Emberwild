@@ -18,6 +18,7 @@ function reload(r){
    bootError:n.run('globalThis.__EMBERWILD_BOOT_SAVE_ERROR??null'),
    deferredSave:n.run('Boolean(globalThis.__EMBERWILD_BOOT_SAVE_RAW)'),
    offlinePending:n.run('globalThis.EmberwildOffline?.isSettling?.()??null'),
+   snapshot:n.run(`(()=>{const p=globalThis.__EMBERWILD_BOOT_SAVE_RAW;if(!p)return null;const d=JSON.parse(p),c=d.offlineExploration?.combat;return {members:d.members?.length,snapshotHeroes:c?.heroes?.map(h=>({hp:h.hp,shield:h.shield,keys:Object.keys(h)})),foes:c?.foes?.map(e=>({id:e.id,hp:e.hp,maxhp:e.maxhp})),status:d.offlineExploration?.status};})()`),
    errors:n.errors.slice(-3),warnings:n.warnings.slice(-3)
   };
   console.error('STORY_RELOAD_FAILURE',JSON.stringify(diagnostics));

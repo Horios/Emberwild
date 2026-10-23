@@ -3,7 +3,13 @@ const {loadRuntime}=require('./headless-runtime.cjs');
 const root=path.resolve(__dirname,'..');
 const json=(r,code)=>JSON.parse(r.run('JSON.stringify('+code+')'));
 function game(){const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);closeModal();Math.random=()=>.99;');return r;}
-function advance(r,ms){r.advance(ms);r.run('tick();');}
+function advance(r,ms){
+ r.advance(ms);
+ // Life jobs have their own wall-clock heartbeat. The headless runner does
+ // not execute Promise callbacks for deferred offline combat settlements;
+ // advance the real life job synchronously before the normal game tick.
+ r.run('emberwildLifeHeartbeat();tick();');
+}
 
 test('Gathering awards exactly once per five seconds and updates the accessible progress bar',()=>{
   const r=game();r.run('setTab("gather");startLifeGathering();');
