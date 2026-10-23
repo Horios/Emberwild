@@ -136,25 +136,25 @@ test('Mobile: expedition settings, readable touch controls and skill details are
   const banner=await p.locator('#preview-build-banner').boundingBox(),utilities=await p.locator('#utilityNavigation').boundingBox();
   assert(banner.y+banner.height<=utilities.y,'preview label does not cover utility buttons');
   await p.evaluate(()=>setTab('battle'));
-  assert.equal(await p.locator('.exploration-secondary').evaluate(d=>d.open),false);
+  assert.equal(await p.locator('.exploration-secondary-settings>details:last-child').evaluate(d=>d.open),false);
   const layout=await p.evaluate(()=>{const card=document.querySelector('.expedition-control-card'),action=card.querySelector('.exploration-primary-actions button');return {settings:card.getBoundingClientRect().top,battle:document.querySelector('.party-combat').getBoundingClientRect().top,start:action.getBoundingClientRect().toJSON(),controls:card.getBoundingClientRect().toJSON()};});
   assert(layout.settings<layout.battle,'settings precede the battle roster');assert(layout.start.height>=40,'exploration start control remains touchable');assert(layout.start.left>=layout.controls.left-1&&layout.start.right<=layout.controls.right+1,'start control stays inside panel');
   for(const viewport of [{width:320,height:640},{width:390,height:844},{width:844,height:390}]){
    await p.setViewportSize(viewport);
-   await p.locator('.exploration-secondary>summary').click();
-   assert.equal(await p.locator('.exploration-secondary').evaluate(d=>d.open),true);
+   await p.locator('.exploration-secondary-settings>details:last-child>summary').click();
+   assert.equal(await p.locator('.exploration-secondary-settings>details:last-child').evaluate(d=>d.open),true);
    await fits(p,'expanded settings '+viewport.width);
    await p.locator('.control-row select[aria-label="探索難度"]').selectOption('1');
    await p.waitForFunction(()=>party.difficulty===1&&!isEmberwildUIInteracting());
    await p.evaluate(()=>render());
-   assert.equal(await p.locator('.exploration-secondary').evaluate(d=>d.open),true);
+   assert.equal(await p.locator('.exploration-secondary-settings>details:last-child').evaluate(d=>d.open),true);
    for(const button of ['.heal-auto-settings-button','.battle-effects-bar button']){
     assert(await p.locator(button).evaluate(e=>e.getBoundingClientRect().height>=40),button+' touch height');
    }
-   await p.locator('.exploration-secondary>summary').click();
+   await p.locator('.exploration-secondary-settings>details:last-child>summary').click();
   }
   await p.setViewportSize({width:390,height:844});
-  await p.locator('.exploration-secondary>summary').click();
+  await p.locator('.exploration-secondary-settings>details:last-child>summary').click();
   await p.locator('.heal-auto-settings-button').click();
   assert.equal(await p.locator('#modal').isVisible(),true);
   const healing=await p.locator('#modal').boundingBox();assert(healing.x>=0&&healing.x+healing.width<=390);

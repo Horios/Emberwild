@@ -69,7 +69,10 @@ function appendBattleLogLine(t){
  if(battleReportPaused||!battleLogMatches(t))return;
  document.querySelectorAll('.battle-log-stream').forEach(stream=>{
   ensureBattleLogScrollState(stream);
-  const shouldPin=stream.dataset.autoScroll!=='0';
+  // Inspect the real scroll surface before new text changes its height;
+  // a user reading old messages takes priority over queued auto-pin callbacks.
+  const shouldPin=stream.dataset.autoScroll!=='0'&&isBattleLogAtBottom(stream);
+  if(!shouldPin)stream.dataset.autoScroll='0';
   const oldScrollTop=battleLogScrollSurface(stream).scrollTop;
   const blank=stream.querySelector('.battle-log-empty');if(blank)blank.remove();
   const line=document.createElement('div');line.className='battle-log-line '+battleLogEntryClass(t);line.dataset.eventType=t.type;line.innerHTML=battleLogTextHTML(t);stream.appendChild(line);

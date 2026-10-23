@@ -23,7 +23,11 @@ test('exact browser boot bytes reload safely and repeated import/save never gran
  const r=loadRuntime(root,'index.html',{'emberwild-save-v1':JSON.stringify(legacy)}),expected=expectedPlans(r);
  assert.equal(r.run('Boolean(party)'),true);assert.equal(r.run('globalThis.__EMBERWILD_BOOT_SAVE_ERROR??null'),null);assert.deepEqual(canonicalPlans(json(r,'party.buildSystem.plans')),expected);
  const before=json(r,'__EMBERWILD_TEAMS.budgets()'),gems=json(r,'playerHero().gems'),permanent=json(r,'party.buildSystem.permanent');
- r.run('for(let i=0;i<3;i++){loadParty(packParty());save();}');
+ try{r.run('for(let i=0;i<3;i++){loadParty(packParty());save();}');}
+ catch(error){
+  const detail=json(r,'party.buildSystem.plans.map(p=>({id:p.id,job:p.job,active:p.active,procSlots:p.procSlots,supportSlots:p.supportSlots,loadout:p.skillLoadout,skillCount:p.skills.length,activeLearned:p.active.map(i=>i===null?null:p.skills[i]),types:p.active.map(i=>i===null?null:CLASSES[p.job]?.skills[i]?.[1])}))');
+  console.log('SKILL_RELOAD_DIAGNOSTIC',JSON.stringify(detail));throw error;
+ }
  assert.deepEqual(json(r,'__EMBERWILD_TEAMS.budgets()'),before);assert.deepEqual(json(r,'playerHero().gems'),gems);assert.deepEqual(json(r,'party.buildSystem.permanent'),permanent);
  const cold=loadRuntime(root,'index.html',Object.fromEntries(r.values));assert.deepEqual(canonicalPlans(json(cold,'party.buildSystem.plans')),expected);assert.deepEqual(cold.errors,[]);assert(!cold.warnings.some(s=>s.includes('載入失敗')));
 });

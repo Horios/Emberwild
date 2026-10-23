@@ -63,7 +63,11 @@ test('acknowledgement write failure retains unread records and grants nothing ag
 
 test('title page never settles or displays errors and a late valid consumable save has no provisional failure toast',async()=>{
  const r=game();r.run('state.consumables.speed2_30m=1;returnToTitle()');const key=r.run('KEY'),raw=r.values.get(key),cold=loadRuntime(root,'index.html',{[key]:raw},r.now);cold.ctx.setTimeout=fn=>setImmediate(fn);
- assert(cold.run('!!party&&!!state'));assert.equal(cold.run('__EMBERWILD_BOOT_SAVE_ERROR'),null);assert.doesNotMatch(cold.elements.get('toast')?.textContent||'',/存檔未能載入/);
+ assert(cold.run('!!party&&!!state'));assert.equal(cold.run('__EMBERWILD_BOOT_SAVE_ERROR'),null);if(/存檔未能載入/.test(cold.elements.get('toast')?.textContent||'')){
+  const previous=JSON.parse(raw);
+  console.log('TITLE_SAVE_DIAGNOSTIC',JSON.stringify({member:previous.members?.map(h=>({job:h.job,skillCount:h.skills?.length,active:h.active,activeLearned:h.active?.map(i=>i===null?null:h.skills[i]),skillLoadout:h.skillLoadout})),build:previous.buildSystem?.plans?.map(p=>({id:p.id,job:p.job,active:p.active,activeLearned:p.active.map(i=>i===null?null:p.skills[i]),skillLoadout:p.skillLoadout})),error:cold.run('__EMBERWILD_BOOT_SAVE_ERROR')}));
+ }
+ assert.doesNotMatch(cold.elements.get('toast')?.textContent||'',/存檔未能載入/);
  const at=cold.run('party.offlineExploration.lastAt');cold.advance(-1000);hidden(cold,true);hidden(cold,false);cold.run('save();tick()');await cold.run('EmberwildOffline.settle()');assert.equal(cold.run('EmberwildOffline.failed'),false);assert.equal(cold.run('party.offlineExploration.lastAt'),at);assert.notEqual(cold.elements.get('offline-settlement')?.hidden,false);
  cold.advance(61000);cold.dispatch('pagehide');assert.equal(cold.values.get(key),raw);cold.run('continueFromTitle()');await settle(cold);assert.equal(cold.run('running'),false);assert.equal(cold.run('EmberwildOffline.failed'),false);
 });
