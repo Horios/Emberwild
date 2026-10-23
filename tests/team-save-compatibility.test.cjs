@@ -53,7 +53,22 @@ test('exact browser boot bytes reload without duplicating progression or skill g
  assert.deepEqual(json(r,'playerHero().gems'),gems);
  assert.deepEqual(json(r,'party.buildSystem.permanent'),permanent);
  const cold=loadRuntime(root,'index.html',Object.fromEntries(r.values));
- assert.deepEqual(canonicalPlans(json(cold,'party.buildSystem.plans')),expected);
+ const actual=canonicalPlans(json(cold,'party.buildSystem.plans'));
+ const expectedAfterMigration=structuredClone(expected),originalInstances=json(r,'party.buildSystem.permanent.gemInstances');
+ const expectedRefunds=[];
+ for(const p of expectedAfterMigration){
+  if(p.job===null)continue;
+  for(let i=0;i<p.sockets.length;i++){
+   const id=p.sockets[i];if(id===null||p.skills[i]||!Object.hasOwn(originalInstances,id))continue;
+   p.sockets[i]=null;expectedRefunds.push(id);
+  }
+ }
+ assert.deepEqual(actual,expectedAfterMigration,'only now-invalid skill socket positions are released on cold reload');
+ const afterInstances=json(cold,'party.buildSystem.permanent.gemInstances');
+ const afterGems=json(cold,'playerHero().gems');
+ for(const id of expectedRefunds)assert.equal(afterInstances[id],undefined,'displaced gem instance returns to inventory');
+ const tally=(inventory,instances)=>{const result=Array.from({length:15},(_,i)=>inventory[i]||0);for(const type of Object.values(instances))result[type]++;return result;};
+ assert.deepEqual(tally(afterGems,afterInstances),tally(gems,originalInstances),'gem ownership is conserved over cold reload');
  assert.deepEqual(cold.errors,[]);
  assert(!cold.warnings.some(s=>s.includes('載入失敗')));
 });

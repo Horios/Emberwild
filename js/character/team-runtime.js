@@ -124,7 +124,7 @@
   const baseBalanceValidate=validateBalanceConfig;validateBalanceConfig=function(input){return baseBalanceValidate(M.normalizeDocument(input));};
   function applyRules(d){cfg=M.settings(d.teamSettings);d.classes.forEach((c,j)=>c.skills.forEach((sk,i)=>Object.assign(mastery.coreMeta(j,i),M.rules(sk))));d.supportSkills.forEach((list,j)=>list.forEach((sk,i)=>Object.assign(SUPPORT[j][i],M.rules(sk))));}
   const baseExport=exportableBalance;exportableBalance=function(){const d=baseExport();d.teamSettings=copy(cfg);d.balanceSettings.meta.teamBuildVersion=M.VERSION;for(const [j,c] of d.classes.entries())c.skills.forEach((sk,i)=>Object.assign(sk,coreRule(j,i)));d.supportSkills.forEach((list,j)=>list.forEach((sk,i)=>Object.assign(sk,supportRule(j,i))));d.notes=d.notes.filter(x=>!String(x).includes('技能點'));d.notes.push('技能沒有技能點成本；永久解鎖共用，學習與 2 主動／2 觸發／2 輔助槽由各隊伍獨立保存。');d.notes.push('技能 unlockConditions 可指定職業精通、任務、材料、BOSS 擊殺、菁英擊殺與持有 BOSS 裝備；同一技能的多項條件需全部達成。');return d;};
-  function stageBalanceBuild(d){
+  function stageBalanceBuild(d,refundedGems=[]){
     if(!build())return null;
     const next=copy(build());
     for(const p of next.plans){
@@ -163,13 +163,30 @@
         }
       }
     }
-    try{return M.validate(next,{classes:d.classes,supports:d.supportSkills,members:party.members,items:player().bag,progression:d.balanceSettings.progression,level:player().lv,config:d.teamSettings,wearable:()=>true});}
-    catch(e){
-      if(String(e.message||'').includes('隊伍技能寶石引用無效')){
-        console.log('COLD_SOCKET_DIAG',JSON.stringify(next.plans.filter(p=>p.job!==null).map(p=>({id:p.id,job:p.job,used:p.sockets.map((id,i)=>id===null?null:{index:i,learned:p.skills[i],known:Object.hasOwn(next.permanent.gemInstances,id)}).filter(Boolean),instanceCount:Object.keys(next.permanent.gemInstances).length}))));
+    // A previously learned core skill may require equipment in the new catalog.
+    // If it is no longer learned, unmount only its old *owned* skill gem.
+    // Do not silently accept other corrupt skill or gem references.
+    const displaced=new Set();
+    for(const p of next.plans){
+      if(p.job===null)continue;
+      for(let i=0;i<p.sockets.length;i++){
+        const id=p.sockets[i];
+        if(id===null||p.skills[i])continue;
+        const wasUnlocked=next.permanent.unlocks[p.job+':core:'+i]===true;
+        const skill=d.skillSystem?.definitions.find(s=>(s.adapters||[s.adapter]).some(a=>a?.job===p.job&&a.kind==='core'&&a.index===i));
+        const gearOnly=skill?.sources?.some(s=>s.type==='equipment')===true;
+        if(!wasUnlocked||!gearOnly||!Object.hasOwn(next.permanent.gemInstances,id))continue;
+        p.sockets[i]=null;
+        displaced.add(id);
       }
-      throw Error('平衡設定不相容於已保存的隊伍：'+e.message+'。請先調整配置；原設定保留。');
     }
+    for(const id of displaced){
+      if(next.plans.some(p=>p.sockets.includes(id)))continue;
+      refundedGems.push(next.permanent.gemInstances[id]);
+      delete next.permanent.gemInstances[id];
+    }
+    try{return M.validate(next,{classes:d.classes,supports:d.supportSkills,members:party.members,items:player().bag,progression:d.balanceSettings.progression,level:player().lv,config:d.teamSettings,wearable:()=>true});}
+    catch(e){throw Error('平衡設定不相容於已保存的隊伍：'+e.message+'。請先調整配置；原設定保留。');}
   }
   const balanceBase=applyBalanceConfig;
   // Re-enter the final adapters without staging a build or committing another save.
@@ -183,13 +200,15 @@
     if(resettingBalance){balanceBase(d,{persist:false});applyRules(d);return d;}
     capture();
     // Inner importers need descriptions hydrated from the exported icon catalogue.
-    const next=stageBalanceBuild(d),before=rollbackDocument(),previousBuild=build()?copy(build()):null,previousCache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
+    const refundedGems=[],next=stageBalanceBuild(d,refundedGems),before=rollbackDocument(),previousBuild=build()?copy(build()):null,previousCache=localStorage.getItem(BALANCE_KEY),previousSuppress=suppressSave;
+    const previousGems=party?copy(player().gems):null;
     const previousMarket=party?.market===undefined?undefined:copy(party.market);
     const battle=party?{heroes:party.members.map(h=>({hp:h.hp,shield:h.shield,potion:h.healPotionCooldownRemaining||0})),actors:copy(actorCooldowns),supports:copy(supportCooldowns),clock:partyClock}:null;
     try{
       suppressSave=true;balanceBase(d,{persist:false});applyRules(d);
       if(next){
         party.buildSystem=next;
+        for(const type of refundedGems)player().gems[type]++;
         for(const p of next.plans)if(p.job!==null)p.equipped=p.equipped.map((id,i)=>{const g=findGear(id);return g&&gearWearableJobs(g).includes(p.job)&&gearEquipPositions(g).includes(i)&&gearRequiredLevel(g)<=player().lv?id:null;});
         apply(plan());capture();resetBattleState();
       }
@@ -201,7 +220,7 @@
       try{
         restoreRules(before);
         if(previousBuild){party.buildSystem=previousBuild;apply(plan());}
-        if(party){if(previousMarket===undefined)delete party.market;else party.market=previousMarket;}
+        if(party){if(previousGems)player().gems=previousGems;if(previousMarket===undefined)delete party.market;else party.market=previousMarket;}
         if(battle){party.members.forEach((h,i)=>{h.hp=battle.heroes[i].hp;h.shield=battle.heroes[i].shield;h.healPotionCooldownRemaining=battle.heroes[i].potion;});actorCooldowns=battle.actors;supportCooldowns=battle.supports;partyClock=battle.clock;}
         if(persist){if(previousCache===null)localStorage.removeItem(BALANCE_KEY);else localStorage.setItem(BALANCE_KEY,previousCache);}
       }
