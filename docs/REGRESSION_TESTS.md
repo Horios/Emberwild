@@ -46,7 +46,12 @@ suites use Playwright 1.62.1 from `package-lock.json`.
 
 The `Horios/Emberwild-Balance` repository is private. End-to-end tests requiring
 the separately checked-out editor or a deployment token are **not** included in
-these self-contained jobs. They need their own explicit permissions/credentials
+these self-contained jobs. The cross-repository tests `material-prices.test.cjs`,
+`shop-options.test.cjs`, `timed-boosts-journal.test.cjs`, and
+`progression-runtime.test.cjs` are intentionally excluded from independent
+CI; they must be run from an environment with the separately checked-out
+balance editor. Story tests keep their game-only checks, while the editor-only
+case reports a skipped test when that fixture is unavailable. They need their own explicit permissions/credentials
 before becoming an enforced gate. Do not insert a personal token into YAML.
 
 Before promoting to production, also verify current and migrated saves, long

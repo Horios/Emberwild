@@ -56,7 +56,8 @@ test('cumulative acquisition survives consuming items; per-recipe/gather/level/f
  for(const c of [M.condition('recipe','alchemy',2),M.condition('alchemy','',2),M.condition('stock','heal_small',2),M.condition('acquired','heal_small',2),M.condition('level'),M.condition('flag','ready'),M.condition('unlock','special')]){if(['stock','acquired'].includes(c.type))c.itemType='item';r.ctx.c=c;assert(r.run('__EMBERWILD_STORY.value(c)>=c.count'),c.type);}
 });
 
-test('editor stage creation, serialization/import, dialogue and branch editing roundtrip into executable runtime',()=>{
+test('editor stage creation, serialization/import, dialogue and branch editing roundtrip into executable runtime',t=>{
+ if(!fs.existsSync(path.join(editor,'balance-editor.html')))return t.skip('Balance editor fixture is not available in standalone game CI');
  const e=loadRuntime(editor,'balance-editor.html');e.run("__EMBERWILD_STORY_EDITOR.select('goddess_intro');globalThis.newStage=__EMBERWILD_STORY_EDITOR.addStage();__EMBERWILD_STORY_EDITOR.set('name','女神主線改名');");const d=json(e,'__EMBERWILD_MASTERY_EDITOR.cleanExport()');assert.equal(d.story.quests[0].stages.length,10);assert.deepEqual(json(e,'validateData()'),[]);const r=game();r.ctx.doc=d;r.run('applyBalanceConfig(doc)');assert.equal(r.run('exportableBalance().story.quests[0].name'),'女神主線改名');assert.deepEqual(json(r,'exportableBalance().story'),d.story);
  e.ctx.doc=json(r,'exportableBalance()');e.run('data=__EMBERWILD_VALIDATE_DOCUMENT(doc);ensureArrays()');assert.deepEqual(json(e,'__EMBERWILD_MASTERY_EDITOR.cleanExport().story'),d.story);assert.deepEqual(e.errors,[]);assert.deepEqual(r.errors,[]);
 });
