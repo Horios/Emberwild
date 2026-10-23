@@ -12,7 +12,10 @@ function expectedPlans(r){
 }
 test('real pre-ownership saves append only empty skill positions and preserve all plans, allocations, gems and permanent records',()=>{
  const r=loadRuntime(root);r.ctx.legacy=structuredClone(legacy);const expected=expectedPlans(r),expectedPermanent=structuredClone(legacy.buildSystem.permanent),original=JSON.stringify(legacy);delete expectedPermanent.skillCredit;
- r.run('loadParty(legacy)');
+ try{r.run('loadParty(legacy)');}catch(error){
+  const diagnosis=r.run(`(()=>{const x=__EMBERWILD_SKILLS.prepare(legacy);return JSON.stringify({members:x.members.map(h=>({job:h.job,active:h.active,skillLoadout:h.skillLoadout,learned:h.active.map(i=>i===null?null:h.skills[i]),types:h.active.map(i=>i===null?null:CLASSES[h.job].skills[i]?.[1])})),plans:x.buildSystem.plans.map(p=>({job:p.job,active:p.active,skillLoadout:p.skillLoadout,learned:p.active.map(i=>i===null?null:p.skills[i]),types:p.active.map(i=>i===null?null:CLASSES[p.job].skills[i]?.[1])}))})})()`);
+  console.log('LEGACY_MIGRATION_DIAG:',diagnosis);throw error;
+ }
  assert.deepEqual(canonicalPlans(json(r,'party.buildSystem.plans')),expected);assert.deepEqual(json(r,'party.buildSystem.permanent'),expectedPermanent);
  assert.deepEqual(json(r,'playerHero().gems'),legacy.members[0].gems);assert.deepEqual(json(r,'state.bag.map(g=>g.id)'),legacy.members.flatMap(h=>h.bag.map(g=>g.id)));
  assert.equal(r.run('JSON.stringify(legacy)'),original);assert.equal(r.run('partyMember(10).name'),legacy.members[1].name);

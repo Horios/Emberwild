@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs');
 const path=require('node:path');
 async function openRuntime(root,entry='index.html',storage={},options={}) {
-  const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
+  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--unsafely-treat-insecure-origin-as-secure=http://emberwild.test'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
   const page=await browser.newPage();
   const errors=[];
   if(options.clockTime){await page.clock.install({time:options.clockTime});await page.clock.pauseAt(options.clockTime);}
