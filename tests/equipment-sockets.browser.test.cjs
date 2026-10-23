@@ -9,15 +9,15 @@ test('equipment sockets: horizontal icons, icon gem choices, modes and disabled 
    selectSaveSlot(1);start(0);closeModal();
    const h=playerHero(),g=gear(1,3,0,h.job);
    Object.assign(g,{id:'socket-ui',skillId:'tutorial_echo',skillSockets:{version:1,count:3,gems:[null,null,null],firstMode:'skill'}});
-   h.bag.push(g);h.gems=Array(15).fill(0);h.gems[0]=h.gems[1]=h.gems[12]=3;equipSharedGear(g.id,memberKey(h),3);selectSkillEquipment(g.id);
-   setTab('equipment');selectInventoryGear(g.id);
+   state.bag.push(g);h.gems=Array(15).fill(0);h.gems[0]=h.gems[1]=h.gems[12]=3;equipSharedGear(g.id,memberKey(h),3);selectSkillEquipment(g.id);
+   setTab('equipment');setInventoryCategory('equipment');selectInventoryGear(g.id);
   });
   const editor=p.locator('[data-socket-equipment="socket-ui"]'),mode=editor.getByLabel('第一孔效果模式');
   assert.equal(await editor.locator('.equipment-socket-choices').count(),0);
   for(const width of [1280,390]){
    await p.setViewportSize({width,height:900});
    const boxes=await editor.locator('[data-equipment-socket]').evaluateAll(es=>es.map(e=>{const b=e.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,right:b.right};}));
-   assert.equal(boxes.length,3);assert(boxes.every(b=>b.y===boxes[0].y));assert(boxes[2].x>boxes[1].x&&boxes[1].x>boxes[0].x);
+   assert.equal(boxes.length,3,'selected gear should show its three sockets in the actual equipment category');assert(boxes.every(b=>b.y===boxes[0].y));assert(boxes[2].x>boxes[1].x&&boxes[1].x>boxes[0].x);
    assert(boxes[2].right<=width,'socket row fits viewport');
    await editor.locator('[data-equipment-socket="0"]').click();
    assert.equal(await editor.locator('[data-equipment-gem] svg').count(),3);

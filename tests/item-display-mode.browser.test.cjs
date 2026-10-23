@@ -12,7 +12,6 @@ test('Item interfaces share one persisted icon-name or name-only list mode',asyn
   try{
     await start(p);
     assert.equal(await p.locator('html').getAttribute('data-item-display'),'icon-name');
-    const before=await p.evaluate(()=>({party:JSON.stringify(party),balance:JSON.stringify(exportableBalance()),save:localStorage.getItem(KEY)}));
     for(const setup of [
       ()=>{setTab('equipment');setInventoryCategory('equipment');},
       ()=>setTab('forge'),
@@ -27,6 +26,10 @@ test('Item interfaces share one persisted icon-name or name-only list mode',asyn
       const positions=await slot.evaluate(el=>({slot:el.getBoundingClientRect().width,art:el.querySelector('.item-slot-art').getBoundingClientRect().left,name:el.querySelector('.item-slot-name').getBoundingClientRect().left}));
       assert(positions.slot>100);assert(positions.art<positions.name);
     }
+    // Snapshot immediately before the display-only action. Visiting other
+    // tabs can legitimately record quest or interface state.
+    await p.evaluate(()=>setTab('shop'));
+    const before=await p.evaluate(()=>({party:JSON.stringify(party),balance:JSON.stringify(exportableBalance()),save:localStorage.getItem(KEY)}));
     await p.locator('#utilityButton-options').click();
     assert.equal(await p.locator('[data-item-display-choice]').count(),2);
     await p.locator('[data-item-display-choice="name"]').click();
@@ -34,7 +37,6 @@ test('Item interfaces share one persisted icon-name or name-only list mode',asyn
     assert.equal(await p.evaluate(k=>localStorage.getItem(k),key),'name');
     assert.equal(await p.locator('[data-item-display-choice="name"]').getAttribute('aria-pressed'),'true');
     await p.getByRole('button',{name:'關閉彈窗',exact:true}).click();
-    await p.evaluate(()=>setTab('shop'));
     const textSlot=p.locator('main .item-slot:visible').first();await textSlot.waitFor();
     assert.equal(await textSlot.locator('.item-slot-art').isVisible(),false);
     assert.equal(await textSlot.locator('.item-slot-name').isVisible(),true);

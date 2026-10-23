@@ -83,7 +83,7 @@ test('Chromium: expanded BOSS help and guide flow naturally through one main scr
         assert(await p.locator('.guide-reading-page td[data-reading-label]').count()>0);
       }
       const journalBefore=await p.locator('.global-battle-journal').boundingBox();
-      await p.locator('.guide-reading-page').getByRole('button',{name:'建立新角色',exact:true}).scrollIntoViewIfNeeded();
+      await p.locator('.guide-reading-page .panel').last().scrollIntoViewIfNeeded();
       const journalAfter=await p.locator('.global-battle-journal').boundingBox();
       assert.deepEqual(journalAfter,journalBefore);
       assert(await p.locator('.layout>main').evaluate(el=>el.scrollTop>0));
