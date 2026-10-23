@@ -33,6 +33,11 @@ default branch, so this schedule **does not activate** until the workflow file
 exists on `main`. It can later be manually dispatched using a workflow ref
 that exists in the repository once registered by GitHub Actions.
 
+Until the workflow is merged to `main`, an on-demand run can be requested
+by pushing a documentation/CI-only commit to `chatgpt-dev` whose message includes
+`[extended-regression]`. Other pushes show skipped extended jobs. This does not
+alter the pre-deployment gate or enable the daily schedule.
+
 Extended tests are not silently treated as the pre-deployment gate. They are
 additional coverage and can be expanded after failures are triaged. Browser
 suites use Playwright 1.62.1 from `package-lock.json`.

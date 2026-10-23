@@ -2,6 +2,10 @@ name: Extended regression
 
 on:
   workflow_dispatch:
+  # Push-triggered on-demand verification works without changing the main branch.
+  # Regular commits skip these jobs; a commit with [extended-regression] runs them.
+  push:
+    branches: [chatgpt-dev]
   schedule:
     # 02:00 Asia/Taipei; schedule is active when this file is on the default branch.
     - cron: '0 18 * * *'
@@ -11,6 +15,7 @@ permissions:
 
 jobs:
   headless:
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[extended-regression]')
     name: Extended / ${{ matrix.area }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -49,6 +54,7 @@ jobs:
           node --test --test-concurrency=1 "${files[@]}"
 
   browser:
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[extended-regression]')
     name: Extended / Chromium interfaces
     runs-on: ubuntu-latest
     timeout-minutes: 45
