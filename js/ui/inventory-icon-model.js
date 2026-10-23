@@ -1,7 +1,7 @@
 /* Shared inventory catalogue derived from the existing balance references. */
 (function(root){
   const kinds=['equipment','item','material','gem','token','skill'],copy=x=>structuredClone(x);
-  const materialGlyphs={'鍛鐵':'anvil','粉塵':'sparkles','以太鍛鐵':'anvil','光輝碎塊':'sparkles','紅色草':'leaf','紅色草泥':'flask-conical','小蟲':'bug','清水':'droplet','藥水瓶':'flask-round','升級卷軸':'scroll-text'};
+  const materialGlyphs={'鍛鐵':'anvil','粉塵':'sparkles','以太鍛鐵':'anvil','光輝碎塊':'sparkles','紅色草':'leaf','小蟲':'bug','清水':'droplet','藥水瓶':'flask-round','升級卷軸':'scroll-text'};
   const tokenGlyphs={berserk:'swords',guardian:'shield',pursuit:'crosshair',arcane:'wand-sparkles',echo:'audio-lines',hunt:'bow-arrow',prayer:'hand-heart',revival:'heart-pulse',plunder:'droplets',endurance:'hourglass'};
   function fallback(kind,key,item){
     if(kind==='material')return 'lucide:'+(materialGlyphs[key]||(/牙|骨/.test(key)?'bone':/翼|羽/.test(key)?'feather':/晶|石/.test(key)?'gem':/齒輪/.test(key)?'cog':'package'));
@@ -18,7 +18,7 @@
     for(const [job,list]of (doc.supportSkills||[]).entries())for(const [index,sk]of list.entries())add('skill','support:'+job+':'+index,sk.name);
     for(const item of doc.items||[])add('item',item.id,item.name,item);add('item','level_scroll','升級卷軸');
     for(const p of doc.companions||[])if(['ticket','achievement'].includes(p.unlockCondition?.type))add('item','companion-ticket-'+p.id,p.name+'招募券');
-    for(const key of ['鍛鐵','粉塵','以太鍛鐵','光輝碎塊','紅色草','紅色草泥','小蟲','清水','藥水瓶'])add('material',key,key);
+    for(const key of ['鍛鐵','粉塵','以太鍛鐵','光輝碎塊','紅色草','小蟲','清水','藥水瓶'])add('material',key,key);
     for(const r of doc.balanceSettings?.economy?.materialPrices||[])if(r.key!=='升級卷軸')add('material',r.key,r.key);
     for(const m of doc.balanceSettings?.monsters?.catalog||[])if(m.material)add('material',m.material,m.material);
     for(const r of [...(doc.balanceSettings?.drops?.entries||[]),...(doc.balanceSettings?.equipment?.salvage?.extraRewards||[])])if(r.type==='material')add('material',r.key,r.key);
@@ -66,7 +66,7 @@
   }
 
   // The workbench owns description text. Legacy fields are import-only adapters.
-  const descriptionDefaults={"item:imbue_fire": "讓武器暫時附著火之力，調整普通攻擊的屬性。", "item:ward_fire": "以火之力形成短暫防護，降低對應屬性的威脅。", "item:elementTonic_fire": "強化對火之力的運用，使對應屬性的攻勢更加集中。", "item:imbue_ice": "讓武器暫時附著冰之力，調整普通攻擊的屬性。", "item:ward_ice": "以冰之力形成短暫防護，降低對應屬性的威脅。", "item:elementTonic_ice": "強化對冰之力的運用，使對應屬性的攻勢更加集中。", "item:imbue_wind": "讓武器暫時附著風之力，調整普通攻擊的屬性。", "item:ward_wind": "以風之力形成短暫防護，降低對應屬性的威脅。", "item:elementTonic_wind": "強化對風之力的運用，使對應屬性的攻勢更加集中。", "item:imbue_light": "讓武器暫時附著光之力，調整普通攻擊的屬性。", "item:ward_light": "以光之力形成短暫防護，降低對應屬性的威脅。", "item:elementTonic_light": "強化對光之力的運用，使對應屬性的攻勢更加集中。", "item:imbue_shadow": "讓武器暫時附著暗之力，調整普通攻擊的屬性。", "item:ward_shadow": "以暗之力形成短暫防護，降低對應屬性的威脅。", "item:elementTonic_shadow": "強化對暗之力的運用，使對應屬性的攻勢更加集中。", "item:speed2_30m": "暫時開放兩倍速探索，可自由切換戰鬥倍速。", "item:exp_100_30m": "暫時增加出戰角色取得的經驗值。", "item:drop_50_30m": "暫時提高物品掉落機率。", "item:heal_small": "恢復少量固定生命值，供戰鬥中緊急補血使用。", "item:heal_standard": "恢復固定生命值，可作為戰鬥中的備用補給。", "item:heal_greater": "恢復較多固定生命值，適合生命偏低時救急。", "item:heal_supreme": "提供大量固定生命值恢復，供危急戰況使用。", "item:power_tier_reroll": "重新抽選一件裝備的 T1～T10 強度階級；抽選分布依該裝備原始掉落難度決定。", "material:鍛鐵": "裝備強化材料。", "material:粉塵": "裝備強化、洗鍊與寶石合成材料。", "material:以太鍛鐵": "高階裝備強化材料。", "material:光輝碎塊": "洗鍊時用於保留指定詞條。", "material:紅色草": "可加工製作紅色草泥。", "material:紅色草泥": "可搭配清水、藥水瓶製作簡易治療藥水。", "material:小蟲": "尚無用途。", "material:清水": "製作簡易治療藥水的煉金材料，每份配方消耗 1 份。", "material:藥水瓶": "製作簡易治療藥水的空瓶，每份配方消耗 1 個。", "gem:0": "技能效果 +2%", "gem:1": "主動施放後 5% 機率冷卻 −1 回合", "gem:2": "觸發率 +1 個百分點", "gem:3": "生命比例最低的存活隊友恢復攻擊力 3% 生命", "gem:4": "生命比例最低的存活隊友獲得施放者防禦力 1% 可累加護盾", "item:level_scroll": "提升全隊共用等級 1 級，後備與名冊夥伴同步成長。"};
+  const descriptionDefaults={"item:imbue_fire": "讓武器暫時附著火之力，調整普通攻擊的屬性。", "item:ward_fire": "以火之力形成短暫防護，降低對應屬性的威脅。", "item:elementTonic_fire": "強化對火之力的運用，使對應屬性的攻勢更加集中。", "item:imbue_ice": "讓武器暫時附著冰之力，調整普通攻擊的屬性。", "item:ward_ice": "以冰之力形成短暫防護，降低對應屬性的威脅。", "item:elementTonic_ice": "強化對冰之力的運用，使對應屬性的攻勢更加集中。", "item:imbue_wind": "讓武器暫時附著風之力，調整普通攻擊的屬性。", "item:ward_wind": "以風之力形成短暫防護，降低對應屬性的威脅。", "item:elementTonic_wind": "強化對風之力的運用，使對應屬性的攻勢更加集中。", "item:imbue_light": "讓武器暫時附著光之力，調整普通攻擊的屬性。", "item:ward_light": "以光之力形成短暫防護，降低對應屬性的威脅。", "item:elementTonic_light": "強化對光之力的運用，使對應屬性的攻勢更加集中。", "item:imbue_shadow": "讓武器暫時附著暗之力，調整普通攻擊的屬性。", "item:ward_shadow": "以暗之力形成短暫防護，降低對應屬性的威脅。", "item:elementTonic_shadow": "強化對暗之力的運用，使對應屬性的攻勢更加集中。", "item:speed2_30m": "暫時開放兩倍速探索，可自由切換戰鬥倍速。", "item:exp_100_30m": "暫時增加出戰角色取得的經驗值。", "item:drop_50_30m": "暫時提高物品掉落機率。", "item:heal_small": "恢復少量固定生命值，供戰鬥中緊急補血使用。", "item:heal_standard": "恢復固定生命值，可作為戰鬥中的備用補給。", "item:heal_greater": "恢復較多固定生命值，適合生命偏低時救急。", "item:heal_supreme": "提供大量固定生命值恢復，供危急戰況使用。", "item:power_tier_reroll": "重新抽選一件裝備的 T1～T10 強度階級；抽選分布依該裝備原始掉落難度決定。", "material:鍛鐵": "裝備強化材料。", "material:粉塵": "裝備強化、洗鍊與寶石合成材料。", "material:以太鍛鐵": "高階裝備強化材料。", "material:光輝碎塊": "洗鍊時用於保留指定詞條。", "material:紅色草": "採集後可與清水、藥水瓶直接煉製簡易治療藥水。", "material:小蟲": "尚無用途。", "material:清水": "製作簡易治療藥水的煉金材料，每份配方消耗 1 份。", "material:藥水瓶": "製作簡易治療藥水的空瓶，每份配方消耗 1 個。", "gem:0": "技能效果 +2%", "gem:1": "主動施放後 5% 機率冷卻 −1 回合", "gem:2": "觸發率 +1 個百分點", "gem:3": "生命比例最低的存活隊友恢復攻擊力 3% 生命", "gem:4": "生命比例最低的存活隊友獲得施放者防禦力 1% 可累加護盾", "item:level_scroll": "提升全隊共用等級 1 級，後備與名冊夥伴同步成長。"};
   const descriptionRecord=(doc,kind,key)=>(doc.inventoryIcons||[]).find(r=>r.kind===kind&&String(r.key)===String(key));
   function itemDescription(doc,kind,key){return descriptionRecord(doc,kind,key)?.description??'';}
   function migrateDescriptions(input,{hydrate=false}={}){
@@ -109,7 +109,7 @@
       if(key==='光輝碎塊')return ['素材','裝備成長素材','詞條保留材料'];
       const plain=key.replace(/^【(?:困難|地獄)】/,'');
       if((doc.balanceSettings?.monsters?.catalog||[]).some(m=>m.kind==='boss'&&m.material===plain))return ['素材','製作材料','BOSS 裝備製作材料',key.startsWith('【困難】')?'困難材料':key.startsWith('【地獄】')?'地獄材料':'普通材料'];
-      const shape={'紅色草':'自然原料','藍色草':'自然原料','小蟲':'自然原料','紅色草泥':'加工材料','清水':'液體','藥水瓶':'容器'}[key];
+      const shape={'紅色草':'自然原料','藍色草':'自然原料','小蟲':'自然原料','清水':'液體','藥水瓶':'容器'}[key];
       if(shape)return ['素材','製作材料','煉金與加工材料',shape];
       if(row.sources.includes('alchemy'))return ['素材','製作材料','煉金與加工材料','加工材料'];
       return ['素材','通用素材','區域通用素材'];

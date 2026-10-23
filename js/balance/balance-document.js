@@ -4,7 +4,7 @@
  const REQUIRED=['balance','classes','supportSkills','equipmentForms','items','balanceSettings','equipmentPowerSystem','statusDefinitions','companions','passiveDefinitions','companionSettings','shopSettings','companionTokens','teamSettings','lifeSkills'];
  const copy=x=>structuredClone(x),array=x=>Array.isArray(x)?x:[];
  // Extend the existing lifeSkills document; legacy timings migrate once into each job.
- function lifeDefaults(){return {materialBuyPrices:{'清水':1,'藥水瓶':1},gathering:[{id:'herb',name:'紅色草',periodMs:5000,chance:1,quantity:1,output:'紅色草',outputType:'material',bonusDrops:[{output:'小蟲',outputType:'material',quantity:1,chance:.05}]}],recipes:{process:{name:'加工紅色草',inputs:[['紅色草',1]],output:'紅色草泥',outputType:'material',periodMs:5000,chance:1,quantity:1},alchemy:{name:'煉製簡易治療藥水',inputs:[['紅色草泥',1],['清水',1],['藥水瓶',1]],output:'heal_small',outputType:'item',periodMs:5000,chance:1,quantity:1}}};}
+ function lifeDefaults(){return {materialBuyPrices:{'清水':1,'藥水瓶':1},gathering:[{id:'herb',name:'紅色草',periodMs:5000,chance:1,quantity:1,output:'紅色草',outputType:'material',bonusDrops:[{output:'小蟲',outputType:'material',quantity:1,chance:.05}]}],recipes:{alchemy:{name:'煉製簡易治療藥水',inputs:[['清水',1],['藥水瓶',1],['紅色草',1]],output:'heal_small',outputType:'item',periodMs:5000,chance:1,quantity:1}}};}
  function normalizeLife(life,items=[]){
   const d=copy(life),ids=new Set(items.map(x=>x.id)),period=d.periodMs??5000;
   if(d.gathering===undefined){d.gathering=lifeDefaults().gathering;d.gathering[0].periodMs=period;d.gathering[0].bonusDrops[0].chance=d.bugChance??.05;}
