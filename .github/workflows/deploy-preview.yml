@@ -20,8 +20,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages
-  cancel-in-progress: false
+  group: ${{ github.ref == 'refs/heads/main' && 'github-pages' || 'emberwild-preview-regression' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   verify-preview:

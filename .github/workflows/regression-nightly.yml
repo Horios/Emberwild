@@ -61,6 +61,6 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - name: Check equipment, page scrolling, inventory and legacy saves
         run: node --test --test-concurrency=1 tests/page-readability.browser.test.cjs tests/equipment-sockets.browser.test.cjs tests/item-display-mode.browser.test.cjs tests/team-save-compatibility.browser.test.cjs tests/item-hover-tooltip.browser.test.cjs
