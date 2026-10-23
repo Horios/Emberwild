@@ -3,12 +3,21 @@ const {loadRuntime}=require('./headless-runtime.cjs'),M=require('../js/skills/co
 const root=path.resolve(__dirname,'..'),editorRoot=path.resolve(root,'../Emberwild-Balance');
 const json=(r,code)=>JSON.parse(r.run('JSON.stringify('+code+')'));
 function game(){const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);closeModal();for(const id of [10,11,12,13,14]){recruitCompanion(id);closeModal();}');return r;}
-test('Game and designer use the identical ownership contract, and migration is append-only and idempotent',()=>{
- const html=fs.readFileSync(path.join(editorRoot,'balance-editor.html'),'utf8');assert.equal(html.match(/<script id="companion-skill-model-v1">\n([\s\S]*?)<\/script>/)[1],fs.readFileSync(path.join(root,'js/skills/companion-skill-model.js'),'utf8'));
- const e=loadRuntime(editorRoot,'balance-editor.html'),d=json(e,'__EMBERWILD_MASTERY_EDITOR.cleanExport()');M.validate(d);
+test('Game ownership migration is append-only and idempotent without the editor',()=>{
+ const d=JSON.parse(fs.readFileSync(path.join(root,'data/balance.json'),'utf8'));M.validate(d);
  const before=structuredClone(d);M.migrate(d);assert.deepEqual(d,before);
- const old=structuredClone(d);delete old.companionSkillVersion;const originalCore=structuredClone(old.classes.map(c=>c.skills)),originalSupport=structuredClone(old.supportSkills);M.migrate(old);M.validate(old);
- originalCore.forEach((pool,j)=>assert.deepEqual(old.classes[j].skills.slice(0,pool.length),pool));originalSupport.forEach((pool,j)=>assert.deepEqual(old.supportSkills[j].slice(0,pool.length),pool));
+ const legacy=structuredClone(d);delete legacy.companionSkillVersion;
+ const originalCore=structuredClone(legacy.classes.map(c=>c.skills)),originalSupport=structuredClone(legacy.supportSkills);
+ M.migrate(legacy);M.validate(legacy);
+ originalCore.forEach((pool,j)=>assert.deepEqual(legacy.classes[j].skills.slice(0,pool.length),pool));
+ originalSupport.forEach((pool,j)=>assert.deepEqual(legacy.supportSkills[j].slice(0,pool.length),pool));
+});
+test('Game and private designer embed the identical ownership module',t=>{
+ const file=path.join(editorRoot,'balance-editor.html');
+ if(!fs.existsSync(file))return t.skip('Private balance editor fixture unavailable in standalone game CI');
+ const html=fs.readFileSync(file,'utf8');
+ assert.equal(html.match(/<script id="companion-skill-model-v1">\n([\s\S]*?)<\/script>/)[1],fs.readFileSync(path.join(root,'js/skills/companion-skill-model.js'),'utf8'));
+ const e=loadRuntime(editorRoot,'balance-editor.html'),d=json(e,'__EMBERWILD_MASTERY_EDITOR.cleanExport()');M.validate(d);
 });
 test('Player, same-job companions and monsters cannot use another character’s skills; editing copies does not change the original',()=>{
  const r=game(),d=json(r,'exportableBalance()'),p=d.companions.find(p=>p.id===10),other=d.companions.find(p=>p.id===11),i=p.core[0];
@@ -36,7 +45,9 @@ test('Invalid ownership, cross-owner induction and passive levels reject atomica
   assert.throws(()=>r.run('{const d=exportableBalance();'+edit+'applyBalanceConfig(d);}'));assert.equal(r.run('JSON.stringify(exportableBalance())'),before);
  }
 });
-test('Designer edits import, save, cold boot and repeated reload preserve owner and unlock levels',()=>{
+test('Designer edits import, save, cold boot and repeated reload preserve owner and unlock levels',t=>{
+ const file=path.join(editorRoot,'balance-editor.html');
+ if(!fs.existsSync(file))return t.skip('Private balance editor fixture unavailable in standalone game CI');
  const e=loadRuntime(editorRoot,'balance-editor.html'),r=game();e.run(`openCompanionSkillPage(10);document.getElementById('addSkill').onclick();const sk=data.classes[0].skills[selected.skill];sk.name='獨立斬擊';sk.requiredLevel=8;sk.power=3;selected.skillTab='support';render();document.getElementById('addCompanionSupport').onclick();data.supportSkills[0][selected.support].level=9;selected.skillTab='passive';render();document.getElementById('addPassive').onclick();const d=data.passiveDefinitions.at(-1);d.name='等級被動';d.requiredLevel=10;d.effects=[{key:'flatAttack',value:20}];`);
  assert.deepEqual(json(e,'validateData()'),[]);r.ctx.doc=json(e,'__EMBERWILD_MASTERY_EDITOR.cleanExport()');r.run('applyBalanceConfig(doc);playerHero().lv=10;syncParty();save();loadParty(structuredClone(packParty()));loadParty(structuredClone(packParty()));');
  const restarted=loadRuntime(root,'index.html',Object.fromEntries(r.values));assert.equal(restarted.run('party.members.length'),6);assert.equal(restarted.run('CLASSES[0].skills.find(s=>s[0]==="獨立斬擊")[6].partnerId'),10);assert.equal(restarted.run('__EMBERWILD_COMPANION_TEST_API.passivesFor(partyMember(10)).find(d=>d.name==="等級被動").requiredLevel'),10);assert.deepEqual(restarted.errors,[]);
