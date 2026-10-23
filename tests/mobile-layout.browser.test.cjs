@@ -172,7 +172,7 @@ test('Mobile: expedition settings, readable touch controls and skill details are
   assert.deepEqual(await p.evaluate(()=>playerHero().skills),skillsBefore,'viewing a skill does not learn it');
   await p.setViewportSize({width:1440,height:900});await p.evaluate(()=>setTab('battle'));
   assert.equal(await p.locator('.expedition-control-card').isVisible(),true,'desktop exploration controls remain visible');
-  assert.equal(await p.locator('.exploration-secondary>summary').isVisible(),true,'difficulty controls remain discoverable');
+  assert.equal(await p.locator('.exploration-secondary-settings>details:last-child>summary').isVisible(),true,'difficulty controls remain discoverable');
   assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
@@ -248,8 +248,12 @@ test('Mobile: messages and loot are sibling panels without shared or nested scro
   await p.evaluate(()=>note('新增最新訊息','playerDamage'));
   assert(await p.evaluate(latestVisible),'new messages keep following');
   await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop=0);await p.waitForTimeout(30);
+  const logState=()=>{const body=document.getElementById('mobileJournalBody'),stream=body.querySelector('.battle-log-stream');return {top:body.scrollTop,height:body.scrollHeight,client:body.clientHeight,display:getComputedStyle(body).display,innerTop:stream.scrollTop,auto:stream.dataset.autoScroll,generation:stream.dataset.logGeneration,expectedGeneration:battleLogGeneration};};
+  const before=await p.evaluate(logState);
   await p.evaluate(()=>{note('回看時不得拉走畫面','playerDamage');refreshGlobalJournal();});
-  assert.equal(await p.locator('#mobileJournalBody').evaluate(e=>e.scrollTop),0);
+  const after=await p.evaluate(logState);
+  if(after.top!==0)console.log('MOBILE_JOURNAL_SCROLL_DIAGNOSTIC',JSON.stringify({before,after}));
+  assert.equal(after.top,0);
   await p.locator('.journal-filter select').selectOption('playerDamage');
   await p.waitForFunction(()=>!isEmberwildUIInteracting());
   assert(await p.evaluate(latestVisible),'filter changes show the latest matching log');

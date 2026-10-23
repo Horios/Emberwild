@@ -118,7 +118,7 @@
   return d;
  }
  validateParty=function(raw){const d=prepare(raw),out=oldValidateParty(d);out.skillSystemVersion=M.VERSION;for(let n=0;n<out.members.length;n++){const src=d.version===3?d.members[n]:d;for(const f of ['skillLoadout','activeSkillEquipmentId','acquiredSkillIds'])if(src[f]!==undefined)out.members[n][f]=copy(src[f]);}return out;};
- const oldLoad=loadParty;loadParty=function(raw){const d=prepare(raw),out=oldLoad(d);party.skillSystemVersion=M.VERSION;party.skillTutorialVersion=1;refreshAll();return out;};
+ const oldLoad=loadParty;loadParty=function(raw){const d=prepare(raw),out=oldLoad(d);party.skillSystemVersion=M.VERSION;party.skillTutorialVersion=1;refreshAll();const message=$('toast');if(party&&state&&message?.textContent?.startsWith('存檔未能載入：')){message.textContent='';message.style.display='none';}return out;};
  const oldPack=packParty;packParty=function(){refreshAll();const out=oldPack();out.skillSystemVersion=M.VERSION;out.skillTutorialVersion=1;return out;};
  const oldStart=start;start=function(...args){const out=oldStart(...args);refreshAll();T()?.capture();save();render();return out;};
  const oldXP=awardXP;awardXP=function(...args){const out=oldXP(...args);refreshAll();return out;};
