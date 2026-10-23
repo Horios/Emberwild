@@ -44,7 +44,13 @@ test('Shop tickets enter inventory, pending tickets stop refresh, failed purchas
  r.run('save=()=>false');assert.equal(r.run('useCompanionRecruitmentTicket(15)'),false);assert.equal(r.run('companionTicketCount(15)'),1);assert.equal(r.run('companionUnlocked(15)'),false);r.run('save=saved');bind(r,15,['region-0-open']);assert.equal(r.run('companionTicketCount(15)'),1);assert.equal(r.run('party.achievements.rewardCompanions.includes(15)'),true);assert.equal(r.run('useCompanionRecruitmentTicket(15)'),true);
 });
 test('Claimed mail persists without duplicate prizes on reload; invalid data fails atomically and player saves are isolated',()=>{
- const r=game();bind(r,15,['region-0-open']);r.run('save()');const reload=loadRuntime(root,'index.html',Object.fromEntries(r.values));assert.equal(reload.run('party.mailbox.messages.length'),1);assert.equal(reload.run('companionTicketCount(15)'),1);assert.equal(reload.run('party.mailbox.messages[0].claimed'),true);
+ const r=game(),initialMail=r.run('party.mailbox.messages.length');
+ bind(r,15,['region-0-open']);r.run('save()');
+ const reload=loadRuntime(root,'index.html',Object.fromEntries(r.values));
+ assert.equal(reload.run('party.mailbox.messages.length'),initialMail+1,'exactly one new companion reward mail');
+ assert.equal(reload.run('companionTicketCount(15)'),1);
+ assert.equal(reload.run("party.mailbox.messages.filter(m=>m.rewardKey==='companion-15').length"),1,'reward mail is unique');
+ assert.equal(reload.run("party.mailbox.messages.find(m=>m.rewardKey==='companion-15')?.claimed"),true);
  const other=game();assert.equal(other.run('companionTicketCount(15)'),0);
  const before=r.run('JSON.stringify(packParty())');r.run('globalThis.bad=structuredClone(packParty());bad.achievements.bossKills[0]=-1');assert.throws(()=>r.run('loadParty(bad)'),/成就與招募券存檔無效/);assert.equal(r.run('JSON.stringify(packParty())'),before);
  const balance=r.run('JSON.stringify(exportableBalance())');r.run("globalThis.bad=exportableBalance();bad.companions[0].unlockCondition={type:'achievement',achievementIds:['region-0-elite-1050']}");assert.throws(()=>r.run('applyBalanceConfig(bad)'),/成就/);assert.equal(r.run('JSON.stringify(exportableBalance())'),balance);
