@@ -148,16 +148,23 @@
             while(entries.length<count)entries.push(null);
           }
         }
+        // Published starter skills can be slotted in old builds before the
+        // new class catalog has been projected into CLASSES at cold startup.
+        // Grant only auto-unlocked starter skills already present in the saved
+        // stable-ID loadout and engine slot. All other skills remain untouched.
+        const starters=d.skillSystem.classRules.find(r=>r.job===p.job)?.initial||[];
+        for(const starter of starters){
+          if(player().lv<starter.level||!p.skillLoadout.active?.includes(starter.skillId))continue;
+          const skill=d.skillSystem.definitions.find(s=>s.id===starter.skillId);
+          const adapter=(skill?.adapters||[skill?.adapter]).find(a=>a?.job===p.job&&a.kind==='core');
+          if(!adapter||!p.active.includes(adapter.index)||d.classes[p.job].skills[adapter.index]?.activation!=='active')continue;
+          p.skills[adapter.index]=1;
+          next.permanent.unlocks[p.job+':core:'+adapter.index]=true;
+        }
       }
     }
     try{return M.validate(next,{classes:d.classes,supports:d.supportSkills,members:party.members,items:player().bag,progression:d.balanceSettings.progression,level:player().lv,config:d.teamSettings,wearable:()=>true});}
-    catch(e){
-      if(String(e.message||'').includes('隊伍技能槽無效')){
-        const p=next.plans.find(x=>e.message.includes(x.id+'/'));
-        if(p)console.log('BALANCE_STAGE_SKILL_DIAG',JSON.stringify({plan:p.id,job:p.job,active:p.active,proc:p.procSlots,support:p.supportSlots,learned:p.active.map(i=>i===null?null:p.skills[i]),types:p.active.map(i=>i===null?null:d.classes[p.job]?.skills[i]?.activation),loadout:p.skillLoadout,permanent:p.active.map(i=>i===null?null:next.permanent.unlocks[p.job+':core:'+i])}));
-      }
-      throw Error('平衡設定不相容於已保存的隊伍：'+e.message+'。請先調整配置；原設定保留。');
-    }
+    catch(e){throw Error('平衡設定不相容於已保存的隊伍：'+e.message+'。請先調整配置；原設定保留。');}
   }
   const balanceBase=applyBalanceConfig;
   // Re-enter the final adapters without staging a build or committing another save.
