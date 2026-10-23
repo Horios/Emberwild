@@ -3,12 +3,13 @@ const {loadRuntime}=require('./headless-runtime.cjs');
 const root=path.resolve(__dirname,'..');
 const json=(r,code)=>JSON.parse(r.run('JSON.stringify('+code+')'));
 function game(){const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);closeModal();Math.random=()=>.99;');return r;}
-function advance(r,ms){
+function advance(r,ms,{combat=false}={}){
  r.advance(ms);
- // Life jobs have their own wall-clock heartbeat. The headless runner does
- // not execute Promise callbacks for deferred offline combat settlements;
- // advance the real life job synchronously before the normal game tick.
- r.run('emberwildLifeHeartbeat();tick();');
+ // Standalone life skill tests advance their existing real-time heartbeat.
+ // Headless combat tick can initiate asynchronous offline debt settlement,
+ // which this VM test runner cannot flush and which blocks subsequent reloads.
+ // Only the explicit combat-integration scenario requests that extra tick.
+ r.run(combat?'emberwildLifeHeartbeat();tick();':'emberwildLifeHeartbeat();');
 }
 
 test('Gathering awards exactly once per five seconds and updates the accessible progress bar',()=>{
@@ -48,7 +49,7 @@ test('Gathering and alchemy continue on other pages alongside actual exploration
   for(const rate of [1,2,4]){
     const r=game();r.run(`recruitCompanion(10);closeModal();recruitCompanion(11);closeModal();state.materials['紅色草泥']=10;buyLifeMaterial('藥水瓶',10);buyLifeMaterial('清水',10);spawnGroup();foes.forEach(f=>{f.hp=f.maxhp=1e9;f.atk=0;});running=true;setBattleSpeed(${rate});startLifeGathering();startLifeWork('alchemy');setTab('equipment');`);
     const stock=r.run('healPotionCount("heal_small")');
-    for(let i=0;i<100;i++)advance(r,100);
+    for(let i=0;i<100;i++)advance(r,100,{combat:true});
     assert.equal(r.run('materialCount("紅色草")'),2);assert.equal(r.run('healPotionCount("heal_small")'),stock+2);
     assert.equal(r.run('running'),true);assert(r.run('foes.some(f=>f.hp<f.maxhp)'));
     assert.deepEqual(r.errors,[]);
