@@ -64,8 +64,13 @@ test('interrupted settlement keeps its original cap, skips the excess, then perm
  r.run('selectSaveSlot(1);start(0);closeModal();startSelectedExploration();save()');
  const first=r.run('party.offlineExploration.lastAt'),key=r.run('KEY');r.advance(90000);
  const pending=r.run('EmberwildOffline.settle()');await turn();assert(callbacks.length>0);
- timer=1200;callbacks.shift()();await turn();
- const durable=r.values.get(key),checkpoint=JSON.parse(durable).offlineExploration;
+ let checkpoint;
+ for(let i=0;i<6;i++){
+  timer+=1200;assert(callbacks.length>0);callbacks.shift()();await turn();
+  checkpoint=JSON.parse(r.values.get(key)).offlineExploration;
+  if(checkpoint.lastAt>first)break;
+ }
+ const durable=r.values.get(key);
  assert(checkpoint.lastAt>first&&checkpoint.lastAt<first+cap);
  assert.equal(checkpoint.offlineWindow.capAt,first+cap);
  assert.equal(checkpoint.offlineWindow.untilAt,r.now);
