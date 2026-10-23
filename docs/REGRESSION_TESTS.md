@@ -38,6 +38,11 @@ by pushing a documentation/CI-only commit to `chatgpt-dev` whose message include
 `[extended-regression]`. Other pushes show skipped extended jobs. This does not
 alter the pre-deployment gate or enable the daily schedule.
 
+The extended workflow uses a per-branch concurrency group: a new run
+cancels a still-running, superseded run from the same branch. Canceled
+historical test runs are not counted as passes. The latest full set is
+still required for an extended-regression verdict.
+
 Extended tests are not silently treated as the pre-deployment gate. They are
 additional coverage and can be expanded after failures are triaged. Browser
 suites use Playwright 1.62.1 from `package-lock.json`.
