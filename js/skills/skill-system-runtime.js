@@ -100,6 +100,16 @@
  const speedBase=combatSpeed;combatSpeed=function(e){return Math.max(1,Math.round(speedBase(e)*(1-Math.min(.9,effectTotal(e.id,'skillSlow')))));};
  const oldValidateParty=validateParty;
  function prepare(raw){
+  // Check saved fields before the new skill system rebuilds its projections.
+  // Keep legitimate old skill indices, but never normalize corrupted input away.
+  for(const p of raw?.buildSystem?.plans||[]){
+   if(p.job===null)continue;
+   for(const field of ['skills','supportLevels'])if(!Array.isArray(p[field])||p[field].some(v=>!Number.isInteger(v)||v<0||v>1))throw Error('隊伍技能資料無效');
+   for(const [field,source] of [['active','skills'],['procSlots','skills'],['supportSlots','supportLevels']]){
+    if(!Array.isArray(p[field])||p[field].some(i=>i!==null&&(!Number.isInteger(i)||i<0||i>=p[source].length||p[source][i]!==1)))throw Error('隊伍技能槽無效');
+   }
+   if(!Array.isArray(p.sockets)||p.sockets.some(id=>id!==null&&!Object.hasOwn(raw.buildSystem.permanent?.gemInstances||{},id)))throw Error('隊伍技能寶石引用無效');
+  }
   const d=M.migrateSave(migrateLegacyGemSave(raw),system),members=d.version===3?d.members:[d],h=members[0],b=d.buildSystem;
   if(d.skillTutorialVersion!==1&&d.story?.quests?.goddess_intro?.done){h.acquiredSkillIds??=[];for(const sk of system.definitions.filter(sk=>sk.sources.some(s=>s.rewardOnly))){const a=sk.adapter;if((h.job===a.job&&h.supportLevels?.[a.index]||b?.plans?.some(p=>p.job===a.job&&p.supportLevels?.[a.index]))&&!h.acquiredSkillIds.includes(sk.id))h.acquiredSkillIds.push(sk.id);}}d.skillTutorialVersion=1;
   if(b){for(const p of b.plans){if(p.job===null){p.skillLoadout=null;p.activeSkillEquipmentId=null;continue;}const tmp={...h,job:p.job,advanced:!!b.permanent.classes[p.job]?.advanced,...copy(p)};tmp.advanced=!!b.permanent.classes[p.job]?.advanced;refreshHero(tmp);for(const f of ['skills','supportLevels','active','procSlots','supportSlots','skillLoadout','activeSkillEquipmentId'])if(tmp[f]!==undefined)p[f]=copy(tmp[f]);for(const [kind,list] of [['core',p.skills],['support',p.supportLevels]])list.forEach((v,i)=>{if(v)b.permanent.unlocks[`${p.job}:${kind}:${i}`]=true;});}const p=b.plans.find(x=>x.id===b.activeId);if(p?.job!==null)for(const f of ['skills','supportLevels','active','procSlots','supportSlots','skillLoadout','activeSkillEquipmentId'])if(p[f]!==undefined)h[f]=copy(p[f]);}

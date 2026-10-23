@@ -62,3 +62,17 @@
  #app .global-journal-head .journal-title-row{display:none}
  #app .global-battle-journal .journal-filter{margin:4px 0}
 }
+
+/* The phone drawer owns all vertical scroll, not the inner log stream. */
+@media(max-width:900px){
+ #app .mobile-journal-open .mobile-journal-body{overflow:auto!important;height:auto;max-height:min(30dvh,440px)}
+ #app .global-battle-journal #liveLog{height:auto!important;min-height:0!important;overflow:visible!important;display:block}
+ #app .global-battle-journal .battle-log-stream{height:auto!important;min-height:0!important;max-height:none!important;flex:none;display:block;overflow:visible!important;scrollbar-gutter:auto}
+}
+/* Landscape phones must still have space to read the main game. */
+@media(max-width:900px) and (max-height:500px){
+ :root{--mobile-nav-height:48px}
+ #app .mobile-journal-open .global-journal-head{display:none}
+ #app .mobile-journal-toggle,#app .mobile-loot-toggle{min-height:34px;padding:5px 10px}
+ #app .mobile-journal-open .mobile-journal-body,#app .mobile-loot-open .mobile-loot-body{height:auto;max-height:60px;overflow:auto!important;padding:5px 10px}
+}

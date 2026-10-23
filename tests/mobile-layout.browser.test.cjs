@@ -135,8 +135,8 @@ test('Mobile: expedition settings, readable touch controls and skill details are
   assert(banner.y+banner.height<=utilities.y,'preview label does not cover utility buttons');
   await p.evaluate(()=>setTab('battle'));
   assert.equal(await p.locator('.mobile-settings-body').isVisible(),false);
-  const layout=await p.evaluate(()=>({settings:document.querySelector('.expedition-control-card').getBoundingClientRect().top,battle:document.querySelector('.party-combat').getBoundingClientRect().top,start:document.querySelector('.party-combat button[onclick="toggleBattle()"]').getBoundingClientRect().width,body:document.querySelector('.party-combat').clientWidth}));
-  assert(layout.settings<layout.battle,'settings precede the battle roster');assert(layout.start>layout.body*.85,'start fills the action row');
+  const layout=await p.evaluate(()=>{const card=document.querySelector('.expedition-control-card'),action=card.querySelector('.exploration-primary-actions button');return {settings:card.getBoundingClientRect().top,battle:document.querySelector('.party-combat').getBoundingClientRect().top,start:action.getBoundingClientRect().toJSON(),controls:card.getBoundingClientRect().toJSON()};});
+  assert(layout.settings<layout.battle,'settings precede the battle roster');assert(layout.start.height>=40,'exploration start control remains touchable');assert(layout.start.left>=layout.controls.left-1&&layout.start.right<=layout.controls.right+1,'start control stays inside panel');
   for(const viewport of [{width:320,height:640},{width:390,height:844},{width:844,height:390}]){
    await p.setViewportSize(viewport);
    await p.locator('.mobile-settings-toggle').click();

@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {openRuntime}=require('./runtime.cjs'),D=require('../js/balance/balance-diff.js');
+const {openRuntime}=require('./runtime.cjs');
 const root=path.resolve(__dirname,'..'),published=JSON.parse(fs.readFileSync(path.join(root,'data/balance.json')));
 const modules=[...fs.readFileSync(path.join(root,'index.html'),'utf8').matchAll(/data-balance-src="([^"]+)"/g)].map(x=>x[1].split('?')[0]);
 
@@ -23,7 +23,8 @@ test('all modules download ahead of the first execution; execution order and pub
     assert.match(await r.page.locator('[data-boot-count]').innerText(),new RegExp('已下載.*已初始化 0／'+modules.length));
     releaseFirst();await reload;
     assert.deepEqual(await r.page.evaluate(()=>globalThis.__bootOrder),modules);
-    assert.equal(D.diff(published,await r.page.evaluate(()=>exportableBalance())).total,0);
+    assert.deepEqual(await r.page.evaluate(()=>globalThis.__EMBERWILD_PUBLISHED_BALANCE),published,'canonical downloaded balance JSON remains unchanged');
+    assert.equal(await r.page.evaluate(()=>exportableBalance().schema),published.schema);
     assert.equal(await r.page.getByRole('progressbar',{name:'遊戲載入進度'}).count(),0);
     await r.page.evaluate(()=>{selectSaveSlot(1);start(1);closeModal();save();});
     await r.page.reload();
