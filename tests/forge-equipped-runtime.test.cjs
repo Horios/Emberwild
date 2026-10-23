@@ -78,7 +78,17 @@ test('BOSS gear remains enhanceable while its exclusive affixes stay fixed',()=>
     return {id:g.id,boss:g.boss,html:forgeView(),canEnhance:canEnhance(g)};
   })()`);
   assert.notEqual(out.boss,undefined);assert(out.canEnhance);
-  assert.match(out.html,/BOSS 專屬詞綴/);assert.match(out.html,/forge-power-reroll/);
-  assert.doesNotMatch(out.html,/onclick="(?:reroll|autoReroll)\(/);
+  assert.match(out.html,/BOSS 專屬加成 1/,'the fixed boss bonuses are displayed');
+  assert.match(out.html,/強化至 \+1/,'boss gear is available for enhancement');
+  assert.match(out.html,/洗鍊隨機詞條/,'random affixes remain separate from fixed boss bonuses');
+  const result=json(r,`(()=>{
+    const g=findGear('${out.id}'),plus=g.plus;
+    const fixed=()=>equipmentAttributeDetailsHTML(g).match(/<div class="equipment-attribute-line"><b>BOSS 專屬加成 \\d+<\\/b>[\\s\\S]*?<\\/div>/g)||[];
+    const before=fixed();enhance(g.id);
+    return {before,after:fixed(),plusBefore:plus,plusAfter:g.plus};
+  })()`);
+  assert(result.before.length>0,'at least one boss-exclusive bonus must be present');
+  assert.equal(result.plusAfter,result.plusBefore+1,'enhancement increases the gear level');
+  assert.deepEqual(result.after,result.before,'enhancement never changes fixed boss bonuses');
   assert.deepEqual(r.errors,[]);
 });
