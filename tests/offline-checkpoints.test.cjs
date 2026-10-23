@@ -56,3 +56,30 @@ test('failed write with an unread receipt falls back to lastCommitted and restor
 test('losing save ownership between uncommitted batches cannot write or acknowledge rewards',async()=>{
  const r=game();let timer=0;r.ctx.performance.now=()=>timer;const {callbacks,pending}=paused(r);await turn();const key=r.run('KEY'),raw=r.values.get(key);r.ctx.performance.now=()=>timer+=20;callbacks.shift()();await turn();r.ctx.__EMBERWILD_SAVE_OWNER=false;await pump(callbacks,pending);assert.equal(r.values.get(key),raw);assert.equal(r.run('EmberwildOffline.failed'),true);assert.equal(r.run('save()'),false);assert.equal(r.run('acknowledgeOfflineExploration()'),false);
 });
+
+test('interrupted settlement keeps its original cap, skips the excess, then permits a new absence',async()=>{
+ const cap=60000,source=(name,code)=>name===file?code.replace('maxOfflineMs=24*60*60*1000','maxOfflineMs='+cap):code;
+ const r=loadRuntime(root,'index.html',{},undefined,{transformSource:source}),callbacks=[];
+ r.ctx.setTimeout=fn=>callbacks.push(fn);let timer=0;r.ctx.performance.now=()=>timer+=20;
+ r.run('selectSaveSlot(1);start(0);closeModal();startSelectedExploration();save()');
+ const first=r.run('party.offlineExploration.lastAt'),key=r.run('KEY');r.advance(90000);
+ const pending=r.run('EmberwildOffline.settle()');await turn();assert(callbacks.length>0);
+ timer=1200;callbacks.shift()();await turn();
+ const durable=r.values.get(key),checkpoint=JSON.parse(durable).offlineExploration;
+ assert(checkpoint.lastAt>first&&checkpoint.lastAt<first+cap);
+ assert.equal(checkpoint.offlineWindow.capAt,first+cap);
+ assert.equal(checkpoint.offlineWindow.untilAt,r.now);
+ const b=loadRuntime(root,'index.html',{[key]:durable},r.now,{transformSource:source});
+ b.ctx.setTimeout=fn=>setImmediate(fn);b.run('continueFromTitle()');await b.run('EmberwildOffline.settle()');
+ assert.equal(b.run('EmberwildOffline.failed'),false);
+ assert.equal(b.run('party.offlineExploration.lastAt'),b.now);
+ assert.equal(b.run('party.offlineExploration.offlineWindow'),null);
+ const receipt=json(b,'party.offlineExploration.receipt||party.offlineExploration.pendingReceipt');
+ assert.equal(receipt.intervals.reduce((sum,x)=>sum+x.end-x.start,0),cap);
+ b.advance(15000);await b.run('EmberwildOffline.settle()');
+ assert.equal(b.run('party.offlineExploration.lastAt'),b.now);
+ assert.equal(b.run('party.offlineExploration.offlineWindow'),null);
+ r.ctx.performance.now=()=>timer;r.ctx.setTimeout=fn=>setImmediate(fn);
+ while(callbacks.length){callbacks.shift()();await turn();}await pending;
+ assert.equal(r.run('EmberwildOffline.failed'),false);
+});

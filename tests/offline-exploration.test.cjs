@@ -40,8 +40,22 @@ test('backwards clock and storage failure preserve the last valid save and unset
 test('full bag preserves generated gear and terminates effective time without deleting existing equipment',async()=>{
  const r=game();r.run('GAMEPLAY_SETTINGS.equipment.bagCapacity=state.bag.length;save()');const ids=json(r,'state.bag.map(g=>g.id)');await settle(r,3600000);assert.equal(r.run('running'),false);assert.deepEqual(json(r,'state.bag.map(g=>g.id)'),ids);assert(r.run('(party.offlineExploration.receipt||party.offlineExploration.pendingReceipt).effectiveMs')<3600000);assert.match(r.run('(party.offlineExploration.receipt||party.offlineExploration.pendingReceipt).reason'),/背包/);
 });
-test('30s, 5m, 1h, 8h and 24h debts complete in finite batches with no artificial time cap',async t=>{
+test('30s, 5m, 1h, 8h and 24h debts complete in finite batches up to the daily offline cap',async t=>{
  for(const ms of [30000,300000,3600000,28800000,86400000])await t.test(String(ms),async()=>{const r=game(),start=performance.now();await settle(r,ms);const receipt=json(r,'party.offlineExploration.receipt||party.offlineExploration.pendingReceipt');assert.equal(receipt.end-receipt.start,ms);assert.equal(r.run('party.offlineExploration.lastAt'),r.now);assert(receipt.effectiveMs<=ms);if(r.run('!!party.offlineExploration.receipt'))assert.equal(receipt.complete,true);else assert.equal(receipt.battles,0);assert(r.run('logs.length')<=65);t.diagnostic(`${ms/1000}s debt: ${Math.round(performance.now()-start)}ms, ${receipt.kills} kills, effective ${receipt.effectiveMs}ms`);});
+});
+test('an absence longer than 24 hours gives the same rewards as 24 hours and does not carry debt',async()=>{
+ const day=24*3600000,normal=game(),long=game();
+ await settle(normal,day);await settle(long,day+6*3600000);
+ const rewards=r=>json(r,'({lv:state.lv,xp:state.xp,gold:state.gold,kills:state.totalKills,ore:state.ore,dust:state.dust,materials:state.materials,consumables:state.consumables,bag:state.bag.map(g=>{const x={...g};delete x.id;return x;})})');
+ assert.deepEqual(rewards(long),rewards(normal));
+ const record=json(long,'party.offlineExploration.receipt||party.offlineExploration.pendingReceipt');
+ assert.equal(record.end-record.start,day);
+ assert.equal(record.intervals.reduce((sum,part)=>sum+part.end-part.start,0),day);
+ assert.equal(record.effectiveMs,json(normal,'(party.offlineExploration.receipt||party.offlineExploration.pendingReceipt).effectiveMs'));
+ assert.equal(long.run('party.offlineExploration.lastAt'),long.now);
+ assert.equal(long.run('party.offlineExploration.offlineWindow'),null);
+ const before=rewards(long);await long.run('EmberwildOffline.settle()');assert.deepEqual(rewards(long),before);
+ long.advance(60000);await long.run('EmberwildOffline.settle()');assert.equal(long.run('party.offlineExploration.lastAt'),long.now);
 });
 test('one ownership lock is acquired before module execution; phone/desktop receipt uses the existing SVG/detail components',()=>{
  const loader=fs.readFileSync(path.join(root,'js/balance/published-loader.js'),'utf8'),ui=fs.readFileSync(path.join(root,'js/combat/offline-exploration.js'),'utf8'),css=fs.readFileSync(path.join(root,'css/offline-exploration.css'),'utf8');assert(loader.indexOf('await new Promise((resolve,reject)=>{\n      navigator.locks.request')<loader.indexOf('const urls=Array.from'));assert.match(loader,/preview\?'preview':'production'/);assert.match(ui,/gearSlotHTML/);assert.match(ui,/equipmentAttributeDetailsHTML/);assert.match(css,/@media\(max-width:600px\)/);assert.match(css,/max-height:94dvh/);

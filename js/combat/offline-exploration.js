@@ -9,7 +9,7 @@
  // Profiling: full saves dominated replay (about 23ms each on an 8h debt).
  // One wall-clock second of work amortizes serialization while bounding replay
  // lost on close. Only commit()/successful save moves the durable checkpoint.
- const checkpointIntervalMs=1000;
+ const checkpointIntervalMs=1000,maxOfflineMs=24*60*60*1000;
  let settlementProgress=null,bootResumePending=!!globalThis.__EMBERWILD_BOOT_SAVE_RAW;
  const atTitle=()=>!!globalThis.isEmberwildTitleOpen?.();
  const nowReal=Date.now.bind(Date),basePack=packParty,baseSave=save,baseLoad=loadParty,baseValidate=validateParty;
@@ -58,6 +58,7 @@
   if(raw===undefined)return null;
   const c=copy(raw),validTime=n=>Number.isSafeInteger(n)&&n>=0&&n<=8.64e15;
   if(![1,2].includes(c.version)||!validTime(c.lastAt)||!validTime(c.startedAt)||!['running','paused','stopped'].includes(c.status)||![c.nextAt,c.roundAt].every(n=>Number.isFinite(n)&&n>=0))throw Error('離線探索時間或狀態無效');
+  if(c.offlineWindow!=null&&(!validTime(c.offlineWindow.capAt)||!validTime(c.offlineWindow.untilAt)))throw Error('離線結算上限資料無效');
   if(c.combat){const b=c.combat;if(!Array.isArray(b.foes)||!Array.isArray(b.states)||b.states.length!==4||!Array.isArray(b.heroes)||!Array.isArray(b.effects)||!Number.isSafeInteger(b.round)||!Number.isSafeInteger(b.partyClock))throw Error('離線戰鬥進度無效');
    if(b.heroes.length!==members.length||b.heroes.some(h=>!Number.isFinite(h.hp)||h.hp<0||!Number.isFinite(h.shield)||h.shield<0)||b.foes.some(e=>!e||typeof e.id!=='string'||!Number.isFinite(e.hp)||e.hp<0||!Number.isFinite(e.maxhp)||e.maxhp<=0))throw Error('離線戰鬥角色資料無效');
    if(b.questChallenge&&(typeof b.questChallenge.key!=='string'||typeof b.questChallenge.name!=='string'||!Number.isInteger(b.questChallenge.mapIndex)))throw Error('離線任務關卡無效');
@@ -141,6 +142,11 @@
  };
  function hasRewards(r){return !!r&&(r.xp>0||r.goldGained>0||r.gear.length>0||Object.values(r.items).some(n=>n>0));}
  function eligible(r){return hasRewards(r)&&(r.battles>0||r.legacy===true);}
+ // An interrupted replay keeps its original 24-hour window in the saved cursor.
+ function ensureOfflineWindow(c,target){
+  if(!c.offlineWindow||c.lastAt>=c.offlineWindow.untilAt)c.offlineWindow={capAt:Math.min(8.64e15,c.lastAt+maxOfflineMs),untilAt:target};
+  else c.offlineWindow.untilAt=Math.max(c.offlineWindow.untilAt,target);
+ }
  function track(target){
   const c=ensure();if(!c.pendingReceipt&&lastMode&&target>c.lastAt)c.pendingReceipt=receipt(c.lastAt,target);
  }
@@ -174,7 +180,7 @@
    if(result.done){roundIterator=null;nextActionAt=Math.max(at+actionMs,roundStartedAt+roundMs);}else nextActionAt=at+actionMs;
   });}finally{stepping=false;}
  }
- // Finite batches yield to the browser; no cap is imposed on owed game time.
+ // Finite batches yield to the browser; settlement enforces the offline cap.
  function advance(target,maxEvents=150){
   const c=ensure();if(globalThis.__EMBERWILD_SAVE_OWNER===false)throw Error('存檔已由另一分頁接手');
   if(!c||target<c.lastAt)return false;
@@ -188,6 +194,14 @@
    if(at===target)break;
   }});
   c.status=running?'running':foes.length?'paused':'stopped';return c.lastAt<target;
+ }
+ // Expire wall-clock boosts during the excess absence without granting combat time.
+ function skipUncreditedTime(target){
+  const c=clock(),delta=target-c.lastAt;if(delta<=0)return;
+  if(nextActionAt)nextActionAt+=delta;
+  if(roundStartedAt)roundStartedAt+=delta;
+  const recording=jobOffline;jobOffline=false;
+  try{consumeTo(target,false);}finally{jobOffline=recording;}
  }
  function commit(){internal=true;try{if(save()!==true)throw Error('無法儲存結算進度，原存檔與未補算時間仍保留');}finally{internal=false;}}
  function rollback(message){
@@ -206,7 +220,7 @@
   if(renderedReceipt===r.id&&!box.hidden)return;renderedReceipt=r.id;
   box.hidden=false;const fmt=n=>Math.round(n).toLocaleString('zh-TW'),time=t=>new Date(t).toLocaleString('zh-TW',{hour12:false});
   const group=(kind,title)=>{const rows=Object.entries(r.items).filter(([k,n])=>k.startsWith(kind+':')&&n>0);return rows.length?`<h3>${title}</h3><div class="offline-items">${rows.map(([k,n])=>itemSlotHTML(kind,k.slice(kind.length+1),{count:n,detailLabel:'本次獲得'})).join('')}</div>`:'';};
-  box.innerHTML=`<section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="offline-heading"><h2 id="offline-heading">離線探索收益</h2><p>${esc(r.map)} · ${esc(r.stage||'一般探索')} · ${r.reason?esc(r.reason):'正常完成補算'}</p><p class="small">開始 ${time(r.start)}<br>結束 ${time(r.end)}${r.stoppedAt?'<br>探索終止 '+time(r.stoppedAt):''}</p><div class="offline-summary"><div>實際離線<b>${api.timeText(r.intervals?.reduce((n,x)=>n+x.end-x.start,0)??r.end-r.start,true)}</b></div><div>有效掛機<b>${api.timeText(r.effectiveMs,true)}</b></div><div>擊殺怪物<b>${fmt(r.kills)} 隻</b></div><div>經驗值<b>＋${fmt(r.xp)}</b></div><div>金錢獲得<b>＋${fmt(r.goldGained)}</b></div><div>金錢消耗<b>−${fmt(r.goldSpent)}</b></div><div>金錢淨增加<b>${fmt(r.goldGained-r.goldSpent)}</b></div></div><p class="small">夥伴沿用現有規則，與主角同步等級，沒有獨立經驗槽。</p><div>${r.levels.map(l=>`<p>${esc(l.name)}：Lv.${l.before} → Lv.${l.after}（升級 ${l.after-l.before} 次）</p>`).join('')}</div>${group('material','素材收益')}${group('item','消耗品收益')}${group('gem','寶石收益')}${r.gear.length?'<h3>裝備收益 · '+r.gear.length+' 件</h3><div class="offline-items">'+r.gear.slice(gearPage*30,gearPage*30+30).map((g,j)=>{const i=gearPage*30+j;return `<button class="offline-gear" onclick="showOfflineGear(${i})">${gearSlotHTML(g,{preview:g,count:1,contentOnly:true})}<span class="q${gearQualityRank(g)}">${AFFIX_RANK[gearQualityRank(g)]}</span></button>`;}).join('')+'</div>'+ (r.gear.length>30?`<div class="actions"><button onclick="changeOfflineGearPage(-1)" ${gearPage===0?'disabled':''}>上一頁</button><span>${gearPage+1} / ${Math.ceil(r.gear.length/30)}</span><button onclick="changeOfflineGearPage(1)" ${(gearPage+1)*30>=r.gear.length?'disabled':''}>下一頁</button></div>`:''):''}<h3>增益實際生效時間</h3>${Object.values(r.boosts).map(b=>`<p>${esc(b.name)} · ${esc(b.effect)}：${api.timeText(b.ms,true)}</p>`).join('')||'<p>無限時增益</p>'}${Object.keys(r.consumed||{}).length?'<h3>道具消耗</h3>'+Object.entries(r.consumed).map(([k,n])=>'<p>'+esc(k.split(':').slice(1).join(':'))+' × '+fmt(n)+'</p>').join(''):''}<p class="small">收益已存入角色與背包；視窗僅顯示已保存的收益，探索仍會持續進行。此遊戲使用裝置時間，無法完全防止改時鐘作弊。</p><button class="primary" onclick="acknowledgeOfflineExploration()">確認／關閉</button></section>`;box.querySelector('[role="dialog"]')?.focus({preventScroll:true});
+  box.innerHTML=`<section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="offline-heading"><h2 id="offline-heading">離線探索收益</h2><p>${esc(r.map)} · ${esc(r.stage||'一般探索')} · ${r.reason?esc(r.reason):'正常完成補算'}</p><p class="small">開始 ${time(r.start)}<br>結束 ${time(r.end)}${r.stoppedAt?'<br>探索終止 '+time(r.stoppedAt):''}</p><div class="offline-summary"><div>計入離線<b>${api.timeText(r.intervals?.reduce((n,x)=>n+x.end-x.start,0)??r.end-r.start,true)}</b></div><div>有效掛機<b>${api.timeText(r.effectiveMs,true)}</b></div><div>擊殺怪物<b>${fmt(r.kills)} 隻</b></div><div>經驗值<b>＋${fmt(r.xp)}</b></div><div>金錢獲得<b>＋${fmt(r.goldGained)}</b></div><div>金錢消耗<b>−${fmt(r.goldSpent)}</b></div><div>金錢淨增加<b>${fmt(r.goldGained-r.goldSpent)}</b></div></div><p class="small">單次離線最多計算 24 小時，超過的時間不產生戰鬥收益。夥伴沿用現有規則，與主角同步等級，沒有獨立經驗槽。</p><div>${r.levels.map(l=>`<p>${esc(l.name)}：Lv.${l.before} → Lv.${l.after}（升級 ${l.after-l.before} 次）</p>`).join('')}</div>${group('material','素材收益')}${group('item','消耗品收益')}${group('gem','寶石收益')}${r.gear.length?'<h3>裝備收益 · '+r.gear.length+' 件</h3><div class="offline-items">'+r.gear.slice(gearPage*30,gearPage*30+30).map((g,j)=>{const i=gearPage*30+j;return `<button class="offline-gear" onclick="showOfflineGear(${i})">${gearSlotHTML(g,{preview:g,count:1,contentOnly:true})}<span class="q${gearQualityRank(g)}">${AFFIX_RANK[gearQualityRank(g)]}</span></button>`;}).join('')+'</div>'+ (r.gear.length>30?`<div class="actions"><button onclick="changeOfflineGearPage(-1)" ${gearPage===0?'disabled':''}>上一頁</button><span>${gearPage+1} / ${Math.ceil(r.gear.length/30)}</span><button onclick="changeOfflineGearPage(1)" ${(gearPage+1)*30>=r.gear.length?'disabled':''}>下一頁</button></div>`:''):''}<h3>增益實際生效時間</h3>${Object.values(r.boosts).map(b=>`<p>${esc(b.name)} · ${esc(b.effect)}：${api.timeText(b.ms,true)}</p>`).join('')||'<p>無限時增益</p>'}${Object.keys(r.consumed||{}).length?'<h3>道具消耗</h3>'+Object.entries(r.consumed).map(([k,n])=>'<p>'+esc(k.split(':').slice(1).join(':'))+' × '+fmt(n)+'</p>').join(''):''}<p class="small">收益已存入角色與背包；視窗僅顯示已保存的收益，探索仍會持續進行。此遊戲使用裝置時間，無法完全防止改時鐘作弊。</p><button class="primary" onclick="acknowledgeOfflineExploration()">確認／關閉</button></section>`;box.querySelector('[role="dialog"]')?.focus({preventScroll:true});
  }
  globalThis.changeOfflineGearPage=function(delta){renderedReceipt=null;gearPage=Math.max(0,Math.min(Math.ceil((clock()?.receipt?.gear.length||1)/30)-1,gearPage+delta));showReceipt();};
  globalThis.showOfflineGear=function(i){const g=clock()?.receipt?.gear[i];if(!g)return;$('modal').innerHTML='<h2>'+equipmentNameHTML(g)+'</h2>'+equipmentAttributeDetailsHTML(g)+'<button onclick="closeModal()">關閉</button>';$('modal').showModal();};
@@ -218,9 +232,12 @@
  };
  function settle(target=nowReal(),offline=true){
   if(!party||restoring||atTitle()||globalThis.__EMBERWILD_SAVE_OWNER===false)return Promise.resolve();
-  if(job){if(Number.isSafeInteger(target)){requestedAt=Math.max(requestedAt,target);if(offline){jobOffline=true;track(target);}}return job;}
-  const c=ensure();if(!Number.isSafeInteger(target)||target<0||target>8.64e15||target<c.lastAt){failed=true;settlementProgress=null;showProgress('裝置時間無效或早於最後結算時間；收益與時間已保留，請校正時間後重試。',true);return Promise.resolve();}
-  requestedAt=target;jobOffline=offline;if(offline)track(target);
+  const c=ensure();
+  if(job){if(Number.isSafeInteger(target)){requestedAt=Math.max(requestedAt,target);if(offline){jobOffline=true;ensureOfflineWindow(c,requestedAt);track(Math.min(requestedAt,c.offlineWindow.capAt));}if(c.offlineWindow)c.offlineWindow.untilAt=Math.max(c.offlineWindow.untilAt,requestedAt);}return job;}
+  if(!Number.isSafeInteger(target)||target<0||target>8.64e15||target<c.lastAt){failed=true;settlementProgress=null;showProgress('裝置時間無效或早於最後結算時間；收益與時間已保留，請校正時間後重試。',true);return Promise.resolve();}
+  requestedAt=target;jobOffline=offline;
+  if(offline||c.offlineWindow||target-c.lastAt>maxOfflineMs)ensureOfflineWindow(c,target);
+  if(offline)track(Math.min(target,c.offlineWindow?.capAt??target));
   failed=false;settlementProgress={start:c.lastAt,target};
   job=Promise.resolve().then(async()=>{
    try{
@@ -231,13 +248,16 @@
     if(show)await new Promise(resolve=>setTimeout(resolve,0));
     let lastProgress=performance.now(),lastCheckpoint=lastProgress;
     do{
-     const end=requestedAt;settlementProgress.target=end;
+     const end=c.offlineWindow?Math.min(requestedAt,c.offlineWindow.capAt):requestedAt;
+     if(c.offlineWindow)c.offlineWindow.untilAt=Math.max(c.offlineWindow.untilAt,requestedAt);
+     settlementProgress.target=end;
      let more;
      do{const start=c.lastAt,r=c.pendingReceipt,status=c.status;more=advance(end);if(jobOffline)recordInterval(r,start,c.lastAt);if(c.status!==status||more&&performance.now()-lastCheckpoint>=checkpointIntervalMs){commit();lastCheckpoint=performance.now();}if(show&&(performance.now()-lastProgress>=100||!more)){showProgress('正在計算掛機收益，請稍候…');lastProgress=performance.now();}if(more)await new Promise(resolve=>setTimeout(resolve,0));}while(more);
+     if(c.offlineWindow&&c.lastAt<requestedAt)skipUncreditedTime(requestedAt);
     }while(c.lastAt<requestedAt);
     // A throttled tick takes this async path; do not starve online life jobs.
     internal=true;try{globalThis.emberwildLifeHeartbeat?.();}finally{internal=false;}
-    if(jobOffline&&!document.hidden)promote();commit();render();showReceipt();
+    if(jobOffline&&!document.hidden)promote();c.offlineWindow=null;commit();render();showReceipt();
     if(!c.receipt)document.getElementById('offline-settlement').hidden=true;
    }catch(e){rollback(String(e.message||e));}
    finally{job=null;lastMode=atTitle()?false:running;lastCheck=nowReal();}
