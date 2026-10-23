@@ -30,19 +30,26 @@ test('Gathering awards exactly once per five seconds and updates the accessible 
   assert.deepEqual(r.errors,[]);
 });
 
-test('The full gather/process/alchemy chain consumes one of each input and produces the existing shop potion',()=>{
-  const r=game();r.run('startLifeGathering();');advance(r,5000);r.run('stopLifeGathering();');
-  assert.equal(r.run('startLifeWork("process")'),true);
-  advance(r,4999);assert.equal(r.run('materialCount("紅色草")'),1);assert.equal(r.run('materialCount("紅色草泥")'),0);
-  advance(r,1);assert.equal(r.run('materialCount("紅色草")'),0);assert.equal(r.run('materialCount("紅色草泥")'),1);
-  assert.equal(r.run('startLifeWork("alchemy")'),false);
-  const gold=r.run('state.gold');r.run('buyLifeMaterial("藥水瓶");buyLifeMaterial("清水");');assert.equal(r.run('state.gold'),gold-2);
-  const stock=r.run('healPotionCount("heal_small")');assert.equal(r.run('startLifeWork("alchemy")'),true);advance(r,5000);
-  for(const name of ['紅色草泥','藥水瓶','清水'])assert.equal(r.run('materialCount('+JSON.stringify(name)+')'),0);
-  assert.equal(r.run('healPotionCount("heal_small")'),stock+1);
-  assert.equal(r.run('SHOP.find(x=>x.id==="heal_small").cost'),8);
-  assert.match(r.run('accountItemsView()'),/data-inventory-item="heal_small"/);
-  assert.deepEqual(r.errors,[]);
+test('The published herb/water/bottle recipe consumes its real inputs and yields one healing potion',()=>{
+ const r=game();
+ const beforeHerb=r.run('materialCount("紅色草")');
+ r.run('startLifeGathering();');advance(r,5000);r.run('stopLifeGathering();');
+ assert.equal(r.run('materialCount("紅色草")'),beforeHerb+1);
+ const config=json(r,'__EMBERWILD_LIFE_SKILLS.design.recipes.alchemy');
+ assert.deepEqual(config.inputs.map(([name,count])=>[name,count]),[['清水',1],['藥水瓶',1],['紅色草',1]]);
+ const beforeWater=r.run('materialCount("清水")'),beforeBottle=r.run('materialCount("藥水瓶")');
+ r.run('buyLifeMaterial("清水");buyLifeMaterial("藥水瓶");');
+ assert.equal(r.run('materialCount("清水")'),beforeWater+1);
+ assert.equal(r.run('materialCount("藥水瓶")'),beforeBottle+1);
+ const potions=r.run('healPotionCount("heal_small")');
+ assert.equal(r.run('startLifeWork("alchemy")'),true);
+ advance(r,4999);assert.equal(r.run('healPotionCount("heal_small")'),potions);
+ advance(r,1);
+ assert.equal(r.run('materialCount("紅色草")'),beforeHerb);
+ assert.equal(r.run('materialCount("清水")'),beforeWater);
+ assert.equal(r.run('materialCount("藥水瓶")'),beforeBottle);
+ assert.equal(r.run('healPotionCount("heal_small")'),potions+1);
+ assert.deepEqual(r.errors,[]);
 });
 
 test('Gathering and alchemy continue on other pages alongside actual exploration at every battle speed',()=>{
