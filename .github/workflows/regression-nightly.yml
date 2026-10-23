@@ -1,0 +1,66 @@
+name: Extended regression
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 02:00 Asia/Taipei; schedule is active when this file is on the default branch.
+    - cron: '0 18 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  headless:
+    name: Extended / ${{ matrix.area }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        area: [world, economy, equipment, companions, offline]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt-dev
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run independent game regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.area }}" in
+            world)
+              files=(tests/progression-model.test.cjs tests/progression-runtime.test.cjs tests/monster-design.test.cjs tests/exploration-controls.test.cjs tests/story-system.test.cjs tests/daily-commissions.test.cjs tests/speed-boss-progression.test.cjs)
+              ;;
+            economy)
+              files=(tests/shop-options.test.cjs tests/life-skills.test.cjs tests/element-potions.test.cjs tests/element-potions-runtime.test.cjs tests/material-prices.test.cjs tests/timed-boosts-journal.test.cjs tests/realtime-stacking.test.cjs)
+              ;;
+            equipment)
+              files=(tests/equipment-acquisition.test.cjs tests/equipment-details.test.cjs tests/equipment-enhancement.test.cjs tests/equipment-comparison.test.cjs tests/forge-equipped-runtime.test.cjs tests/reroll-dust.test.cjs)
+              ;;
+            companions)
+              files=(tests/team-model.test.cjs tests/team-runtime.test.cjs tests/companion-skill-ownership.test.cjs tests/companion-passives.test.cjs tests/companion-tokens.test.cjs tests/mailbox.test.cjs tests/achievements.test.cjs)
+              ;;
+            offline)
+              files=(tests/offline-exploration.test.cjs tests/offline-final-stage.test.cjs tests/expedition-stop-dispose.test.cjs tests/offline-checkpoints.test.cjs tests/offline-receipts.test.cjs)
+              ;;
+          esac
+          node --test --test-concurrency=1 "${files[@]}"
+
+  browser:
+    name: Extended / Chromium interfaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt-dev
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Check equipment, page scrolling, inventory and legacy saves
+        run: node --test --test-concurrency=1 tests/page-readability.browser.test.cjs tests/equipment-sockets.browser.test.cjs tests/item-display-mode.browser.test.cjs tests/team-save-compatibility.browser.test.cjs tests/item-hover-tooltip.browser.test.cjs

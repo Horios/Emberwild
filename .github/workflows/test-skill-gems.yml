@@ -1,20 +1,48 @@
-name: Skill gem regression
+name: Regression gate
 
 on:
-  push:
-    branches: [chatgpt-dev]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  gems:
+  core:
+    name: Core modules, gear and skills
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Test gem effects, alchemy and save migration
+      - name: Run current core regression tests
         run: node --test --test-concurrency=1 tests/core-catalog-split.test.cjs tests/core-services-split.test.cjs tests/core-ui-split.test.cjs tests/core-journal-split.test.cjs tests/live-battle-journal.test.cjs tests/gear-inventory-controls.test.cjs tests/gear-inventory.test.cjs tests/item-descriptions.test.cjs tests/load-integrity.test.cjs tests/skill-gems.test.cjs tests/equipment-skill-system.test.cjs tests/skill-equipment-tutorial.test.cjs tests/skill-system-model.test.cjs
+
+  persistence:
+    name: Saves, offline rewards and state ownership
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify recoverable saves and offline settlement
+        run: node --test --test-concurrency=1 tests/boot-save-notices.test.cjs tests/offline-checkpoints.test.cjs tests/offline-receipts.test.cjs tests/gameplay-lifecycle-audit.test.cjs tests/team-save-compatibility.test.cjs
+
+  browser-smoke:
+    name: Chromium boot and responsive navigation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify actual browser boot and mobile navigation
+        run: node --test --test-concurrency=1 tests/mobile-layout.browser.test.cjs tests/published-loader.browser.test.cjs
