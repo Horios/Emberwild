@@ -108,6 +108,11 @@ test('Responsive: title, creation, utility dialogs and desktop layout stay usabl
   assert(await p.locator('.start').evaluate(e=>e.scrollWidth<=e.clientWidth));
   await p.evaluate(()=>{start(0);clearInterval(timer);closeModal();});await p.waitForTimeout(60);await p.evaluate(()=>closeModal());
   for(const id of ['mailbox','achievements','options']){
+   const overlay=await p.evaluate(()=>{const el=document.getElementById('offline-settlement'),c=party?.offlineExploration;return {visible:!!el&&!el.hidden,receipt:!!c?.receipt?.complete,stage:c?.status};});
+   if(overlay.visible){
+    assert(overlay.receipt,'offline dialog must have a completed reward receipt: '+JSON.stringify(overlay));
+    assert.equal(await p.evaluate(()=>acknowledgeOfflineExploration()),true);
+   }
    await p.locator('#utilityButton-'+id).click();
    const b=await p.locator('#modal').boundingBox();assert(b.x>=0&&b.x+b.width<=320&&b.height<=640,id+' fits');
    await p.getByRole('button',{name:'關閉彈窗',exact:true}).click();
@@ -273,8 +278,7 @@ test('Mobile: messages and loot are sibling panels without shared or nested scro
   const top=await p.locator('#mobileLootBody').evaluate(e=>e.scrollTop);
   await p.evaluate(()=>{note('閱讀戰利品時不強制跳走','playerDamage');refreshGlobalJournal();});
   assert.equal(await p.locator('#mobileLootBody').evaluate(e=>e.scrollTop),top);
-  await p.locator('.journal-quick-dispose').scrollIntoViewIfNeeded();
-  assert(await p.locator('.journal-quick-dispose').isVisible());
+  assert.equal(await p.locator('.journal-quick-dispose').count(),0,'equipment dismantling is managed in inventory, not the journal');
   for(const viewport of [{width:320,height:640},{width:844,height:390}]){
    await p.setViewportSize(viewport);await fits(p,'separate loot '+viewport.width);
    assert(await p.locator('#globalBattleJournal').evaluate(e=>e.scrollHeight<=e.clientHeight+1),'no shared outer scroll');
