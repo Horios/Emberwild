@@ -9,7 +9,21 @@ function kill(r,map=0,id){r.ctx.targetMonster=id||seed.balanceSettings.monsters.
 function boss(r,map){r.run(`party.map=${map};syncParty();party.bossChallenge=null;bossProgressEntry(${map}).charges=1;startBossChallenge();for(const e of [...foes]){e.hp=0;rewardGroupKill(e);}save();leaveBossChallenge();running=false;resetEncounter();closeModal()`);}
 function tick(r,ms){r.advance(ms);r.run('tickLifeSkills()');}
 function replace(r,edit){const d=json(r,'exportableBalance()');edit(d);r.ctx.doc=d;r.run('applyBalanceConfig(doc)');return d;}
-function reload(r){r.run('save()');const n=loadRuntime(root,'index.html',Object.fromEntries(r.values),r.now);n.run('continueFromTitle();closeModal()');return n;}
+function reload(r){
+ r.run('save()');
+ const n=loadRuntime(root,'index.html',Object.fromEntries(r.values),r.now);
+ if(n.run('!party')){
+  // Keep the real failure: surface the underlying cold-boot hydration reason.
+  const diagnostics={
+   bootError:n.run('globalThis.__EMBERWILD_BOOT_SAVE_ERROR??null'),
+   deferredSave:n.run('Boolean(globalThis.__EMBERWILD_BOOT_SAVE_RAW)'),
+   offlinePending:n.run('globalThis.EmberwildOffline?.isSettling?.()??null'),
+   errors:n.errors.slice(-3),warnings:n.warnings.slice(-3)
+  };
+  console.error('STORY_RELOAD_FAILURE',JSON.stringify(diagnostics));
+ }
+ n.run('continueFromTitle();closeModal()');return n;
+}
 
 test('new/legacy saves migrate, real recruitment, kills and enhancement complete goddess mainline; rewards are exactly once',()=>{
  let r=game();assert.equal(r.run('party.story.quests.goddess_intro.current'),'welcome');complete(r,'goddess_intro');complete(r,'goddess_intro');assert.equal(r.run("completeStoryStage('goddess_intro')"),false);recruit(r);complete(r,'goddess_intro');complete(r,'goddess_intro');complete(r,'goddess_intro');kill(r);complete(r,'goddess_intro');complete(r,'goddess_intro');r.run('enhance(playerHero().bag[0].id)');assert.equal(r.run('party.progressStats.enhance'),1);complete(r,'goddess_intro');const gold=r.run('state.gold');complete(r,'goddess_intro');assert.equal(r.run('state.gold'),gold+200);const snapshot=json(r,'party.story');r=reload(r);assert.deepEqual(json(r,'party.story'),snapshot);assert.equal(r.run("completeStoryStage('goddess_intro')"),false);assert.equal(r.run('state.gold'),gold+200);
