@@ -7,17 +7,19 @@ function advance(r,ms){r.advance(ms);r.run('tick();');}
 
 test('Gathering awards exactly once per five seconds and updates the accessible progress bar',()=>{
   const r=game();r.run('setTab("gather");startLifeGathering();');
+  const initialHerb=r.run('materialCount("紅色草")'),initialBug=r.run('materialCount("小蟲")');
   assert.match(r.elements.get('app').innerHTML,/setTab\('gather'\)/);
-  assert.match(r.elements.get('app').innerHTML,/<progress[^>]+aria-label="採集進度"/);
-  advance(r,4999);assert.equal(r.run('materialCount("紅色草")'),0);
-  assert.equal(r.elements.get('life-gather-progress').value,4999);
-  advance(r,1);assert.equal(r.run('materialCount("紅色草")'),1);
-  assert.equal(r.elements.get('life-gather-progress').value,0);
-  advance(r,15000);assert.equal(r.run('materialCount("紅色草")'),4);
-  assert.equal(r.run('materialCount("小蟲")'),0);
-  r.run('Math.random=()=>.049;');advance(r,5000);assert.equal(r.run('materialCount("小蟲")'),1);
-  r.run('Math.random=()=>.05;');advance(r,5000);assert.equal(r.run('materialCount("小蟲")'),1);
-  r.run('stopLifeGathering();');advance(r,50000);assert.equal(r.run('materialCount("紅色草")'),6);
+  assert.match(r.run('gatheringView()'),/<progress[^>]+aria-label="採集進度"/);
+  advance(r,4999);assert.equal(r.run('materialCount("紅色草")'),initialHerb);
+  assert.equal(r.run('__EMBERWILD_LIFE_SKILLS.jobs.gather.elapsed'),4999);
+  assert.match(r.run('gatheringView()'),/id="life-gather-progress"[^>]*value="4999"/);
+  advance(r,1);assert.equal(r.run('materialCount("紅色草")'),initialHerb+1);
+  assert.equal(r.run('__EMBERWILD_LIFE_SKILLS.jobs.gather.elapsed'),0);
+  advance(r,15000);assert.equal(r.run('materialCount("紅色草")'),initialHerb+4);
+  assert.equal(r.run('materialCount("小蟲")'),initialBug);
+  r.run('Math.random=()=>.049;');advance(r,5000);assert.equal(r.run('materialCount("小蟲")'),initialBug+1);
+  r.run('Math.random=()=>.05;');advance(r,5000);assert.equal(r.run('materialCount("小蟲")'),initialBug+1);
+  r.run('stopLifeGathering();');advance(r,50000);assert.equal(r.run('materialCount("紅色草")'),initialHerb+6);
   assert.deepEqual(r.errors,[]);
 });
 
