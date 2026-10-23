@@ -77,7 +77,7 @@
     applyBalanceConfig(globalThis.__EMBERWILD_BALANCE_SOURCE,{persist:false});
     // Only the fully installed validators can decide whether a save is unreadable.
     const playerBytes=globalThis.__EMBERWILD_TEAM_BOOT_RAW||globalThis.__EMBERWILD_BOOT_SAVE_RAW;
-    if(playerBytes){try{loadParty(JSON.parse(playerBytes));globalThis.__EMBERWILD_BOOT_SAVE_ERROR=null;}catch(error){party=null;state=null;running=false;globalThis.__EMBERWILD_BOOT_SAVE_ERROR=String(error.message||error);if(typeof backToTitle==='function')backToTitle();else render();toast('存檔未能載入：'+globalThis.__EMBERWILD_BOOT_SAVE_ERROR+'；可匯入備份。');}}
+    if(playerBytes){try{loadParty(JSON.parse(playerBytes));globalThis.__EMBERWILD_BOOT_SAVE_ERROR=null;}catch(error){party=null;state=null;running=false;globalThis.__EMBERWILD_BOOT_SAVE_ERROR=String(error.message||error);if(typeof backToTitle==='function')backToTitle();else render();if(!party&&!state&&globalThis.__EMBERWILD_BOOT_SAVE_ERROR)toast('存檔未能載入：'+globalThis.__EMBERWILD_BOOT_SAVE_ERROR+'；可匯入備份。');}}
     const importBase=importBalanceJSON;
     importBalanceJSON=async ev=>{const result=await importBase(ev);if(result){globalThis.__EMBERWILD_BALANCE_SOURCE=exportableBalance();if(preview)localStorage.setItem(key+'-published-base',version);}return result;};
     const resetBase=resetBalanceJSON;resetBalanceJSON=()=>{const result=resetBase();if(result!==false){globalThis.__EMBERWILD_BALANCE_SOURCE=published;localStorage.removeItem(key);localStorage.removeItem(key+'-published-base');toast('已恢復目前發布版本的平衡資料');}return result;};

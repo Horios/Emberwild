@@ -165,8 +165,10 @@ test('Mobile: expedition settings, readable touch controls and skill details are
   assert.equal(await p.locator('.companion-management-page>.heading').count(),1,'desktop restores its original heading');
   await p.setViewportSize({width:390,height:844});await p.evaluate(()=>setTab('skills'));
   const skillsBefore=await p.evaluate(()=>playerHero().skills.slice());
-  await p.locator('[data-team-skill="0:core:0"]').click();
-  await p.waitForFunction(()=>{const e=document.querySelector('[data-team-skill-detail="0:core:0"]'),m=document.querySelector('main');if(!e)return false;const d=e.getBoundingClientRect(),r=m.getBoundingClientRect();return d.top>=r.top&&d.bottom<=r.bottom;});
+  await p.locator('[data-skill-slot="active:0"]').click();
+  assert.equal(await p.locator('#modal .skill-candidate-list').isVisible(),true);
+  assert(await p.locator('#modal [data-skill-id]').count()>0,'learned skills can be inspected without equipping');
+  await p.evaluate(()=>closeModal());
   assert.deepEqual(await p.evaluate(()=>playerHero().skills),skillsBefore,'viewing a skill does not learn it');
   await p.setViewportSize({width:1440,height:900});await p.evaluate(()=>setTab('battle'));
   assert.equal(await p.locator('.expedition-control-card').isVisible(),true,'desktop exploration controls remain visible');

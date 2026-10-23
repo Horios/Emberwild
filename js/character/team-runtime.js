@@ -134,6 +134,21 @@
         if(p[field].slice(count).some(v=>v!==empty))throw Error('平衡設定會刪除「'+p.name+'」的已學習技能或寶石；請先調整方案');
         p[field]=Array.from({length:count},(_,i)=>p[field][i]??empty);
       }
+      // Convert only the unoccupied tail of legacy 2/2/2 slots to the
+      // currently configured stable-ID skill slot sizes.
+      if(p.skillLoadout){
+        const stage=next.permanent.classes[p.job]?.advanced?'advanced':'first';
+        const rule=d.skillSystem?.classRules?.find(r=>r.job===p.job)?.slots?.[stage];
+        if(rule)for(const [type,field] of [['active','active'],['proc','procSlots'],['support','supportSlots']]){
+          const count=rule[type],slots=p[field],ids=p.skillLoadout[type];
+          if(!Number.isInteger(count)||!Array.isArray(slots)||!Array.isArray(ids))throw Error('隊伍技能槽資料無效');
+          for(const entries of [slots,ids]){
+            if(entries.slice(count).some(value=>value!==null))throw Error('新版技能槽不足以保留已配置技能');
+            entries.length=Math.min(entries.length,count);
+            while(entries.length<count)entries.push(null);
+          }
+        }
+      }
     }
     try{return M.validate(next,{classes:d.classes,supports:d.supportSkills,members:party.members,items:player().bag,progression:d.balanceSettings.progression,level:player().lv,config:d.teamSettings,wearable:()=>true});}
     catch(e){throw Error('平衡設定不相容於已保存的隊伍：'+e.message+'。請先調整配置；原設定保留。');}

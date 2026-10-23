@@ -104,7 +104,7 @@ function syncBattleLogHeader(live){if(battleReportPaused)return;const tag=live?.
 function markBattleLogGeneration(live){if(live)live.dataset.logGeneration=String(battleLogGeneration);}
 function captureBattleLogScroll(live){
  const stream=live?.querySelector?.('.battle-log-stream');
- return stream?{stream,top:battleLogScrollSurface(stream).scrollTop,left:battleLogScrollSurface(stream).scrollLeft,autoScroll:stream.dataset.autoScroll}:null;
+ return stream?{stream,top:battleLogScrollSurface(stream).scrollTop,left:battleLogScrollSurface(stream).scrollLeft,autoScroll:stream.dataset.autoScroll==='0'||!isBattleLogAtBottom(stream)?'0':'1'}:null;
 }
 function restoreBattleLogScroll(position){
  if(!position?.stream.isConnected)return;
