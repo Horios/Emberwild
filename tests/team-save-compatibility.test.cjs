@@ -6,30 +6,56 @@ const root=path.resolve(__dirname,'..'),legacy=JSON.parse(fs.readFileSync(path.j
 const json=(r,c)=>JSON.parse(r.run('JSON.stringify('+c+')'));
 // Missing token keys and explicit null both mean unequipped; retain real UID values.
 function canonicalPlans(rows){return rows.map(p=>({...p,tokens:Object.fromEntries(Object.entries(p.tokens).filter(([,id])=>id!==null))}));}
-function expectedPlans(r){
- const counts=json(r,'CLASSES.map((c,j)=>({core:c.skills.length,support:SUPPORT[j].length}))');
- return canonicalPlans(legacy.buildSystem.plans.map(p=>{const out=structuredClone(p);if(p.job!==null)for(const [field,count,empty] of [['skills',counts[p.job].core,0],['supportLevels',counts[p.job].support,0],['sockets',counts[p.job].core,null]])out[field].push(...Array(count-out[field].length).fill(empty));return out;}));
+function assertLegacyRetained(actual,legacyRows,system){
+ const byId=new Map(actual.map(p=>[p.id,p]));
+ for(const old of legacyRows){
+  const p=byId.get(old.id);assert(p,'plan '+old.id+' remains');
+  for(const field of ['id','name','job','stats','equipped','companions','enlisted'])assert.deepEqual(p[field],old[field],old.id+' '+field+' retained');
+  if(old.job===null)continue;
+  assert(p.skills.length>=old.skills.length,old.id+' core pool never shrinks');
+  assert(p.supportLevels.length>=old.supportLevels.length,old.id+' support pool never shrinks');
+  const rule=system.classRules.find(r=>r.job===old.job);
+  for(const entry of rule.initial){
+   const sk=system.definitions.find(s=>s.id===entry.skillId);
+   assert.equal(p.skills[sk.adapter.index],1,old.id+' class starter '+sk.id+' is now available');
+  }
+ }
 }
-test('real pre-ownership saves append only empty skill positions and preserve all plans, allocations, gems and permanent records',()=>{
- const r=loadRuntime(root);r.ctx.legacy=structuredClone(legacy);const expected=expectedPlans(r),expectedPermanent=structuredClone(legacy.buildSystem.permanent),original=JSON.stringify(legacy);delete expectedPermanent.skillCredit;
+test('real pre-ownership saves retain plans, progression and gems while gaining current class starters',()=>{
+ const r=loadRuntime(root);r.ctx.legacy=structuredClone(legacy);const original=JSON.stringify(legacy);
  r.run('loadParty(legacy)');
- assert.deepEqual(canonicalPlans(json(r,'party.buildSystem.plans')),expected);assert.deepEqual(json(r,'party.buildSystem.permanent'),expectedPermanent);
- assert.deepEqual(json(r,'playerHero().gems'),legacy.members[0].gems);assert.deepEqual(json(r,'state.bag.map(g=>g.id)'),legacy.members.flatMap(h=>h.bag.map(g=>g.id)));
- assert.equal(r.run('JSON.stringify(legacy)'),original);assert.equal(r.run('partyMember(10).name'),legacy.members[1].name);
- for(const id of ['team-1','team-2','team-3','team-2']){r.ctx.id=id;r.run('switchTeamPlan(id);loadParty(packParty());');assert.deepEqual(canonicalPlans(json(r,'party.buildSystem.plans')),expected);}
+ const initial=canonicalPlans(json(r,'party.buildSystem.plans')),system=json(r,'__EMBERWILD_SKILLS.system()');
+ assertLegacyRetained(initial,legacy.buildSystem.plans,system);
+ const permanent=json(r,'party.buildSystem.permanent');
+ for(const [k,v] of Object.entries(legacy.buildSystem.permanent.unlocks))assert.equal(permanent.unlocks[k],v,'existing permanent unlock preserved: '+k);
+ assert.deepEqual(json(r,'state.bag.map(g=>g.id)'),legacy.members.flatMap(h=>h.bag.map(g=>g.id)));
+ assert.equal(r.run('JSON.stringify(legacy)'),original);
+ assert.equal(r.run('partyMember(10).name'),legacy.members[1].name);
+ const gems=json(r,'playerHero().gems'),budget=json(r,'__EMBERWILD_TEAMS.budgets()');
+ for(const id of ['team-1','team-2','team-3','team-2']){
+  r.ctx.id=id;r.run('switchTeamPlan(id);loadParty(packParty());');
+  assert.deepEqual(canonicalPlans(json(r,'party.buildSystem.plans')),initial,'plan data stable across switch/reload '+id);
+  assert.deepEqual(json(r,'playerHero().gems'),gems,'no duplicate gems '+id);
+  assert.deepEqual(json(r,'__EMBERWILD_TEAMS.budgets()'),budget,'no duplicate points '+id);
+ }
  assert.deepEqual(r.errors,[]);
 });
-test('exact browser boot bytes reload safely and repeated import/save never grants points, skills or extra gem instances',()=>{
- const r=loadRuntime(root,'index.html',{'emberwild-save-v1':JSON.stringify(legacy)}),expected=expectedPlans(r);
- assert.equal(r.run('Boolean(party)'),true);assert.equal(r.run('globalThis.__EMBERWILD_BOOT_SAVE_ERROR??null'),null);assert.deepEqual(canonicalPlans(json(r,'party.buildSystem.plans')),expected);
+test('exact browser boot bytes reload without duplicating progression or skill grants',()=>{
+ const r=loadRuntime(root,'index.html',{'emberwild-save-v1':JSON.stringify(legacy)});
+ assert.equal(r.run('Boolean(party)'),true);
+ assert.equal(r.run('globalThis.__EMBERWILD_BOOT_SAVE_ERROR??null'),null);
+ const expected=canonicalPlans(json(r,'party.buildSystem.plans'));
+ assertLegacyRetained(expected,legacy.buildSystem.plans,json(r,'__EMBERWILD_SKILLS.system()'));
  const before=json(r,'__EMBERWILD_TEAMS.budgets()'),gems=json(r,'playerHero().gems'),permanent=json(r,'party.buildSystem.permanent');
- try{r.run('for(let i=0;i<3;i++){loadParty(packParty());save();}');}
- catch(error){
-  const detail=json(r,'party.buildSystem.plans.map(p=>({id:p.id,job:p.job,active:p.active,procSlots:p.procSlots,supportSlots:p.supportSlots,loadout:p.skillLoadout,skillCount:p.skills.length,activeLearned:p.active.map(i=>i===null?null:p.skills[i]),types:p.active.map(i=>i===null?null:CLASSES[p.job]?.skills[i]?.[1])}))');
-  console.log('SKILL_RELOAD_DIAGNOSTIC',JSON.stringify(detail));throw error;
- }
- assert.deepEqual(json(r,'__EMBERWILD_TEAMS.budgets()'),before);assert.deepEqual(json(r,'playerHero().gems'),gems);assert.deepEqual(json(r,'party.buildSystem.permanent'),permanent);
- const cold=loadRuntime(root,'index.html',Object.fromEntries(r.values));assert.deepEqual(canonicalPlans(json(cold,'party.buildSystem.plans')),expected);assert.deepEqual(cold.errors,[]);assert(!cold.warnings.some(s=>s.includes('載入失敗')));
+ r.run('for(let i=0;i<3;i++){loadParty(packParty());save();}');
+ assert.deepEqual(canonicalPlans(json(r,'party.buildSystem.plans')),expected);
+ assert.deepEqual(json(r,'__EMBERWILD_TEAMS.budgets()'),before);
+ assert.deepEqual(json(r,'playerHero().gems'),gems);
+ assert.deepEqual(json(r,'party.buildSystem.permanent'),permanent);
+ const cold=loadRuntime(root,'index.html',Object.fromEntries(r.values));
+ assert.deepEqual(canonicalPlans(json(cold,'party.buildSystem.plans')),expected);
+ assert.deepEqual(cold.errors,[]);
+ assert(!cold.warnings.some(s=>s.includes('載入失敗')));
 });
 test('migration still rejects malformed, over-budget and out-of-range data before replacing the current party',()=>{
  const r=loadRuntime(root);r.run('start(0);closeModal();globalThis.liveParty=party;');const before=json(r,'packParty()');
