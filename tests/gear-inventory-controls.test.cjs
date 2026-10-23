@@ -36,7 +36,10 @@ test('fold state survives redraw; sortable attributes are limited to common stat
  assert.match(html,/class="gear-control-fold" open ontoggle="setGearInventoryFold\('filters'/);
  assert.match(html,/class="gear-control-fold" open ontoggle="setGearInventoryFold\('sort'/);
  for(const key of ['atk','def','hp'])assert(html.includes('<option value="'+key+'"'));
- assert(!html.includes('<option value="elementResistPct:'));
+ const sortOptions=html.match(/<select aria-label="裝備排序"[^>]*>([\s\S]*?)<\/select>/)?.[1]||'';
+ assert(sortOptions.includes('<option value="atk"'));
+ assert(!sortOptions.includes('<option value="elementResistPct:'),'rare attributes are filterable, not sortable');
+ assert(html.includes('<option value="elementResistPct:'),'advanced filters still support rare attributes');
  assert.equal(r.run('setGearInventorySort("elementResistPct:fire::")'),false);
  assert.equal(r.run('__EMBERWILD_GEAR_INVENTORY.sort().key'),'atk');
  assert.deepEqual(r.errors,[]);
