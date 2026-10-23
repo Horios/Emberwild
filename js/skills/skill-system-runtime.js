@@ -33,6 +33,16 @@
   if(!h||!system)return h;
   if(companion(h)){
    const list=system.definitions.filter(sk=>learned(h,sk));
+   // New append-only companion skills can be projected beyond old saved arrays.
+   // Only mark skills the companion's validated ownership rules actually unlock.
+   // Do not reclassify unknown or malformed persisted values as learned.
+   for(const sk of list){
+    const field=sk.adapter.kind==='core'?'skills':sk.adapter.kind==='support'?'supportLevels':null;
+    const values=field&&h[field],i=sk.adapter.index;
+    if(!Array.isArray(values)||!Number.isInteger(i)||i<0)continue;
+    while(values.length<=i)values.push(0);
+    values[i]=1;
+   }
    h.active=list.filter(sk=>sk.type==='active').map(sk=>sk.adapter.index);h.procSlots=list.filter(sk=>sk.type==='proc').map(sk=>sk.adapter.index);h.supportSlots=list.filter(sk=>sk.type==='support').map(sk=>sk.adapter.index);
    return h;
   }
