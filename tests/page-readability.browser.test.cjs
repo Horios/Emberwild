@@ -38,9 +38,12 @@ test('Chromium: equipment uses one compact protagonist header and keeps real equ
     const widths=await p.evaluate(()=>({overview:document.querySelector('.worn-overview').clientWidth,detail:document.querySelector('.worn-player-equipment').getBoundingClientRect().width}));
     assert(widths.detail>=widths.overview-2);
     await p.locator('[data-equip-position="0"]').click();
-    await p.locator('[data-gear-id="'+ids.gear+'"]').waitFor();
-    await p.locator('[data-gear-id="'+ids.gear+'"]').click();
-    await p.locator('#modal').getByRole('button',{name:'確認穿戴',exact:true}).click();
+    const candidate=p.locator('.worn-candidate-list [data-item-gear="'+ids.gear+'"]');
+    await candidate.waitFor({state:'visible'});
+    await candidate.click();
+    // Empty slots equip immediately; replacing worn gear opens comparison.
+    if(await p.locator('#modal').evaluate(el=>el.open))
+      await p.locator('#modal').getByRole('button',{name:'確認穿戴',exact:true}).click();
     assert.equal(await p.evaluate(()=>playerHero().equipped[0]),ids.gear);
     await p.locator('.worn-slot').first().getByRole('button',{name:'卸下',exact:true}).click();
     assert.equal(await p.evaluate(()=>playerHero().equipped[0]),null);
