@@ -30,14 +30,20 @@ function battleLogRowsHTML(){
  return Array.from({length:blanks},()=>'<div class="battle-log-line battle-log-empty" aria-hidden="true">&nbsp;</div>').join('')+ordered.map(e=>`<div class="battle-log-line ${battleLogEntryClass(e)}" data-event-type="${e.type}">${battleLogTextHTML(e)}</div>`).join('');
 }
 
+function battleLogScrollSurface(stream){
+ const outer=stream?.closest?.('#mobileJournalBody');
+ return outer&&getComputedStyle(outer).display==='block'?outer:stream;
+}
 function isBattleLogAtBottom(stream){
- return !stream||stream.scrollHeight-stream.clientHeight-stream.scrollTop<=2;
+ const surface=battleLogScrollSurface(stream);
+ return !surface||surface.scrollHeight-surface.clientHeight-surface.scrollTop<=2;
 }
 function ensureBattleLogScrollState(stream){
  if(!stream||stream.dataset.scrollStateReady==='1')return;
  stream.dataset.scrollStateReady='1';
  stream.dataset.autoScroll=battleReportPaused?'0':'1';
- stream.addEventListener('scroll',()=>{
+ for(const surface of [stream,stream.closest?.('#mobileJournalBody')].filter(Boolean))surface.addEventListener('scroll',()=>{
+  if(battleLogScrollSurface(stream)!==surface)return;
   const follow=isBattleLogAtBottom(stream)?'1':'0';
   if(battleReportPaused)stream.dataset.reportAutoScroll=follow;
   else stream.dataset.autoScroll=follow;
@@ -48,7 +54,7 @@ function forceBattleLogBottom(stream){
  ensureBattleLogScrollState(stream);
  if(battleReportPaused)return;
  stream.dataset.autoScroll='1';
- const pin=()=>{if(!battleReportPaused&&stream.isConnected&&stream.dataset.autoScroll==='1')stream.scrollTop=Math.max(0,stream.scrollHeight-stream.clientHeight);};
+ const pin=()=>{if(!battleReportPaused&&stream.isConnected&&stream.dataset.autoScroll==='1')battleLogScrollSurface(stream).scrollTop=Math.max(0,battleLogScrollSurface(stream).scrollHeight-battleLogScrollSurface(stream).clientHeight);};
  pin();
  queueMicrotask(pin);
  requestAnimationFrame(()=>{pin();requestAnimationFrame(pin);});
@@ -64,7 +70,7 @@ function appendBattleLogLine(t){
  document.querySelectorAll('.battle-log-stream').forEach(stream=>{
   ensureBattleLogScrollState(stream);
   const shouldPin=stream.dataset.autoScroll!=='0';
-  const oldScrollTop=stream.scrollTop;
+  const oldScrollTop=battleLogScrollSurface(stream).scrollTop;
   const blank=stream.querySelector('.battle-log-empty');if(blank)blank.remove();
   const line=document.createElement('div');line.className='battle-log-line '+battleLogEntryClass(t);line.dataset.eventType=t.type;line.innerHTML=battleLogTextHTML(t);stream.appendChild(line);
   const real=[...stream.children].filter(el=>!el.classList.contains('battle-log-empty'));
@@ -76,8 +82,8 @@ function appendBattleLogLine(t){
    // position they chose. Do not compensate for old rows pruned from the top,
    // otherwise several new combat messages can walk scrollTop all the way to 0.
    const restore=()=>{
-    const max=Math.max(0,stream.scrollHeight-stream.clientHeight);
-    stream.scrollTop=Math.min(oldScrollTop,max);
+    const surface=battleLogScrollSurface(stream),max=Math.max(0,surface.scrollHeight-surface.clientHeight);
+    surface.scrollTop=Math.min(oldScrollTop,max);
     stream.dataset.autoScroll='0';
    };
    restore();
@@ -95,13 +101,13 @@ function syncBattleLogHeader(live){if(battleReportPaused)return;const tag=live?.
 function markBattleLogGeneration(live){if(live)live.dataset.logGeneration=String(battleLogGeneration);}
 function captureBattleLogScroll(live){
  const stream=live?.querySelector?.('.battle-log-stream');
- return stream?{stream,top:stream.scrollTop,left:stream.scrollLeft,autoScroll:stream.dataset.autoScroll}:null;
+ return stream?{stream,top:battleLogScrollSurface(stream).scrollTop,left:battleLogScrollSurface(stream).scrollLeft,autoScroll:stream.dataset.autoScroll}:null;
 }
 function restoreBattleLogScroll(position){
  if(!position?.stream.isConnected)return;
  const {stream,top,left,autoScroll}=position;
  ensureBattleLogScrollState(stream);
- stream.scrollLeft=left;
+ battleLogScrollSurface(stream).scrollLeft=left;
  if(!battleReportPaused&&autoScroll!=='0')forceBattleLogBottom(stream);
- else{stream.scrollTop=Math.min(top,Math.max(0,stream.scrollHeight-stream.clientHeight));stream.dataset.autoScroll=autoScroll??'0';}
+ else{const surface=battleLogScrollSurface(stream);surface.scrollTop=Math.min(top,Math.max(0,surface.scrollHeight-surface.clientHeight));stream.dataset.autoScroll=autoScroll??'0';}
 }

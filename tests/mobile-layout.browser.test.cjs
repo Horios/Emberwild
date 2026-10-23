@@ -116,9 +116,11 @@ test('Responsive: title, creation, utility dialogs and desktop layout stay usabl
   assert.equal(await p.locator('.mobile-journal-toggle').isVisible(),false);
   assert.equal(await p.locator('.mobile-more-toggle').isVisible(),false);
   assert.equal(await p.locator('#mobileJournalBody').isVisible(),true);
+  await p.evaluate(()=>document.querySelectorAll('aside nav details[data-nav-group]').forEach(d=>d.open=true));
   assert.equal(await p.locator('aside nav [data-page]:visible').count(),navPages.length);
   const order=await p.locator('aside nav [data-page]').evaluateAll(nodes=>nodes.map(e=>({id:e.dataset.page,y:e.getBoundingClientRect().y})).sort((a,b)=>a.y-b.y).map(e=>e.id));
-  assert.deepEqual(order,navPages.map(([id])=>id));
+  const designed=await p.evaluate(()=>EmberwildNavigation.design.groups.flatMap(g=>g.pages.map(p=>p.id)));
+  assert.deepEqual(order,designed,'desktop navigation follows the configured tree');
   const rects=await p.evaluate(()=>['aside','main','#globalBattleJournal'].map(s=>{const r=document.querySelector('.layout').querySelector(s).getBoundingClientRect();return {x:r.x,right:r.right};}));
   assert(rects[0].right<=rects[1].x&&rects[1].right<=rects[2].x,'desktop retains three columns');
   await p.evaluate(()=>returnToTitle());assert.equal(await p.locator('.mobile-more-toggle').count(),0);
@@ -134,24 +136,25 @@ test('Mobile: expedition settings, readable touch controls and skill details are
   const banner=await p.locator('#preview-build-banner').boundingBox(),utilities=await p.locator('#utilityNavigation').boundingBox();
   assert(banner.y+banner.height<=utilities.y,'preview label does not cover utility buttons');
   await p.evaluate(()=>setTab('battle'));
-  assert.equal(await p.locator('.mobile-settings-body').isVisible(),false);
+  assert.equal(await p.locator('.exploration-secondary').evaluate(d=>d.open),false);
   const layout=await p.evaluate(()=>{const card=document.querySelector('.expedition-control-card'),action=card.querySelector('.exploration-primary-actions button');return {settings:card.getBoundingClientRect().top,battle:document.querySelector('.party-combat').getBoundingClientRect().top,start:action.getBoundingClientRect().toJSON(),controls:card.getBoundingClientRect().toJSON()};});
   assert(layout.settings<layout.battle,'settings precede the battle roster');assert(layout.start.height>=40,'exploration start control remains touchable');assert(layout.start.left>=layout.controls.left-1&&layout.start.right<=layout.controls.right+1,'start control stays inside panel');
   for(const viewport of [{width:320,height:640},{width:390,height:844},{width:844,height:390}]){
    await p.setViewportSize(viewport);
-   await p.locator('.mobile-settings-toggle').click();
-   assert.equal(await p.locator('.mobile-settings-body').isVisible(),true);
+   await p.locator('.exploration-secondary>summary').click();
+   assert.equal(await p.locator('.exploration-secondary').evaluate(d=>d.open),true);
    await fits(p,'expanded settings '+viewport.width);
    await p.locator('.control-row select[aria-label="探索難度"]').selectOption('1');
    await p.waitForFunction(()=>party.difficulty===1&&!isEmberwildUIInteracting());
    await p.evaluate(()=>render());
-   assert.equal(await p.locator('.mobile-settings-body').isVisible(),true);
+   assert.equal(await p.locator('.exploration-secondary').evaluate(d=>d.open),true);
    for(const button of ['.heal-auto-settings-button','.battle-effects-bar button']){
     assert(await p.locator(button).evaluate(e=>e.getBoundingClientRect().height>=40),button+' touch height');
    }
-   await p.locator('.mobile-settings-toggle').click();
+   await p.locator('.exploration-secondary>summary').click();
   }
   await p.setViewportSize({width:390,height:844});
+  await p.locator('.exploration-secondary>summary').click();
   await p.locator('.heal-auto-settings-button').click();
   assert.equal(await p.locator('#modal').isVisible(),true);
   const healing=await p.locator('#modal').boundingBox();assert(healing.x>=0&&healing.x+healing.width<=390);
@@ -166,8 +169,8 @@ test('Mobile: expedition settings, readable touch controls and skill details are
   await p.waitForFunction(()=>{const e=document.querySelector('[data-team-skill-detail="0:core:0"]'),m=document.querySelector('main');if(!e)return false;const d=e.getBoundingClientRect(),r=m.getBoundingClientRect();return d.top>=r.top&&d.bottom<=r.bottom;});
   assert.deepEqual(await p.evaluate(()=>playerHero().skills),skillsBefore,'viewing a skill does not learn it');
   await p.setViewportSize({width:1440,height:900});await p.evaluate(()=>setTab('battle'));
-  assert.equal(await p.locator('.mobile-settings-toggle').isVisible(),false);
-  assert.equal(await p.locator('.mobile-settings-body').isVisible(),true,'desktop settings always visible');
+  assert.equal(await p.locator('.expedition-control-card').isVisible(),true,'desktop exploration controls remain visible');
+  assert.equal(await p.locator('.exploration-secondary>summary').isVisible(),true,'difficulty controls remain discoverable');
   assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
