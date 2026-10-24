@@ -6,6 +6,14 @@ const navPages=[['battle','battle'],['statistics','statistics'],['shop','shop'],
 async function start(page){
  await page.evaluate(()=>{selectSaveSlot(1);start(0);clearInterval(timer);closeModal();recruitCompanion(10);closeModal();recruitCompanion(12);closeModal();});
  await page.waitForTimeout(60);await page.evaluate(()=>closeModal());
+ // A real, saved offline receipt is modal and intentionally intercepts input.
+ // UI-layout tests must acknowledge it, not bypass pointer-event checks.
+ await page.waitForFunction(()=>!EmberwildOffline.busy,{},{timeout:30000});
+ const offline=await page.evaluate(()=>{const el=document.getElementById('offline-settlement'),c=party?.offlineExploration;return {visible:!!el&&!el.hidden,complete:!!c?.receipt?.complete,failed:EmberwildOffline.failed};});
+ if(offline.visible){
+  assert(offline.complete&&!offline.failed,'unexpected unfinished offline settlement during UI setup: '+JSON.stringify(offline));
+  assert.equal(await page.evaluate(()=>acknowledgeOfflineExploration()),true,'acknowledge saved offline receipt before UI interactions');
+ }
 }
 async function fits(page,label){
  const b=await page.evaluate(()=>{
