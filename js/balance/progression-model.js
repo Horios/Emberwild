@@ -126,7 +126,7 @@
       "xpCurve": {
         "base": 24,
         "linear": 18,
-        "quadratic": 6,
+        "quadratic": 8,
         "multiplierBase": 1,
         "multiplierPerLevel": 0
       },

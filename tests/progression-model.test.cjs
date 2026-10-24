@@ -17,11 +17,11 @@ test('LV30→31 has no awakening step and low-attack builds can damage every ord
   }
   for(let l=1;l<=60;l++)for(const c of curve.defaults.classes){const v=curve.naturalStats(c,l),e=curve.monsterStats(s,l,'normal',2);assert(v.atk-e.def*.55>1);}
 });
-test('Actual three-person XP share keeps the final level below thirty ordinary encounters',()=>{
-  const s=settings();assert.equal(curve.requiredXp(s,1),48);assert.equal(curve.requiredXp(s,59),21972);
+test('Three-person XP growth requires increasingly more encounters at higher levels',()=>{
+  const s=settings();assert.equal(curve.requiredXp(s,1),50);assert.equal(curve.requiredXp(s,59),28934);
   assert.equal(curve.enemyXp(s,59),549);assert.equal(curve.xpShare(549,3),183);
-  assert(curve.requiredXp(s,59)/curve.xpShare(curve.enemyXp(s,59),3)/4.5<30);
-  let previous=0;for(let l=1;l<60;l++){const fights=curve.requiredXp(s,l)/curve.xpShare(curve.enemyXp(s,l),3)/4.5;assert(fights>=previous);previous=fights;}
+  assert(curve.requiredXp(s,59)/curve.xpShare(curve.enemyXp(s,59),3)/4.5>35);
+  let previous=0,previousIncrease=0;for(let l=1;l<60;l++){const share=curve.xpShare(curve.enemyXp(s,l),3),fights=curve.requiredXp(s,l)/share/4.5;const oldFights=(24+18*l+6*l*l)/share/4.5,increase=fights-oldFights;assert(fights>=previous);assert(increase>=previousIncrease-1e-10,`non-growing increase at LV${l}`);previous=fights;previousIncrease=increase;}
   assert(curve.enemyXp(s,59,'boss')>curve.enemyXp(s,59,'elite')&&curve.enemyXp(s,59,'elite')>curve.enemyXp(s,59));
 });
 test('Low-level foes lose EXP before party sharing, with full rewards on equal or stronger foes',()=>{
