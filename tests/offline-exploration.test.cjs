@@ -105,5 +105,5 @@ test('multi-hour replay paints progress before work and reports simulation curso
  let ticks=0;r.ctx.performance.now=()=>++ticks*20;
  for(let i=0;i<6;i++){callbacks.shift()();await new Promise(setImmediate);}assert.match(box.innerHTML,/max="10800000"/);const value=Number(box.innerHTML.match(/value="(\d+)"/)[1]);assert(value>0&&value<10800000);assert.equal(value,r.run('party.offlineExploration.lastAt')-start);
  r.ctx.performance.now=()=>0;r.ctx.setTimeout=fn=>setImmediate(fn);while(callbacks.length){callbacks.shift()();await new Promise(setImmediate);}await pending;
- assert.equal(r.run('EmberwildOffline.failed'),false);assert.equal(r.run('party.offlineExploration.lastAt'),r.now);assert.match(box.innerHTML,/實際離線/);assert.doesNotMatch(box.innerHTML,/<progress/);assert.deepEqual(r.errors,[]);
+ assert.equal(r.run('EmberwildOffline.failed'),false);assert.equal(r.run('party.offlineExploration.lastAt'),r.now);assert.match(box.innerHTML,/計入離線/);assert.match(box.innerHTML,/有效掛機/);assert.doesNotMatch(box.innerHTML,/<progress/);assert.deepEqual(r.errors,[]);
 });
