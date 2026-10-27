@@ -84,7 +84,7 @@
   for(const node of nodes.values())node.remove();
  }
  function sync({animate=true}={}){
-  if(globalThis.__EMBERWILD_OFFLINE_SILENT)return;
+  if(globalThis.__EMBERWILD_OFFLINE_SILENT||document.hidden)return;
   const summary=document.getElementById('battleSummary'),roster=document.getElementById('battleEnemyIcons');
   if(!party||!summary?.isConnected&&!roster?.isConnected)return;
   const s=snapshot(),event=sample(s,animate);

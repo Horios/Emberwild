@@ -11,6 +11,9 @@ test('combat icons and aggregate HP update in place for damage, healing, revive,
  const g=await setup(),p=g.page;
  try{
   assert.equal(await hp(p),'475 / 1,000');assert.equal(await p.locator('[data-summary-percent]').textContent(),'47.5%');assert.equal(await p.locator('#battleEnemyIcons svg').count(),2);
+  await p.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});foes[1].hp=449;EmberwildBattleSummary.sync();});assert.equal(await hp(p),'475 / 1,000');
+  await p.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});EmberwildBattleSummary.sync();});assert.equal(await hp(p),'474 / 1,000');
+  await p.evaluate(()=>{foes[1].hp=450;EmberwildBattleSummary.sync();});
   await p.evaluate(()=>{globalThis.savedIcon=$('battleEnemyIcons').firstElementChild;globalThis.savedArt=savedIcon.firstElementChild;globalThis.savedSummary=$('battleSummary');foes[0].hp=0;EmberwildBattleSummary.sync();});
   assert.equal(await hp(p),'450 / 1,000');assert.equal(await p.locator('[data-enemy-id="summary-a"].is-dead').count(),1);
   await p.evaluate(()=>{foes[1].hp=600;EmberwildBattleSummary.sync();});assert.equal(await hp(p),'600 / 1,000');assert.equal(await state(p),'敵方治療');assert.equal(await p.locator('[data-enemy-id="summary-b"]').getAttribute('data-effect'),'healed');
