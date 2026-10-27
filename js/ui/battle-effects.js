@@ -101,7 +101,7 @@
   let entries=activeNodes.get(node);if(!entries){entries=new Map();activeNodes.set(node,entries);}
   const type=event.type,channel=type==='break'?'break':['heal','regen','potion','drain'].includes(type)?'recovery':['shield','absorb','break','dissolve','shield-impact'].includes(type)?'shield':type==='hit'?'hit':['buff','debuff'].includes(type)?type:type==='cast'?'cast':'action';
   if(entries.has(channel)){const old=entries.get(channel);clearTimeout(old.timer);old.element.remove();entries.delete(channel);}
-  const element=document.createElement('span');element.className='battle-fx battle-fx-'+type;
+  const element=document.createElement('span');element.className='battle-fx battle-fx-'+type+(node.dataset.combatId?' battle-fx-health':'');
   element.dataset.fx=type;element.dataset.detail=mode();element.setAttribute('aria-hidden','true');
   const base=['hit','absorb','shield-impact','evade','resist','regen'].includes(type)?270:['slash','ranged'].includes(type)?380:510;
   const duration=Math.max(100,Math.round(base/Math.max(1,battleRate)*(motion.matches?.65:1)));
@@ -120,10 +120,12 @@
  }
  function sync(s){
   if(preference==='off'||!visible()||s.result||owner&&owner!==party||encounter&&encounter!==foes){clear();return;}
-  for(const node of activeNodes.keys())if(!node.isConnected||node.classList.contains('is-dead'))cleanNode(node);
+  for(const node of activeNodes.keys())if(!node.isConnected||node.classList.contains('is-dead')||node.classList.contains('fallen'))cleanNode(node);
   for(const node of markedNodes)if(!node.isConnected){node.querySelector('.battle-fx-status')?.remove();delete node.dataset.fxShield;markedNodes.delete(node);}
   const rows=[...s.allies,...s.units],byId=new Map(rows.map(row=>[String(row.id),row]));
   const nodes=new Map();document.querySelectorAll('#battleAllyIcons > [data-hero-id],#battleEnemyIcons > [data-enemy-id]').forEach(node=>nodes.set(node.dataset.heroId||node.dataset.enemyId,node));
+  const healthNodes=new Map();document.querySelectorAll('.squad-field .unit[data-combat-id]').forEach(node=>healthNodes.set(node.dataset.combatId,node));
+  const playUnit=(key,event,sourceKey)=>{for(const surfaces of [nodes,healthNodes]){const node=surfaces.get(key);if(node)play(node,event,surfaces.get(sourceKey));}};
   const currentStatuses=statuses();
   for(const [key,node] of nodes){
    const row=byId.get(key);let badge=node.querySelector('.battle-fx-status');
@@ -141,10 +143,10 @@
   // Per-unit event channels are bounded; preserve insertion/resolution order.
   const sources=new Set();
   for(const event of batch.events.values()){
-   const row=byId.get(event.target),node=nodes.get(event.target);if(!row?.alive||!node)continue;
-   const source=nodes.get(event.source);
-   if(source&&event.source!==event.target&&!sources.has(event.source)&&['slash','ranged','fire','ice','lightning','wind','light','shadow','magic','impact','evade','absorb'].includes(event.type)&&byId.get(event.source)?.alive){sources.add(event.source);play(source,{type:['slash','ranged','impact'].includes(event.type)?'attack':'cast'});}
-   play(node,event,source);
+   const row=byId.get(event.target);if(!row?.alive)continue;
+   const source=nodes.get(event.source)||healthNodes.get(event.source);
+   if(source&&event.source!==event.target&&!sources.has(event.source)&&['slash','ranged','fire','ice','lightning','wind','light','shadow','magic','impact','evade','absorb'].includes(event.type)&&byId.get(event.source)?.alive){sources.add(event.source);playUnit(event.source,{type:['slash','ranged','impact'].includes(event.type)?'attack':'cast'});}
+   playUnit(event.target,event,event.source);
   }
  }
  function wrap(name,context){const base=globalThis[name];if(typeof base!=='function')return;globalThis[name]=function(...args){if(!frame)return base.apply(this,args);return scope(context(...args),()=>base.apply(this,args));};}
@@ -162,7 +164,7 @@
  for(const name of ['resetEncounter','resetSession','loadParty','spawnGroup','refillParty']){const base=globalThis[name];if(typeof base==='function')globalThis[name]=function(...args){clear();return base.apply(this,args);};}
  globalThis.EmberwildBattleEffects={begin,end,scope,result,sync,clear,get capturing(){return !!frame;},get preference(){return preference;},get pendingEvents(){return pending?[...pending.events.values()].map(e=>({...e})):[];},get activeCount(){return [...activeNodes.values()].reduce((n,m)=>n+m.size,0);}};
  globalThis.setBattleEffects=function(value){if(!choices.includes(value))return false;preference=value;clear();try{localStorage.setItem(storageKey,value);}catch{toast('特效已套用，但瀏覽器無法保存設定。');}document.querySelectorAll('[data-battle-effects]').forEach(select=>select.value=value);EmberwildBattleSummary.sync({animate:false});return true;};
- globalThis.battleEffectsOptionsView=()=>'<section class="panel option-row"><div><h2>戰鬥特效</h2><p class="small">調整探索圖示動畫；保留目前行動者金框。依戰鬥倍速縮短，減少動態效果時自動簡化。</p></div><select data-battle-effects aria-label="戰鬥特效" onchange="setBattleEffects(this.value)">'+choices.map((value,i)=>'<option value="'+value+'" '+(preference===value?'selected':'')+'>'+['完整','簡化','關閉'][i]+'</option>').join('')+'</select></section>';
+ globalThis.battleEffectsOptionsView=()=>'<section class="panel option-row"><div><h2>戰鬥特效</h2><p class="small">調整探索圖示與血條區塊動畫；保留目前行動者金框。依戰鬥倍速縮短，減少動態效果時自動簡化。</p></div><select data-battle-effects aria-label="戰鬥特效" onchange="setBattleEffects(this.value)">'+choices.map((value,i)=>'<option value="'+value+'" '+(preference===value?'selected':'')+'>'+['完整','簡化','關閉'][i]+'</option>').join('')+'</select></section>';
  const modal=document.getElementById('modal');if(modal)new MutationObserver(()=>{if(modal.open)clear();}).observe(modal,{attributes:true,attributeFilter:['open']});
  addEventListener('visibilitychange',clear);addEventListener('pagehide',clear);
  addEventListener('storage',e=>{if(e.key===storageKey||e.key===null){preference=choices.includes(e.newValue)?e.newValue:'full';clear();}});

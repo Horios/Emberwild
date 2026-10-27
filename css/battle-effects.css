@@ -43,3 +43,16 @@
 @media(prefers-reduced-motion:reduce){.battle-fx>svg{animation-name:fx-pulse!important;filter:none}.battle-fx-projectile{display:none}.battle-fx{transform:none!important}}
 
 .battle-enemy-icon[data-fx-shield="true"]>.enemy-icon-art{border-radius:50%;box-shadow:inset 0 0 0 1px #72d9ff85,inset 0 0 5px #72d9ff25}
+
+/* Mirror each resolved event on the unit's HP information area. The frame and
+   color wash expand across the card; glyphs retain their aspect ratio. */
+.squad-field .unit[data-combat-id]{position:relative;isolation:isolate}
+.squad-field .unit>.battle-fx-health{inset:1px 1px auto;height:76px;max-height:100%;z-index:1;border-width:2px;border-radius:5px;overflow:hidden}
+.squad-field .unit>.battle-fx-health>svg{inset:1px 12px auto auto;width:62px;height:calc(100% - 4px);max-height:62px;max-width:28%;opacity:.8}
+.squad-field .unit>.battle-fx-health>b{inset:3px 14px auto auto;left:auto;min-width:34px;font-size:11px;background:var(--panel)}
+.squad-field .unit>.battle-fx-health .battle-fx-projectile{left:auto;right:36px;top:30px}
+.squad-field .unit>.unit-title,.squad-field .unit>.unit-numbers,.squad-field .unit>.battle-health-bar{position:relative;z-index:2}
+.squad-field .unit>.battle-fx-health.battle-fx-hit{background:#ef5b512b}
+.squad-field .unit>.battle-fx-health.battle-fx-fire{background:linear-gradient(90deg,#ff834d10,#ff834d26)}
+.squad-field .unit>.battle-fx-health.battle-fx-ice{background:linear-gradient(90deg,#9ee7ff08,#9ee7ff23)}
+@media(max-width:900px){.squad-field .unit>.battle-fx-health{height:94px}.squad-field .unit>.battle-fx-health>svg{top:12px}}

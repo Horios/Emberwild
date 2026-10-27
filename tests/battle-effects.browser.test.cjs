@@ -21,7 +21,7 @@ test('actual hits, misses, AoE and shield outcomes reach only their own SVG icon
 });
 test('healing and coexisting buff/debuff/shield markers use party IDs and expire cleanly',async()=>{
  const g=await setup(),p=g.page;try{
-  assert.equal(await p.locator('#battleAllyIcons>div').count(),3);
+  assert.equal(await p.locator('#battleAllyIcons>[data-hero-id]').count(),3);
   await p.evaluate(()=>{for(const h of heroes())h.hp=1;fxCapture(()=>EmberwildBattleEffects.scope({mode:'skill'},()=>heroes()[1].hp+=10));});
   const target=await p.evaluate(()=>heroKey(heroes()[1]));assert.equal(await p.locator('#battleAllyIcons [data-hero-id="'+target+'"] [data-fx="heal"]').count(),1);assert.equal(await p.locator('#battleAllyIcons [data-fx="heal"]').count(),1);
   await p.clock.runFor(800);await p.evaluate(()=>fxCapture(()=>{applyPureShield(heroes()[1],300);__EMBERWILD_STATUS_TEST_API.apply({id:'fx-b',name:'強化',polarity:'buff',duration:2,modifiers:[{kind:'guard',value:.1}]},state,heroes()[1]);__EMBERWILD_STATUS_TEST_API.apply({id:'fx-d',name:'弱化',polarity:'debuff',duration:2,modifiers:[{kind:'weaken',value:.1}]},foes[0],heroes()[1]);}));
@@ -47,13 +47,68 @@ test('speed, reduced motion, settings persistence, bounded bursts, stale/dead ta
 test('desktop/mobile animation frames preserve icon boxes and readable HP; capture visual QA frames',async()=>{
  const g=await setup(),p=g.page;try{
   for(const size of [{width:1440,height:900},{width:390,height:844},{width:320,height:568}]){
-   await p.setViewportSize(size);await p.evaluate(()=>render());const before=await p.locator('#battleEnemyIcons>div').evaluateAll(ns=>ns.map(n=>({w:n.offsetWidth,h:n.offsetHeight})));
+   await p.setViewportSize(size);await p.evaluate(()=>render());const before=await p.locator('#battleEnemyIcons>[data-enemy-id]').evaluateAll(ns=>ns.map(n=>({w:n.offsetWidth,h:n.offsetHeight})));
    await p.evaluate(()=>{recordAction(heroKey(state),characterName(state),'技能');fxCapture(()=>foes.forEach(e=>resolveHit(e,50,state,'fire',false)));});await p.clock.runFor(100);
-   assert.deepEqual(await p.locator('#battleEnemyIcons>div').evaluateAll(ns=>ns.map(n=>({w:n.offsetWidth,h:n.offsetHeight}))),before);
+   assert.deepEqual(await p.locator('#battleEnemyIcons>[data-enemy-id]').evaluateAll(ns=>ns.map(n=>({w:n.offsetWidth,h:n.offsetHeight}))),before);
    assert.equal(await p.locator('#battleEnemyIcons .is-elite').count(),1);assert.equal(await p.locator('#battleAllyIcons .is-acting').count(),1);
    assert(await p.locator('[data-summary-hp]').isVisible());assert(await p.locator('#battleEnemyIcons').isVisible());
    await p.locator('#battleEnemyIcons').screenshot({path:'/tmp/emberwild-fx-icons-'+size.width+'.png'});await p.screenshot({path:'/tmp/emberwild-fx-'+size.width+'.png'});await p.clock.runFor(800);
   }
   await p.setViewportSize({width:1440,height:900});await p.evaluate(()=>{for(const h of heroes())h.hp=1;fxCapture(()=>{EmberwildBattleEffects.scope({mode:'skill'},()=>heroes()[1].hp+=10);applyPureShield(heroes()[0],300);});});await p.clock.runFor(100);await p.screenshot({path:'/tmp/emberwild-fx-recovery.png'});assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
+
+test('each resolved effect is mirrored once on the matching HP block, including same-name AoE and special outcomes',async()=>{
+ const g=await setup(),p=g.page;try{
+  async function check(code,expected,target='fx-1'){
+   await p.clock.runFor(800);
+   await p.evaluate(code=>{fxCapture(()=>{(0,eval)(code);});},code);
+   const both=await p.evaluate(()=>{
+    const collect=(selector,key)=>Object.fromEntries([...document.querySelectorAll(selector)].map(n=>[n.dataset[key],[...n.querySelectorAll(':scope > .battle-fx')].map(e=>e.dataset.fx).sort()]));
+    return {icons:{...collect('#battleAllyIcons>[data-hero-id]','heroId'),...collect('#battleEnemyIcons>[data-enemy-id]','enemyId')},health:collect('.squad-field .unit[data-combat-id]','combatId')};
+   });
+   assert.deepEqual(both.health,both.icons,code);
+   for(const type of expected)assert(both.health[target].includes(type),type+' on '+target);
+   for(const [key,types] of Object.entries(both.health))assert.equal(new Set(types).size,types.length,'no duplicate effect on '+key);
+   return both;
+  }
+  const hero=await p.evaluate(()=>heroKey(state));
+  for(const element of ['physical','fire','ice','wind','light','shadow'])await check(`resolveHit(foes[1],50,state,'${element}',false)`,[element==='physical'?'slash':element,'hit']);
+  await check(`EmberwildBattleEffects.scope({ranged:true},()=>resolveHit(foes[1],50,state,'physical',false))`,['ranged','hit']);
+  await check(`EmberwildBattleEffects.scope({mode:'damage',element:null},()=>foes[1].hp-=1)`,['impact','hit']);
+  const aoe=await check(`foes.forEach(e=>resolveHit(e,50,state,'fire',false))`,['fire','hit']);for(const key of ['fx-0','fx-1','fx-2'])assert(aoe.health[key].includes('fire'));
+  await check(`applyPureShield(state,10000)`,['shield'],hero);
+  await p.evaluate(()=>heroes().forEach(h=>h.shield=10000));const blocked=await check(`castEnemySharedSkill(foes[0],{name:'測試魔法',effect:'damage',element:'fire',activation:'active',power:1,maxTargets:1,meta:{}})`,[],hero);
+  assert(Object.values(blocked.health).some(types=>types.includes('absorb')));assert(!Object.values(blocked.health).some(types=>types.includes('hit')));
+  await p.evaluate(()=>{foes[1].shield=1;});await check(`resolveHit(foes[1],50,state,'fire',false)`,['absorb','break','fire','hit']);
+  await p.evaluate(()=>{state.shield=500;});await check(`EmberwildBattleEffects.scope({mode:'skill'},()=>state.shield=0)`,['dissolve'],hero);
+  await p.evaluate(()=>state.hp=1);
+  await check(`EmberwildBattleEffects.scope({mode:'skill'},()=>state.hp+=2)`,['heal'],hero);
+  await check(`EmberwildBattleEffects.scope({mode:'regen'},()=>state.hp+=2)`,['regen'],hero);
+  await check(`EmberwildBattleEffects.scope({mode:'damage'},()=>state.hp+=2)`,['drain'],hero);
+  await p.evaluate(()=>{state.hp=1;state.healingPotions.heal_small=3;state.healPotionCooldownRemaining=0;});await check(`useAutoHealingPotion(state)`,['potion'],hero);
+  await check(`__EMBERWILD_STATUS_TEST_API.apply({id:'hpfx-buff',name:'強化',tags:['modifier'],polarity:'buff',duration:3,modifiers:[{kind:'guard',value:.1}]},state,state)`,['buff'],hero);
+  await check(`__EMBERWILD_STATUS_TEST_API.apply({id:'hpfx-debuff',name:'弱化',tags:['modifier'],polarity:'debuff',duration:3,modifiers:[{kind:'weaken',value:.1}]},state,foes[1])`,['debuff']);
+  await p.evaluate(()=>foes[1].kind='boss');const resisted=await check(`__EMBERWILD_CONTROL_TEST_API.applyPolymorph(foes[1],500,{duration:3})`,['resist']);assert(!resisted.health['fx-1'].includes('debuff'));
+  await p.evaluate(()=>{const base=enemyBattleStats;enemyBattleStats=e=>({...base(e),evasion:1});});const dodged=await check(`resolveHit(foes[1],50,state,'fire',false)`,['evade']);assert(!dodged.health['fx-1'].includes('hit'));
+  await p.evaluate(()=>stopTeamExploration());assert.equal(await p.locator('.battle-fx').count(),0);assert.equal(await p.evaluate(()=>EmberwildBattleEffects.activeCount),0);assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
+
+test('HP block effects preserve layout and readable bars at desktop/mobile widths, and expire across redraw/encounter changes',async()=>{
+ const g=await setup(),p=g.page;try{
+  for(const width of [1440,390,320]){
+   await p.setViewportSize({width,height:900});await p.evaluate(()=>render());
+   const rects=()=>p.locator('.squad-field .unit[data-combat-id]').evaluateAll(ns=>ns.map(n=>({w:n.offsetWidth,h:n.offsetHeight})));
+   const before=await rects();await p.evaluate(()=>fxCapture(()=>resolveHit(foes[1],50,state,'fire',false)));assert.deepEqual(await rects(),before);
+   const card=p.locator('.squad-field .unit[data-combat-id="fx-1"]');await card.scrollIntoViewIfNeeded();await p.clock.runFor(100);
+   const box=await card.locator('.battle-fx-health[data-fx="fire"]').boundingBox(),cardBox=await card.boundingBox();assert(box.width>=cardBox.width-6&&box.height>=Math.min(70,cardBox.height-2),'effect spans HP information area: '+JSON.stringify({width,box,cardBox}));
+   const glyph=await card.locator('.battle-fx-health[data-fx="fire"]>svg').boundingBox();assert(glyph.y+glyph.height<=box.y+box.height+1,'effect glyph fits short HP blocks');
+   const bar=card.locator('.battle-health-bar');assert(await bar.isVisible());assert.equal(await bar.evaluate(n=>getComputedStyle(n).zIndex),'2');
+   await card.screenshot({path:'/tmp/emberwild-hpfx-'+width+'.png'});await p.clock.runFor(800);assert.equal(await card.locator('.battle-fx').count(),0);
+  }
+  await p.evaluate(()=>{fxCapture(()=>resolveHit(foes[0],50,state,'ice',false));render();EmberwildBattleSummary.sync();});await p.clock.runFor(800);assert.equal(await p.evaluate(()=>EmberwildBattleEffects.activeCount),0);
+  await p.evaluate(()=>{fxCapture(()=>resolveHit(foes[0],50,state,'fire',false));spawnGroup();render();});assert.equal(await p.locator('.battle-fx').count(),0);
+  await p.evaluate(()=>{setBattleEffects('off');fxCapture(()=>resolveHit(foes[0],50,state,'fire',false));});assert.equal(await p.locator('.battle-fx').count(),0);assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
