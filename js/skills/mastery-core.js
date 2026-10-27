@@ -212,7 +212,15 @@ function ensureGearWeaponType(g){
   else if(Number.isInteger(Number(g.job))&&DEFAULT_WEAPON_BY_JOB[Number(g.job)])g.weaponType=DEFAULT_WEAPON_BY_JOB[Number(g.job)];
   return g;
 }
-function migrateGearList(list){if(Array.isArray(list))for(const g of list)ensureGearWeaponType(g);}
+function migrateGearList(list){
+  if(!Array.isArray(list))return;
+  // Replay blocks inventory edits: only the appended tail can need migration.
+  const cache=globalThis.__EMBERWILD_OFFLINE_RULE_CACHE;
+  const lengths=cache?(cache.migratedGear??=new WeakMap()):null;
+  const start=lengths&&lengths.get(list)<=list.length?lengths.get(list):0;
+  for(let i=start;i<list.length;i++)ensureGearWeaponType(list[i]);
+  lengths?.set(list,list.length);
+}
 function migrateAllKnownWeapons(){
   for(const h of party?.members||[]){migrateGearList(h.bag);if(h.equipped)for(const id of h.equipped){if(!id)continue;ensureGearWeaponType(h.bag?.find(g=>g.id===id));}}
   migrateGearList(party?.sharedGear?.items);migrateGearList(state?.bag);

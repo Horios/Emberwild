@@ -93,13 +93,17 @@
  function quiet(fn){
   // Keep the modal DOM contract (dataset/classList) for boss reward cleanup,
   // while leaving replay dialogs detached and unable to pause the event loop.
-  const originals={render,note,toast,refreshGlobalJournal},fake=document.createElement('dialog');
+  const originals={render,note,toast,refreshGlobalJournal,GS},fake=document.createElement('dialog');
   fake.showModal=()=>{};fake.close=()=>{};
-  globalThis.__EMBERWILD_OFFLINE_SILENT=true;globalThis.__EMBERWILD_OFFLINE_RULE_CACHE={};render=()=>{};toast=()=>{};refreshGlobalJournal=()=>{};
+  globalThis.__EMBERWILD_OFFLINE_SILENT=true;globalThis.__EMBERWILD_OFFLINE_RULE_CACHE=jobOffline?(replayCache??={}):{};render=()=>{};toast=()=>{};refreshGlobalJournal=()=>{};
+  if(jobOffline){
+   const settings=globalThis.__EMBERWILD_OFFLINE_RULE_CACHE.settings??=new Map();
+   GS=(path,fallback)=>{if(!settings.has(path))settings.set(path,originals.GS(path,undefined));const value=settings.get(path);return value===undefined?fallback:value;};
+  }
   // Live ticks use this same event loop; only offline replay suppresses reports.
   if(jobOffline)note=()=>{};
   globalThis.__EMBERWILD_SIMULATION_MODAL=fake;
-  try{return fn();}finally{({render,note,toast,refreshGlobalJournal}=originals);globalThis.__EMBERWILD_SIMULATION_MODAL=null;globalThis.__EMBERWILD_OFFLINE_RULE_CACHE=null;globalThis.__EMBERWILD_OFFLINE_SILENT=false;}
+  try{return fn();}finally{({render,note,toast,refreshGlobalJournal,GS}=originals);globalThis.__EMBERWILD_SIMULATION_MODAL=null;globalThis.__EMBERWILD_OFFLINE_RULE_CACHE=null;globalThis.__EMBERWILD_OFFLINE_SILENT=false;}
  }
  function buffs(){return [...(party?.timedBoosts||[]),...party.members.flatMap(h=>api.ELEMENTAL_TYPES.flatMap(k=>api.buffRows(h[k])))];}
  function receipt(start,end){const p=playerHero();return {id:String(start)+'-'+String(end)+'-'+String(p.created),start,end,map:MAPS[party.map]?.name||'',stage:party.questChallenge?.name||(party.bossChallenge?.active?'BOSS 難關':'一般探索'),intervals:[],battles:0,effectiveMs:0,kills:0,xp:0,goldGained:0,goldSpent:0,items:{},consumed:{},gear:[],boosts:{},levels:party.members.map(h=>({key:memberKey(h),name:characterName(h),before:h.lv,after:h.lv})),complete:false,reason:'',stoppedAt:null};}
@@ -115,29 +119,30 @@
  }
  function captureResources(before){
   const r=clock()?.pendingReceipt;if(!r||r.complete)return null;
-  const h=playerHero();before??={items:{},after:{}};before.gold=h.gold;before.gained=r.goldGained;
-  stock(before.items);before.bag=h.bag;before.length=h.bag.length;return before;
+  const t=performance.now(),h=playerHero();before??={items:{},after:{}};before.gold=h.gold;before.gained=r.goldGained;
+  stock(before.items);before.bag=h.bag;before.length=h.bag.length;if(metrics)metrics.inventoryMs+=performance.now()-t;return before;
  }
  function collect(before){
   const r=clock()?.pendingReceipt;if(!before||!r||r.complete)return;
-  const h=playerHero(),delta=h.gold-before.gold-(r.goldGained-before.gained);r.goldGained+=Math.max(0,delta);r.goldSpent+=Math.max(0,-delta);
+  const t=performance.now(),h=playerHero(),delta=h.gold-before.gold-(r.goldGained-before.gained);r.goldGained+=Math.max(0,delta);r.goldSpent+=Math.max(0,-delta);
   const after=stock(before.after);
-  for(const k in before.items){const n=(after[k]||0)-(before.items[k]||0);if(n>0)r.items[k]=(r.items[k]||0)+n;else if(n<0){r.consumed??={};r.consumed[k]=(r.consumed[k]||0)-n;}}
+  for(const k in before.items){const n=(after[k]||0)-(before.items[k]||0);if(n>0)r.items[k]=(r.items[k]||0)+n;else if(n<0){r.consumed??={};r.consumed[k]=(r.consumed[k]||0)-n;if(analysis){analysis.bad=true;analysis.ready=false;}}}
   for(const k in after)if(!(k in before.items)&&after[k]>0)r.items[k]=(r.items[k]||0)+after[k];
   // Combat only appends through addGear (equipment and tokens). UI disposal is
   // blocked while replaying. Inspect just the appended tail, preserving order.
   // Retain ID comparison if a future event replaces the bag array.
   if(h.bag===before.bag){for(let i=before.length;i<h.bag.length;i++)r.gear.push(copy(h.bag[i]));}
   else {const ids=new Set(before.bag.map(g=>g.id));for(const g of h.bag)if(!ids.has(g.id))r.gear.push(copy(g));}
-  for(const l of r.levels)l.after=partyMember(l.key)?.lv??l.after;
+  for(const l of r.levels)l.after=partyMember(l.key)?.lv??l.after;if(metrics)metrics.inventoryMs+=performance.now()-t;
  }
  const award=awardXP;
  awardXP=function(...args){const h=playerHero(),level=h?.lv,xp=h?.xp,out=award(...args),r=clock()?.pendingReceipt;if(stepping&&jobOffline&&r&&!r.complete&&h){let gained=h.xp-xp;for(let lv=level;lv<h.lv;lv++)gained+=need(lv);r.xp+=Math.max(0,gained);}return out;};
  const reward=rewardGroupKill;
- rewardGroupKill=function(e){const eligible=e&&!e.rewarded,before=playerHero()?.gold||0,out=reward(e),r=clock()?.pendingReceipt;if(stepping&&jobOffline&&eligible&&e.rewarded&&r&&!r.complete){r.kills++;r.goldGained+=Math.max(0,playerHero().gold-before);}return out;};
+ rewardGroupKill=function(e){const started=performance.now(),eligible=e&&!e.rewarded,before=playerHero()?.gold||0,out=reward(e),r=clock()?.pendingReceipt;if(stepping&&jobOffline&&metrics)metrics.dropMs+=performance.now()-started;if(stepping&&jobOffline&&eligible&&e.rewarded&&r&&!r.complete){if(analysis){const k=e.monsterId+':'+e.kind;analysis.monsters[k]=(analysis.monsters[k]||0)+1;}r.kills++;r.goldGained+=Math.max(0,playerHero().gold-before);}return out;};
  const finalize=finalizeBattleStatistics;
  finalizeBattleStatistics=function(result){
-  const finished=!!activeBattleStat&&(result==='victory'||result==='wipe'),out=finalize(result),r=clock()?.pendingReceipt;
+  const finished=!!activeBattleStat&&(result==='victory'||result==='wipe'),deaths=activeBattleStat?.deaths?.length||0,out=finalize(result),r=clock()?.pendingReceipt;
+  if(stepping&&jobOffline&&analysis){if(result==='wipe'||deaths){analysis.deaths+=deaths;analysis.bad=true;analysis.ready=false;if(observed)observed.bad=true;}if(finished&&observed)observed.finished=true;}
   if(stepping&&jobOffline&&finished&&r){r.battles++;r.lastBattleAt=Date.now();}return out;
  };
  function hasRewards(r){return !!r&&(r.xp>0||r.goldGained>0||r.gear.length>0||Object.values(r.items).some(n=>n>0));}
@@ -180,17 +185,126 @@
    if(result.done){roundIterator=null;nextActionAt=Math.max(at+actionMs,roundStartedAt+roundMs);}else nextActionAt=at+actionMs;
   });}finally{stepping=false;}
  }
+ // Fast replay learns combat cost only. Every new encounter and every reward is
+ // still generated by spawnGroup/rewardGroupKill, never copied from sample loot.
+ const HOUR=3600000;
+ let analysis=null,observed=null,metrics=null,replayCache=null,modelSeed=0;
+ function sampleRandom(){modelSeed=(Math.imul(modelSeed,1664525)+1013904223)>>>0;return modelSeed/4294967296;}
+ function fastReason(reason){if(metrics)metrics.fallbacks[reason]=(metrics.fallbacks[reason]||0)+1;return false;}
+ function combatKey(){return JSON.stringify([party.map,party.difficulty,party.active,battleRate,party.members.map(h=>[memberKey(h),h.lv,h.job,h.advanced,h.stats,h.skills,h.active,h.procSlots,h.supportSlots,h.activeSkillEquipmentId,equipment(h),stats(h)]),buffs().filter(b=>b.enabled&&b.remainingMs>0).map(b=>[b.name,b.boostType,b.bonusPercent,b.effectPercent])]);}
+ function simpleCombat(){
+  if(party.questChallenge||party.bossChallenge?.active||isFinalMap(party.map))return 'special-stage';
+  // Bosses and custom skills can carry phase, status or progression dependencies.
+  if((worldMapConfig(party.map)?.bossChance||0)>0)return 'boss-map';
+  if(heroes().length!==1||heroes()[0]!==playerHero())return 'party-mechanism';
+  const h=playerHero();
+  if(h.hp<=0||h.mp!==undefined)return 'unsupported-resource';
+  if(h.tokenId||h.procSlots.some(x=>x!==null)||h.supportSlots.some(x=>x!==null)||h.activeSkillEquipmentId)return 'special-skill';
+  const simpleSkill=i=>{const sk=CLASSES[h.job].skills[i],m=sk?.[6];return /^class\d+-initial\d+$/.test(m?.id||'')&&['damage','tauntRage','shield','heal'].includes(sk[5])&&!m.onHitStatusId&&!m.statusId&&(!m.systemEffect||['taunt','guard','regen','slow'].includes(m.systemEffect))&&(m.commonEffectKeys||[]).every(k=>['target','hitCount'].includes(k));};
+  if(h.active.some(i=>i!==null&&!simpleSkill(i)))return 'special-skill';
+  if(equipment(h).some(g=>itemForm(g)?.fixedEffects?.some(x=>['basicAdvanceNextRound'].includes(x.key))))return 'special-equipment';
+  if(api.ELEMENTAL_TYPES.some(k=>api.buffRows(h[k]).some(b=>b.remainingMs>0)))return 'elemental-supply';
+  const rows=monsterCatalog().filter(m=>m.mapIndex===party.map&&m.enabled!==false&&m.kind==='normal');
+  if(rows.some(m=>m.skillAssignments?.length))return 'enemy-skill';
+  return '';
+ }
+ function totals(){const r=clock()?.pendingReceipt;return {battles:r?.battles||0,kills:r?.kills||0,xp:r?.xp||0,gold:r?.goldGained||0,potions:copy(r?.consumed||{}),deaths:analysis?.deaths||0,hp:party.members.map(h=>h.hp)};}
+ function resetAnalysis(at,key=combatKey()){
+  analysis={start:at,key,next:at+HOUR,before:{...totals(),deaths:0},deaths:0,minimumHpRatio:1,hours:[],profiles:new Map(),monsters:{},bad:false,ready:false,verdict:false};observed=null;
+ }
+ function checkHours(at){
+  if(!analysis||at<analysis.next||analysis.hours.length>=3)return;
+  const t=totals(),b=analysis.before;
+  const row={battles:t.battles-b.battles,kills:t.kills-b.kills,xp:t.xp-b.xp,gold:t.gold-b.gold,averageMs:0,hpNet:t.hp.map((n,i)=>n-b.hp[i]),potions:{},deaths:0,monsters:analysis.monsters,key:analysis.key};
+  row.averageMs=row.battles?HOUR/row.battles:0;
+  for(const k in t.potions)if((t.potions[k]||0)>(b.potions[k]||0))row.potions[k]=t.potions[k]-(b.potions[k]||0);
+  row.deaths=analysis.deaths-b.deaths;row.minimumHpRatio=analysis.minimumHpRatio;analysis.minimumHpRatio=1;analysis.hours.push(row);analysis.monsters={};analysis.before=t;analysis.next+=HOUR;
+  if(analysis.hours.length<3)return;
+  const hs=analysis.hours,stable=k=>{const avg=hs.reduce((n,h)=>n+h[k],0)/3;return avg>0&&hs.every(h=>Math.abs(h[k]-avg)/avg<=.05);};
+  const enough=hs.every(h=>h.battles>=30&&h.kills>=100),keys=new Set(hs.flatMap(h=>Object.keys(h.monsters)));
+  let distribution=true;
+  for(const k of keys){const share=hs.reduce((n,h)=>n+(h.monsters[k]||0),0)/hs.reduce((n,h)=>n+h.kills,0);if(share<.02){distribution=false;break;}if(hs.some(h=>(h.monsters[k]||0)<5||Math.abs((h.monsters[k]||0)/h.kills-share)>.05))distribution=false;}
+  analysis.ready=enough&&!analysis.bad&&hs.every(h=>!Object.keys(h.potions).length)&&stable('kills')&&stable('battles')&&(stable('xp')||hs.every(h=>!h.xp))&&stable('gold')&&distribution;
+  analysis.verdict=true;metrics.hours=copy(hs);if(!analysis.ready)fastReason(!enough?'insufficient-hour-samples':analysis.bad?'unsafe-resources':'unstable-hours');
+ }
+ const spawnForOffline=spawnGroup;
+ spawnGroup=function(...args){
+  const out=spawnForOffline(...args);
+  if(stepping&&jobOffline&&analysis){
+   const key=combatKey();if(key!==analysis.key){fastReason('combat-state-change');resetAnalysis(Date.now(),key);}
+   observed={at:Date.now(),clock:partyClock,key:foes.length+':'+foes.filter(e=>e.kind==='elite').length,hp:foes.reduce((n,e)=>n+e.maxhp,0),mastery:copy(playerHero().mastery||{}),minHp:1,bad:false,finished:false};
+  }
+  return out;
+ };
+ function sampleAfterEvent(){
+  if(!analysis||!observed)return;
+  const h=playerHero();observed.minHp=Math.min(observed.minHp,h.hp/stats(h).hp);analysis.minimumHpRatio=Math.min(analysis.minimumHpRatio,observed.minHp);
+  if(h.hp<=0||observed.minHp<.8||activeBattleStat?.deaths.length){observed.bad=true;analysis.bad=true;analysis.ready=false;}
+  if(!observed.finished)return;
+  const key=combatKey();if(key!==analysis.key){fastReason('combat-state-change');resetAnalysis(clock().lastAt,key);return;}
+  const duration=nextActionAt-observed.at;
+  if(duration>0&&!observed.bad){
+   const p=analysis.profiles.get(observed.key)||{count:0,rows:[],min:Infinity,max:0};p.count++;p.min=Math.min(p.min,observed.hp);p.max=Math.max(p.max,observed.hp);
+   const sample={duration,rounds:partyClock-observed.clock,mastery:Object.fromEntries(Object.entries(h.mastery||{}).map(([k,n])=>[k,n-(observed.mastery[k]||0)])),hero:Object.fromEntries(transient.filter(k=>h[k]!==undefined).map(k=>[k,h[k]]))};
+   // Reservoir sampling bounds scratch memory and does not favour early battles.
+   if(p.rows.length<128)p.rows.push(sample);else {const i=Math.floor(sampleRandom()*p.count);if(i<128)p.rows[i]=sample;}
+   analysis.profiles.set(observed.key,p);
+  }
+  observed=null;
+ }
+ function tryFast(target){
+  if(!analysis?.ready||!observed||roundIterator||round!==0||combatRoundProgress||!running)return false;
+  const reason=simpleCombat();if(reason)return fastReason(reason);
+  if(combatKey()!==analysis.key){fastReason('combat-state-change');resetAnalysis(clock().lastAt);return false;}
+  if(foes.some(e=>!['normal','elite'].includes(e.kind)||e.evasion>0||e.lifesteal>0))return fastReason('special-enemy');
+  const p=analysis.profiles.get(observed.key);if(!p||p.count<8||observed.hp<p.min||observed.hp>p.max)return fastReason('unrepresented-encounter');
+  const mean=p.rows.reduce((n,x)=>n+x.duration,0)/p.rows.length,cv=Math.sqrt(p.rows.reduce((n,x)=>n+(x.duration-mean)**2,0)/p.rows.length)/mean;
+  if(cv>.3)return fastReason('variable-combat-duration');
+  const sample=p.rows[Math.floor(sampleRandom()*p.rows.length)],c=clock(),end=observed.at+sample.duration;
+  const expiry=Math.min(...buffs().filter(b=>b.remainingMs>0).map(b=>c.lastAt+b.remainingMs),Infinity);
+  if(end>=expiry||end>Math.min(target,c.lastAt+HOUR))return fastReason('time-boundary');
+  const h=playerHero(),xp=foes.reduce((n,e)=>n+Math.round(EmberwildProgression.xpShare(EmberwildProgression.enemyXp(GAMEPLAY_SETTINGS,e.lv,e.kind,e.difficulty||0,h.lv),heroes().length)*(1+api.bonus(party,'exp')/100)),0);
+  if(h.lv<levelCap(h)&&h.xp+xp>=need(h.lv))return fastReason('level-boundary');
+  // Require a large HP reserve even with twice the longest sampled battle,
+  // no evasion, healing, shield or beneficial status. Special attacks are excluded.
+  const v=stats(h),formula=GAMEPLAY_SETTINGS.combat.damageFormula||{},maxRounds=Math.max(...p.rows.map(x=>x.rounds))*2;
+  const damage=foes.reduce((n,e)=>n+Math.ceil(Math.max(formula.minimumDamage??1,e.atk*(formula.attackCoefficient??1)*(1+Math.max(0,e.lv-h.lv)*GAMEPLAY_SETTINGS.combat.levelGapDamagePerLevel)-Math.max(0,v.def*(1-Math.min(.95,e.defenseIgnore||0))-(e.pierce||0))*(formula.defenseCoefficient??GAMEPLAY_SETTINGS.combat.defenseEffectiveness))*(e.crit>0?Math.max(1,e.critDamage||1.5):1)*Math.max(1,1+(e.elementBonus||0)+(e.elementDamage?.[e.element]||0))*Math.max(1,1-(v.resist?.[e.element]||0))),0)*maxRounds;
+  if(h.hp<v.hp*.99||damage>h.hp*.5)return fastReason('hp-reserve');
+  if(h.autoPotion&&(healPotionCount(h.autoPotionId)>0||h.potions>0)&&h.hp-damage<=v.hp*(h.autoPotionThresholdPct??35)/100)return fastReason('potion-threshold');
+  // No full save per encounter. A failed fast mutation restores the existing
+  // atomic checkpoint and resumes in full mode; no partial rewards are committed.
+  const t=performance.now();stepping=true;
+  try{virtual(end,()=>{
+   consumeTo(end,true);partyClock+=sample.rounds;round=sample.rounds;
+   for(const e of foes)e.hp=0;globalThis.EmberwildBattleSummary?.finish('victory');
+   metrics.phase='正在生成掉落物品';
+   for(const e of foes)rewardGroupKill(e);
+   for(const [k,n] of Object.entries(sample.mastery))if(n>0)__EMBERWILD_MASTERY.gainMastery(h,k,n);
+   refillParty();for(const [k,n] of Object.entries(sample.hero))if(!['hp','shield'].includes(k))h[k]=n;
+   combatRoundProgress=null;roundIterator=null;nextActionAt=end;roundStartedAt=end;
+   finalizeBattleStatistics('victory');if(!running){lastMode=false;const r=c.pendingReceipt;if(r){r.stoppedAt=end;r.reason='背包已滿，掉落已保留';}}metrics.fastBattles++;metrics.fastMs+=sample.duration;metrics.phase='正在快速結算收益';observed=null;
+  });}finally{stepping=false;metrics.fastComputeMs+=performance.now()-t;}
+  return true;
+ }
+
  // Finite batches yield to the browser; settlement enforces the offline cap.
  function advance(target,maxEvents=150){
-  const c=ensure();if(globalThis.__EMBERWILD_SAVE_OWNER===false)throw Error('存檔已由另一分頁接手');
+  let c=ensure();if(globalThis.__EMBERWILD_SAVE_OWNER===false)throw Error('存檔已由另一分頁接手');
   if(!c||target<c.lastAt)return false;
   let count=0,resources=null;const batchStart=performance.now();
   quiet(()=>{while(c.lastAt<target&&count<maxEvents&&(count===0||performance.now()-batchStart<12)){
    if(!lastMode||!running){const wait=target-c.lastAt;if(nextActionAt)nextActionAt+=wait;if(roundStartedAt)roundStartedAt+=wait;consumeTo(target,false);break;}
+   if(jobOffline&&analysis){checkHours(c.lastAt);if(analysis.ready&&observed&&!roundIterator&&round===0)resources=captureResources(resources);try{if(tryFast(target)){collect(resources);count++;continue;}}catch(error){
+    // Restore inventory, receipt, combat cursor and story trackers together.
+    // Re-run only the uncommitted interval using the full combat engine.
+    if(!lastCommitted)throw error;metrics.lastFastError=String(error.message||error);restoring=true;try{loadParty(JSON.parse(lastCommitted));}finally{restoring=false;}
+    analysis=null;observed=null;resources=null;c=ensure();fastReason('fast-error');metrics.phase='正在分析戰鬥效率（完整模擬）';return true;
+   }}
    const expiry=Math.min(...buffs().filter(b=>b.enabled&&b.remainingMs>0).map(b=>c.lastAt+b.remainingMs),Infinity);
-   const at=Math.min(target,Math.max(c.lastAt,nextActionAt),expiry);consumeTo(at,true);
+   const at=Math.min(target,Math.max(c.lastAt,nextActionAt),expiry,jobOffline&&analysis&&analysis.hours.length<3?analysis.next:Infinity);consumeTo(at,true);
    if(at===expiry){count++;continue;}
-   if(nextActionAt<=at){resources=jobOffline?captureResources(resources):null;event(at);collect(resources);count++;if(!running){lastMode=false;const r=c.pendingReceipt;if(jobOffline&&r&&!r.complete){r.stoppedAt=at;r.reason=playerHero().bag.length>=RULES.bagCapacity?'背包已滿，掉落已保留':globalThis.expeditionChallengeResult?(expeditionChallengeResult.success?'任務關卡完成':'任務關卡戰敗'):'本次探索已依戰鬥規則結束';}}}
+   if(jobOffline&&analysis)checkHours(at);
+   if(nextActionAt<=at){resources=jobOffline?captureResources(resources):null;const eventStart=performance.now();event(at);if(jobOffline&&metrics)metrics.fullMs+=performance.now()-eventStart;collect(resources);if(jobOffline)sampleAfterEvent();count++;if(!running){lastMode=false;const r=c.pendingReceipt;if(jobOffline&&r&&!r.complete){r.stoppedAt=at;r.reason=playerHero().bag.length>=RULES.bagCapacity?'背包已滿，掉落已保留':globalThis.expeditionChallengeResult?(expeditionChallengeResult.success?'任務關卡完成':'任務關卡戰敗'):'本次探索已依戰鬥規則結束';}}}
    if(at===target)break;
   }});
   c.status=running?'running':foes.length?'paused':'stopped';return c.lastAt<target;
@@ -203,7 +317,7 @@
   const recording=jobOffline;jobOffline=false;
   try{consumeTo(target,false);}finally{jobOffline=recording;}
  }
- function commit(){internal=true;try{if(save()!==true)throw Error('無法儲存結算進度，原存檔與未補算時間仍保留');}finally{internal=false;}}
+ function commit(){const t=performance.now();internal=true;try{if(save()!==true)throw Error('無法儲存結算進度，原存檔與未補算時間仍保留');}finally{internal=false;if(metrics)metrics.saveMs+=performance.now()-t;}}
  function rollback(message){
   let raw=null;try{raw=localStorage.getItem(KEY);}catch{}
   restoring=true;try{for(const candidate of new Set([raw,lastCommitted]))if(candidate){try{loadParty(JSON.parse(candidate));break;}catch{}}}finally{restoring=false;}failed=true;
@@ -212,7 +326,7 @@
  function showProgress(message,error=false){
   const box=document.getElementById('offline-settlement');if(!box||atTitle())return;
   const c=clock(),p=settlementProgress;
-  const total=p?Math.max(1,p.target-p.start):0,done=p?Math.max(0,Math.min(total,c.lastAt-p.start)):0,percent=total?Math.floor(done/total*1000)/10:0;box.hidden=false;renderedReceipt=null;
+  const total=p?Math.max(1,p.target-p.start):0,done=p?Math.max(0,Math.min(total-1,c.lastAt-p.start)):0,percent=total?Math.floor(done/total*1000)/10:0;box.hidden=false;renderedReceipt=null;
   box.innerHTML=`<section role="status" aria-live="polite" aria-busy="${!error}"><h2>離線探索收益</h2><p>${esc(message)}</p>${p?`<progress max="${total}" value="${done}" aria-label="離線結算進度"></progress><p class="offline-progress-value">${percent}% · 已計算 ${api.timeText(done,true)} / ${api.timeText(total,true)}</p><p class="small">進度代表已計算時間；計算期間分批儲存，完成時立即儲存全部收益。</p>`:''}${error?'<button onclick="retryOfflineExploration()">重試結算</button>':''}</section>`;
  }
  function showReceipt(){
@@ -232,18 +346,20 @@
  };
  function settle(target=nowReal(),offline=true){
   if(!party||restoring||atTitle()||globalThis.__EMBERWILD_SAVE_OWNER===false)return Promise.resolve();
-  const c=ensure();
+  let c=ensure();
   if(job){if(Number.isSafeInteger(target)){requestedAt=Math.max(requestedAt,target);if(offline){jobOffline=true;ensureOfflineWindow(c,requestedAt);track(Math.min(requestedAt,c.offlineWindow.capAt));}if(c.offlineWindow)c.offlineWindow.untilAt=Math.max(c.offlineWindow.untilAt,requestedAt);}return job;}
   if(!Number.isSafeInteger(target)||target<0||target>8.64e15||target<c.lastAt){failed=true;settlementProgress=null;showProgress('裝置時間無效或早於最後結算時間；收益與時間已保留，請校正時間後重試。',true);return Promise.resolve();}
   requestedAt=target;jobOffline=offline;
   if(offline||c.offlineWindow||target-c.lastAt>maxOfflineMs)ensureOfflineWindow(c,target);
   if(offline)track(Math.min(target,c.offlineWindow?.capAt??target));
+  metrics={fullMs:0,fastComputeMs:0,dropMs:0,inventoryMs:0,saveMs:0,totalMs:0,fastMs:0,fastBattles:0,fallbacks:{},hours:[],phase:'正在分析戰鬥效率'};
+  analysis=null;observed=null;replayCache=null;modelSeed=(c.lastAt^playerHero().created^party.map)>>>0;if(offline&&target-c.lastAt>3*HOUR&&!globalThis.__EMBERWILD_OFFLINE_FULL_ONLY){const reason=simpleCombat();if(reason)fastReason(reason);else resetAnalysis(c.lastAt);}
   failed=false;settlementProgress={start:c.lastAt,target};
   job=Promise.resolve().then(async()=>{
    try{
     // Foreground catch-up is silent; an unread receipt keeps its DOM and scroll.
     const show=jobOffline&&!c.receipt&&settlementProgress.target-settlementProgress.start>1000;
-    if(show)showProgress('正在計算掛機收益，請稍候…');commit();
+    const settlementStarted=performance.now();if(show)showProgress('正在分析戰鬥效率');commit();
     // Paint the overlay before starting CPU-intensive combat replay.
     if(show)await new Promise(resolve=>setTimeout(resolve,0));
     let lastProgress=performance.now(),lastCheckpoint=lastProgress;
@@ -252,15 +368,15 @@
      if(c.offlineWindow)c.offlineWindow.untilAt=Math.max(c.offlineWindow.untilAt,requestedAt);
      settlementProgress.target=end;
      let more;
-     do{const start=c.lastAt,r=c.pendingReceipt,status=c.status;more=advance(end);if(jobOffline)recordInterval(r,start,c.lastAt);if(c.status!==status||more&&performance.now()-lastCheckpoint>=checkpointIntervalMs){commit();lastCheckpoint=performance.now();}if(show&&(performance.now()-lastProgress>=100||!more)){showProgress('正在計算掛機收益，請稍候…');lastProgress=performance.now();}if(more)await new Promise(resolve=>setTimeout(resolve,0));}while(more);
+     do{const start=c.lastAt,r=c.pendingReceipt,status=c.status;more=advance(end);if(c!==clock()){c=clock();more=c.lastAt<end;}else if(jobOffline)recordInterval(r,start,c.lastAt);if(c.status!==status||more&&performance.now()-lastCheckpoint>=checkpointIntervalMs){commit();lastCheckpoint=performance.now();}if(show&&(performance.now()-lastProgress>=100||!more)){showProgress(metrics.fastBattles?'正在快速結算收益 · 正在生成掉落物品':metrics.phase);lastProgress=performance.now();}if(more)await new Promise(resolve=>setTimeout(resolve,0));}while(more);
      if(c.offlineWindow&&c.lastAt<requestedAt)skipUncreditedTime(requestedAt);
     }while(c.lastAt<requestedAt);
     // A throttled tick takes this async path; do not starve online life jobs.
     internal=true;try{globalThis.emberwildLifeHeartbeat?.();}finally{internal=false;}
-    if(jobOffline&&!document.hidden)promote();c.offlineWindow=null;commit();render();showReceipt();
+    if(show){showProgress('正在完成收益與存檔');await new Promise(resolve=>setTimeout(resolve,0));}if(jobOffline&&!document.hidden)promote();c.offlineWindow=null;commit();metrics.totalMs=performance.now()-settlementStarted;render();showReceipt();
     if(!c.receipt)document.getElementById('offline-settlement').hidden=true;
    }catch(e){rollback(String(e.message||e));}
-   finally{job=null;lastMode=atTitle()?false:running;lastCheck=nowReal();}
+   finally{analysis=null;observed=null;replayCache=null;job=null;lastMode=atTitle()?false:running;lastCheck=nowReal();}
   });return job;
  }
  globalThis.retryOfflineExploration=function(){failed=false;return settle(nowReal(),jobOffline);};
@@ -301,5 +417,5 @@
  document.addEventListener('visibilitychange',()=>{if(!party||atTitle())return;if(document.hidden){sync();save();}else{if(!job)lastMode=clock()?.status==='running';void settle(nowReal(),false);}});
  addEventListener('pagehide',()=>{if(party&&!job&&!failed&&!atTitle())save();});
  if(party){ensure();}lastCheck=nowReal();
- globalThis.EmberwildOffline={sync,settle,advance,snapshot,hydrate,validate,get busy(){return !!job;},get failed(){return failed;},get active(){return lastMode;}};
+ globalThis.EmberwildOffline={get metrics(){return copy(metrics);},sync,settle,advance,snapshot,hydrate,validate,get busy(){return !!job;},get failed(){return failed;},get active(){return lastMode;}};
 })();

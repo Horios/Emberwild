@@ -30,7 +30,10 @@ function normalizeBattleStatistics(raw){
 }
 function ensureBattleStatistics(){
   if(!party)return {maps:{}};
+  const cache=globalThis.__EMBERWILD_OFFLINE_RULE_CACHE;
+  if(cache?.statistics===party.battleStatistics)return party.battleStatistics;
   party.battleStatistics=normalizeBattleStatistics(party.battleStatistics);
+  if(cache)cache.statistics=party.battleStatistics;
   return party.battleStatistics;
 }
 function currentMapBattleRecords(){

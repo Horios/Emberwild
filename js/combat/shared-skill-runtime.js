@@ -7,13 +7,14 @@
   const BASIC_EFFECTS=new Set(['cleanse','dispel','revive','damage','heal','shield','drain','nextActiveDamage','advanceNextRound','shieldLowest','applyStatus','induceSkill']);
   const idFor=(job,index)=>CLASSES[job]?.skills?.[index]?.[6]?.sharedId||`job${job}-core${index}`;
   function sharedCoreSkillPool(){
+    const cache=globalThis.__EMBERWILD_OFFLINE_RULE_CACHE;if(cache?.sharedSkillPool)return cache.sharedSkillPool;
     const out=[];
     for(let job=0;job<CLASSES.length;job++)for(let index=0;index<(CLASSES[job]?.skills?.length||0);index++){
       const sk=CLASSES[job].skills[index],meta=sk?.[6]&&typeof sk[6]==='object'?sk[6]:{};
       const usageScope=['character','monster','elite','boss','shared'].includes(meta.usageScope)?meta.usageScope:'character';
       out.push({id:idFor(job,index),job,index,name:sk[0],activation:sk[1],requiredLevel:sk[2],cooldown:Math.max(0,Math.round(Number(sk[3])||0)),power:Math.max(0,Number(sk[4])||0),effect:sk[5],element:SKILL_ELEMENTS[job]?.[index]||'physical',maxTargets:Math.max(1,Math.floor(Number(meta.maxTargets)||1)),usageScope,meta});
     }
-    return out;
+    if(cache)cache.sharedSkillPool=out;return out;
   }
   globalThis.sharedCoreSkillPool=sharedCoreSkillPool;
   function sharedSkillById(id){return sharedCoreSkillPool().find(x=>x.id===id)||null;}

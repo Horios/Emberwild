@@ -7,7 +7,12 @@
   let cfg=M.settings(),hydrating=false,suppressSave=false,resettingBalance=false;
   const classDocs=()=>CLASSES.map(c=>({skills:c.skills.map(sk=>({...sk[6],activation:sk[1]}))}));
   const build=()=>party?.buildSystem,player=()=>party?.members[0],plan=()=>build()?.plans.find(p=>p.id===build().activeId);
-  const coreRule=(j,i)=>M.rules(mastery.coreMeta(j,i)),supportRule=(j,i)=>M.rules(SUPPORT[j]?.[i]);
+  function replayRule(raw){
+    const cache=globalThis.__EMBERWILD_OFFLINE_RULE_CACHE;
+    if(!cache||!raw)return M.rules(raw);
+    const rules=cache.teamRules??=new WeakMap();if(!rules.has(raw))rules.set(raw,M.rules(raw));return rules.get(raw);
+  }
+  const coreRule=(j,i)=>replayRule(mastery.coreMeta(j,i)),supportRule=(j,i)=>replayRule(SUPPORT[j]?.[i]);
   const costs=()=>0;
   const budgets=()=>M.budget(player().lv,GAMEPLAY_SETTINGS.progression,build().permanent);
   function masteryView(h){
@@ -67,13 +72,18 @@
     const achievements=party?.achievements||{},sum=obj=>Object.values(obj||{}).reduce((n,v)=>n+(Number(v)||0),0),mapName=i=>i<0?'任意區域':(MAPS[i]?.name||('區域 '+i)),bossName=i=>i<0?'任意 BOSS':(MAPS[i]?.boss?.[0]||mapName(i)+' BOSS');
     for(const x of r.unlockConditions.bossKills){const n=x.mapIndex<0?sum(achievements.bossKills):(achievements.bossKills?.[x.mapIndex]||0);if(n<x.count)reasons.push('擊敗 '+bossName(x.mapIndex)+' '+n+'/'+x.count);}
     for(const x of r.unlockConditions.eliteKills){const n=x.mapIndex<0?sum(achievements.eliteKills):(achievements.eliteKills?.[x.mapIndex]||0);if(n<x.count)reasons.push('擊敗 '+mapName(x.mapIndex)+'菁英 '+n+'/'+x.count);}
-    const seen=new Set(),owned=[];for(const g of party?.sharedGear?.items||[]){if(g?.id&&!seen.has(g.id)){seen.add(g.id);owned.push(g);}}for(const member of party?.members||[])for(const g of member?.bag||[]){if(g?.id&&!seen.has(g.id)){seen.add(g.id);owned.push(g);}}const bossGear=owned.filter(g=>g?.boss!==undefined);
-    for(const x of r.unlockConditions.bossEquipment){const n=bossGear.filter(g=>x.mapIndex<0||(g.region??g.boss)===x.mapIndex).length;if(n<x.quantity)reasons.push('持有 '+bossName(x.mapIndex)+'裝備 '+n+'/'+x.quantity);}
+    if(r.unlockConditions.bossEquipment.length){const seen=new Set(),owned=[];for(const g of party?.sharedGear?.items||[]){if(g?.id&&!seen.has(g.id)){seen.add(g.id);owned.push(g);}}for(const member of party?.members||[])for(const g of member?.bag||[]){if(g?.id&&!seen.has(g.id)){seen.add(g.id);owned.push(g);}}const bossGear=owned.filter(g=>g?.boss!==undefined);
+    for(const x of r.unlockConditions.bossEquipment){const n=bossGear.filter(g=>x.mapIndex<0||(g.region??g.boss)===x.mapIndex).length;if(n<x.quantity)reasons.push('持有 '+bossName(x.mapIndex)+'裝備 '+n+'/'+x.quantity);}}
     return reasons;
   }
   function refreshUnlocks(){
-    if(!build())return;const perm=build().permanent;
+    if(!build())return;const perm=build().permanent,cache=globalThis.__EMBERWILD_OFFLINE_RULE_CACHE,h=player();
+    // Replay cannot edit builds. Re-evaluate gates when their dependencies change,
+    // rather than scanning every skill on every point of mastery/character XP.
+    const key=cache?JSON.stringify([h.lv,h.tutorial,h.claimed,h.bag.length,party.achievements, Object.values(perm.classes).map(c=>[c.activated,c.advanced,mastery.masteryLevelFromXp(c.xp)]),Object.entries(perm.masteries).map(([k,n])=>[k,mastery.masteryLevelFromXp(n)])]):null;
+    if(cache?.unlockOwner===perm&&cache.unlockKey===key)return;
     CLASSES.forEach((c,j)=>{for(const [kind,list] of [['core',c.skills],['support',SUPPORT[j]]])list.forEach((_,i)=>{const k=M.key(j,kind,i),r=kind==='core'?coreRule(j,i):supportRule(j,i);if(!perm.unlocks[k]&&!r.unlockConditions.materials.length&&!unlockMissing(j,kind,i).length)perm.unlocks[k]=true;});});
+    if(cache){cache.unlockOwner=perm;cache.unlockKey=key;}
   }
   function busy(){return !!(running||partyBusy||roundIterator||foes.some(e=>e.hp>0));}
   function safe(){if(busy()){toast('請先停止探索並結束目前遭遇，再修改隊伍配置');return false;}return !!party;}

@@ -420,6 +420,8 @@
     return EmberwildProgression.enhancedGearStats(base,g.plus||0,gearRequiredLevel(g),GS('equipment.enhance.flatStatsPerLevel',defaults.flatStatsPerLevel),GS('equipment.enhance.flatStatsPerEquipmentLevel',defaults.flatStatsPerEquipmentLevel));
   }
   function gearStatBreakdown(g){
+    const cache=globalThis.__EMBERWILD_OFFLINE_RULE_CACHE,rows=cache?(cache.gearStats??=new WeakMap()):null,hit=rows?.get(g);
+    if(hit&&hit.plus===g.plus&&hit.base===g.baseSnapshot&&hit.power===g.powerTier&&hit.prefix===g.prefixId&&hit.suffix===g.suffixId)return hit.value;
     if(EmberwildTokens.isToken(g)){const zero={atk:0,hp:0,def:0};return {raw:{...zero},body:{...zero},grade:{...zero},enhance:{...zero},total:{...zero},mult:g.qualityMultipliers[g.rar],powerTier:1,prefix:null,suffix:null,bossProfile:null};}
     ensureGearIdentityMeta(g);
     const mult=g.starterPack?Number(EQUIPMENT_POWER.strength.legacyMultipliers[(g.powerTier||1)-1])||1:strengthMultiplier(g);
@@ -433,7 +435,8 @@
       const b=g.baseSnapshot,total=enhancedBaseStats(g,b.base);
       integers={raw:{...b.raw},body:{...b.body},grade:Object.fromEntries(['hp','atk','def'].map(k=>[k,b.base[k]-b.body[k]])),enhance:Object.fromEntries(['hp','atk','def'].map(k=>[k,total[k]-b.base[k]])),total};
     }
-    return {...integers,mult,powerTier:g.powerTier||1,prefix:prefixById(g.prefixId),suffix:suffixById(g.suffixId),bossProfile:bossProfileForGear(g)};
+    const value={...integers,mult,powerTier:g.powerTier||1,prefix:prefixById(g.prefixId),suffix:suffixById(g.suffixId),bossProfile:bossProfileForGear(g)};
+    rows?.set(g,{plus:g.plus,base:g.baseSnapshot,power:g.powerTier,prefix:g.prefixId,suffix:g.suffixId,value});return value;
   }
   globalThis.gearStatBreakdown=gearStatBreakdown;
   gearBaseStats=function(g){return gearStatBreakdown(g).total;};
