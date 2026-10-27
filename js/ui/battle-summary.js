@@ -11,8 +11,9 @@
  const key=e=>{if(e.id!=null)return String(e.id);if(!fallbackIds.has(e))fallbackIds.set(e,'visual-'+(++serial));return fallbackIds.get(e);};
  const finite=n=>Number.isFinite(Number(n))?Number(n):0;
  const fmt=n=>n.toLocaleString('zh-TW',{maximumFractionDigits:1});
- function clear(){terminal=null;previous.clear();flashes.clear();owner=party;openingAction=lastActionOrder.at(-1)||null;}
+ function clear(){globalThis.EmberwildBattleEffects?.clear();terminal=null;previous.clear();flashes.clear();owner=party;openingAction=lastActionOrder.at(-1)||null;}
  function finish(result){
+  globalThis.EmberwildBattleEffects?.clear();
   // Keep the actual array, including its final HP, even if result cleanup clears
   // the global foes binding. This is O(1), including during offline simulation.
   terminal={owner:party,units:foes,name:currentExplorationName(),result};
@@ -118,6 +119,7 @@
   if(roster)updateRoster(roster,s);
   if(allies)updateRoster(allies,s,true);
   if(journalIcons)updateRoster(journalIcons,s);
+  globalThis.EmberwildBattleEffects?.sync(s);
  }
  function toggleDetails(){detailCollapsed=!detailCollapsed;sync({animate:false});}
  globalThis.EmberwildBattleSummary={snapshot,sync,finish,toggleDetails};

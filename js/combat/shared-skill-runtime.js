@@ -48,7 +48,7 @@
   }
   function damageHero(e,h,amount,element,sk){
     const ev=enemyBattleStats(e),hv=battleStats(h),profile=enemySkillProfile(e,sk),c=GAMEPLAY_SETTINGS.combat,formula=c.damageFormula||{},atkCoef=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defCoef=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:(c.defenseEffectiveness??.55),min=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
-    if(Math.random()<hv.evasion){note(characterName(h)+'閃避了'+combatEnemyName(e)+'的「'+sk.name+'」');return 0;}
+    if(Math.random()<hv.evasion){globalThis.EmberwildBattleEffects?.result('evade',h,e);note(characterName(h)+'閃避了'+combatEnemyName(e)+'的「'+sk.name+'」');return 0;}
     const ignore=Math.min(.95,profile.defenseIgnore),effectiveDef=Math.max(0,hv.def*(1-ignore)-profile.pierce);
     let hit=Math.max(min,amount*atkCoef-effectiveDef*defCoef);
     const crit=Math.random()<profile.critChance;if(crit)hit*=profile.critDamage;

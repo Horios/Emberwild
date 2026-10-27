@@ -80,7 +80,7 @@
 
   function applyPolymorph(e,shield,meta){
     if(!e||e.hp<=0)return false;
-    if(isBossEnemy(e)){note(combatEnemyName(e)+' 對變形免疫。');return true;}
+    if(isBossEnemy(e)){globalThis.EmberwildBattleEffects?.result('resist',e);note(combatEnemyName(e)+' 對變形免疫。');return true;}
     meta=normalizeControlMeta(meta,'polymorph');
     const s=stateFor(e.id),amount=Math.max(1,Math.round(Number(shield)||1));
     s.polymorph={turns:Math.max(1,meta.duration),total:Math.max(1,meta.duration),shield:amount,maxShield:amount};
@@ -90,7 +90,7 @@
   function applyFreeze(e,meta,forcedTurns=null){
     if(!e||e.hp<=0)return false;meta=normalizeControlMeta(meta,'freeze');
     const turns=forcedTurns===null?(isBossEnemy(e)?meta.bossDuration:meta.duration):Math.max(1,int0(forcedTurns,1));
-    if(turns<=0)return true;
+    if(turns<=0){globalThis.EmberwildBattleEffects?.result('resist',e);return true;}
     const s=stateFor(e.id);s.freeze={turns,total:turns};
     note(combatEnemyName(e)+' 冰凍 '+turns+' 回合。');return true;
   }
@@ -101,7 +101,7 @@
   }
   function applyRage(e,meta,tauntHeroJob=null){
     if(!e||e.hp<=0)return false;meta=normalizeControlMeta(meta,'rage');
-    const turns=isBossEnemy(e)?meta.bossDuration:meta.duration;if(turns<=0)return true;
+    const turns=isBossEnemy(e)?meta.bossDuration:meta.duration;if(turns<=0){globalThis.EmberwildBattleEffects?.result('resist',e);return true;}
     const s=stateFor(e.id);s.rage={turns,total:turns,basicAttackBonus:meta.basicAttackBonus,tauntHeroJob:Number.isInteger(tauntHeroJob)?tauntHeroJob:null};
     note(combatEnemyName(e)+' 狂暴 '+turns+' 回合：無法使用技能，普攻傷害 +'+Math.round(meta.basicAttackBonus*100)+'%。');return true;
   }
@@ -175,7 +175,7 @@
     const elementBonus=(ev.elementDamage[e.element]||0)+(e.element==='physical'?0:ev.elementBonus);
     if(elementBonus)hit=Math.max(minimumDamage,Math.round(hit*(1+elementBonus)));
     hit=Math.max(minimumDamage,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));
-    if(Math.random()<v.evasion){note(characterName(h)+'閃避了'+combatEnemyName(e)+'的攻擊');return;}
+    if(Math.random()<v.evasion){globalThis.EmberwildBattleEffects?.result('evade',h,e);note(characterName(h)+'閃避了'+combatEnemyName(e)+'的攻擊');return;}
     const resist=Math.min(c.caps.resistance,(v.resist[e.element]||0)+supplyEffect(h,'ward',e.element));
     hit=Math.max(minimumDamage,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;
     if(absorb>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'mitigation',absorb);

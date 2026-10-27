@@ -174,7 +174,7 @@
   resolveHit=function(e,amount,h,element,crit,options={}){
     const v=battleStats(h),formula=GAMEPLAY_SETTINGS.combat.damageFormula||{},attackCoefficient=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defenseCoefficient=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:(GAMEPLAY_SETTINGS.combat.defenseEffectiveness??.55),minimumDamage=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
     const enemyStats=typeof enemyBattleStats==='function'?enemyBattleStats(e):null;
-    if(enemyStats?.evasion>0&&Math.random()<enemyStats.evasion){note(combatEnemyName(e)+'閃避了'+characterName(h)+'的攻擊');return 0;}
+    if(enemyStats?.evasion>0&&Math.random()<enemyStats.evasion){globalThis.EmberwildBattleEffects?.result('evade',e,h);note(combatEnemyName(e)+'閃避了'+characterName(h)+'的攻擊');return 0;}
     const bossBonus=(e?.kind==='boss'||e?.kind==='final')?(v.bossDamage||0):0;
     const rawAmount=amount*(1+bossBonus),fracture=Math.min(GAMEPLAY_SETTINGS.combat.caps.fracture,effectTotal(e.id,'fracture'));
     const ignore=Math.min(GAME_BALANCE.combat.statCaps.defenseIgnore??.75,Math.max(0,Number.isFinite(options.defenseIgnore)?options.defenseIgnore:(v.defenseIgnore||0)));

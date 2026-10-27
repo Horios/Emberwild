@@ -82,6 +82,11 @@
   function healPotionCount(id){return Math.max(0,Math.floor(Number(healingInventory()[id])||0));}
   function setHealPotionCount(id,n){healingInventory()[id]=Math.max(0,Math.floor(Number(n)||0));}
   function useAutoHealingPotion(h){
+    const visual=globalThis.EmberwildBattleEffects;
+    if(!visual?.capturing)return useAutoHealingPotionCore(h);
+    return visual.scope({source:h,mode:'potion'},()=>useAutoHealingPotionCore(h));
+  }
+  function useAutoHealingPotionCore(h){
     normalizeHeroHealingSettings(h);
     if(h.healPotionCooldownRemaining>0){h.healPotionCooldownRemaining--;return false;}
     if(!h.autoPotion||h.hp<=0)return false;
