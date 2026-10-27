@@ -65,7 +65,12 @@ test('offline replay skips icon rendering and settles to the effective encounter
   assert(await p.evaluate(()=>{const s=EmberwildBattleSummary.snapshot();return $('battleSummary').querySelector('[role="progressbar"]').getAttribute('aria-valuenow')===String(s.percent)}));
   await p.evaluate(()=>{acknowledgeOfflineExploration();resetEncounter();running=false;startSelectedExploration();state.consumables.speed2_30m=1;useSupply('speed2_30m');setBattleSpeed(2);for(const h of heroes())h.shield=1e9;foes.forEach(e=>{e.hp=1e6;e.maxhp=1e6;e.atk=1});setTab('equipment');});
   assert.equal(await p.evaluate(()=>battleRate),2);
-  for(let i=0;i<12;i++){await p.clock.runFor(1000);await p.evaluate(()=>tick());}
+  // The warrior opens with a non-damaging taunt. A random six-enemy group
+  // can still be resolving enemy actions at 12s; observe a real hit instead.
+  for(let i=0;i<30;i++){
+   await p.clock.runFor(1000);await p.evaluate(()=>tick());
+   if(i>=11&&await p.evaluate(()=>foes.some(e=>e.hp<e.maxhp)))break;
+  }
   await p.evaluate(async()=>{if(EmberwildOffline.busy)await EmberwildOffline.settle(undefined,false);EmberwildBattleSummary.sync();});
   assert(await p.evaluate(()=>round>0&&lastActionOrder.length>0));assert(await p.evaluate(()=>{const s=EmberwildBattleSummary.snapshot();return s.hp<s.max&&Number($('battleSummary').querySelector('[role="progressbar"]').getAttribute('aria-valuenow'))===s.percent}));
   assert.deepEqual(g.errors,[]);
