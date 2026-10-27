@@ -47,7 +47,9 @@ test('Different strengths and elements keep independent states, stats, timers an
   const restarted=loadRuntime(root,'index.html',{...Object.fromEntries(g.values),[g.run('BALANCE_KEY')]:g.run('JSON.stringify(exportableBalance())')},g.now+6*60000);
   restarted.ctx.setTimeout=fn=>setImmediate(fn);
   restarted.run('continueFromTitle();closeModal();');await restarted.run('EmberwildOffline.settle()');
-  assert.equal(restarted.run('state.ward'),null);
+  assert.equal(restarted.run("activeSupplies(state,'ward').length"),0);
+  assert.equal(restarted.run("activeSupplies(state,'elementTonic').length"),0);
+  assert.equal(restarted.run("EmberwildTimedBoosts.buffRows(state.ward).every(b=>b.remainingMs===0&&b.enabled===false)"),true);
   assert.equal(restarted.run('party.timedBoosts.length'),1);
   assert.deepEqual(g.errors,[]);assert.deepEqual(restarted.errors,[]);
 });

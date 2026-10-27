@@ -58,7 +58,7 @@
   }
   function migrateElementalBuff(buff,type,{item=null,settings=null,now=Date.now()}={}){
     if(!buff)return null;
-    if(Object.prototype.hasOwnProperty.call(buff,'remainingMs')){validateElementalItem({...buff,type,duration:0});return migrateBuff(buff,now);}
+    if(Object.prototype.hasOwnProperty.call(buff,'remainingMs')){validateElementalItem({...buff,type,duration:0});const out=migrateBuff(buff,now);if(!out.name)out.name=item?.name??type+'_'+buff.element;if(!out.itemId&&item?.id)out.itemId=item.id;return out;}
     if(Object.prototype.hasOwnProperty.call(buff,'expiresAt')){
       if(!Number.isSafeInteger(buff.expiresAt)||buff.expiresAt<0||buff.expiresAt>8.64e15)throw Error('屬性藥水到期時間無效');
       validateElementalItem({...buff,type,duration:0});return remainingMs(buff,now)>0?migrateBuff({...buff,name:buff.name??item?.name??type+'_'+buff.element},now):null;

@@ -48,6 +48,15 @@ test('Old active buffs retain remaining time on migration and never refill on lo
   assert.equal(api.migrateElementalBuff({element:'fire',remainingTurns:0,until:0},'ward',options),null);
   assert.throws(()=>api.migrateElementalBuff({...buff,remainingMs:-1},'ward',options));
 });
+test('Legacy real-time elemental sources recover missing identity and stack with the next matching dose',()=>{
+  const {api}=contracts(),source={...item(),durationMinutes:5},legacy={element:'fire',durationMinutes:5,effectPercent:40,remainingMs:300000,enabled:true,until:0,statEffects:{attack:7}};
+  const normalized=api.migrateElementalBuff(legacy,'ward',{item:source,now:1000});
+  assert.equal(normalized.name,source.name);assert.equal(normalized.itemId,source.id);
+  assert.equal(api.remainingMs(normalized),300000);
+  const stacked=api.stackBuff([normalized],api.createElementalBuff(source,1000),1000);
+  assert.equal(stacked.length,1);assert.equal(stacked[0].remainingMs,600000);
+  assert.equal(legacy.name,undefined);assert.equal(legacy.itemId,undefined);
+});
 test('Default and old shop pools delist all wards and tonics without deleting definitions',()=>{
   const {api,shop}=contracts(),items=[item(),item('elementTonic'),{id:'imbue_fire',type:'imbue'}];
   const defaults=shop.validate(undefined,{items:[...items,...api.DEFAULT_ITEMS]});
