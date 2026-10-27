@@ -3,10 +3,10 @@ const assert=require('node:assert/strict');
 const path=require('node:path');
 const {loadRuntime}=require('./headless-runtime.cjs');
 const root=path.resolve(__dirname,'..'),plain=x=>JSON.parse(JSON.stringify(x));
-function game(){const g=loadRuntime(root);g.run('selectSaveSlot(1);start(0);closeModal();running=false;');return g;}
+async function game(){const g=loadRuntime(root);g.ctx.setTimeout=fn=>setImmediate(fn);g.run('selectSaveSlot(1);start(0);closeModal();running=false;');await g.run('EmberwildOffline.settle()');return g;}
 
-test('All five real-time consumables extend remaining time without duplicating strength',()=>{
-  const g=game();
+test('All five real-time consumables extend remaining time without duplicating strength',async()=>{
+  const g=await game();
   for(const id of ['speed2_30m','exp_100_30m','drop_50_30m','ward_fire','elementTonic_fire']){
     g.ctx.itemId=id;
     const result=plain(g.run(`(()=>{const api=EmberwildTimedBoosts,item=SHOP.find(x=>x.id===itemId),rows=()=>item.type==='timedBoost'?party.timedBoosts.filter(b=>b.itemId===itemId):api.buffRows(state[item.type]);state.consumables[itemId]=2;useSupply(itemId);const first=rows()[0].remainingMs;useSupply(itemId);return {count:rows().length,first,remaining:rows()[0].remainingMs,minutes:item.durationMinutes,inventory:state.consumables[itemId]};})()`));
@@ -19,7 +19,7 @@ test('All five real-time consumables extend remaining time without duplicating s
 });
 
 test('Different strengths and elements keep independent states, stats, timers and combat effects',async()=>{
-  const g=game();g.ctx.setTimeout=fn=>setImmediate(fn);
+  const g=await game();g.ctx.setTimeout=fn=>setImmediate(fn);
   g.run(`{const cfg=exportableBalance(),source=cfg.items.find(x=>x.id==='ward_fire');
     cfg.items.push({...source,id:'ward_strong',effectPercent:40,durationMinutes:1,statEffects:{hp:50,attack:7}});
     cfg.items.push({...cfg.items.find(x=>x.id==='elementTonic_fire'),id:'tonic_strong',effectPercent:55,durationMinutes:1});
@@ -50,12 +50,13 @@ test('Different strengths and elements keep independent states, stats, timers an
   assert.equal(restarted.run("activeSupplies(state,'ward').length"),0);
   assert.equal(restarted.run("activeSupplies(state,'elementTonic').length"),0);
   assert.equal(restarted.run("EmberwildTimedBoosts.buffRows(state.ward).every(b=>b.remainingMs===0&&b.enabled===false)"),true);
-  assert.equal(restarted.run('party.timedBoosts.length'),1);
+  assert.equal(restarted.run("EmberwildTimedBoosts.active(party).filter(b=>b.boostType==='exp').length"),1);
+  assert.equal(restarted.run("party.timedBoosts.some(b=>b.boostType==='exp'&&b.remainingMs===0&&b.enabled===false)"),true);
   assert.deepEqual(g.errors,[]);assert.deepEqual(restarted.errors,[]);
 });
 
-test('24 hour boundary accepts an exact fit and rejects excess without consuming any kind of item',()=>{
-  const g=game();
+test('24 hour boundary accepts an exact fit and rejects excess without consuming any kind of item',async()=>{
+  const g=await game();
   for(const id of ['speed2_30m','exp_100_30m','drop_50_30m','ward_fire','elementTonic_fire']){
     g.ctx.itemId=id;
     g.run(`{const item=SHOP.find(x=>x.id===itemId);state.consumables[itemId]=3;useSupply(itemId);const rows=item.type==='timedBoost'?party.timedBoosts:EmberwildTimedBoosts.buffRows(state[item.type]);rows.find(b=>b.itemId===itemId).remainingMs=86400000-item.durationMinutes*60000;useSupply(itemId);}`);
@@ -75,8 +76,8 @@ test('24 hour boundary accepts an exact fit and rejects excess without consuming
   assert.equal(g.run('state.consumables.ward_fire'),1);
 });
 
-test('Failed saves roll back both stacked and new states and preserve inventory',()=>{
-  const g=game();
+test('Failed saves roll back both stacked and new states and preserve inventory',async()=>{
+  const g=await game();
   for(const id of ['exp_100_30m','ward_fire']){
     g.ctx.itemId=id;
     for(const existing of [false,true]){
@@ -89,11 +90,11 @@ test('Failed saves roll back both stacked and new states and preserve inventory'
   }
 });
 
-test('Legacy singleton saves retain deadlines and merge the next dose, while malformed sources reject',()=>{
-  const g=game();
+test('Legacy singleton saves retain deadlines and merge the next dose, while malformed sources reject',async()=>{
+  const g=await game();
   g.run("state.consumables.ward_fire=2;useSupply('ward_fire');delete state.ward.name;delete state.ward.itemId;save();loadParty(packParty());");
   const deadline=g.run('state.ward.remainingMs');
-  g.advance(10000);g.run("useSupply('ward_fire');");
+  g.advance(10000);await g.run("EmberwildOffline.settle()");g.run("useSupply('ward_fire');");
   assert.equal(g.run('state.ward.remainingMs'),deadline+300000);
   for(const mutation of ["p.members[0].ward=[p.members[0].ward,p.members[0].ward]","p.members[0].ward.remainingMs=Infinity","p.members[0].ward=[{...p.members[0].ward,element:'bad'}]"]){
     assert(g.run(`(()=>{const p=packParty();${mutation};try{validateParty(p);return false;}catch{return true;}})()`));
