@@ -30,3 +30,14 @@
 #app .gear-management-panel .inventory-detail-wrap{overflow:visible;max-height:none;scrollbar-gutter:auto;padding-bottom:12px}
 #app .gear-management-panel .inventory-detail-pane{overflow:visible}
 @media(max-width:760px){#app .gear-management-panel .inventory-master-pane{height:clamp(250px,38dvh,380px)}.gear-management-panel .gear-basic-filters,.gear-management-panel .gear-numeric-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.inventory-wear-guide{margin-bottom:14px}.inventory-wear-guide ol{padding-left:22px;line-height:1.8}.inventory-wear-target{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0}.inventory-wear-target>b{flex-basis:100%}
+
+.gear-management-toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:8px 0}.gear-filter-button{margin-inline-start:auto}
+.gear-management-panel .inventory-master-heading{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 8px}.inventory-master-heading>span{margin-inline-start:auto;white-space:nowrap}
+.gear-management-panel .gear-sort-controls{align-items:center;gap:4px;margin-inline-start:auto}.gear-management-panel .gear-sort-controls label{display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap}.gear-management-panel .gear-sort-controls select{min-height:30px;max-width:135px;font-size:11px;padding:3px}.gear-management-panel .gear-sort-controls button{min-height:30px;font-size:11px;padding:4px 7px}
+.gear-filter-dialog{width:min(740px,100%);box-sizing:border-box}.gear-filter-dialog h2{margin:0}.gear-filter-dialog .gear-numeric-fold{border-top:1px solid var(--line);padding-top:10px}.gear-filter-dialog summary{cursor:pointer}.gear-filter-dialog select{max-width:100%}
+@media(max-width:760px){.gear-management-panel .inventory-master-heading{gap:4px}.gear-management-panel .gear-sort-controls select{max-width:125px}.gear-management-panel .gear-sort-controls button{min-height:36px}}
+
+.gear-management-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 12px}.gear-management-top .gear-management-toolbar{flex:1;justify-content:flex-end}.gear-management-top .gear-filter-button{margin-inline-start:4px}#app .gear-management-panel .inventory-master-pane{height:clamp(320px,65dvh,760px)}
+@media(max-width:760px){#app .gear-management-panel .inventory-master-pane{height:clamp(280px,45dvh,440px)}.gear-management-top .gear-management-toolbar{margin:2px 0 6px}}

@@ -819,7 +819,7 @@ function normalizeEquipmentFormsArray(forms){
 }
 normalizeEquipmentFormsArray(ITEM_FORMS);
 function equipmentFormGroup(g){const group=Number.isInteger(g?.formJob)?g.formJob:Number(g?.job);return Number.isInteger(group)&&group>=0&&group<ITEM_FORMS.length?group:Number(g?.job)||0;}
-function rollEquipmentForm(job,slot){const candidates=[];for(const group of [job,GLOBAL_EQUIPMENT_FORM_GROUP])for(let index=0;index<(ITEM_FORMS[group]?.[slot]?.length||0);index++)candidates.push({group,index});return candidates.length?candidates[rand(candidates.length)]:{group:job,index:0};}
+function rollEquipmentForm(job,slot){const candidates=[];for(const group of [job,GLOBAL_EQUIPMENT_FORM_GROUP])for(let index=0;index<(ITEM_FORMS[group]?.[slot]?.length||0);index++)if(!globalThis.__EMBERWILD_STORY?.isRewardForm(ITEM_FORMS[group][slot][index].id))candidates.push({group,index});return candidates.length?candidates[rand(candidates.length)]:{group:job,index:0};}
 function gearEquipPositions(g){return g?.slot===3?[3,4]:Number.isInteger(g?.slot)&&g.slot>=0&&g.slot<=2?[g.slot]:[];}
 function bossEquipmentSlot(family){return [0,1,2,0,1,3][Math.max(0,Math.min(5,Number(family)||0))]??0;}
 function normalizeEquipmentFormWearability(){

@@ -27,19 +27,22 @@ test('numeric filters clamp to bag values and reset when the chosen property cha
  assert.equal(r.run('__EMBERWILD_GEAR_INVENTORY.filters().upper'),'');
  assert.deepEqual(r.errors,[]);
 });
-test('fold state survives redraw; sortable attributes are limited to common stats',()=>{
+test('filter dialog preserves state and sort sits alongside the inventory list',()=>{
  const r=game();
  r.run('setGearInventoryFold("filters",true);setGearInventoryFold("sort",true);setGearInventorySort("atk");setGearInventoryFilter("job","0")');
  const html=r.run('inlineInventoryView()');
- assert.match(html,/<summary>裝備篩選<\/summary>/);
- assert.match(html,/<summary>裝備排序<\/summary>/);
- assert.match(html,/class="gear-control-fold" open ontoggle="setGearInventoryFold\('filters'/);
- assert.match(html,/class="gear-control-fold" open ontoggle="setGearInventoryFold\('sort'/);
- for(const key of ['atk','def','hp'])assert(html.includes('<option value="'+key+'"'));
+ assert.match(html,/onclick="openGearInventoryFilters\(\)"/);
+ assert(!html.includes('<summary>裝備篩選</summary>'));
+ assert.match(html,/<b>裝備列表<\/b><div class="gear-sort-controls">/);
  const sortOptions=html.match(/<select aria-label="裝備排序"[^>]*>([\s\S]*?)<\/select>/)?.[1]||'';
  assert(sortOptions.includes('<option value="atk"'));
- assert(!sortOptions.includes('<option value="elementResistPct:'),'rare attributes are filterable, not sortable');
- assert(html.includes('<option value="elementResistPct:'),'advanced filters still support rare attributes');
+ assert(!sortOptions.includes('<option value="elementResistPct:'));
+ r.run('openGearInventoryFilters()');const dialog=r.run('$("modal").innerHTML');
+ assert(dialog.includes('<option value="elementResistPct:'));
+ const statOptions=dialog.match(/<select aria-label="屬性"[^>]*>([\s\S]*?)<\/select>/)?.[1]||'';
+ assert(!statOptions.includes('skillEffectPct:'));
+ assert(!statOptions.includes('核心技能'));
+ assert(dialog.includes('詞綴篩選'));
  assert.equal(r.run('setGearInventorySort("elementResistPct:fire::")'),false);
  assert.equal(r.run('__EMBERWILD_GEAR_INVENTORY.sort().key'),'atk');
  assert.deepEqual(r.errors,[]);

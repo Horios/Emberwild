@@ -151,6 +151,6 @@
  const stopBase=stopTeamExploration;stopTeamExploration=function(...args){if(party)party.questChallenge=null;return stopBase(...args);};
  const changeMapBase=chooseMap;chooseMap=function(...args){if(party)party.questChallenge=null;globalThis.expeditionChallengeResult=null;return changeMapBase(...args);};
 
- globalThis.__EMBERWILD_STORY={get design(){return copy(design);},protectedGear,value,progress,met,sync,record,transaction,stats,resetTracking,validateProgress};
+ globalThis.__EMBERWILD_STORY={get design(){return copy(design);},isRewardForm:id=>design.gearRewards.some(g=>g.formId===id),protectedGear,value,progress,met,sync,record,transaction,stats,resetTracking,validateProgress};
 })();
 

@@ -13,7 +13,7 @@
   grantConfiguredDrop=function(rule,e,rng=Math.random){
     if(!['equipment','token'].includes(rule.type))return baseGrant(rule,e,rng);
     const qty=randomQuantity(rule,rng),doc=exportableBalance(),ref=rule.type==='equipment'?M.equipmentRef(rule.key,doc):null;
-    if(rule.type==='equipment'&&!ref)return null;
+    if(rule.type==='equipment'&&(!ref||globalThis.__EMBERWILD_STORY?.isRewardForm(ref.form?.id)))return null;
     if(rule.type==='token'){
       const definition=doc.companionTokens?.catalog?.find(t=>t.id===rule.key);if(!definition)return null;
       for(let i=0;i<qty;i++)globalThis.grantConfiguredToken(rule.key,rng);

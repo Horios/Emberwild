@@ -84,14 +84,14 @@
    const e=row.unit,num=(indices.get(e.name)||0)+1;indices.set(e.name,num);
    const name=ally?characterName(e):e.name+(names.get(e.name)>1?num:'');
    let node=nodes.get(row.id);
-   if(!node){node=document.createElement('div');node.dataset[attribute]=row.id;node.className='battle-enemy-icon'+(ally?' battle-ally-icon':'');node.innerHTML='<span class="enemy-icon-art"></span><small></small><span class="enemy-icon-event"></span><span class="enemy-icon-elite" aria-hidden="true">◆</span>';}
+   if(!node){node=document.createElement('button');node.type='button';node.onclick=()=>showUnit(row.id,ally?'ally':'enemy');node.dataset[attribute]=row.id;node.className='battle-enemy-icon'+(ally?' battle-ally-icon':'');node.innerHTML='<span class="enemy-icon-art"></span><small></small><span class="enemy-icon-event"></span><span class="enemy-icon-elite" aria-hidden="true">◆</span>';}
    const artKey=ally?EmberwildAvatars.resolvedId(e):[baseMonsterName(e),e.monsterId,e.mat,e.element,e.icon,e.race].join('|');
-   if(node.dataset.artKey!==artKey){node.querySelector('.enemy-icon-art').innerHTML=ally?EmberwildAvatars.control(e):artwork(e);node.dataset.artKey=artKey;}
+   if(node.dataset.artKey!==artKey){node.querySelector('.enemy-icon-art').innerHTML=ally?EmberwildAvatars.control(e).replace(/^<button[^>]*>/,'<span class="battle-avatar-art" data-avatar-id="'+EmberwildAvatars.resolvedId(e)+'">').replace(/<\/button>$/,'</span>'):artwork(e);node.dataset.artKey=artKey;}
    const flash=ally?null:flashes.get(row.id),state=row.alive?(row.acting?'目前行動':'存活'):ally?'倒下':'已擊敗';
    node.classList.toggle('is-dead',!row.alive);node.classList.toggle('is-acting',row.acting);node.classList.toggle('is-boss',!ally&&(e.kind==='boss'||e.kind==='final'));
    node.classList.toggle('is-elite',!ally&&e.kind==='elite');
    node.dataset.effect=flash?.effect||'';
-   node.title=name+' · '+state+(ally?'':' · '+fmt(row.hp)+' / '+fmt(row.max)+' HP');node.setAttribute('aria-label',node.title);
+   node.title=name+' · '+state+(ally?'':' · '+fmt(row.hp)+' / '+fmt(row.max)+' HP');node.setAttribute('aria-label',name+' · 查看戰鬥詳細資訊');
    put(node,'small',!ally&&names.get(e.name)>1?String(num):'');put(node,'.enemy-icon-event',flash?.label||(!row.alive?state:''));
    if(root.children[index]!==node)root.insertBefore(node,root.children[index]||null);
    nodes.delete(row.id);
@@ -121,8 +121,66 @@
   if(journalIcons)updateRoster(journalIcons,s);
   globalThis.EmberwildBattleEffects?.sync(s);
  }
+ // The inspector reads the exact combat unit, never a catalogue-only replacement.
+ const pct=n=>fmt(finite(n)*100)+'%';
+ const controlLabels={polymorph:'變形',freeze:'冰凍',frost:'結霜',rage:'狂暴',fear:'恐懼',tauntRage:'嘲諷狂暴'};
+ const effectLabels={attack:'攻擊提升',power:'技能威力提升',guard:'傷害減免',fracture:'防禦降低',weaken:'攻擊降低',vulnerable:'承受傷害增加',damageAmp:'承受傷害增加',critical:'暴擊率提升',regen:'每回合恢復最大生命',slow:'速度降低',followup:'追打',dotAttack:'持續傷害（攻擊倍率）',dotMaxHp:'持續傷害（最大生命比例）'};
+ function inspect(id,side){
+  const s=snapshot(),ally=side==='ally',rows=ally?s.allies:s.units,row=rows.find(x=>x.id===String(id));if(!row)return null;
+  const u=row.unit,v=ally?battleStats(u):enemyBattleStats({...u}),skills=[],statuses=[];
+  if(ally){
+   const S=globalThis.__EMBERWILD_SKILLS;
+   for(const sk of S.system().definitions){
+    if(sk.type==='passive'||!S.learned(u,sk))continue;
+    const a=EmberwildSkillSystem.adapterFor(sk,u.job),configured=(sk.type==='support'?u.supportSlots:sk.type==='proc'?u.procSlots:u.active)?.includes(a.index),box=sk.type==='support'?supportCooldowns:actorCooldowns;
+    skills.push({id:sk.id,name:sk.name,type:sk.type,configured,remaining:sk.type==='proc'?0:cooldownLeft(box,memberKey(u)+'-'+a.index),detail:withHero(u,()=>sk.description||(a.kind==='support'?supportSkillDetail(u.job,a.index,u):coreSkillDetail(u.job,a.index,u))),cooldown:sk.type==='proc'?0:sk.type==='support'?supportSkillCooldown(u,a.index):skillCooldown(a.index,u)});
+   }
+   for(const sk of globalThis.__EMBERWILD_COMPANION_TEST_API?.passivesFor(u)||[])skills.push({id:sk.id,name:sk.name,type:'passive',configured:true,remaining:0,cooldown:0,detail:[sk.description,...(sk.effects||[]).map(EmberwildPassives.effectText)].filter(Boolean).join(' · ')});
+  }else{
+   const assignment=GAMEPLAY_SETTINGS.monsters.catalog.find(m=>m.id===u.monsterId)?.skillAssignments||[],box=globalThis.EmberwildEnemyCombatState?.pack()?.[u.id]||{};
+   for(const a of assignment){
+    const sk=sharedSkillById(a.skillId);if(!sk)continue;
+    const configured=sk.meta?.partnerId==null&&u.lv>=sk.requiredLevel&&sharedSkillScopeAllowsEnemy(sk.usageScope,u.kind);
+    skills.push({id:sk.id,name:sk.name,type:sk.activation,configured,remaining:cooldownLeft(box,sk.id),cooldown:sk.cooldown,detail:sk.meta.description||`${ELEMENTS[sk.element]||sk.element}屬性 · 倍率 ${pct(sk.power)} · 最多 ${sk.maxTargets} 目標`});
+   }
+  }
+  for(const h of heroes())for(const sk of globalThis.__EMBERWILD_COMPANION_TEST_API?.passivesFor(h)||[])if(ally?(sk.target==='self'&&h===u||sk.target==='allies'&&h.hp>0):sk.target==='enemies'&&h.hp>0&&u.hp>0){
+   statuses.push({name:sk.name,polarity:sk.kind==='debuff'?'debuff':'buff',detail:(sk.effects||[]).map(EmberwildPassives.effectText).join(' · '),time:'常駐被動',source:characterName(h)});
+  }
+  for(const e of effects)if(e.target===row.id&&e.until>partyClock){
+   const taunt=e.kind==='skillTaunt',source=party.members.find(h=>memberKey(h)===(e.sourceKey??e.source)),target=taunt?party.members.find(h=>String(memberKey(h))===String(e.value)):null;
+   statuses.push({name:e.name||effectLabels[e.kind]||e.kind,polarity:['weaken','fracture','vulnerable','damageAmp','dotAttack','dotMaxHp','skillTaunt','slow'].includes(e.kind)?'debuff':'buff',detail:taunt?'優先攻擊 '+(target?characterName(target):String(e.value)):(effectLabels[e.kind]||e.kind)+' '+pct(e.value),remaining:Math.max(0,Math.ceil(e.until-partyClock)),source:source?characterName(source):''});
+  }
+  for(const e of globalThis.EmberwildStatusCombatState?.pack().active||[])if(e.targetKey===row.id&&e.expiresClock>partyClock&&(e.remainingUses==null||e.remainingUses>0)){
+   // Immune controls have no effect unless their real control state exists.
+   if(e.definition.control&&!e.definition.modifiers?.length&&!e.definition.periodic?.length&&!globalThis.__EMBERWILD_CONTROL_TEST_API?.states?.[u.id]?.[e.definition.control.kind])continue;
+   statuses.push({name:e.name,polarity:globalThis.__EMBERWILD_STATUS_TEST_API.polarity(e.definition),detail:customStatusTooltip(e.definition),remaining:Math.ceil(e.expiresClock-partyClock),uses:e.remainingUses,source:e.sourceName});
+  }
+  if(!ally)for(const [kind,c] of Object.entries(globalThis.__EMBERWILD_CONTROL_TEST_API?.states?.[u.id]||{}))if(c&&(c.turns===undefined||c.turns>0)){
+   const bits=[];if(c.shield!==undefined)bits.push('變形護盾 '+fmt(c.shield));if(c.slowPct!==undefined)bits.push('速度降低 '+pct(c.slowPct));if(c.damageReduction!==undefined)bits.push('傷害降低 '+pct(c.damageReduction));if(c.skipChance!==undefined)bits.push('無法行動機率 '+pct(c.skipChance));if(c.basicAttackBonus!==undefined)bits.push('普攻加成 '+pct(c.basicAttackBonus));
+   statuses.push({name:controlLabels[kind]||kind,polarity:kind==='rage'?'buff':'debuff',detail:bits.join(' · '),remaining:c.turns??null});
+  }
+  if(ally)for(const kind of ['imbue','ward','elementTonic'])for(const b of (EmberwildTimedBoosts.ELEMENTAL_TYPES.includes(kind)?EmberwildTimedBoosts.buffRows(u[kind]):u[kind]?[u[kind]]:[])){
+   if(EmberwildTimedBoosts.ELEMENTAL_TYPES.includes(kind)?!(b.enabled&&EmberwildTimedBoosts.remainingMs(b)>0):!(b.remainingTurns>0))continue;
+   const d=supplyBuffDetails(b,kind);statuses.push({name:d.name,polarity:'buff',detail:d.detail,time:d.time,clock:d.clock});
+  }
+  const controls=globalThis.__EMBERWILD_CONTROL_TEST_API?.states?.[u.id]||{},max=ally?v.hp:row.max,hp=Math.max(0,Math.min(max,finite(u.hp)));
+  const same=rows.filter(x=>x.unit.name===u.name),name=ally?characterName(u):u.name+(same.length>1?same.indexOf(row)+1:'');
+  return {id:row.id,side:ally?'ally':'enemy',name,level:u.lv,kind:ally?(u.companionId===undefined?'主角':'夥伴'):({normal:'普通怪物',elite:'菁英怪物',boss:'BOSS',final:'最終 BOSS'}[u.kind]||'怪物'),alive:hp>0,hp,max,shield:Math.max(0,finite(u.shield)),controlShield:Math.max(0,finite(controls.polymorph?.shield)),element:ally?weaponElement(u):u.element,race:ally?null:u.race,stats:{...v},skills,statuses,nextActiveDamageBonus:Math.max(0,finite(u.nextActiveDamageBonus)),advanceSteps:Math.max(0,finite(ally?u.procAdvanceSteps:u.sharedAdvanceSteps))};
+ }
+ function showUnit(id,side){
+  const d=inspect(id,side);if(!d)return false;
+  const statNames={atk:'攻擊力',def:'防禦力',speed:'速度',crit:'暴擊率',critDamage:'暴擊傷害',pierce:'防禦穿透',defenseIgnore:'防禦無視',lifesteal:'生命竊取',evasion:'閃避率',elementBonus:'全屬性增傷',bossDamage:'BOSS 增傷'},ratios=new Set(['crit','critDamage','defenseIgnore','lifesteal','evasion','elementBonus','bossDamage']);
+  const statRows=Object.entries(statNames).map(([k,n])=>[n,ratios.has(k)?pct(d.stats[k]):fmt(finite(d.stats[k]))]);
+  for(const [k,label,names] of [['elementDamage','屬性增傷',ELEMENTS],['resist','屬性抗性',ELEMENTS],['raceDamage','種族增傷',RACES]])for(const [target,value] of Object.entries(d.stats[k]||{}))statRows.push([(names[target]||target)+' · '+label,pct(value)]);
+  const labels={active:'主動',proc:'普攻觸發',support:'輔助',passive:'被動'},polarity={buff:'增益',debuff:'減益',neutral:'狀態'};
+  const modal=$('modal');modal.classList.add('battle-unit-dialog');
+  modal.innerHTML=`<div class="battle-unit-inspector"><h2>${esc(d.name)} · 戰鬥詳細資訊</h2><p>LV ${esc(String(d.level??'—'))} · ${esc(d.kind)} · ${d.alive?'存活':'已倒下／擊敗'} · ${esc(ELEMENTS[d.element]||d.element||'無')}屬性${d.race?' · '+esc(RACES[d.race]||d.race):''}</p><p class="battle-unit-vitals"><b>生命 ${fmt(d.hp)} / ${fmt(d.max)}</b><span>護盾 ${fmt(d.shield)}</span>${d.controlShield?'<span>變形護盾 '+fmt(d.controlShield)+'</span>':''}</p><h3>目前戰鬥能力</h3><dl class="battle-unit-stat-grid">${statRows.map(([label,value])=>`<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>${d.nextActiveDamageBonus?'<p>下一次主動技能增傷 '+pct(d.nextActiveDamageBonus)+'</p>':''}${d.advanceSteps?'<p>下回合行動提前 '+d.advanceSteps+' 格</p>':''}<h3>持有技能與冷卻</h3><div class="battle-unit-skill-list">${d.skills.map(sk=>`<article><b>${esc(sk.name)}</b><span>${labels[sk.type]||esc(sk.type)} · ${!sk.configured?'未配置／不符合使用條件 · ':''}${sk.type==='proc'?'普攻時判定觸發':sk.type==='passive'?'持續生效':sk.remaining>0?'剩餘冷卻 '+sk.remaining+' 個自身回合':'就緒'}${sk.cooldown?' · 冷卻 '+sk.cooldown+' 回合':''}</span><p>${esc(sk.detail)}</p></article>`).join('')||'<p>未持有技能，使用普通攻擊。</p>'}</div><h3>目前增益與減益</h3><div class="battle-unit-status-list">${d.statuses.map(e=>`<article data-polarity="${esc(e.polarity)}"><b>${esc(e.name)} · ${polarity[e.polarity]||'狀態'}</b><p>${esc(e.detail)}</p><small>${esc(e.time|| (e.remaining===null?'持續至解除／戰鬥結束':'剩餘 '+e.remaining+' 戰鬥回合'))}${e.clock?' · '+esc(e.clock):''}${e.uses!=null?' · 剩餘 '+e.uses+' 次':''}${e.source?' · 來源：'+esc(e.source):''}</small></article>`).join('')||'<p>目前無增益或減益。</p>'}</div><p class="small">開啟視窗時戰鬥暫停。冷卻依該單位自身回合計算，增減益依各自標示的時間計算。</p><button type="button" class="primary" onclick="closeModal()">關閉</button></div>`;
+  if(!modal.open)modal.showModal();return true;
+ }
+ $('modal').addEventListener('close',()=>$('modal').classList.remove('battle-unit-dialog'));
  function toggleDetails(){detailCollapsed=!detailCollapsed;sync({animate:false});}
- globalThis.EmberwildBattleSummary={snapshot,sync,finish,toggleDetails};
+ globalThis.EmberwildBattleSummary={snapshot,sync,finish,toggleDetails,inspect,showUnit};
  const journalBase=sharedBattleJournal;
  sharedBattleJournal=function(){const html=journalBase();return html.replace('<div class="journal-resizer"',summaryHTML()+'<div class="journal-resizer"');};
  const battleBase=battleView;

@@ -1,15 +1,19 @@
 /* Bag presentation uses immutable item identities and the existing stat ledger,
    sale transaction and salvage reward plan. No generated-stat cache is persisted. */
 (()=>{
-  const defaults=()=>({job:'all',slot:'all',quality:'all',tMin:'',tMax:'',levelMin:'',levelMax:'',locked:'all',worn:'all',stat:'',op:'gte',value:'',upper:''});
+  const defaults=()=>({job:'all',slot:'all',quality:'all',tMin:'',tMax:'',levelMin:'',levelMax:'',locked:'all',worn:'all',stat:'',op:'gte',value:'',upper:'',affixType:'',affixSkill:'',affixElement:'',affixRace:'',affixRank:'',affixOp:'gte',affixValue:''});
   let filter=defaults(),sort='quality',direction='desc',multi=false,advanced=false,selected=new Set(),review=null;
   const folds={filters:false,sort:false},commonSortFields=['atk','def','hp','speed','crit'];
   const T=()=>globalThis.__EMBERWILD_TEAM_EQUIPMENT;
-  const fields=()=>globalThis.equipmentNumericFields();
+  const fields=()=>globalThis.equipmentNumericFields().filter(f=>!/^skill(?:EffectPct|CooldownReduction|ProcChance):/.test(f.key));
+  const affixTypes=[[0,'攻擊'],[1,'生命'],[2,'防禦'],[3,'暴擊率'],[4,'技能效果'],[5,'技能冷卻／觸發率'],[6,'暴擊傷害'],[7,'防禦穿透'],[8,'生命竊取'],[9,'閃避率'],[12,'屬性增傷'],[13,'種族增傷'],[14,'屬性抗性'],[15,'攻擊加成'],[16,'全技能冷卻'],[17,'掉落率'],[18,'防禦無視']];
+  function matchingAffixes(g){return (g.affix||[]).filter(a=>String(a.type)===filter.affixType&&(!filter.affixRank||String(a.rank??0)===filter.affixRank)&&(!filter.affixElement||a.element===filter.affixElement)&&(!filter.affixRace||a.race===filter.affixRace)&&(!filter.affixSkill||g.job+':'+(a.skill??0)===filter.affixSkill));}
+  const compare=(n,v,op)=>({gt:n>v,gte:n>=v,eq:n===v,lte:n<=v,lt:n<v})[op]===true;
   const numeric=(g)=>globalThis.equipmentAbilitySummary(g).numeric;
   function inputLimits(key){
     if(key==='tMin'||key==='tMax')return {min:1,max:Math.max(1,globalThis.__EMBERWILD_EQUIPMENT_POWER?.strength?.multipliers?.length||10),step:1};
     if(key==='levelMin'||key==='levelMax')return {min:1,max:RULES.maxLevel,step:1};
+    if(key==='affixValue')return {min:0,max:Math.max(0,...(state?.bag||[]).flatMap(g=>matchingAffixes(g).map(a=>Number(a.value)||0))),step:'any'};
     if(key==='value'||key==='upper'){
       // Actual owned-equipment totals bound numeric search; no arbitrary stat cap.
       const values=filter.stat?(state?.bag||[]).filter(g=>!EmberwildTokens.isToken(g)).map(g=>Number(numeric(g)[filter.stat])||0):[];
@@ -36,6 +40,7 @@
       const t=Number.isInteger(g.powerTier)?g.powerTier:null,level=gearRequiredLevel(g),worn=wearers.has(g.id);
       if(filter.job!=='all'&&!gearWearableJobs(g).includes(Number(filter.job))||filter.slot!=='all'&&g.slot!==Number(filter.slot)||filter.quality!=='all'&&gearQualityRank(g)!==Number(filter.quality)||filter.locked!=='all'&&!!g.locked!==(filter.locked==='yes')||filter.worn!=='all'&&worn!==(filter.worn==='yes'))return;
       if((filter.tMin!==''||filter.tMax!=='')&&t===null||!bound(t,filter.tMin,true)||!bound(t,filter.tMax,false)||!bound(level,filter.levelMin,true)||!bound(level,filter.levelMax,false))return;
+      if(filter.affixType){const affixes=matchingAffixes(g);if(!affixes.length||filter.affixValue!==''&&!affixes.some(a=>compare(Number(a.value),Number(filter.affixValue),filter.affixOp)))return;}
       const stats=numeric(g);
       if(filter.stat&&keys.has(filter.stat)&&filter.value!==''){
         const n=stats[filter.stat],v=Number(filter.value),u=Number(filter.upper);
@@ -56,7 +61,7 @@
     return result;
   }
   function visibleSelection(mode){const ids=new Set(rows().map(r=>r.g.id));return state.bag.filter(g=>ids.has(g.id)&&selected.has(g.id)&&actionable(g,mode));}
-  const redraw=()=>{review=null;render();};
+  const redraw=()=>{review=null;render();if($('modal').dataset.gearFilters==='true'&&$('modal').open)openGearInventoryFilters();};
   globalThis.setGearInventoryFilter=function(key,value){
     if(!Object.hasOwn(filter,key))return false;
     const limit=inputLimits(key);
@@ -66,6 +71,7 @@
     }else{
       filter[key]=String(value);
       if(key==='stat'){filter.value='';filter.upper='';}
+      if(key==='affixType'){filter.affixSkill='';filter.affixElement='';filter.affixRace='';filter.affixRank='';filter.affixValue='';}
     }
     selected.clear();redraw();return true;
   };
@@ -79,22 +85,25 @@
   globalThis.clearSelectedGear=function(){selected.clear();redraw();};
   const choose=(key,label,options)=>`<label>${label}<select aria-label="${label}" onchange="setGearInventoryFilter('${key}',this.value)">${options.map(([value,text])=>`<option value="${esc(String(value))}" ${String(value)===filter[key]?'selected':''}>${esc(text)}</option>`).join('')}</select></label>`;
   const input=(key,label)=>{
-    const limit=inputLimits(key),disabled=['value','upper'].includes(key)&&!filter.stat;
+    const limit=inputLimits(key),disabled=['value','upper'].includes(key)&&!filter.stat||key==='affixValue'&&!filter.affixType;
     return `<label>${label}<input type="number" aria-label="${label}" min="${limit.min}" max="${limit.max}" step="${limit.step}" value="${esc(filter[key])}" ${disabled?'disabled':''} onchange="setGearInventoryFilter('${key}',this.value)"></label>`;
   };
-  function controls(){
-    const all=[['all','全部']],fs=fields();
-    return `<div class="gear-management-controls">
-      <details class="gear-control-fold" ${folds.filters?'open':''} ontoggle="setGearInventoryFold('filters',this.open)"><summary>裝備篩選</summary>
-        <div class="gear-control-fold-body"><div class="gear-basic-filters">${choose('job','職業',[...all,...CLASSES.map((c,i)=>[i,c.name])])}${choose('slot','部位',[...all,...['武器','護甲','副手','飾品'].map((s,i)=>[i,s])])}${choose('quality','品質',[...all,...AFFIX_RANK.map((q,i)=>[i,q])])}${choose('locked','鎖定',[...all,['yes','已鎖定'],['no','未鎖定']])}${choose('worn','穿戴',[...all,['yes','已裝備'],['no','未裝備']])}${input('tMin','T 級下限')}${input('tMax','T 級上限')}${input('levelMin','等級下限')}${input('levelMax','等級上限')}<button onclick="clearGearInventoryFilters()">清除篩選</button></div>
-        <details class="gear-numeric-fold" ${advanced?'open':''} ontoggle="setGearInventoryAdvanced(this.open)"><summary>進階屬性篩選</summary><p class="small">依裝備自身總值（含詞綴與強化），不含角色或隊伍能力。</p><div class="gear-numeric-filters">${choose('stat','屬性',[['','不限制'],...fs.map(f=>[f.key,f.label])])}${choose('op','比較',[['gt','大於'],['gte','大於等於'],['eq','等於'],['lte','小於等於'],['lt','小於'],['range','區間（含上下限）']])}${input('value','數值／下限')}${filter.op==='range'?input('upper','數值上限'):''}</div></details></div>
-      </details>
-      <details class="gear-control-fold" ${folds.sort?'open':''} ontoggle="setGearInventoryFold('sort',this.open)"><summary>裝備排序</summary>
-        <div class="gear-control-fold-body gear-sort-controls"><label>排序<select aria-label="裝備排序" onchange="setGearInventorySort(this.value)">${[['acquired','取得時間'],['level','裝備等級'],['tier','T 級'],['quality','稀有度 → T 級'],...fs.filter(f=>commonSortFields.includes(f.key)).map(f=>[f.key,f.label]),['price','出售價格']].map(([key,label])=>`<option value="${key}" ${sort===key?'selected':''}>${esc(label)}</option>`).join('')}</select></label><button onclick="toggleGearInventoryDirection()">${direction==='desc'?'高 → 低':'低 → 高'}</button></div>
-      </details>
-      <div class="gear-management-actions"><button onclick="toggleGearInventoryMulti()" aria-pressed="${multi}">${multi?'結束多選':'多選裝備'}</button></div>
-    </div>`;
+  function affixControls(){
+    const type=Number(filter.affixType),all=[['','不限']];
+    const skills=[...new Set((state?.bag||[]).flatMap(g=>(g.affix||[]).filter(a=>a.type===type&&[4,5].includes(a.type)).map(a=>g.job+':'+(a.skill??0))))].map(key=>{const [j,i]=key.split(':').map(Number);return [key,CLASSES[j].name+' · '+CLASSES[j].skills[i]?.[0]];});
+    return `<h3>詞綴篩選</h3><p class="small">只檢查隨機詞綴；數值條件套用於同一條詞綴，不計基底、強化或寶石。</p><div class="gear-numeric-filters">${choose('affixType','詞綴效果',[['','不限制'],...affixTypes])}${filter.affixType?choose('affixRank','詞綴品質',[...all,...AFFIX_RANK.map((name,n)=>[n,name])]):''}${[4,5].includes(type)&&filter.affixType?choose('affixSkill','詞綴技能',[...all,...skills]):''}${[12,14].includes(type)?choose('affixElement','詞綴屬性',[...all,...Object.entries(ELEMENTS)]):''}${type===13?choose('affixRace','詞綴種族',[...all,...Object.entries(RACES)]):''}${choose('affixOp','詞綴比較',[['gt','大於'],['gte','大於等於'],['eq','等於'],['lte','小於等於'],['lt','小於']])}${input('affixValue','詞綴數值')}</div>`;
   }
+  function filterControls(){
+    const all=[['all','全部']],fs=fields();
+    return `<h2>裝備篩選</h2><div class="gear-basic-filters">${choose('job','職業',[...all,...CLASSES.map((c,i)=>[i,c.name])])}${choose('slot','部位',[...all,...['武器','護甲','副手','飾品'].map((s,i)=>[i,s])])}${choose('quality','品質',[...all,...AFFIX_RANK.map((q,i)=>[i,q])])}${choose('locked','鎖定',[...all,['yes','已鎖定'],['no','未鎖定']])}${choose('worn','穿戴',[...all,['yes','已裝備'],['no','未裝備']])}${input('tMin','T 級下限')}${input('tMax','T 級上限')}${input('levelMin','等級下限')}${input('levelMax','等級上限')}</div>
+      <details class="gear-numeric-fold" ${advanced?'open':''} ontoggle="setGearInventoryAdvanced(this.open)"><summary>進階屬性篩選</summary><p class="small">依裝備自身總值（含詞綴與強化），不含角色或隊伍能力。</p><div class="gear-numeric-filters">${choose('stat','屬性',[['','不限制'],...fs.map(f=>[f.key,f.label])])}${choose('op','比較',[['gt','大於'],['gte','大於等於'],['eq','等於'],['lte','小於等於'],['lt','小於'],['range','區間（含上下限）']])}${input('value','數值／下限')}${filter.op==='range'?input('upper','數值上限'):''}</div>${affixControls()}</details>
+      <div class="actions"><button onclick="clearGearInventoryFilters()">清除篩選</button><button class="primary" onclick="finishGearInventoryFilters()">完成</button></div>`;
+  }
+  globalThis.openGearInventoryFilters=function(){const modal=$('modal'),scroll=modal.scrollTop;modal.dataset.gearFilters='true';modal.innerHTML='<div class="gear-filter-dialog gear-management-controls">'+filterControls()+'</div>';if(!modal.open)modal.showModal();modal.scrollTop=scroll;return true;};
+  globalThis.finishGearInventoryFilters=function(){delete $('modal').dataset.gearFilters;closeModal();render();};
+  $('modal').addEventListener('close',()=>{if($('modal').dataset.gearFilters==='true'){delete $('modal').dataset.gearFilters;render();}});
+  function sortControls(){return `<div class="gear-sort-controls"><label>排序<select aria-label="裝備排序" onchange="setGearInventorySort(this.value)">${[['acquired','取得時間'],['level','裝備等級'],['tier','T 級'],['quality','稀有度 → T 級'],...fields().filter(f=>commonSortFields.includes(f.key)).map(f=>[f.key,f.label]),['price','出售價格']].map(([key,label])=>`<option value="${key}" ${sort===key?'selected':''}>${esc(label)}</option>`).join('')}</select></label><button type="button" onclick="toggleGearInventoryDirection()" aria-label="切換裝備排序方向">${direction==='desc'?'高 → 低':'低 → 高'}</button></div>`;}
+  function controls(){const active=JSON.stringify(filter)!==JSON.stringify(defaults());return `<div class="gear-management-toolbar"><button onclick="toggleGearInventoryMulti()" aria-pressed="${multi}">${multi?'結束多選':'多選裝備'}</button><button type="button" class="gear-filter-button" onclick="openGearInventoryFilters()">裝備篩選${active?' · 已套用':''}</button></div>`;}
   globalThis.setGearInventoryAdvanced=value=>{advanced=!!value;};
   function item(row){
     const g=row.g,worn=gearWearer(g.id),can=actionable(g),stats=Object.entries(row.stats).filter(([key,n])=>['atk','def','hp','speed'].includes(key)&&n).map(([key,n])=>({atk:'攻',def:'防',hp:'生命',speed:'速度'}[key])+' '+n).join(' · ');
@@ -124,9 +133,22 @@
     const list=rows(),visible=new Set(list.map(r=>r.g.id));selected=new Set([...selected].filter(id=>visible.has(id)&&actionable(findGear(id))));
     if(!visible.has(inventorySelectedGearId))inventorySelectedGearId=list[0]?.g.id??null;
     const current=list.find(r=>r.g.id===inventorySelectedGearId)?.g;
-    return `<section class="panel compact-inventory-panel gear-management-panel">${resourceLine()}${state.bag.length>=RULES.bagCapacity?'<p class="gear-overflow-note" role="status">背包已滿，掉落已保留；整理至容量以下後可繼續探索。</p>':''}${controls()}<div class="inventory-master-detail"><section class="inventory-master-pane"><div class="inventory-master-heading"><b>裝備列表</b><span>顯示 ${list.length} 件</span></div><div class="inline-equipment-list inventory-list-scroll">${list.map(item).join('')||'<p class="empty">沒有符合條件的裝備。</p>'}</div>${multi?`<div class="gear-batch-controls"><b>已選 ${selected.size} 件</b><button onclick="selectVisibleGear()">全選目前結果</button><button onclick="clearSelectedGear()">清除選取</button><button onclick="requestGearInventoryBatch('sell')" ${selected.size?'':'disabled'}>批次出售</button><button onclick="requestGearInventoryBatch('salvage')" ${selected.size?'':'disabled'}>批次分解</button></div>`:''}</section><section class="inventory-detail-wrap">${inventoryGearDetail(current)}</section></div></section>`;
+    return `<section class="panel compact-inventory-panel gear-management-panel"><div class="gear-management-top">${resourceLine()}${controls()}</div>${state.bag.length>=RULES.bagCapacity?'<p class="gear-overflow-note" role="status">背包已滿，掉落已保留；整理至容量以下後可繼續探索。</p>':''}<div class="inventory-master-detail"><section class="inventory-master-pane"><div class="inventory-master-heading"><b>裝備列表</b>${sortControls()}<span>顯示 ${list.length} 件</span></div><div class="inline-equipment-list inventory-list-scroll">${list.map(item).join('')||'<p class="empty">沒有符合條件的裝備。</p>'}</div>${multi?`<div class="gear-batch-controls"><b>已選 ${selected.size} 件</b><button onclick="selectVisibleGear()">全選目前結果</button><button onclick="clearSelectedGear()">清除選取</button><button onclick="requestGearInventoryBatch('sell')" ${selected.size?'':'disabled'}>批次出售</button><button onclick="requestGearInventoryBatch('salvage')" ${selected.size?'':'disabled'}>批次分解</button></div>`:''}</section><section class="inventory-detail-wrap">${inventoryGearDetail(current)}</section></div></section>`;
   };
-  const reset=resetSession;resetSession=function(){const out=reset();filter=defaults();sort='quality';direction='desc';multi=false;folds.filters=false;folds.sort=false;advanced=false;selected.clear();review=null;return out;};
+  let wearTarget=null;
+  globalThis.openInventoryWear=function(id){
+    const g=findGear(id),h=party?.members[0];if(!g||!h||EmberwildTokens.isToken(g))return false;
+    wearTarget={owner:party,id};const positions=gearEquipPositions(g),position=positions.find(p=>h.equipped[p]===id)??positions.find(p=>!h.equipped[p])??positions[0];
+    wornSlotSelection={key:memberKey(h),position};pageHeroSelection.set('worn',memberKey(h));closeModal();setTab('worn');return true;
+  };
+  const wornBase=wornEquipmentView;
+  wornEquipmentView=function(){
+    const h=party.members[0],g=wearTarget?.owner===party?findGear(wearTarget.id):null,sk=g&&globalThis.__EMBERWILD_SKILLS?.byId(g.skillId),wearer=g&&gearWearer(g.id),valid=g&&eligibleWearers(g).includes(h)&&!inlineAffixDrafts.has(affixDraftKey(g));
+    const selected=g?`<div class="inventory-wear-target"><b>準備穿戴：${equipmentNameHTML(g)}</b>${wearer?'<p>目前由 '+esc(characterName(wearer))+' 穿戴。</p>':!valid?'<p>此裝備不符合目前職業、等級或有待確認詞綴。</p>':gearEquipPositions(g).map(p=>`<button type="button" onclick="previewEquip('${g.id}',${memberKey(h)},${p})">穿戴至${esc(EQUIP_POSITION_NAMES[p])}</button>`).join('')}</div>`:'';
+    const guide=`<section class="panel inventory-wear-guide" aria-label="固定穿戴流程"><h2>穿戴流程</h2><ol><li>選擇裝備欄位與背包裝備。</li><li>查看換裝比較，再確認穿戴；空欄位會直接穿戴。</li><li>技能裝備：前往技能頁啟用一件裝備技能，再放入對應的主動、觸發或輔助槽。</li></ol>${selected}<button type="button" onclick="setTab('skills')">${sk?'啟用與配置「'+esc(sk.name)+'」':'前往技能配置'}</button></section>`;
+    return guide+wornBase();
+  };
+  const reset=resetSession;resetSession=function(){const out=reset();wearTarget=null;filter=defaults();sort='quality';direction='desc';multi=false;folds.filters=false;folds.sort=false;advanced=false;selected.clear();review=null;return out;};
   const validate=validateParty;validateParty=data=>validate(EmberwildGearInventory.prepareSave(data));
   function full(){return !!state&&state.bag.length>=RULES.bagCapacity;}
   function blocked(){if(!full())return false;running=false;toast('背包已滿，請先整理裝備再繼續探索');return true;}
