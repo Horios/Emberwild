@@ -89,6 +89,9 @@ pacedRound=function*(){
   }
  }
  combatRoundProgress=null;
+ // Capture presentation references before the existing result cleanup removes foes.
+ if(!living().length)globalThis.EmberwildBattleSummary?.finish('wipe');
+ else if(foes.length&&!foes.some(e=>e.hp>0))globalThis.EmberwildBattleSummary?.finish('victory');
  for(const e of foes)if(e.hp<=0)rewardGroupKill(e);if(!living().length){running=false;party.members[0].gold-=Math.floor(party.members[0].gold*GS('combat.defeatGoldLoss',.05));for(const h of heroes())h.shield=0;note('全隊戰敗，帳號失去 '+Math.round(GS('combat.defeatGoldLoss',.05)*10000)/100+'% 金幣。生命已全滿。');refillParty();foes=[];enemy=null;}else if(!foes.some(e=>e.hp>0)){refillParty();note('本次遭遇勝利，全隊生命已回滿。');if(foes.some(e=>e.kind==='final')){running=false;note('噬日者已倒下！LV30 成員解鎖 LV60，其他成員達 LV30 時解鎖。');}}save();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();if(activeBattleStat){if(activeBattleStat.pendingOutcome==='wipe')finalizeBattleStatistics('wipe');else if(foes.length&&foes.every(e=>e.hp<=0))finalizeBattleStatistics('victory');}
 };
 const resumableRoundReset=resetEncounter;

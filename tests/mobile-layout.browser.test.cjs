@@ -94,7 +94,8 @@ test('Mobile: folding the live journal preserves combat, filters, loot and page 
   assert.equal(await p.locator('#mobileLootBody').evaluate(e=>e.scrollTop),lootScroll);
   await p.locator('.mobile-loot-toggle').click();
   assert.equal(await p.locator('#mobileJournalBody').isVisible(),false);
-  await p.evaluate(()=>{toggleBattle();clearInterval(timer);render();});
+  // Layout interactions can leave a throttled wall-clock catch-up pending.
+  await p.evaluate(async()=>{await EmberwildOffline.settle(undefined,false);toggleBattle();clearInterval(timer);render();});
   assert.equal(await p.evaluate(()=>running),true);
   assert.equal(await p.locator('#mobileJournalBody').isVisible(),false);
   await p.locator('.mobile-journal-toggle').click();

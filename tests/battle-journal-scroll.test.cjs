@@ -84,14 +84,18 @@ test('Battle journal preserves scrolling through redraws and sparse filters',asy
     });
     for(const filter of ['exp','item'])await t.test(filter+' stays at the latest row during actual 2x combat between rewards',async()=>{
       await fill(filter);
-      await page.evaluate(()=>{
-        setBattleSpeed(2);toggleBattle();
+      await page.evaluate(async()=>{
+        await EmberwildOffline.settle(undefined,false);
+        state.consumables.speed2_30m=1;useSupply('speed2_30m');setBattleSpeed(2);toggleBattle();
         foes=[{...makeEnemy(0,state,()=>.9),id:'scroll_target',hp:1e8,maxhp:1e8,atk:1,def:0}];enemy=foes[0];
         round=0;roundIterator=null;roundStartedAt=0;nextActionAt=0;lastActionOrder=[];
         for(const h of heroes())h.shield=1e6;
       });
       try{
         for(let i=0;i<12;i++){await page.waitForTimeout(100);atBottom(await position());}
+        // The resumable timeline can still be inside its encounter transition.
+        await page.waitForFunction(()=>round>0&&lastActionOrder.length>0,{},{timeout:8000});
+        atBottom(await position());
         assert.equal(await page.evaluate(()=>round>0&&lastActionOrder.length>0),true,'The actual timer must advance combat actions');
       }finally{await page.evaluate(()=>{if(running)toggleBattle();});}
     });
