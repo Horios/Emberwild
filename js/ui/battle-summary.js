@@ -21,7 +21,7 @@
   if(owner!==party)clear();
   const ended=terminal?.owner===party&&(!foes.length||terminal.units===foes)?terminal:null;
   const source=party?(ended?.units||foes):[];
-  const action=lastActionOrder.at(-1),actingId=!ended&&running&&!$('modal')?.open&&action!==openingAction?action?.id:null;
+  const action=lastActionOrder.at(-1),actingId=(!ended||ended.result==='victory')&&running&&!$('modal')?.open&&action!==openingAction?action?.id:null;
   const allies=party?heroes().map(h=>({id:heroKey(h),unit:h,alive:h.hp>0,acting:h.hp>0&&heroKey(h)===actingId})):[];
   const units=source.map(e=>{
    // maxhp is also the cap used by enemy healing, lifesteal and individual bars.
@@ -154,6 +154,8 @@
  const refreshBase=refreshGlobalJournal;
  refreshGlobalJournal=function(...args){const out=refreshBase(...args);sync();return out;};
  const tickBase=tick;
- tick=function(...args){const out=tickBase(...args);if(!globalThis.EmberwildOffline?.busy)sync();return out;};
+ // The shared timeline publishes each visible event through render/journal.
+ // Do not rescan all portraits on its idle 50ms scheduling checks.
+ tick=function(...args){const out=tickBase(...args);if(!globalThis.EmberwildOffline)sync();return out;};
  if(party)render();
 })();

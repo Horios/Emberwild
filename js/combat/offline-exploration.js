@@ -5,7 +5,7 @@
  const copy=v=>v==null?v:JSON.parse(JSON.stringify(v)),api=EmberwildTimedBoosts;
  const hooks=()=>[EmberwildControlCombatState,EmberwildEnemyCombatState,EmberwildStatusCombatState,EmberwildTokenCombatState];
  const transient=['hp','shield','basicAdvanceRound','procAdvanceRound','procAdvanceSteps','nextActiveDamageBonus','healPotionCooldownRemaining'];
- let internal=false,stepping=false,job=null,failed=false,restoring=false,lastMode=false,actionSerial=0,lastRendered=0,gearPage=0,lastCheck=0,requestedAt=0,renderedReceipt=null,jobOffline=false,lastCommitted=globalThis.__EMBERWILD_BOOT_SAVE_RAW||null;
+ let internal=false,stepping=false,job=null,failed=false,restoring=false,lastMode=false,actionSerial=0,lastRendered=0,gearPage=0,lastCheck=0,lastHeartbeat=0,requestedAt=0,renderedReceipt=null,jobOffline=false,lastCommitted=globalThis.__EMBERWILD_BOOT_SAVE_RAW||null;
  // Profiling: full saves dominated replay (about 23ms each on an 8h debt).
  // One wall-clock second of work amortizes serialization while bounding replay
  // lost on close. Only commit()/successful save moves the durable checkpoint.
@@ -180,9 +180,21 @@
   actionSerial++;stepping=true;
   try{virtual(at,()=>{
    if(!roundIterator){globalThis.__EMBERWILD_RESUMING_ROUND=!!combatRoundProgress;roundIterator=pacedRound();if(!combatRoundProgress)roundStartedAt=at;}
-   let result;try{result=roundIterator.next();}finally{globalThis.__EMBERWILD_RESUMING_ROUND=false;}
+   let result;try{
+    result=roundIterator.next();
+    // A yield is one complete action (including its procs/counters). Once it
+    // ends combat, resume the same generator now to run rewards and all result
+    // wrappers; there is no remaining independent actor to display or wait for.
+    if(!result.done&&(!living().length||!foes.some(e=>e.hp>0)))result=roundIterator.next();
+   }finally{globalThis.__EMBERWILD_RESUMING_ROUND=false;}
    const actionMs=Math.max(1,Math.round(GS('combat.pacing.actionIntervalMs',900)/battleRate)),roundMs=Math.max(actionMs,Math.round(GS('combat.pacing.roundMinimumMs',6000)/battleRate));
-   if(result.done){roundIterator=null;nextActionAt=Math.max(at+actionMs,roundStartedAt+roundMs);}else nextActionAt=at+actionMs;
+   if(result.done){
+    roundIterator=null;
+    // round===0 means this step only spawned an encounter. The existing action
+    // interval is also the encounter gap; the minimum belongs to ongoing rounds.
+    const ongoing=round>0&&foes.some(e=>e.hp>0);
+    nextActionAt=ongoing?Math.max(at+actionMs,roundStartedAt+roundMs):at+actionMs;
+   }else nextActionAt=at+actionMs;
   });}finally{stepping=false;}
  }
  // Fast replay learns combat cost only. Every new encounter and every reward is
@@ -288,7 +300,7 @@
  }
 
  // Finite batches yield to the browser; settlement enforces the offline cap.
- function advance(target,maxEvents=150){
+ function advance(target,maxEvents=150,foreground=false){
   let c=ensure();if(globalThis.__EMBERWILD_SAVE_OWNER===false)throw Error('存檔已由另一分頁接手');
   if(!c||target<c.lastAt)return false;
   let count=0,resources=null;const batchStart=performance.now();
@@ -304,8 +316,18 @@
    const at=Math.min(target,Math.max(c.lastAt,nextActionAt),expiry,jobOffline&&analysis&&analysis.hours.length<3?analysis.next:Infinity);consumeTo(at,true);
    if(at===expiry){count++;continue;}
    if(jobOffline&&analysis)checkHours(at);
-   if(nextActionAt<=at){resources=jobOffline?captureResources(resources):null;const eventStart=performance.now();event(at);if(jobOffline&&metrics)metrics.fullMs+=performance.now()-eventStart;collect(resources);if(jobOffline)sampleAfterEvent();count++;if(!running){lastMode=false;const r=c.pendingReceipt;if(jobOffline&&r&&!r.complete){r.stoppedAt=at;r.reason=playerHero().bag.length>=RULES.bagCapacity?'背包已滿，掉落已保留':globalThis.expeditionChallengeResult?(expeditionChallengeResult.success?'任務關卡完成':'任務關卡戰敗'):'本次探索已依戰鬥規則結束';}}}
-   if(at===target)break;
+   if(nextActionAt<=at){
+    if(foreground){
+     // One visible event per tick, at the actual presentation time. Absorb a
+     // short foreground stall into this round instead of replaying a burst.
+     // Wall-clock boosts still consume the whole elapsed interval.
+     consumeTo(target,true);
+     const late=Math.max(0,target-nextActionAt);
+     if(roundIterator||combatRoundProgress)roundStartedAt+=late;
+     nextActionAt=target;
+    }
+    resources=jobOffline?captureResources(resources):null;const eventStart=performance.now();event(foreground?target:at);if(jobOffline&&metrics)metrics.fullMs+=performance.now()-eventStart;collect(resources);if(jobOffline)sampleAfterEvent();count++;if(!running){lastMode=false;const r=c.pendingReceipt;if(jobOffline&&r&&!r.complete){r.stoppedAt=at;r.reason=playerHero().bag.length>=RULES.bagCapacity?'背包已滿，掉落已保留':globalThis.expeditionChallengeResult?(expeditionChallengeResult.success?'任務關卡完成':'任務關卡戰敗'):'本次探索已依戰鬥規則結束';}}}
+   if(foreground||at===target)break;
   }});
   c.status=running?'running':foes.length?'paused':'stopped';return c.lastAt<target;
  }
@@ -373,7 +395,7 @@
     }while(c.lastAt<requestedAt);
     // A throttled tick takes this async path; do not starve online life jobs.
     internal=true;try{globalThis.emberwildLifeHeartbeat?.();}finally{internal=false;}
-    if(show){showProgress('正在完成收益與存檔');await new Promise(resolve=>setTimeout(resolve,0));}if(jobOffline&&!document.hidden)promote();c.offlineWindow=null;commit();metrics.totalMs=performance.now()-settlementStarted;render();showReceipt();
+    if(show){showProgress('正在完成收益與存檔');await new Promise(resolve=>setTimeout(resolve,0));}if(jobOffline&&!document.hidden)promote();c.offlineWindow=null;commit();metrics.totalMs=performance.now()-settlementStarted;lastRendered=actionSerial;render();showReceipt();
     if(!c.receipt)document.getElementById('offline-settlement').hidden=true;
    }catch(e){rollback(String(e.message||e));}
    finally{analysis=null;observed=null;replayCache=null;job=null;lastMode=atTitle()?false:running;lastCheck=nowReal();}
@@ -384,16 +406,26 @@
   if(internal||stepping||restoring||!party||failed||atTitle()||globalThis.__EMBERWILD_SAVE_OWNER===false)return;
   if(job){requestedAt=Math.max(requestedAt,now);return;}
   const c=ensure();if(now<c.lastAt){void settle(now,false);return;}
-  if(now-c.lastAt>1000){void settle(now,false);return;}
+  // Hidden tabs and sleep-sized gaps keep the unrestricted shared replay path.
+  // Ordinary foreground jitter must never start an asynchronous catch-up job.
+  if(now-c.lastAt>=10000||document.hidden&&now-c.lastAt>1000){void settle(now,false);return;}
   jobOffline=false;
-  internal=true;try{advance(now,50);}finally{internal=false;}
+  internal=true;try{
+   // save()/UI callbacks can sync before tick paints. Do not overwrite that
+   // unpresented event with another action; the next 50ms tick publishes it.
+   if(document.hidden||actionSerial===lastRendered)advance(now,50,!document.hidden);
+   else consumeTo(now,lastMode&&running);
+  }finally{internal=false;}
   lastMode=active();c.status=running?'running':foes.length?'paused':'stopped';
   if(c.receipt&&renderedReceipt!==c.receipt.id){try{commit();showReceipt();}catch(e){rollback(String(e.message||e));}}
  }
  tick=function(){
   if(failed||atTitle()||globalThis.__EMBERWILD_SAVE_OWNER===false)return;
-  const now=nowReal();if(now-lastCheck<1000)return;lastCheck=now;sync(now);
-  if(!job&&!document.hidden){globalThis.emberwildLifeHeartbeat?.();__EMBERWILD_TIMED_BOOST_TEST.refreshJournalRealtime();if(lastRendered!==actionSerial){lastRendered=actionSerial;render();}}
+  const now=nowReal();if(now-lastCheck<(document.hidden?1000:50))return;lastCheck=now;sync(now);
+  if(!job&&!document.hidden){
+   if(now-lastHeartbeat>=1000){lastHeartbeat=now;globalThis.emberwildLifeHeartbeat?.();__EMBERWILD_TIMED_BOOST_TEST.refreshJournalRealtime();}
+   if(lastRendered!==actionSerial){lastRendered=actionSerial;if(tab==='battle')render();else refreshGlobalJournal();}
+  }
  };
  // UI actions are already synchronous. Flush debt before changing the team/map,
  // and persist the new running/paused/stopped state after the operation.

@@ -28,7 +28,9 @@ test('changing difficulty cannot clear an encounter before its elapsed time has 
 });
 test('speed-expiry linking changes apply after elapsed time, never retroactively',async()=>{
  const r=game();r.run(`for(const id of ['speed2_30m','exp_100_30m']){state.consumables[id]=1;useSupply(id);}setBattleSpeed(2);party.timedBoosts[0].remainingMs=1000;party.timedBoosts[1].remainingMs=10000;save();`);r.advance(5000);
- r.run('setPauseBoostsOnSpeedEnd(true)');assert.equal(r.run('party.combatSession.pauseBoostsOnSpeedEnd'),false);await r.run('EmberwildOffline.settle()');assert.equal(r.run('party.timedBoosts[1].remainingMs'),5000);assert.equal(r.run('party.timedBoosts[1].enabled'),true);
+ // A short foreground gap now settles wall-clock boosts synchronously before
+ // applying the UI change; it no longer has to reject the action for replay.
+ r.run('setPauseBoostsOnSpeedEnd(true)');assert.equal(r.run('party.combatSession.pauseBoostsOnSpeedEnd'),true);await r.run('EmberwildOffline.settle()');assert.equal(r.run('party.timedBoosts[1].remainingMs'),5000);assert.equal(r.run('party.timedBoosts[1].enabled'),true);
  r.run('setPauseBoostsOnSpeedEnd(true)');assert.equal(r.run('party.combatSession.pauseBoostsOnSpeedEnd'),true);
 });
 
