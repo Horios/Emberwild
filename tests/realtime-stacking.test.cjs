@@ -94,8 +94,12 @@ test('Legacy singleton saves retain deadlines and merge the next dose, while mal
   const g=await game();
   g.run("state.consumables.ward_fire=2;useSupply('ward_fire');delete state.ward.name;delete state.ward.itemId;save();loadParty(packParty());");
   const deadline=g.run('state.ward.remainingMs');
-  g.advance(10000);await g.run("EmberwildOffline.settle()");g.run("useSupply('ward_fire');");
-  assert.equal(g.run('state.ward.remainingMs'),deadline+300000);
+  g.advance(10000);await g.run("EmberwildOffline.settle()");
+  assert.equal(g.run('state.ward.remainingMs'),deadline-10000);
+  g.run("useSupply('ward_fire');");
+  assert.equal(g.run('state.ward.remainingMs'),deadline-10000+300000);
+  assert.equal(g.run('state.ward.itemId'),'ward_fire');
+  assert.equal(g.run('EmberwildTimedBoosts.buffRows(state.ward).length'),1);
   for(const mutation of ["p.members[0].ward=[p.members[0].ward,p.members[0].ward]","p.members[0].ward.remainingMs=Infinity","p.members[0].ward=[{...p.members[0].ward,element:'bad'}]"]){
     assert(g.run(`(()=>{const p=packParty();${mutation};try{validateParty(p);return false;}catch{return true;}})()`));
   }

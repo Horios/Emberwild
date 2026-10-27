@@ -74,4 +74,20 @@ jobs:
       - run: npm ci
       - run: npx playwright install chromium
       - name: Check equipment, page scrolling, inventory and legacy saves
-        run: node --test --test-concurrency=1 tests/equipment-details.test.cjs tests/page-readability.browser.test.cjs tests/equipment-sockets.browser.test.cjs tests/item-display-mode.browser.test.cjs tests/team-save-compatibility.browser.test.cjs tests/item-hover-tooltip.browser.test.cjs
+        shell: bash
+        run: |
+          set -uo pipefail
+          failed=0
+          files=(tests/equipment-details.test.cjs tests/page-readability.browser.test.cjs tests/equipment-sockets.browser.test.cjs tests/item-display-mode.browser.test.cjs tests/team-save-compatibility.browser.test.cjs tests/item-hover-tooltip.browser.test.cjs)
+          for file in "${files[@]}"; do
+            echo "::group::${file}"
+            if timeout --signal=TERM --kill-after=10s 6m node --test --test-concurrency=1 "${file}"; then
+              echo "::notice file=${file}::Completed successfully"
+            else
+              rc=$?
+              echo "::error file=${file}::Failed or timed out (exit ${rc})"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "${failed}"
