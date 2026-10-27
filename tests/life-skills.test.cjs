@@ -90,7 +90,7 @@ test('Missing inputs or full output stock stop cleanly without consuming partial
 test('New materials can be sold at requested prices, including after old balance JSON is applied',async()=>{
   const r=await game();r.run('state.materials["紅色草"]=4;state.materials["小蟲"]=2;');
   assert.equal(r.run('materialSellPrice("紅色草")'),1);assert.equal(r.run('materialSellPrice("小蟲")'),5);
-  assert.match(r.run('accountMaterialsView()'),/data-material="紅色草"/);assert.match(r.run('accountMaterialsView()'),/data-material="小蟲"/);
+  assert.match(r.run('accountMaterialsView()'),/data-item-kind="material" data-item-key="紅色草"[^>]*data-item-quantity="4"/);assert.match(r.run('accountMaterialsView()'),/data-item-kind="material" data-item-key="小蟲"[^>]*data-item-quantity="2"/);
   r.run('{const d=exportableBalance();d.balanceSettings.economy.materialPrices=d.balanceSettings.economy.materialPrices.filter(x=>!["紅色草","小蟲","清水","藥水瓶"].includes(x.key));applyBalanceConfig(d);}');
   const gold=r.run('state.gold'),herbPrice=r.run('materialSellPrice("紅色草")'),bugPrice=r.run('materialSellPrice("小蟲")');r.run('sellMaterial("紅色草",4);sellMaterial("小蟲",2);');assert.equal(r.run('state.gold'),gold+4*herbPrice+2*bugPrice);
   for(const name of ['清水','藥水瓶'])assert(r.run('materialSellPrice('+JSON.stringify(name)+')')<=1);
