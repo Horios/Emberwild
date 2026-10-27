@@ -15,13 +15,13 @@ test('combat icons and aggregate HP update in place for damage, healing, revive,
   await p.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});EmberwildBattleSummary.sync();});assert.equal(await hp(p),'474 / 1,000');
   await p.evaluate(()=>{foes[1].hp=450;EmberwildBattleSummary.sync();});
   await p.evaluate(()=>{globalThis.savedIcon=$('battleEnemyIcons').firstElementChild;globalThis.savedArt=savedIcon.firstElementChild;globalThis.savedSummary=$('battleSummary');foes[0].hp=0;EmberwildBattleSummary.sync();});
-  assert.equal(await hp(p),'450 / 1,000');assert.equal(await p.locator('[data-enemy-id="summary-a"].is-dead').count(),1);
-  await p.evaluate(()=>{foes[1].hp=600;EmberwildBattleSummary.sync();});assert.equal(await hp(p),'600 / 1,000');assert.equal(await state(p),'敵方治療');assert.equal(await p.locator('[data-enemy-id="summary-b"]').getAttribute('data-effect'),'healed');
-  await p.evaluate(()=>{foes[0].hp=40;EmberwildBattleSummary.sync();});assert.equal(await state(p),'敵方復活');assert.equal(await p.locator('[data-enemy-id="summary-a"].is-dead').count(),0);
+  assert.equal(await hp(p),'450 / 1,000');assert.equal(await p.locator('#battleEnemyIcons [data-enemy-id="summary-a"].is-dead').count(),1);
+  await p.evaluate(()=>{foes[1].hp=600;EmberwildBattleSummary.sync();});assert.equal(await hp(p),'600 / 1,000');assert.equal(await state(p),'敵方治療');assert.equal(await p.locator('#battleEnemyIcons [data-enemy-id="summary-b"]').getAttribute('data-effect'),'healed');
+  await p.evaluate(()=>{foes[0].hp=40;EmberwildBattleSummary.sync();});assert.equal(await state(p),'敵方復活');assert.equal(await p.locator('#battleEnemyIcons [data-enemy-id="summary-a"].is-dead').count(),0);
   assert(await p.evaluate(()=>$('battleEnemyIcons').firstElementChild===savedIcon&&savedIcon.firstElementChild===savedArt));
   await p.evaluate(()=>{foes.push({...foes[0],id:'summary-c',hp:200,maxhp:200});EmberwildBattleSummary.sync();});assert.equal(await hp(p),'840 / 1,200');assert.equal(await state(p),'援軍加入');assert.equal(await p.locator('#battleEnemyIcons>div').count(),3);
   await p.evaluate(()=>{foes.splice(2,1);EmberwildBattleSummary.sync();render();});assert.equal(await hp(p),'640 / 1,000');assert.equal(await p.locator('#battleEnemyIcons>div').count(),2);assert(await p.evaluate(()=>$('battleEnemyIcons').firstElementChild===savedIcon&&$('battleSummary')===savedSummary));
-  await p.evaluate(()=>{foes=[{...foes[0],id:'phase-2',hp:800,maxhp:1200,kind:'boss'}];enemy=foes[0];EmberwildBattleSummary.sync();});assert.equal(await hp(p),'800 / 1,200');assert.equal(await p.locator('#battleEnemyIcons>div').count(),1);assert.equal(await p.locator('[data-enemy-id="phase-2"].is-boss').count(),1);
+  await p.evaluate(()=>{foes=[{...foes[0],id:'phase-2',hp:800,maxhp:1200,kind:'boss'}];enemy=foes[0];EmberwildBattleSummary.sync();});assert.equal(await hp(p),'800 / 1,200');assert.equal(await p.locator('#battleEnemyIcons>div').count(),1);assert.equal(await p.locator('#battleEnemyIcons [data-enemy-id="phase-2"].is-boss').count(),1);
   await p.evaluate(()=>{foes[0].shield=99999;foes[0].maxhp=1400;EmberwildBattleSummary.sync();});assert.equal(await hp(p),'800 / 1,400');
   await p.evaluate(()=>{EmberwildBattleSummary.finish('wipe');foes=[];enemy=null;running=false;render();});assert.equal(await state(p),'戰鬥失敗');assert.equal(await hp(p),'800 / 1,400');
   await p.evaluate(()=>{spawnGroup();foes.forEach(e=>e.hp=0);EmberwildBattleSummary.finish('victory');foes=[];render();});assert.equal(await state(p),'戰鬥勝利');assert.match(await hp(p),/^0 \/ /);
@@ -35,6 +35,7 @@ test('shared summary stays visible while operating pages and collapsing desktop/
   await p.evaluate(()=>{for(let i=0;i<65;i++)note('紀錄 '+i+' '+'.'.repeat(80),'playerDamage');globalThis.originalRows=$('liveLog').querySelectorAll('[data-event-type]').length;});
   for(const size of [{width:1440,height:900},{width:1024,height:768},{width:390,height:844},{width:320,height:568},{width:844,height:390}]){
    await p.setViewportSize(size);await p.evaluate(()=>render());
+   assert(await p.locator('#journalEnemyIcons .battle-enemy-icon').evaluateAll(nodes=>nodes.every(n=>{const box=n.getBoundingClientRect(),svg=n.querySelector('svg').getBoundingClientRect();return svg.left>=box.left&&svg.right<=box.right&&svg.top>=box.top&&svg.bottom<=box.bottom;})),'journal SVGs fit their compact icons');
    for(const tab of ['equipment','forge','skills','lifeSkills','gather','alchemy','story','battle']){
     await p.evaluate(id=>setTab(id),tab);assert(await p.locator('#battleSummary').isVisible(),tab+' summary');
     await p.evaluate(()=>{foes[1].hp=Math.max(1,foes[1].hp-1);EmberwildBattleSummary.sync();});
@@ -67,6 +68,50 @@ test('offline replay skips icon rendering and settles to the effective encounter
   for(let i=0;i<12;i++){await p.clock.runFor(1000);await p.evaluate(()=>tick());}
   await p.evaluate(async()=>{if(EmberwildOffline.busy)await EmberwildOffline.settle(undefined,false);EmberwildBattleSummary.sync();});
   assert(await p.evaluate(()=>round>0&&lastActionOrder.length>0));assert(await p.evaluate(()=>{const s=EmberwildBattleSummary.snapshot();return s.hp<s.max&&Number($('battleSummary').querySelector('[role="progressbar"]').getAttribute('aria-valuenow'))===s.percent}));
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
+test('allied portraits move above cards and the active actor marker follows both teams and journal icons',async()=>{
+ const g=await setup(),p=g.page;
+ try{
+  assert.equal(await p.locator('#battleAllyIcons>div').count(),await p.evaluate(()=>heroes().length));
+  assert.equal(await p.locator('.squad-allies .unit-title .character-avatar-control').count(),0);
+  assert(await p.evaluate(()=>{const strip=$('battleAllyIcons').getBoundingClientRect(),card=document.querySelector('.squad-allies>.unit').getBoundingClientRect();return strip.bottom<=card.top+1;}));
+  assert.equal(await p.locator('#journalEnemyIcons svg').count(),2);
+  assert.equal(await p.locator('.battle-enemy-icon.is-acting').count(),0,'the first enemy is not highlighted before an action');
+  await p.evaluate(()=>{recordAction(heroKey(heroes()[0]),characterName(heroes()[0]),'普攻');EmberwildBattleSummary.sync();});
+  assert.equal(await p.locator('#battleAllyIcons .is-acting').count(),1);assert.equal(await p.locator('#battleEnemyIcons .is-acting,#journalEnemyIcons .is-acting').count(),0);
+  await p.evaluate(()=>{recordAction(foes[1].id,foes[1].name,'攻擊');EmberwildBattleSummary.sync();globalThis.journalUnit=$('journalEnemyIcons').lastElementChild;globalThis.allyUnit=$('battleAllyIcons').firstElementChild;});
+  assert.equal(await p.locator('#battleAllyIcons .is-acting').count(),0);assert.equal(await p.locator('#battleEnemyIcons .is-acting').getAttribute('data-enemy-id'),'summary-b');assert.equal(await p.locator('#journalEnemyIcons .is-acting').getAttribute('data-enemy-id'),'summary-b');
+  assert(await p.evaluate(()=>$('battleEnemyIcons').lastElementChild.querySelector('.enemy-icon-art').innerHTML===journalUnit.querySelector('.enemy-icon-art').innerHTML));
+  await p.evaluate(()=>{foes[1].hp=0;EmberwildBattleSummary.sync();});assert.equal(await p.locator('#battleEnemyIcons .is-dead,#journalEnemyIcons .is-dead').count(),2);assert.equal(await p.locator('.battle-enemy-icon.is-acting').count(),0);
+  assert(await p.locator('#journalEnemyIcons .is-dead .enemy-icon-art').evaluate(e=>getComputedStyle(e).filter.includes('grayscale(1)')));
+  await p.evaluate(()=>{foes[1].hp=200;EmberwildBattleSummary.sync();setTab('equipment');foes[0].hp=0;EmberwildBattleSummary.sync();setTab('battle');});
+  assert.equal(await p.locator('#journalEnemyIcons .is-dead').getAttribute('data-enemy-id'),'summary-a');assert(await p.evaluate(()=>$('journalEnemyIcons').lastElementChild===journalUnit&&$('battleAllyIcons').firstElementChild===allyUnit));
+  await p.evaluate(()=>{heroes()[0].avatarId='phoenix';EmberwildBattleSummary.sync();});assert.equal(await p.locator('#battleAllyIcons [data-avatar-id="phoenix"]').count(),1);
+  await p.locator('#battleAllyIcons .character-avatar-control').click();assert(await p.locator('#modal.character-avatar-dialog').isVisible());await p.evaluate(()=>closeModal());
+  await p.evaluate(()=>{running=false;EmberwildBattleSummary.sync();});assert.equal(await p.locator('.battle-enemy-icon.is-acting').count(),0);
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
+test('different monster names have distinct artwork, elites have ornaments and duplicate suffixes match displayed names',async()=>{
+ const g=await setup(),p=g.page;
+ try{
+  await p.evaluate(()=>{const base=foes[0];foes=[['wolf-a','霧狼','normal'],['slime','幽影','normal'],['wolf-b','霧狼','normal'],['elite-a','菁英・霧狼','elite'],['spirit','荒野幽靈','normal'],['elite-b','菁英・霧狼','elite']].map(([id,name,kind])=>({...base,id,name,kind,race:'spirit',hp:100,maxhp:100}));enemy=foes[0];beginBattleStatistics();render();});
+  for(const id of ['battleEnemyIcons','journalEnemyIcons']){
+   assert.deepEqual(await p.locator('#'+id+' small').allTextContents(),['1','','2','1','','2']);
+   assert.deepEqual(await p.locator('#'+id+'>div').evaluateAll(nodes=>nodes.map(n=>n.title.split(' · ')[0])),await p.evaluate(()=>foes.map(combatEnemyName)));
+   const art=await p.locator('#'+id+' .enemy-icon-art').evaluateAll(nodes=>nodes.map(n=>n.innerHTML));assert.equal(art[0],art[2]);assert.equal(art[0],art[3]);assert.equal(art[3],art[5]);assert.equal(new Set([art[0],art[1],art[4]]).size,3);
+   assert.equal(await p.locator('#'+id+' .is-elite .enemy-icon-elite:visible').count(),2);
+  }
+  await p.evaluate(()=>{globalThis.wolfNode=$('battleEnemyIcons').firstElementChild;foes[0].hp=0;foes.push({...foes[0],id:'wolf-c',hp:100});EmberwildBattleSummary.sync();});
+  assert.deepEqual(await p.locator('#battleEnemyIcons small').allTextContents(),['1','','2','1','','2','3']);assert(await p.evaluate(()=>$('battleEnemyIcons').firstElementChild===wolfNode));
+  await p.evaluate(()=>{foes.splice(0,1);EmberwildBattleSummary.sync();});
+  assert.deepEqual(await p.locator('#journalEnemyIcons>div').evaluateAll(nodes=>nodes.map(n=>n.title.split(' · ')[0])),await p.evaluate(()=>foes.map(combatEnemyName)));
+  await p.evaluate(()=>{const base=foes[0];foes=Array.from({length:24},(_,i)=>({...base,id:'unique-'+i,name:'不同名怪物'+i,kind:'normal',race:'spirit'}));beginBattleStatistics();render();});
+  const unique=await p.locator('#battleEnemyIcons .enemy-icon-art').evaluateAll(nodes=>nodes.map(n=>n.innerHTML));assert.equal(new Set(unique).size,24,'same-race enemies still receive different artwork');
+  assert((await p.locator('#battleEnemyIcons small').allTextContents()).every(n=>n===''),'unique names have no numeric marker');
+  assert.deepEqual(await p.locator('#journalEnemyIcons .enemy-icon-art').evaluateAll(nodes=>nodes.map(n=>n.innerHTML)),unique);
   assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
