@@ -178,3 +178,35 @@ test('integrated portrait, readable HP and click targets fit phones; physical/ma
   await p.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});dispatchEvent(new Event('visibilitychange'));});await p.clock.runFor(1000);assert.equal(await p.locator('.battle-fx').count(),0);assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
+
+test('ongoing shield, buff, debuff and polymorph layers persist together until their actual state is removed',async()=>{
+ const g=await setup(),p=g.page;try{
+  await p.evaluate(()=>fxCapture(()=>{
+   applyPureShield(foes[1],300);
+   __EMBERWILD_CONTROL_TEST_API.applyPolymorph(foes[1],500,{duration:3});
+   __EMBERWILD_STATUS_TEST_API.apply({id:'lasting-buff',name:'持續強化',polarity:'buff',duration:3,modifiers:[{kind:'attack',value:.1}]},state,foes[1]);
+   __EMBERWILD_STATUS_TEST_API.apply({id:'lasting-debuff',name:'持續弱化',polarity:'debuff',duration:3,modifiers:[{kind:'weaken',value:.1}]},state,foes[1]);
+   resolveHit(foes[0],5,state,'fire',false);
+  }));
+  const card=p.locator('.unit[data-combat-id="fx-1"]'),icon=card.locator('.battle-enemy-icon');
+  const check=async expected=>{for(const node of [card,icon])assert.deepEqual(await node.locator(':scope>.battle-fx-status>[data-fx-persistent]').evaluateAll(ns=>ns.map(n=>n.dataset.fxPersistent).sort()),expected.slice().sort());};
+  await check(['shield','buff','debuff','polymorph']);
+  const layers=await card.locator(':scope>.battle-fx-status>[data-fx-persistent]').evaluateAll(ns=>Object.fromEntries(ns.map(n=>[n.dataset.fxPersistent,{layer:n.dataset.fxLayer,z:Number(getComputedStyle(n).zIndex),w:n.getBoundingClientRect().width}])));
+  assert.equal(layers.shield.layer,'protection');assert.equal(layers.polymorph.layer,'control');assert(layers.shield.z<layers.polymorph.z);assert(layers.shield.w>layers.polymorph.w);
+  await p.evaluate(()=>globalThis.lastingNode=document.querySelector('.unit[data-combat-id="fx-1"]>.battle-fx-status'));
+  await p.clock.runFor(5000);assert.equal(await p.locator('.battle-fx').count(),0,'instant damage and application bursts finish');await check(['shield','buff','debuff','polymorph']);
+  for(const width of [1440,390,320]){await p.setViewportSize({width,height:844});await p.evaluate(()=>render());await check(['shield','buff','debuff','polymorph']);assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));if(width===1440)await card.screenshot({path:'/tmp/ember-persistent-layers.png'});}
+  await p.evaluate(()=>{globalThis.shieldLayer=document.querySelector('.unit[data-combat-id="fx-1"]>.battle-fx-status>[data-fx-persistent="shield"]');__EMBERWILD_STATUS_TEST_API.remove(foes[1],'buff');EmberwildBattleSummary.sync();});await check(['shield','debuff','polymorph']);assert(await p.evaluate(()=>shieldLayer.isConnected),'dispelling one layer preserves the others');
+  await p.evaluate(()=>{__EMBERWILD_STATUS_TEST_API.apply({id:'lasting-buff',name:'持續強化',polarity:'buff',duration:3,modifiers:[{kind:'attack',value:.1}]},state,foes[1]);EmberwildBattleSummary.sync();});await check(['shield','buff','debuff','polymorph']);
+  await p.evaluate(()=>{battleRate=2;render();});assert(await p.evaluate(()=>lastingNode.isConnected));await check(['shield','buff','debuff','polymorph']);
+  await p.emulateMedia({reducedMotion:'reduce'});await p.evaluate(()=>EmberwildBattleSummary.sync());
+  assert.equal(await icon.locator('[data-fx-persistent="polymorph"]').evaluate(n=>getComputedStyle(n).animationName),'none');await p.clock.runFor(3000);await check(['shield','buff','debuff','polymorph']);
+  await p.evaluate(()=>{__EMBERWILD_CONTROL_TEST_API.clear(foes[1],'polymorph');EmberwildBattleSummary.sync();});await check(['shield','buff','debuff']);
+  await p.evaluate(()=>{foes[1].shield=0;EmberwildBattleSummary.sync();});await check(['buff','debuff']);
+  await p.evaluate(()=>{partyClock+=4;__EMBERWILD_STATUS_TEST_API.tick();EmberwildBattleSummary.sync();});await check([]);
+  await p.evaluate(()=>{applyPureShield(foes[1],100);EmberwildBattleSummary.sync();});await check(['shield']);
+  await p.evaluate(()=>{foes[1].hp=0;EmberwildBattleSummary.sync();});await check([]);
+  await p.evaluate(()=>{running=false;foes[1].hp=100;EmberwildBattleSummary.sync();setTab('options');});assert.equal(await p.locator('.battle-fx-status').count(),0);
+  await p.evaluate(()=>{closeModal();setTab('battle');});await check(['shield']);await p.evaluate(()=>setBattleEffects('off'));assert.equal(await p.locator('.battle-fx-status').count(),0);assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});

@@ -83,3 +83,40 @@
 @media(prefers-reduced-motion:reduce){.battle-enemy-icon:has(>.battle-fx)>.enemy-icon-art{animation:none!important}}
 .battle-fx-critical{border-width:3px;background:radial-gradient(ellipse,#ffd69a40,transparent 65%)}
 .battle-fx-critical>svg{--fx-glyph:fx-shatter}
+
+/* Ongoing combat state stays visible until the state itself is removed. */
+.battle-fx-status{inset:2px;display:block;z-index:1;overflow:hidden;border-radius:6px}
+.battle-fx-status>[data-fx-persistent]{position:absolute;inset:0;width:auto;height:auto;border:0;border-radius:0;clip-path:none!important;background:none!important;color:#f4d58b;opacity:.75;pointer-events:none}
+.battle-fx-status>i>svg{position:absolute;left:2px;bottom:2px;width:15px!important;height:15px!important;filter:drop-shadow(0 0 2px currentColor)}
+.battle-fx-status>.fx-status-shield{border:2px double #72d9ff;border-radius:45%;box-shadow:inset 0 0 8px #72d9ff40;color:#72d9ff}
+.battle-fx-status>.fx-status-buff{inset:3px;border-top:2px dashed #f4d58b;box-shadow:inset 3px 0 7px -5px #f4d58b}
+.battle-fx-status>.fx-status-buff>svg{left:1px;top:1px;bottom:auto}
+.battle-fx-status>.fx-status-debuff{inset:5px 2px 2px;border-bottom:2px dotted #ce8bdc;box-shadow:inset 0 -7px 9px -8px #ce8bdc;color:#ce8bdc}
+.battle-fx-status>.fx-status-debuff>svg{left:auto;right:1px}
+.battle-fx-status>.fx-status-polymorph{inset:6px;border:1px dashed #e9a7e8;border-radius:50%;background:radial-gradient(ellipse,#d18cde20,transparent 75%)!important;color:#e9a7e8}
+.battle-fx-status>.fx-status-polymorph>svg{inset:0;width:100%!important;height:100%!important;opacity:.7}
+.battle-fx-status>:is(.fx-status-freeze,.fx-status-frost){inset:4px;border:1px solid #9ee7ff;clip-path:polygon(12% 0,88% 0,100% 50%,88% 100%,12% 100%,0 50%)!important;color:#9ee7ff}
+.battle-fx-status>:is(.fx-status-fear,.fx-status-tauntRage,.fx-status-rage){inset:4px;border:1px dotted #df9bba;border-radius:8px;color:#df9bba}
+.battle-fx-status[data-detail="full"]>i{animation:fx-status-breathe 2400ms ease-in-out infinite!important}
+.battle-fx-status[data-detail="full"]>.fx-status-debuff{animation-delay:-1200ms!important}
+.squad-field .unit>.battle-fx-status{inset:2px;border-radius:4px}
+.squad-field .unit>.battle-fx-status>i{border-radius:4px}
+.squad-field .unit>.battle-fx-status>i>svg{left:auto;right:3px;bottom:3px;width:18px!important;height:18px!important;opacity:.6}
+.squad-enemies .unit>.battle-fx-status>i>svg{right:56px}
+.squad-field .unit>.battle-fx-status>.fx-status-polymorph{inset:5px;border:0;box-shadow:none;background:radial-gradient(ellipse at 90% 20%,#d18cde20,transparent 45%)!important}
+.squad-field .unit>.battle-fx-status>.fx-status-polymorph>svg{left:auto;top:3px;bottom:auto}
+@keyframes fx-status-breathe{0%,100%{opacity:.48}50%{opacity:.85}}
+@media(prefers-reduced-motion:reduce){.battle-fx-status[data-detail]>i{animation:none!important}}
+
+/* Protection is behind status edges; control remains a separate foreground layer. */
+.battle-fx-status>[data-fx-layer="protection"]{z-index:1}
+.battle-fx-status>[data-fx-layer="enhancement"]{z-index:2}
+.battle-fx-status>[data-fx-layer="affliction"]{z-index:3}
+.battle-fx-status>[data-fx-layer="control"]{z-index:4}
+/* Application accents use the same upper/lower lanes as their ongoing layers. */
+.battle-enemy-icon>.battle-fx-buff>svg{inset:0 auto auto 0;width:48%!important;height:48%!important}
+.battle-enemy-icon>.battle-fx-debuff>svg{inset:auto 0 0 auto;width:48%!important;height:48%!important}
+.battle-enemy-icon>.battle-fx-buff>b{top:-2px;bottom:auto}
+.squad-field .unit>.battle-fx-health.battle-fx-buff>svg{top:2px;bottom:auto}
+.squad-field .unit>.battle-fx-health.battle-fx-debuff>svg{top:auto;bottom:2px}
+.squad-field .unit>.battle-fx-health.battle-fx-buff>b{top:2px;bottom:auto}

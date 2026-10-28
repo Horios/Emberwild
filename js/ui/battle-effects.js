@@ -15,7 +15,7 @@
  const control=u=>globalThis.__EMBERWILD_CONTROL_TEST_API?.states?.[u.id]||{};
  function shields(u){return Math.max(0,Number(u.shield)||0)+Math.max(0,Number(control(u).polymorph?.shield)||0);}
  function statuses(){
-  const rows=new Map(),add=(key,target,polarity,ref)=>rows.set(key,{target,polarity,ref});
+  const rows=new Map(),add=(key,target,polarity,ref,kind)=>rows.set(key,{target,polarity,ref,kind});
   for(const e of effects)if(e.until>partyClock)add(e,e.target,['weaken','fracture','vulnerable','damageAmp','followup','dotAttack','dotMaxHp','skillTaunt','slow'].includes(e.kind)?'debuff':'buff',e);
   for(const e of globalThis.EmberwildStatusCombatState?.pack().active||[])if(e.expiresClock>partyClock&&(e.remainingUses===null||e.remainingUses>0)){
    // Pure controls are represented by their actual control state below. A
@@ -23,7 +23,7 @@
    if(e.definition.control&&!e.definition.modifiers?.length&&!e.definition.periodic?.length)continue;
    add(e.id,e.targetKey,globalThis.__EMBERWILD_STATUS_TEST_API.polarity(e.definition),e);
   }
-  for(const u of foes)for(const [kind,v] of Object.entries(control(u)))if(v&&(v.turns===undefined||v.turns>0))add(u.id+':'+kind,u.id,'debuff',v);
+  for(const u of foes)for(const [kind,v] of Object.entries(control(u)))if(v&&(v.turns===undefined||v.turns>0))add(u.id+':'+kind,u.id,kind==='rage'?'buff':'debuff',v,kind);
   return rows;
  }
  function units(){return [...heroes(),...foes];}
@@ -74,12 +74,12 @@
   pending=null;
   if(preference==='off'||!visible()){frame=null;return;}
   owner=party;encounter=foes;
-  frame={events:new Map(),initial:sample(),vitals:sample(),statuses:statuses(),context:{mode:'regen'},at:performance.now(),owner:party,encounter:foes};
+  frame={events:new Map(),initial:sample(),vitals:sample(),initialStatuses:statuses(),statuses:statuses(),context:{mode:'regen'},at:performance.now(),owner:party,encounter:foes};
  }
  function end(){if(!frame)return;checkpoint();if(frame.events.size)pending=frame;frame=null;}
  function result(type,target,source){if(frame)enqueue(type,id(target),{source:source?id(source):null});}
  function cleanNode(node){const entries=activeNodes.get(node);if(entries)for(const row of entries.values()){clearTimeout(row.timer);row.element.remove();}activeNodes.delete(node);}
- function clear(){frame=null;pending=null;staged=null;held=null;for(const t of timers)clearTimeout(t);timers.clear();for(const node of activeNodes.keys())cleanNode(node);for(const node of markedNodes){node.querySelector('.battle-fx-status')?.remove();delete node.dataset.fxShield;}markedNodes.clear();owner=null;encounter=null;}
+ function clear(){frame=null;pending=null;staged=null;held=null;for(const t of timers)clearTimeout(t);timers.clear();for(const node of activeNodes.keys())cleanNode(node);for(const node of markedNodes){node.querySelector(':scope > .battle-fx-status')?.remove();delete node.dataset.fxShield;}markedNodes.clear();owner=null;encounter=null;}
  const colors={slash:'#ff796f',ranged:'#ff987d',impact:'#ff796f',magic:'#cda5ff',fire:'#ff834d',ice:'#9ee7ff',lightning:'#eeceff',wind:'#a5f0ce',light:'#fff0a5',shadow:'#be8fe9',critical:'#ffd69a',dot:'#d59b6b',hit:'#ff796f',heal:'#87efad',regen:'#b3f6c9',potion:'#74e7bd',drain:'#f28ea3',buff:'#f4d58b',debuff:'#c495f0',shield:'#72d9ff',absorb:'#a6edff',break:'#d5f6ff',dissolve:'#89bed9','shield-impact':'#a6edff',evade:'#d1dbe6',resist:'#e8f3ff',cast:'#d1a8ff',attack:'#ffe4bb'};
  const graphics={
   slash:'<path d="M9 49Q20 9 55 12Q30 20 9 49Z" fill="currentColor"/><path d="M10 53L53 10"/>',
@@ -96,6 +96,7 @@
   evade:'<path d="M7 18H30M3 32H23M7 46H30M35 14L51 32L35 50"/>',
   resist:'<path d="M32 5L53 13V32Q50 48 32 58Q14 48 11 32V13Z"/><path d="M21 31L29 39L44 23"/>',
   magic:'<circle cx="32" cy="32" r="23"/><path d="M32 4L37 26L59 32L37 38L32 60L26 38L4 32L26 26Z"/>',
+  polymorph:'<path d="M12 42Q4 23 23 14Q44 4 53 26Q61 48 39 53Q21 57 20 38Q19 22 35 24Q47 26 40 37Q36 43 31 37"/><path d="M8 10V20M3 15H13M50 48V60M44 54H56"/>',
   cast:'<circle cx="32" cy="32" r="25"/><path d="M13 13L20 20M51 13L44 20M13 51L20 44M51 51L44 44"/>'
  };
  function art(type){return graphics[type]||graphics[{critical:'magic',dot:'debuff',hit:'magic',impact:'slash',wind:'magic',light:'magic',shadow:'magic',regen:'heal',potion:'heal',drain:'heal',dissolve:'shield','shield-impact':'absorb'}[type]]||graphics.magic;}
@@ -127,22 +128,33 @@
  function sync(s){
   if(preference==='off'||!visible()||owner&&owner!==party||staged&&staged.encounter!==foes&&!held){clear();return;}
   for(const node of activeNodes.keys())if(!node.isConnected)cleanNode(node);
-  for(const node of markedNodes)if(!node.isConnected){node.querySelector('.battle-fx-status')?.remove();delete node.dataset.fxShield;markedNodes.delete(node);}
+  for(const node of markedNodes)if(!node.isConnected){node.querySelector(':scope > .battle-fx-status')?.remove();delete node.dataset.fxShield;markedNodes.delete(node);}
   const rows=[...s.allies,...s.units],byId=new Map(rows.map(row=>[String(row.id),row]));
   const nodes=new Map();document.querySelectorAll('#battleAllyIcons .unit > [data-hero-id],#battleEnemyIcons .unit > [data-enemy-id]').forEach(node=>nodes.set(node.dataset.heroId||node.dataset.enemyId,node));
   const healthNodes=new Map();document.querySelectorAll('.squad-field .unit[data-combat-id]').forEach(node=>healthNodes.set(node.dataset.combatId,node));
   const playUnit=(key,event,sourceKey)=>{for(const surfaces of [nodes,healthNodes]){const node=surfaces.get(key);if(node)play(node,event,surfaces.get(sourceKey));}};
-  const currentStatuses=statuses();
-  for(const [key,node] of nodes){
-   const row=byId.get(key);let badge=node.querySelector('.battle-fx-status');
-   if(!row?.alive){badge?.remove();delete node.dataset.fxShield;markedNodes.delete(node);continue;}
-   if(shields(row.unit)>0)node.dataset.fxShield='true';else delete node.dataset.fxShield;
-   const tags=new Set([...currentStatuses.values()].filter(x=>String(x.target)===key).map(x=>x.polarity));
-   const labels=[shields(row.unit)>0?'shield':null,tags.has('buff')?'buff':null,tags.has('debuff')?'debuff':null].filter(Boolean);
-   if(!labels.length){badge?.remove();markedNodes.delete(node);continue;}
-   markedNodes.add(node);
-   if(!badge){badge=document.createElement('span');badge.className='battle-fx-status';node.append(badge);}
-   const html=labels.map(tag=>'<i class="fx-status-'+tag+'" title="'+({shield:'護盾',buff:'增益',debuff:'減益'}[tag])+'"></i>').join('');if(badge.innerHTML!==html)badge.innerHTML=html;
+  const currentStatuses=staged?.delay&&!staged.impacted?staged.initialStatuses:statuses();
+  // Persistent layers reflect authoritative state, not animation timeouts. The
+  // portrait and HP card share the exact same labels and disappear on expiry,
+  // dispel, shield exhaustion, control removal, death or encounter cleanup.
+  const statusNames={shield:'護盾',buff:'增益',debuff:'減益',polymorph:'變形',freeze:'冰凍',frost:'結霜',rage:'狂暴',fear:'恐懼',tauntRage:'嘲諷'};
+  for(const [key,portrait] of nodes){
+   const row=byId.get(key),active=[...currentStatuses.values()].filter(x=>String(x.target)===key),tags=new Set(active.map(x=>x.polarity));
+   const labels=row?.alive?[(row.shield??shields(row.unit))>0?'shield':null,tags.has('buff')?'buff':null,tags.has('debuff')?'debuff':null,...new Set(active.map(x=>x.kind).filter(Boolean))].filter(Boolean):[];
+   for(const node of [portrait,healthNodes.get(key)].filter(Boolean)){
+    let badge=node.querySelector(':scope > .battle-fx-status');
+    if(labels.includes('shield'))node.dataset.fxShield='true';else delete node.dataset.fxShield;
+    if(!labels.length){badge?.remove();markedNodes.delete(node);continue;}
+    markedNodes.add(node);
+    if(!badge){badge=document.createElement('span');badge.className='battle-fx-status';badge.setAttribute('role','img');node.append(badge);}
+    badge.dataset.detail=mode();badge.setAttribute('aria-label',labels.map(tag=>statusNames[tag]||tag).join('、'));
+    const existing=new Map([...badge.children].map(n=>[n.dataset.fxPersistent,n]));
+    for(const tag of labels){
+     let layer=existing.get(tag);existing.delete(tag);
+     if(!layer){layer=document.createElement('i');layer.className='fx-status-'+tag;layer.dataset.fxPersistent=tag;layer.dataset.fxLayer=tag==='shield'?'protection':tag==='buff'?'enhancement':tag==='debuff'?'affliction':'control';layer.title=statusNames[tag]||tag;layer.innerHTML='<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+art(tag)+'</svg>';badge.append(layer);}
+    }
+    for(const layer of existing.values())layer.remove();
+   }
   }
   paintVitals(s);
   if(!staged||staged.played)return;
