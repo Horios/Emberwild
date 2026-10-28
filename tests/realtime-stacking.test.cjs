@@ -101,6 +101,6 @@ test('Legacy singleton saves retain deadlines and merge the next dose, while mal
   assert.equal(g.run('state.ward.itemId'),'ward_fire');
   assert.equal(g.run('EmberwildTimedBoosts.buffRows(state.ward).length'),1);
   for(const mutation of ["p.members[0].ward=[p.members[0].ward,p.members[0].ward]","p.members[0].ward.remainingMs=Infinity","p.members[0].ward=[{...p.members[0].ward,element:'bad'}]"]){
-    assert(g.run(`(()=>{const p=packParty();${mutation};try{validateParty(p);return false;}catch{return true;}})()`));
+    assert(g.run(`(()=>{const p=structuredClone(packParty());${mutation};try{validateParty(p);return false;}catch{return true;}})()`));
   }
 });

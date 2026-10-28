@@ -62,3 +62,13 @@ test('skill and level-scroll tooltips avoid a second copy of the flavor descript
  const item=fs.readFileSync(path.join(root,'js/ui/item-presentation.js'),'utf8');
  assert(item.includes("else if(item&&key!=='level_scroll')"));
 });
+
+test('empty inventory detail remains safe when no gear passes the current filter',()=>{
+ const r=game();r.run('state.bag=[];');
+ const html=r.run('inlineInventoryView()');
+ assert.match(html,/顯示 0 件/);
+ assert.match(html,/沒有符合條件的裝備/);
+ assert.doesNotMatch(html,/data-socket-equipment=/);
+ assert.equal(typeof r.run('inventoryGearDetail(undefined)'),'string');
+ assert.deepEqual(r.errors,[]);
+});

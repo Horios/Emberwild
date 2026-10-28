@@ -29,7 +29,7 @@
  };
  function socketIcon(id){return id===null?'<span aria-hidden="true">＋</span>':inventoryGemIcon(id);}
  function sockets(g){
-  if(EmberwildTokens.isToken(g))return '';const sk=S.byId(g.skillId),h=party.members[0],active=!!sk&&h.activeSkillEquipmentId===g.id,x=g.skillSockets;
+  if(!g||EmberwildTokens.isToken(g))return '';const sk=S.byId(g.skillId),h=party.members[0],active=!!sk&&h.activeSkillEquipmentId===g.id,x=g.skillSockets;
   if(!x)return '';
   if(socketSelection?.id!==g.id)socketSelection=null;
   const selected=socketSelection&&socketSelection.n<x.count?socketSelection.n:-1,id=selected<0?null:x.gems[selected],canSwitch=active&&x.count>0;

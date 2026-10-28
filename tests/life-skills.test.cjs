@@ -94,14 +94,16 @@ test('New materials can be sold at requested prices, including after old balance
   r.run('{const d=exportableBalance();d.balanceSettings.economy.materialPrices=d.balanceSettings.economy.materialPrices.filter(x=>!["紅色草","小蟲","清水","藥水瓶"].includes(x.key));applyBalanceConfig(d);}');
   const gold=r.run('state.gold'),herbPrice=r.run('materialSellPrice("紅色草")'),bugPrice=r.run('materialSellPrice("小蟲")');r.run('sellMaterial("紅色草",4);sellMaterial("小蟲",2);');assert.equal(r.run('state.gold'),gold+4*herbPrice+2*bugPrice);
   for(const name of ['清水','藥水瓶'])assert(r.run('materialSellPrice('+JSON.stringify(name)+')')<=1);
-  assert.match(r.run('lifeSkillsView()'),/尚無用途/);
+  assert.match(r.run('lifeSkillsView()'),/data-item-kind="material" data-item-key="紅色草"/);
 });
 
 test('Purchases and timed rewards roll back when saving fails',async()=>{
   const r=await game();r.run('startLifeGathering();');const gold=r.run('state.gold');
   r.run('globalThis.originalSave=save;save=()=>false;');assert.equal(r.run('buyLifeMaterial("清水",10)'),false);assert.equal(r.run('state.gold'),gold);assert.equal(r.run('materialCount("清水")'),0);
   await advance(r,5000);assert.equal(r.run('materialCount("紅色草")'),0);assert.equal(r.run('__EMBERWILD_LIFE_SKILLS.jobs.gather'),null);
-  r.run('save=originalSave;state.materials["紅色草"]=1;buyLifeMaterial("清水");buyLifeMaterial("藥水瓶");startLifeWork("alchemy");save=()=>false;');await advance(r,5000);
+  r.run('save=originalSave;state.materials["紅色草"]=1;buyLifeMaterial("清水");buyLifeMaterial("藥水瓶");startLifeWork("alchemy");save=()=>false;');
+  assert.deepEqual(json(r,'({herb:materialCount("紅色草"),water:materialCount("清水"),bottle:materialCount("藥水瓶"),work:__EMBERWILD_LIFE_SKILLS.jobs.work?.mode||null})'),{herb:1,water:1,bottle:1,work:'alchemy'},'pre-tick inventory and recipe must be valid before testing failed-save rollback');
+  await advance(r,5000);
   assert.equal(r.run('materialCount("紅色草")'),1);assert.equal(r.run('materialCount("清水")'),1);assert.equal(r.run('materialCount("藥水瓶")'),1);assert.equal(r.run('healPotionCount("heal_small")'),5);
   r.run('save=originalSave;');assert.deepEqual(r.errors,[]);
 });
