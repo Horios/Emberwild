@@ -80,6 +80,6 @@
 @keyframes fx-sink{0%{opacity:0;transform:translateY(-8px) scale(1.1)}35%{opacity:.95}100%{opacity:0;transform:translateY(8px) scale(.75)}}
 @keyframes fx-portrait-hit{0%,100%{transform:translateX(0)}15%,45%{transform:translateX(-3px)}30%,60%{transform:translateX(3px)}}
 @keyframes fx-portrait-evade{0%,100%{transform:translateX(0)}35%{transform:translateX(7px);opacity:.4}}
-@media(prefers-reduced-motion:reduce){.battle-enemy-icon>.enemy-icon-art{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.battle-enemy-icon:has(>.battle-fx)>.enemy-icon-art{animation:none!important}}
 .battle-fx-critical{border-width:3px;background:radial-gradient(ellipse,#ffd69a40,transparent 65%)}
 .battle-fx-critical>svg{--fx-glyph:fx-shatter}
