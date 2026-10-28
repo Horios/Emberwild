@@ -429,7 +429,7 @@ const visualPeriodicBase=executeStatusPeriodic;
 executeStatusPeriodic=function(inst,fx,...args){
   const visual=globalThis.EmberwildBattleEffects;
   if(!visual?.capturing)return visualPeriodicBase(inst,fx,...args);
-  return visual.scope({mode:fx.kind==='heal'?'regen':'damage',element:fx.resolution==='elemental'?fx.element:null},()=>visualPeriodicBase(inst,fx,...args));
+  return visual.scope({mode:fx.kind==='heal'?'regen':'damage',periodic:true,element:fx.resolution==='elemental'?fx.element:null},()=>visualPeriodicBase(inst,fx,...args));
 };
 const visualStatusDamageBase=statusApplyShieldAwareDamage;
 statusApplyShieldAwareDamage=function(...args){

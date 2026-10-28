@@ -4,16 +4,15 @@
 (()=>{
  'use strict';
  let owner=null,terminal=null,previous=new Map(),flashes=new Map(),detailCollapsed=false;
- let retainedSummary=null,retainedRoster=null,retainedAllies=null,openingAction=null,serial=0;
+ let retainedSummary=null,retainedField=null,openingAction=null,serial=0;
  const fallbackIds=new WeakMap();
  const monsterArtwork=new Map(),usedArtwork=new Set();let artworkOwner=null;
  const iconPool=[...new Set(['ghost','paw-print','sprout','skull','bot','flame','bug','bird','cat','dog','fish','rabbit','rat','snail','turtle','worm','squirrel',...(globalThis.__EMBERWILD_LUCIDE?.names||[])])];
  const key=e=>{if(e.id!=null)return String(e.id);if(!fallbackIds.has(e))fallbackIds.set(e,'visual-'+(++serial));return fallbackIds.get(e);};
  const finite=n=>Number.isFinite(Number(n))?Number(n):0;
  const fmt=n=>n.toLocaleString('zh-TW',{maximumFractionDigits:1});
- function clear(){globalThis.EmberwildBattleEffects?.clear();terminal=null;previous.clear();flashes.clear();owner=party;openingAction=lastActionOrder.at(-1)||null;}
+ function clear(){terminal=null;retainedField=null;previous.clear();flashes.clear();owner=party;openingAction=lastActionOrder.at(-1)||null;}
  function finish(result){
-  globalThis.EmberwildBattleEffects?.clear();
   // Keep the actual array, including its final HP, even if result cleanup clears
   // the global foes binding. This is O(1), including during offline simulation.
   terminal={owner:party,units:foes,name:currentExplorationName(),result};
@@ -23,7 +22,7 @@
   const ended=terminal?.owner===party&&(!foes.length||terminal.units===foes)?terminal:null;
   const source=party?(ended?.units||foes):[];
   const action=lastActionOrder.at(-1),actingId=(!ended||ended.result==='victory')&&running&&!$('modal')?.open&&action!==openingAction?action?.id:null;
-  const allies=party?heroes().map(h=>({id:heroKey(h),unit:h,alive:h.hp>0,acting:h.hp>0&&heroKey(h)===actingId})):[];
+  const allies=party?heroes().map(h=>({id:heroKey(h),unit:h,hp:h.hp,max:stats(h).hp,alive:h.hp>0,acting:h.hp>0&&heroKey(h)===actingId})):[];
   const units=source.map(e=>{
    // maxhp is also the cap used by enemy healing, lifesteal and individual bars.
    const max=Math.max(0,finite(e.maxhp)),hp=Math.min(max,Math.max(0,finite(e.hp)));
@@ -36,7 +35,6 @@
    result:ended?.result||null,name};
  }
  function summaryHTML(){return `<section id="battleSummary" class="battle-summary" aria-label="即時戰鬥摘要"><div class="battle-summary-heading"><b data-summary-name></b><span data-summary-state></span></div><div id="journalEnemyIcons" class="battle-enemy-icons journal-enemy-icons" aria-label="戰報怪物圖示"></div><div class="battle-summary-hp"><b>敵方總血量</b><span data-summary-hp></span></div><div class="battle-summary-meter" role="progressbar" aria-label="敵方剩餘生命值" aria-valuemin="0" aria-valuemax="100"><span></span></div><div class="battle-summary-foot"><span data-summary-count></span><span data-summary-percent></span><button type="button" class="battle-details-toggle" onclick="EmberwildBattleSummary.toggleDetails()"></button></div></section>`;}
- function rosterHTML(){return '<div id="battleEnemyIcons" class="battle-enemy-icons" aria-label="參戰怪物圖示"></div>';}
  const baseMonsterName=e=>{const name=String(e.name||e.monsterId||'怪物');return e.kind==='elite'?name.replace(/^菁英[・·．\s]*/,''):name;};
  function artwork(e){
   if(artworkOwner!==party){monsterArtwork.clear();usedArtwork.clear();artworkOwner=party;}
@@ -77,7 +75,8 @@
  }
  function updateRoster(root,s,ally=false){
   const rows=ally?s.allies:s.units,attribute=ally?'heroId':'enemyId';
-  const nodes=new Map([...root.children].map(n=>[n.dataset[attribute],n]));
+  const integrated=root.classList.contains('squad-allies')||root.classList.contains('squad-enemies');
+  const nodes=new Map([...root.querySelectorAll(integrated?'.unit > .battle-enemy-icon':':scope > .battle-enemy-icon')].map(n=>[n.dataset[attribute],n]));
   const names=new Map();for(const row of rows)names.set(row.unit.name,(names.get(row.unit.name)||0)+1);
   const indices=new Map();
   rows.forEach((row,index)=>{
@@ -93,7 +92,10 @@
    node.dataset.effect=flash?.effect||'';
    node.title=name+' · '+state+(ally?'':' · '+fmt(row.hp)+' / '+fmt(row.max)+' HP');node.setAttribute('aria-label',name+' · 查看戰鬥詳細資訊');
    put(node,'small',!ally&&names.get(e.name)>1?String(num):'');put(node,'.enemy-icon-event',flash?.label||(!row.alive?state:''));
-   if(root.children[index]!==node)root.insertBefore(node,root.children[index]||null);
+   if(integrated){
+    const card=[...root.querySelectorAll(':scope > .unit')].find(n=>n.dataset.combatId===row.id);
+    if(card){if(node.parentNode!==card)card.prepend(node);card.classList.toggle('fallen',!row.alive);card.classList.toggle('is-current',row.acting);}
+   }else if(root.children[index]!==node)root.insertBefore(node,root.children[index]||null);
    nodes.delete(row.id);
   });
   for(const node of nodes.values())node.remove();
@@ -102,7 +104,11 @@
   if(globalThis.__EMBERWILD_OFFLINE_SILENT||document.hidden)return;
   const summary=document.getElementById('battleSummary'),roster=document.getElementById('battleEnemyIcons'),allies=document.getElementById('battleAllyIcons'),journalIcons=document.getElementById('journalEnemyIcons');
   if(!party||!summary?.isConnected&&!roster?.isConnected&&!allies?.isConnected)return;
-  const s=snapshot(),event=sample(s,animate);
+  const s=globalThis.EmberwildBattleEffects?.present(snapshot())||snapshot(),event=sample(s,animate);
+  if(tab==='battle'&&!globalThis.EmberwildBattleEffects?.holdingEncounter&&foes.length){
+   const expected=[...s.allies,...s.units].map(r=>r.id).sort().join('|'),actual=[...document.querySelectorAll('.squad-field :is(.squad-allies,.squad-enemies) > .unit[data-combat-id]')].map(n=>n.dataset.combatId).sort().join('|');
+   if(actual!==expected){render();return;}
+  }
   const status=s.result==='victory'?'戰鬥勝利':s.result==='wipe'?'戰鬥失敗':!s.total?(running?'搜尋敵人':'尚未探索'):!running?'戰鬥暫停':$('modal')?.open?'視窗暫停':event||'戰鬥中';
   if(summary){
    put(summary,'[data-summary-name]',s.name);summary.querySelector('[data-summary-name]').title=s.name;put(summary,'[data-summary-state]',status);
@@ -186,10 +192,9 @@
  const battleBase=battleView;
  battleView=function(){
   const s=snapshot();
-  let html=battleBase().replace(/<section class="squad-enemies"><h3>[\s\S]*?<\/h3>/,
-   `<section class="squad-enemies"><h3>遭遇敵人 <small>${s.alive} / ${s.total}</small></h3>`+rosterHTML());
-  html=html.replace(/<button\b[^>]*class="character-avatar-control[^\"]*"[\s\S]*?<\/button>/g,'')
-   .replace(/(<section class="squad-allies"><h3>[\s\S]*?<\/h3>)/,'$1<div id="battleAllyIcons" class="battle-enemy-icons battle-ally-icons" aria-label="出戰隊員圖示"></div>');
+  let html=battleBase().replace('<section class="squad-enemies">','<section id="battleEnemyIcons" class="squad-enemies" aria-label="參戰怪物圖示">')
+   .replace('<section class="squad-allies">','<section id="battleAllyIcons" class="squad-allies" aria-label="出戰隊員圖示">')
+   .replace(/<button\b[^>]*class="character-avatar-control[^\"]*"[\s\S]*?<\/button>/g,'');
   if(s.result&&!foes.length)html=html.replace(/<p class="empty">尚無遭遇[\s\S]*?<\/p>/,
    `<p class="empty">${s.result==='victory'?'戰鬥勝利':'戰鬥失敗'}<br>本場怪物狀態保留至下一場遭遇。</p>`);
   return html;
@@ -203,12 +208,21 @@
  render=function(...args){
   if(globalThis.__EMBERWILD_OFFLINE_SILENT)return renderBase(...args);
   retainedSummary=document.getElementById('battleSummary')||retainedSummary;
-  retainedRoster=document.getElementById('battleEnemyIcons')||retainedRoster;
-  retainedAllies=document.getElementById('battleAllyIcons')||retainedAllies;
+  const oldField=document.querySelector('.squad-field')||retainedField;
+  const cards=new Map([...(oldField?.querySelectorAll('.unit[data-combat-id]')||[])].map(n=>[n.dataset.combatId,n]));
   const out=renderBase(...args);
-  for(const [id,old] of [['battleSummary',retainedSummary],['battleEnemyIcons',retainedRoster],['battleAllyIcons',retainedAllies]]){
+  for(const [id,old] of [['battleSummary',retainedSummary]]){
    const fresh=document.getElementById(id);if(fresh&&old&&fresh!==old)fresh.replaceWith(old);
   }
+  const freshField=document.querySelector('.squad-field');
+  if(freshField&&oldField&&(globalThis.EmberwildBattleEffects?.holdingEncounter||terminal?.owner===party&&!foes.length&&terminal.units.length)){freshField.replaceWith(oldField);}
+  else for(const fresh of freshField?.querySelectorAll('.unit[data-combat-id]')||[]){
+   const old=cards.get(fresh.dataset.combatId);if(!old||old===fresh)continue;
+   // Keep the exact portrait and running effect nodes through full screen redraws.
+   for(const child of [...old.children])if(!child.matches('.battle-enemy-icon,.battle-fx,.battle-fx-status'))child.remove();
+   old.append(...fresh.children);old.className=fresh.className;old.removeAttribute('style');fresh.replaceWith(old);
+  }
+  retainedField=document.querySelector('.squad-field')||retainedField;
   sync();return out;
  };
  const refreshBase=refreshGlobalJournal;

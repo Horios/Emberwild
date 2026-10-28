@@ -4,11 +4,13 @@
 (()=>{
  'use strict';
  const storageKey='emberwild-battle-effects',choices=['full','simple','off'];
- let preference='full',frame=null,pending=null,owner=null,encounter=null,sequence=0;
+ let preference='full',frame=null,pending=null,owner=null,encounter=null,sequence=0,staged=null,held=null;
+ const timers=new Set();
+ function later(fn,ms){const timer=setTimeout(()=>{timers.delete(timer);fn();},ms);timers.add(timer);return timer;}
  const activeNodes=new Map(),markedNodes=new Set(),motion=matchMedia('(prefers-reduced-motion: reduce)');
  try{const saved=localStorage.getItem(storageKey);if(choices.includes(saved))preference=saved;}catch{}
  const id=u=>u?.job!==undefined?heroKey(u):u?.id;
- const visible=()=>!!party&&running&&tab==='battle'&&!document.hidden&&!$('modal')?.open&&!globalThis.isEmberwildTitleOpen?.()&&!globalThis.EmberwildOffline?.busy&&!party.offlineExploration?.receipt;
+ const visible=()=>!!party&&tab==='battle'&&!document.hidden&&!$('modal')?.open&&!globalThis.isEmberwildTitleOpen?.()&&!globalThis.EmberwildOffline?.busy&&!party.offlineExploration?.receipt;
  const mode=()=>preference==='full'&&(motion.matches||battleRate>2)?'simple':preference;
  const control=u=>globalThis.__EMBERWILD_CONTROL_TEST_API?.states?.[u.id]||{};
  function shields(u){return Math.max(0,Number(u.shield)||0)+Math.max(0,Number(control(u).polymorph?.shield)||0);}
@@ -33,7 +35,7 @@
   // occurrence in resolution order. Later AoE targets and shield breaks survive.
   frame.events.delete(key);
   if(frame.events.size>=256)frame.events.delete(frame.events.keys().next().value);
-  frame.events.set(key,{type,target:String(target),source:frame.context.source?String(id(frame.context.source)):null,...extra});
+  frame.events.set(key,{type,target:String(target),critical:!!frame.context.critical,periodic:!!frame.context.periodic,source:frame.context.source?String(id(frame.context.source)):null,...extra});
  }
  function attackType(ctx){
   const element=ctx.element;
@@ -44,14 +46,14 @@
   if(!frame)return;
   const ctx=frame.context;
   for(const u of units()){
-   const before=frame.vitals.get(u),after={hp:u.hp,shield:shields(u)};frame.vitals.set(u,after);if(!before)continue;
+   const before=frame.vitals.get(u),after={hp:u.hp,shield:shields(u)};frame.vitals.set(u,after);if(!before||ctx.mode==='settlement')continue;
    const target=id(u);if(!target)continue;
    if(after.shield>before.shield)enqueue('shield',target);
    if(after.shield<before.shield){
     const hit=ctx.mode==='damage';enqueue(hit?'absorb':'dissolve',target);
     if(hit&&after.shield<=0)enqueue('break',target);
    }
-   if(after.hp<before.hp){enqueue(attackType(ctx),target);enqueue('hit',target);}
+   if(after.hp<before.hp){enqueue(ctx.periodic?'dot':attackType(ctx),target);enqueue('hit',target);}
    else if(after.hp>before.hp)enqueue(ctx.mode==='potion'?'potion':ctx.mode==='damage'||ctx.effect==='drain'?'drain':ctx.mode==='regen'?'regen':'heal',target);
    // A shield-only attack has an impact on the shield, never a red HP hit.
 
@@ -65,20 +67,20 @@
  }
  function scope(context,fn){
   if(!frame)return fn();
-  checkpoint();const current=frame,old=current.context;current.context={...old,...context};
+  checkpoint();const current=frame,old=current.context;if(context.mode==='settlement')current.terminalVitals=sample();current.context={...old,...context};
   try{return fn();}finally{if(frame===current){checkpoint();current.context=old;}}
  }
  function begin(){
   pending=null;
   if(preference==='off'||!visible()){frame=null;return;}
   owner=party;encounter=foes;
-  frame={events:new Map(),vitals:sample(),statuses:statuses(),context:{mode:'regen'},at:performance.now(),owner:party,encounter:foes};
+  frame={events:new Map(),initial:sample(),vitals:sample(),statuses:statuses(),context:{mode:'regen'},at:performance.now(),owner:party,encounter:foes};
  }
- function end(){if(!frame)return;checkpoint();pending=frame;frame=null;}
+ function end(){if(!frame)return;checkpoint();if(frame.events.size)pending=frame;frame=null;}
  function result(type,target,source){if(frame)enqueue(type,id(target),{source:source?id(source):null});}
  function cleanNode(node){const entries=activeNodes.get(node);if(entries)for(const row of entries.values()){clearTimeout(row.timer);row.element.remove();}activeNodes.delete(node);}
- function clear(){frame=null;pending=null;for(const node of activeNodes.keys())cleanNode(node);for(const node of markedNodes){node.querySelector('.battle-fx-status')?.remove();delete node.dataset.fxShield;}markedNodes.clear();owner=null;encounter=null;}
- const colors={slash:'#ffe4bb',ranged:'#ffc166',impact:'#e9b4fa',magic:'#cda5ff',fire:'#ff834d',ice:'#9ee7ff',lightning:'#eeceff',wind:'#a5f0ce',light:'#fff0a5',shadow:'#be8fe9',hit:'#ff796f',heal:'#87efad',regen:'#b3f6c9',potion:'#74e7bd',drain:'#f28ea3',buff:'#f4d58b',debuff:'#c495f0',shield:'#72d9ff',absorb:'#a6edff',break:'#d5f6ff',dissolve:'#89bed9','shield-impact':'#a6edff',evade:'#d1dbe6',resist:'#e8f3ff',cast:'#d1a8ff',attack:'#ffe4bb'};
+ function clear(){frame=null;pending=null;staged=null;held=null;for(const t of timers)clearTimeout(t);timers.clear();for(const node of activeNodes.keys())cleanNode(node);for(const node of markedNodes){node.querySelector('.battle-fx-status')?.remove();delete node.dataset.fxShield;}markedNodes.clear();owner=null;encounter=null;}
+ const colors={slash:'#ff796f',ranged:'#ff987d',impact:'#ff796f',magic:'#cda5ff',fire:'#ff834d',ice:'#9ee7ff',lightning:'#eeceff',wind:'#a5f0ce',light:'#fff0a5',shadow:'#be8fe9',critical:'#ffd69a',dot:'#d59b6b',hit:'#ff796f',heal:'#87efad',regen:'#b3f6c9',potion:'#74e7bd',drain:'#f28ea3',buff:'#f4d58b',debuff:'#c495f0',shield:'#72d9ff',absorb:'#a6edff',break:'#d5f6ff',dissolve:'#89bed9','shield-impact':'#a6edff',evade:'#d1dbe6',resist:'#e8f3ff',cast:'#d1a8ff',attack:'#ffe4bb'};
  const graphics={
   slash:'<path d="M9 49Q20 9 55 12Q30 20 9 49Z" fill="currentColor"/><path d="M10 53L53 10"/>',
   ranged:'<path d="M7 49L53 14M38 14H53V29M9 36L19 46M15 30L25 40"/>',
@@ -96,34 +98,38 @@
   magic:'<circle cx="32" cy="32" r="23"/><path d="M32 4L37 26L59 32L37 38L32 60L26 38L4 32L26 26Z"/>',
   cast:'<circle cx="32" cy="32" r="25"/><path d="M13 13L20 20M51 13L44 20M13 51L20 44M51 51L44 44"/>'
  };
- function art(type){return graphics[type]||graphics[{hit:'magic',impact:'magic',wind:'magic',light:'magic',shadow:'magic',regen:'heal',potion:'heal',drain:'heal',dissolve:'shield','shield-impact':'absorb'}[type]]||graphics.magic;}
+ function art(type){return graphics[type]||graphics[{critical:'magic',dot:'debuff',hit:'magic',impact:'slash',wind:'magic',light:'magic',shadow:'magic',regen:'heal',potion:'heal',drain:'heal',dissolve:'shield','shield-impact':'absorb'}[type]]||graphics.magic;}
  function play(node,event,sourceNode){
   let entries=activeNodes.get(node);if(!entries){entries=new Map();activeNodes.set(node,entries);}
-  const type=event.type,channel=type==='break'?'break':['heal','regen','potion','drain'].includes(type)?'recovery':['shield','absorb','break','dissolve','shield-impact'].includes(type)?'shield':type==='hit'?'hit':['buff','debuff'].includes(type)?type:type==='cast'?'cast':'action';
-  if(entries.has(channel)){const old=entries.get(channel);clearTimeout(old.timer);old.element.remove();entries.delete(channel);}
+  const type=event.type,channel=type==='critical'?'critical':type==='dot'?'dot':type==='break'?'break':['heal','regen','potion','drain'].includes(type)?'recovery':['shield','absorb','break','dissolve','shield-impact'].includes(type)?'shield':type==='hit'?'hit':['buff','debuff'].includes(type)?type:type==='cast'?'cast':'action';
+  // Two overlapping occurrences per channel survive; a third replaces only the oldest.
+  const peers=[...entries].filter(([,row])=>row.channel===channel);
+  if(peers.length>=2){const [key,old]=peers[0];clearTimeout(old.timer);old.element.remove();entries.delete(key);}
+  const eventKey=++sequence;
   const element=document.createElement('span');element.className='battle-fx battle-fx-'+type+(node.dataset.combatId?' battle-fx-health':'');
-  element.dataset.fx=type;element.dataset.detail=mode();element.setAttribute('aria-hidden','true');
-  const base=['hit','absorb','shield-impact','evade','resist','regen'].includes(type)?270:['slash','ranged'].includes(type)?380:510;
-  const duration=Math.max(100,Math.round(base/Math.max(1,battleRate)*(motion.matches?.65:1)));
+  element.dataset.fx=type;element.dataset.event=event.eventId||'';element.dataset.critical=String(!!event.critical);if(event.label)element.dataset.skill=event.label;element.dataset.detail=mode();element.setAttribute('aria-hidden','true');
+  const base=type==='cast'?(event.important?850:650):['buff','debuff'].includes(type)?750:['heal','regen','potion','drain','shield'].includes(type)?650:['slash','ranged','impact','hit','evade','resist','absorb','dot','critical'].includes(type)?500:600;
+  const duration=Math.round(base*(battleRate===2?.82:1));
   element.style.setProperty('--fx-time',duration+'ms');element.style.setProperty('--fx-color',colors[type]||colors.magic);
   element.style.setProperty('--fx-direction',String(++sequence%2?-1:1));
   element.innerHTML='<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+art(type)+'</svg>';
-  if(['evade','resist'].includes(type))element.innerHTML+='<b>'+({evade:'閃避',resist:'抵抗'}[type])+'</b>';
+  const label=event.label||({critical:'暴擊',evade:'閃避',resist:'抵抗',absorb:'格擋',heal:'治療',shield:'護盾',buff:'增益',debuff:'減益',dot:'持續傷害'}[type])||(event.critical?'暴擊':'');
+  if(label){const text=document.createElement('b');text.textContent=label;element.append(text);}
   if(mode()==='full'&&sourceNode&&sourceNode!==node&&['fire','ice','lightning','wind','light','shadow','magic','ranged'].includes(type)){
    const a=sourceNode.getBoundingClientRect(),b=node.getBoundingClientRect(),dx=a.x-b.x,dy=a.y-b.y,length=Math.hypot(dx,dy)||1;
    element.style.setProperty('--fx-from-x',Math.round(dx/length*24)+'px');element.style.setProperty('--fx-from-y',Math.round(dy/length*24)+'px');
    const trail=document.createElement('i');trail.className='battle-fx-projectile';element.append(trail);
   }
   node.append(element);
-  const row={element,timer:null},remove=()=>{if(entries.get(channel)!==row)return;clearTimeout(row.timer);element.remove();entries.delete(channel);if(!entries.size)activeNodes.delete(node);};
-  row.timer=setTimeout(remove,duration+80);entries.set(channel,row);element.addEventListener('animationend',e=>{if(e.target===element)remove();});
+  const row={element,timer:null,channel},remove=()=>{if(entries.get(eventKey)!==row)return;clearTimeout(row.timer);element.remove();entries.delete(eventKey);if(!entries.size)activeNodes.delete(node);};
+  row.timer=setTimeout(remove,duration+80);entries.set(eventKey,row);element.addEventListener('animationend',e=>{if(e.target===element)remove();});
  }
  function sync(s){
-  if(preference==='off'||!visible()||s.result||owner&&owner!==party||encounter&&encounter!==foes){clear();return;}
-  for(const node of activeNodes.keys())if(!node.isConnected||node.classList.contains('is-dead')||node.classList.contains('fallen'))cleanNode(node);
+  if(preference==='off'||!visible()||owner&&owner!==party||staged&&staged.encounter!==foes&&!held){clear();return;}
+  for(const node of activeNodes.keys())if(!node.isConnected)cleanNode(node);
   for(const node of markedNodes)if(!node.isConnected){node.querySelector('.battle-fx-status')?.remove();delete node.dataset.fxShield;markedNodes.delete(node);}
   const rows=[...s.allies,...s.units],byId=new Map(rows.map(row=>[String(row.id),row]));
-  const nodes=new Map();document.querySelectorAll('#battleAllyIcons > [data-hero-id],#battleEnemyIcons > [data-enemy-id]').forEach(node=>nodes.set(node.dataset.heroId||node.dataset.enemyId,node));
+  const nodes=new Map();document.querySelectorAll('#battleAllyIcons .unit > [data-hero-id],#battleEnemyIcons .unit > [data-enemy-id]').forEach(node=>nodes.set(node.dataset.heroId||node.dataset.enemyId,node));
   const healthNodes=new Map();document.querySelectorAll('.squad-field .unit[data-combat-id]').forEach(node=>healthNodes.set(node.dataset.combatId,node));
   const playUnit=(key,event,sourceKey)=>{for(const surfaces of [nodes,healthNodes]){const node=surfaces.get(key);if(node)play(node,event,surfaces.get(sourceKey));}};
   const currentStatuses=statuses();
@@ -138,36 +144,73 @@
    if(!badge){badge=document.createElement('span');badge.className='battle-fx-status';node.append(badge);}
    const html=labels.map(tag=>'<i class="fx-status-'+tag+'" title="'+({shield:'護盾',buff:'增益',debuff:'減益'}[tag])+'"></i>').join('');if(badge.innerHTML!==html)badge.innerHTML=html;
   }
-  const batch=pending;pending=null;
-  if(!batch||batch.owner!==party||batch.encounter!==foes||performance.now()-batch.at>700)return;
-  // Per-unit event channels are bounded; preserve insertion/resolution order.
-  const sources=new Set();
-  for(const event of batch.events.values()){
-   const row=byId.get(event.target);if(!row?.alive)continue;
-   const source=nodes.get(event.source)||healthNodes.get(event.source);
-   if(source&&event.source!==event.target&&!sources.has(event.source)&&['slash','ranged','fire','ice','lightning','wind','light','shadow','magic','impact','evade','absorb'].includes(event.type)&&byId.get(event.source)?.alive){sources.add(event.source);playUnit(event.source,{type:['slash','ranged','impact'].includes(event.type)?'attack':'cast'});}
-   playUnit(event.target,event,event.source);
+  paintVitals(s);
+  if(!staged||staged.played)return;
+  const batch=staged;batch.played=true;
+  const playEvent=event=>playUnit(event.target,event,event.source);
+  const events=[...batch.events.values()],sources=new Set(events.filter(e=>e.type==='cast').map(e=>e.target));
+  for(const event of events)if(!sources.has(event.source)&&nodes.has(event.source)&&event.source!==event.target&&!['critical','dot'].includes(event.type)){
+   sources.add(event.source);playEvent({target:event.source,type:['slash','ranged','impact'].includes(event.type)?'attack':'cast',eventId:batch.eventId});
+  }
+  for(const event of events){event.eventId=batch.eventId;if(event.type==='cast')playEvent(event);}
+  const impact=()=>{if(staged!==batch||!visible())return;batch.impacted=true;
+   EmberwildBattleSummary.sync({animate:false});
+   for(const event of events)if(event.type!=='cast'&&byId.has(event.target))playEvent(event);
+  };
+  if(batch.delay)later(impact,batch.delay);else impact();
+ }
+ // Presentation timestamps never feed the shared simulation clock or saves.
+ function present(s){
+  if(pending&&pending.owner===party){
+   staged=pending;pending=null;staged.delay=[...staged.events.values()].some(e=>e.type==='cast')?(battleRate===2?130:190):0;
+   staged.eventId=String(++sequence);staged.started=performance.now();
+   if(s.result&&staged.terminalVitals){const final=row=>{const v=staged.terminalVitals.get(row.unit);return v?{...row,hp:v.hp,shield:v.shield,alive:v.hp>0}:row;};s={...s,allies:s.allies.map(final),units:s.units.map(final)};}
+   if(s.result){held={snapshot:s,until:staged.started+staged.delay+(battleRate===2?700:850),encounter:staged.encounter};
+    const hold=held;later(()=>{if(held!==hold)return;held=null;if(visible())render();},held.until-staged.started);
+   }
+  }
+  if(held&&performance.now()<held.until)s=held.snapshot;
+  if(staged&&!staged.impacted&&staged.delay){
+   const project=row=>{const v=staged.initial.get(row.unit);return v?{...row,hp:v.hp,shield:v.shield,alive:v.hp>0}:row;};
+   const units=s.units.map(project),allies=s.allies.map(project),hp=units.reduce((n,r)=>n+r.hp,0);
+   return {...s,units,allies,hp,percent:s.max?hp/s.max*100:0,alive:units.filter(r=>r.alive).length,result:null};
+  }
+  return s;
+ }
+ function paintVitals(s){
+  for(const row of [...s.allies,...s.units]){
+   const card=[...document.querySelectorAll('.squad-field .unit[data-combat-id]')].find(n=>n.dataset.combatId===String(row.id));if(!card)continue;
+   const before=staged&&!staged.impacted&&staged.delay?staged.initial.get(row.unit):null;
+   const hp=before?.hp??row.hp??row.unit.hp,max=row.max??stats(row.unit).hp,shield=before?.shield??row.shield??shields(row.unit);
+   const hpText=card.querySelector('.unit-numbers > span:first-child b');if(hpText)hpText.textContent=Math.ceil(hp)+' / '+Math.ceil(max);
+   const bar=card.querySelector('.battle-health-bar');if(bar){const box=document.createElement('div');box.innerHTML=battleHealthMeter(hp,max,shield);if(bar.outerHTML!==box.firstChild.outerHTML)bar.replaceWith(box.firstChild);}
+   card.classList.toggle('fallen',hp<=0);
+   const icon=card.querySelector('.battle-enemy-icon');icon?.classList.toggle('is-dead',hp<=0);
+   const second=card.querySelector('.unit-numbers > span:nth-child(2) b');if(second)second.textContent=Math.round(shield);
+   const title=card.querySelector('.unit-title > span');if(title){const kind=row.unit.job!==undefined?'出戰':row.unit.kind==='elite'?'菁英':['boss','final'].includes(row.unit.kind)?'首領':'普通';title.textContent='LV '+row.unit.lv+' · '+(hp<=0?(row.unit.job!==undefined?'倒下':'已擊敗'):kind);}
   }
  }
+
  function wrap(name,context){const base=globalThis[name];if(typeof base!=='function')return;globalThis[name]=function(...args){if(!frame)return base.apply(this,args);return scope(context(...args),()=>base.apply(this,args));};}
  wrap('performHeroBasic',h=>({source:h,mode:'damage',element:weaponElement(h),ranged:h.job===2}));
  wrap('performEnemyBasic',e=>({source:e,mode:'damage',element:e.element}));
- wrap('resolveHit',(e,amount,h,element)=>({source:h,mode:'damage',element}));
+ wrap('resolveHit',(e,amount,h,element,critical)=>({source:h,mode:'damage',element,critical}));
  wrap('sharedEnemySkillDamage',(e,h,amount,element)=>({source:e,mode:'damage',element}));
  wrap('castPartySkill',(h,i)=>{const effect=CLASSES[h.job]?.skills?.[i]?.[5];return {source:h,mode:['damage','drain'].includes(effect)?'damage':'skill',element:coreSkillElement(h.job,i),effect,ranged:h.job===2};});
  wrap('castEnemySharedSkill',(e,sk)=>({source:e,mode:['damage','drain'].includes(sk.effect)?'damage':'skill',element:sk.element,effect:sk.effect}));
  wrap('castSupport',h=>({source:h,mode:'skill',element:null}));
  wrap('potion',()=>({source:state,mode:'potion',element:null}));
+ wrap('refillParty',()=>({mode:'settlement'}));
  wrap('applyPureShield',()=>({mode:'shield'}));
  // Cast glows are derived only from successful casts, never attempted cooldowns.
- for(const name of ['castPartySkill','castEnemySharedSkill']){const base=globalThis[name];globalThis[name]=function(...args){const out=base.apply(this,args);if(frame&&out!==false){const source=args[0];enqueue('cast',id(source));}return out;};}
- for(const name of ['resetEncounter','resetSession','loadParty','spawnGroup','refillParty']){const base=globalThis[name];if(typeof base==='function')globalThis[name]=function(...args){clear();return base.apply(this,args);};}
- globalThis.EmberwildBattleEffects={begin,end,scope,result,sync,clear,get capturing(){return !!frame;},get preference(){return preference;},get pendingEvents(){return pending?[...pending.events.values()].map(e=>({...e})):[];},get activeCount(){return [...activeNodes.values()].reduce((n,m)=>n+m.size,0);}};
+ for(const name of ['castPartySkill','castEnemySharedSkill','castSupport']){const base=globalThis[name];globalThis[name]=function(...args){const out=base.apply(this,args);if(frame&&out!==false){const source=args[0],sk=name==='castPartySkill'?CLASSES[source.job]?.skills?.[args[1]]:name==='castSupport'?SUPPORT[source.job]?.[args[1]]:args[1];enqueue('cast',id(source),{label:sk?.name||sk?.[0]||'技能',important:name==='castPartySkill'&&source.job===1&&(sk?.[0]==='魔爆'||sk?.name==='魔爆')});}return out;};}
+ for(const name of ['resetEncounter','resetSession','loadParty','stopTeamExploration']){const base=globalThis[name];if(typeof base==='function')globalThis[name]=function(...args){clear();return base.apply(this,args);};}
+ globalThis.EmberwildBattleEffects={begin,end,scope,result,sync,clear,present,get holdingEncounter(){return !!held&&held.encounter!==foes&&performance.now()<held.until;},get capturing(){return !!frame;},get preference(){return preference;},get pendingEvents(){return pending?[...pending.events.values()].map(e=>({...e})):[];},get activeCount(){return [...activeNodes.values()].reduce((n,m)=>n+m.size,0);}};
  globalThis.setBattleEffects=function(value){if(!choices.includes(value))return false;preference=value;clear();try{localStorage.setItem(storageKey,value);}catch{toast('特效已套用，但瀏覽器無法保存設定。');}document.querySelectorAll('[data-battle-effects]').forEach(select=>select.value=value);EmberwildBattleSummary.sync({animate:false});return true;};
- globalThis.battleEffectsOptionsView=()=>'<section class="panel option-row"><div><h2>戰鬥特效</h2><p class="small">調整探索圖示與血條區塊動畫；保留目前行動者金框。依戰鬥倍速縮短，減少動態效果時自動簡化。</p></div><select data-battle-effects aria-label="戰鬥特效" onchange="setBattleEffects(this.value)">'+choices.map((value,i)=>'<option value="'+value+'" '+(preference===value?'selected':'')+'>'+['完整','簡化','關閉'][i]+'</option>').join('')+'</select></section>';
+ globalThis.battleEffectsOptionsView=()=>'<section class="panel option-row"><div><h2>戰鬥特效</h2><p class="small">調整探索圖示與血條區塊動畫；保留目前行動者金框。倍速調整事件間隔，動畫保留可辨識時間；減少動態效果時自動簡化。</p></div><select data-battle-effects aria-label="戰鬥特效" onchange="setBattleEffects(this.value)">'+choices.map((value,i)=>'<option value="'+value+'" '+(preference===value?'selected':'')+'>'+['完整','簡化','關閉'][i]+'</option>').join('')+'</select></section>';
  const modal=document.getElementById('modal');if(modal)new MutationObserver(()=>{if(modal.open)clear();}).observe(modal,{attributes:true,attributeFilter:['open']});
  addEventListener('visibilitychange',clear);addEventListener('pagehide',clear);
  addEventListener('storage',e=>{if(e.key===storageKey||e.key===null){preference=choices.includes(e.newValue)?e.newValue:'full';clear();}});
  // Navigation and paused exploration already render through this existing entry point.
- const renderBase=render;render=function(...args){if(!visible())clear();return renderBase.apply(this,args);};
+ const renderBase=render;render=function(...args){if(!visible()||!running&&!frame&&!pending&&!held)clear();return renderBase.apply(this,args);};
 })();

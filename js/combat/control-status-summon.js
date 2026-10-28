@@ -171,7 +171,7 @@
     const formula=c.damageFormula||{},attackCoefficient=Number.isFinite(formula.attackCoefficient)?formula.attackCoefficient:1,defenseCoefficient=Number.isFinite(formula.defenseCoefficient)?formula.defenseCoefficient:c.defenseEffectiveness,minimumDamage=Math.max(0,Number.isFinite(formula.minimumDamage)?formula.minimumDamage:1);
     const effectiveDefense=Math.max(0,v.def*(1-Math.min(.95,ev.defenseIgnore))-ev.pierce);
     let hit=Math.max(minimumDamage,Math.round(ev.atk*(1-Math.min(c.caps.weaken,effectTotal(e.id,'weaken')))*multi*attackCoefficient-effectiveDefense*defenseCoefficient));
-    if(ev.crit>0&&Math.random()<ev.crit)hit=Math.round(hit*ev.critDamage);
+    const critical=ev.crit>0&&Math.random()<ev.crit;if(critical)hit=Math.round(hit*ev.critDamage);
     const elementBonus=(ev.elementDamage[e.element]||0)+(e.element==='physical'?0:ev.elementBonus);
     if(elementBonus)hit=Math.max(minimumDamage,Math.round(hit*(1+elementBonus)));
     hit=Math.max(minimumDamage,Math.round(hit*(1-Math.min(c.caps.guard,effectTotal(heroKey(h),'guard')))));
@@ -180,6 +180,7 @@
     hit=Math.max(minimumDamage,Math.round(hit*(1-resist)));const absorb=Math.min(h.shield,hit);h.shield-=absorb;
     if(absorb>0&&typeof recordCombatContribution==='function')recordCombatContribution(h,'mitigation',absorb);
     const hpDamage=Math.max(0,hit-absorb);h.hp=Math.max(0,h.hp-hpDamage);
+    if(critical&&beforeHp>h.hp)globalThis.EmberwildBattleEffects?.result('critical',h,e);
     globalThis.EmberwildTokenRuntime?.afterDamage(h,e,beforeHp,h.hp);
     if(ev.lifesteal>0)e.hp=Math.min(e.maxhp,e.hp+Math.round((beforeHp-h.hp)*ev.lifesteal));
     if(absorb>0&&hpDamage===0)note(combatEnemyName(e)+' → '+characterName(h)+' 的護盾 '+absorb+' 傷害（剩餘 '+Math.round(h.shield)+'）','enemyDamage');

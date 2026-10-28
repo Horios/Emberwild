@@ -42,12 +42,12 @@ test('actual evasion branch emits dodge without hit or shield effects',()=>{
  const r=game();r.run(`const fxEnemyStats=enemyBattleStats;enemyBattleStats=function(e){return {...fxEnemyStats(e),evasion:1};}`);
  const events=capture(r,`resolveHit(foes[1],50,state,'fire',false)`);assert(events.some(e=>e.type==='evade'&&e.target==='fx-1'));assert(!events.some(e=>['fire','hit','absorb'].includes(e.type)));
 });
-test('off, hidden, non-battle, reset and terminal outcomes discard presentation work',()=>{
+test('off, hidden, navigation and reset discard presentation; terminal outcomes retain the last hit',()=>{
  const r=game();r.run(`setBattleEffects('off')`);assert.deepEqual(capture(r,`resolveHit(foes[1],50,state,'fire',false)`),[]);
  r.run(`setBattleEffects('full');tab='equipment'`);assert.deepEqual(capture(r,`resolveHit(foes[1],50,state,'fire',false)`),[]);
  r.run(`tab='battle'`);r.ctx.document.hidden=true;assert.deepEqual(capture(r,`resolveHit(foes[1],50,state,'fire',false)`),[]);r.ctx.document.hidden=false;
  capture(r,`resolveHit(foes[1],50,state,'fire',false)`);r.run('resetEncounter()');assert.equal(r.run('EmberwildBattleEffects.pendingEvents.length'),0);
- r.run('spawnGroup()');capture(r,`resolveHit(foes[1],50,state,'fire',false)`);r.run(`EmberwildBattleSummary.finish('victory')`);assert.equal(r.run('EmberwildBattleEffects.pendingEvents.length'),0);
+ r.run('spawnGroup()');capture(r,`resolveHit(foes[1],50,state,'fire',false)`);r.run(`EmberwildBattleSummary.finish('victory')`);assert(r.run('EmberwildBattleEffects.pendingEvents.length')>0);r.run('resetEncounter()');assert.equal(r.run('EmberwildBattleEffects.pendingEvents.length'),0);
 });
 test('effects settings produce identical seeded combat, cooldowns, rewards, saves and RNG state',()=>{
  const outputs=[];

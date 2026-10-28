@@ -195,7 +195,7 @@ test('Mobile: long combat names, stats, skills and effects grow without overlapp
  const g=await openRuntime(root),p=g.page;
  try{
   await start(p);
-  await p.evaluate(()=>{toggleBattle();clearInterval(timer);for(const h of heroes())h.name='手機長名稱測試角色與職業';const f=structuredClone(foes[0]);foes=Array.from({length:6},(_,i)=>({...structuredClone(f),name:'菁英長名稱怪物與屬性測試'+i}));});
+  await p.evaluate(()=>{toggleBattle();clearInterval(timer);for(const h of heroes())h.name='手機長名稱測試角色與職業';const f=structuredClone(foes[0]);foes=Array.from({length:6},(_,i)=>({...structuredClone(f),id:f.id+'-mobile-'+i,name:'菁英長名稱怪物與屬性測試'+i}));});
   for(const viewport of [{width:320,height:740},{width:390,height:844},{width:600,height:800},{width:768,height:1024},{width:844,height:390}]){
    await p.setViewportSize(viewport);
    await p.evaluate(()=>{setTab('battle');document.querySelectorAll('.unit-skills').forEach(e=>e.insertAdjacentHTML('beforeend','<div>主動與觸發技能的長名稱狀態文字測試</div>'.repeat(3)));document.querySelectorAll('.unit-effects').forEach(e=>e.insertAdjacentHTML('beforeend','<span class="tag">持續增益與減益狀態的長名稱</span>'.repeat(6)));});
@@ -205,6 +205,7 @@ test('Mobile: long combat names, stats, skills and effects grow without overlapp
     for(const unit of document.querySelectorAll('.squad-field .unit')){
      const u=box(unit);let bottom=u.top;
      for(const child of unit.children){
+      if(child.matches('.battle-enemy-icon,.battle-fx,.battle-fx-status'))continue;
       const r=box(child);if(!r.width||!r.height)continue;
       if(r.top<bottom-1||r.bottom>u.bottom+1||r.right>u.right+1)errors.push(child.className+' overlaps or escapes unit');
       if(child.matches('.unit-title,.unit-numbers,.unit-skills,.unit-effects,.enemy-action-status')&&(child.scrollHeight>child.clientHeight+1||child.scrollWidth>child.clientWidth+1))errors.push(child.className+' clips text');

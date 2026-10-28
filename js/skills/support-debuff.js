@@ -143,7 +143,8 @@
 
   const debuffPerformEnemyActionBase=performEnemyAction;
   performEnemyAction=function(e){
-    tickFixedDotBeforeEnemyAction(e);
+    const visual=globalThis.EmberwildBattleEffects;
+    if(visual?.capturing)visual.scope({mode:'damage',periodic:true},()=>tickFixedDotBeforeEnemyAction(e));else tickFixedDotBeforeEnemyAction(e);
     if(!e||e.hp<=0){note((e?.name||'敵人')+'受到持續傷害倒下，未能行動。');return 'dot';}
     return debuffPerformEnemyActionBase(e);
   };
