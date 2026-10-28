@@ -37,6 +37,19 @@ test('a real foreground long task does not produce a burst of independent action
   await g.page.clock.runFor(10000);inspect(await g.page.evaluate(()=>paceBrowser),2);assert.equal(await g.page.evaluate(()=>EmberwildOffline.busy),false);assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
+test('a save before a blocked publication still leaves a full interval between visible actions',async t=>{
+ for(const rate of [1,2]){const g=await setup(rate),p=g.page;try{
+  await p.evaluate(()=>clearInterval(timer));await p.clock.runFor(50);await p.evaluate(()=>tick());
+  const gap=900/rate;await p.clock.runFor(gap);await p.evaluate(()=>save());
+  assert.equal(await p.evaluate(()=>paceBrowser.actions.length),2);assert.equal(await p.evaluate(()=>paceBrowser.frames.at(-1).actions),1);
+  await p.clock.fastForward(2300);await p.evaluate(()=>tick());const published=await p.evaluate(()=>Date.now());
+  assert.equal(await p.evaluate(()=>nextActionAt-Date.now()),gap);assert.equal(await p.evaluate(()=>paceBrowser.frames.at(-1).actions),2);
+  await p.clock.runFor(gap-50);await p.evaluate(()=>tick());assert.equal(await p.evaluate(()=>paceBrowser.actions.length),2);
+  await p.clock.runFor(50);await p.evaluate(()=>tick());assert.equal(await p.evaluate(()=>paceBrowser.actions.length),3);
+  const elapsed=await p.evaluate(at=>Date.now()-at,published);assert.equal(elapsed,gap);t.diagnostic(JSON.stringify({rate,publicationGapMs:elapsed,blockMs:2300}));
+  assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}}
+});
 test('five real minutes of browser foreground play, actual rendering, saves and a 2300ms main-thread block', {skip:!process.env.EMBERWILD_PACE_REALTIME,timeout:420000},async t=>{
  await Promise.all([1,2].map(async rate=>{const g=await setup(rate,false);try{
   const start=Date.now();let blocked=false;

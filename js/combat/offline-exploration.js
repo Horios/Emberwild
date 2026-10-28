@@ -5,7 +5,7 @@
  const copy=v=>v==null?v:JSON.parse(JSON.stringify(v)),api=EmberwildTimedBoosts;
  const hooks=()=>[EmberwildControlCombatState,EmberwildEnemyCombatState,EmberwildStatusCombatState,EmberwildTokenCombatState];
  const transient=['hp','shield','basicAdvanceRound','procAdvanceRound','procAdvanceSteps','nextActiveDamageBonus','healPotionCooldownRemaining'];
- let internal=false,stepping=false,job=null,failed=false,restoring=false,lastMode=false,actionSerial=0,lastRendered=0,gearPage=0,lastCheck=0,lastHeartbeat=0,requestedAt=0,renderedReceipt=null,jobOffline=false,lastCommitted=globalThis.__EMBERWILD_BOOT_SAVE_RAW||null;
+ let internal=false,stepping=false,job=null,failed=false,restoring=false,lastMode=false,actionSerial=0,lastRendered=0,presentation=null,gearPage=0,lastCheck=0,lastHeartbeat=0,requestedAt=0,renderedReceipt=null,jobOffline=false,lastCommitted=globalThis.__EMBERWILD_BOOT_SAVE_RAW||null;
  // Profiling: full saves dominated replay (about 23ms each on an 8h debt).
  // One wall-clock second of work amortizes serialization while bounding replay
  // lost on close. Only commit()/successful save moves the durable checkpoint.
@@ -196,6 +196,7 @@
     const ongoing=round>0&&foes.some(e=>e.hp>0);
     nextActionAt=ongoing?Math.max(at+actionMs,roundStartedAt+roundMs):at+actionMs;
    }else nextActionAt=at+actionMs;
+   if(!jobOffline&&!document.hidden)presentation={intervalMs:actionMs,nextAt:nextActionAt,owner:party};
   });}finally{stepping=false;visual?.end();}
  }
  // Fast replay learns combat cost only. Every new encounter and every reward is
@@ -425,7 +426,18 @@
   const now=nowReal();if(now-lastCheck<(document.hidden?1000:50))return;lastCheck=now;sync(now);
   if(!job&&!document.hidden){
    if(now-lastHeartbeat>=1000){lastHeartbeat=now;globalThis.emberwildLifeHeartbeat?.();__EMBERWILD_TIMED_BOOST_TEST.refreshJournalRealtime();}
-   if(lastRendered!==actionSerial){lastRendered=actionSerial;if(tab==='battle')render();else refreshGlobalJournal();}
+   if(lastRendered!==actionSerial){
+    // save()/UI sync can resolve an action before tick presents it. Its wait
+    // must survive a delayed publication or a slow render, rather than already
+    // being overdue on the following tick. Keep the unpainted-event guard until
+    // rendering finishes; replay never enters this foreground publication path.
+    const serial=actionSerial,published=presentation;
+    if(tab==='battle')render();else refreshGlobalJournal();
+    lastRendered=serial;
+    // An existing minimum-round wait can already cover the presentation cost.
+    const delay=published?.owner===party&&published.nextAt===nextActionAt?Math.max(0,nowReal()+published.intervalMs-nextActionAt):0;
+    if(lastMode&&running&&delay){nextActionAt+=delay;if(roundIterator||combatRoundProgress)roundStartedAt+=delay;}
+   }
   }
  };
  // UI actions are already synchronous. Flush debt before changing the team/map,

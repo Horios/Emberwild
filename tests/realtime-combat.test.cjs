@@ -12,6 +12,44 @@ test('short foreground stalls and save/UI syncs cannot overwrite an unpainted in
   const count=r.run('paceEvents.length'),wait=r.run('nextActionAt')-r.now;drive(r,wait-50);assert.equal(r.run('paceEvents.length'),count);drive(r,50);assert.equal(r.run('paceEvents.length'),count+1);assert.equal(report(r).maxActionsPerFrame,1);
  }
 });
+test('an action resolved by save retains its interval after a delayed publication',()=>{
+ for(const rate of [1,2]){const r=game({rate,durable:true}),gap=duration(r);drive(r,50);r.advance(gap);r.run('save()');
+  assert.equal(r.run('paceActions.length'),2);assert.equal(r.run('paceFrames.at(-1).actions'),1);
+  r.advance(2300);r.run('tick()');const published=r.now;
+  assert.equal(r.run('paceFrames.at(-1).actions'),2);assert.equal(r.run('nextActionAt')-published,gap);
+  drive(r,gap-50);assert.equal(r.run('paceActions.length'),2);drive(r,50);assert.equal(r.run('paceActions.length'),3);
+  assert.equal(r.run('paceFrames.at(-1).at')-published,gap);assert.equal(r.run('EmberwildOffline.busy'),false);assert.equal(r.run('party.offlineExploration.receipt'),null);
+ }
+});
+test('slow rendering and a reentrant save cannot consume the next action interval',()=>{
+ for(const rate of [1,2]){const r=game({rate,durable:true}),gap=duration(r);r.ctx.blockPaint=()=>r.advance(2300);
+  r.run(`const slowRender=render;render=function(...args){render=slowRender;const out=slowRender(...args);blockPaint();save();return out;};`);
+  drive(r,50);assert.equal(r.run('paceActions.length'),1);assert.equal(r.run('nextActionAt')-r.now,gap);
+  drive(r,gap-50);assert.equal(r.run('paceActions.length'),1);drive(r,50);assert.equal(r.run('paceActions.length'),2);
+  assert.equal(r.run('party.combatSession.idleTimeMs'),2350+gap);assert.deepEqual(r.errors,[]);
+ }
+});
+test('a delayed lethal publication preserves only the original encounter gap and survives saving',()=>{
+ const r=game();r.run(`initiativeOrder=()=>[{side:'hero',id:heroKey(state),actor:state}];castPartySkill=()=>false;castSupport=()=>false;performHeroBasic=()=>{foes.forEach(e=>e.hp=0);};`);
+ r.advance(50);r.run('save()');const kills=r.run('state.totalKills'),gold=r.run('state.gold');assert(kills>0);
+ r.advance(2300);r.run('tick();save()');assert.equal(r.run('roundIterator'),null);assert.equal(r.run('combatRoundProgress'),null);assert.equal(r.run('nextActionAt')-r.now,900);
+ const stored=json(r,'packParty()');assert.equal(stored.offlineExploration.nextAt-r.now,900);
+ drive(r,850);assert.equal(r.run('round'),1);drive(r,50);assert.equal(r.run('round'),0);assert.equal(r.run('nextActionAt')-r.now,900);assert.equal(r.run('state.totalKills'),kills);assert.equal(r.run('state.gold'),gold);
+});
+test('a pending publication cannot shift a loaded or reset encounter timeline',()=>{
+ const r=game({durable:true});r.advance(50);r.run('save();globalThis.beforeLoad=packParty();');const due=r.run('nextActionAt');
+ r.advance(2300);r.run('loadParty(beforeLoad)');r.advance(50);r.run('tick()');assert.equal(r.run('nextActionAt'),due);
+ r.advance(50);r.run('tick()');assert.equal(r.run('nextActionAt')-r.now,900);
+ r.advance(900);r.run('save();resetEncounter();running=true;');assert.equal(r.run('nextActionAt'),0);
+ r.advance(50);r.run('tick()');assert.equal(r.run('nextActionAt'),0);
+ r.advance(50);r.run('tick()');assert.equal(r.run('nextActionAt')-r.now,900);assert.deepEqual(r.errors,[]);
+});
+test('publishing round cleanup does not restart a minimum-round wait that already covers the delay',()=>{
+ const r=game({durable:true});r.run(`initiativeOrder=()=>[{side:'hero',id:heroKey(state),actor:state}];castSupport=()=>false;castPartySkill=()=>false;`);
+ drive(r,50);const started=r.now;r.advance(900);r.run('save()');assert.equal(r.run('roundIterator'),null);assert.equal(r.run('nextActionAt'),started+6000);
+ r.advance(2300);r.run('tick()');assert.equal(r.run('nextActionAt'),started+6000);assert.equal(r.run('paceActions.length'),1);
+ drive(r,2800);assert.equal(r.run('paceActions.length'),2);assert.equal(r.run('paceActions.at(-1).at'),started+6000);
+});
 test('one lethal AoE stays one action; settlement and encounter spawn do not wait out the round minimum',()=>{
  for(const rate of [1,2]){const r=game({rate});r.run(`foes=foes.slice(0,3);foes.forEach(e=>{e.hp=1;e.maxhp=1;});initiativeOrder=()=>[{side:'hero',id:heroKey(state),actor:state}];`);
   const gap=duration(r);drive(r,50);assert.equal(r.run('paceActions.length'),1);assert.equal(r.run('paceActions[0].kind'),'技能');assert.equal(r.run('combatRoundProgress'),null);assert.equal(r.run('roundIterator'),null);assert.equal(r.run('state.totalKills'),3);assert.equal(r.run('activeBattleStat'),null);assert.equal(r.run('EmberwildBattleSummary.snapshot().hp'),0);assert.equal(r.run('nextActionAt')-r.now,gap);
