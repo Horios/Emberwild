@@ -49,7 +49,13 @@ test('10000 shared draws respect progress, gold bands, equipment caps and do not
  const r=game();const before=r.run('JSON.stringify(packParty())');
  const result=plain(r,"EmberwildWishingLake.simulate(exportableBalance().wishingLake,exportableBalance(),{mapId:'map0',inputId:'gel',quantity:50,count:10000})");
  assert.equal(result.invalid,0);assert(result.goldMin>=500&&result.goldMax<=20000);assert(Math.abs(result.types.gold/10000-.5)<.03);assert(Math.abs(result.types.item/10000-.3)<.03);assert(Math.abs(result.aheadRatio-.1)<.035);assert(Object.keys(result.levels).every(lv=>+lv>=1&&+lv<=6));assert.equal(r.run('JSON.stringify(packParty())'),before);
- r.run('globalThis.c=exportableBalance();c.wishingLake.equipment.aheadChance=1;');const cap=plain(r,"EmberwildWishingLake.simulate(c.wishingLake,c,{mapId:'map12',inputId:'gel',quantity:50,count:10000})");assert(Object.keys(cap.levels).every(lv=>+lv>=57&&+lv<=60));
+ r.run("globalThis.poolConfig=exportableBalance();poolConfig.wishingLake.pools.push({id:'goldOnly',name:'金幣池',enabled:true,rewards:[{...poolConfig.wishingLake.pools[0].rewards[0]}]});poolConfig.wishingLake.inputs[0].poolId='goldOnly';");
+ const goldOnly=plain(r,"EmberwildWishingLake.simulate(poolConfig.wishingLake,poolConfig,{mapId:'map0',inputId:'gel',quantity:50,count:100})");assert.equal(goldOnly.types.gold,100);assert.equal(goldOnly.invalid,0);
+ r.run("poolConfig.wishingLake.pools[1].rewards.push({...poolConfig.wishingLake.pools[0].rewards[1]});poolConfig.wishingLake.pools[1].typeWeights={gold:0,item:1,equipment:0};");
+ const own=plain(r,"EmberwildWishingLake.simulate(poolConfig.wishingLake,poolConfig,{mapId:'map0',inputId:'gel',quantity:50,count:100})");assert.equal(own.types.item,100);
+ r.run("poolConfig.wishingLake.pools[1].enabled=false;applyBalanceConfig(poolConfig,{persist:false});recordMapClear(0);state.materials['黏稠凝膠']=100;selectLakeOffering('gel');");assert.equal(r.run('__EMBERWILD_WISHING_LAKE.choices().some(x=>x.id==="gel")'),false);assert.equal(r.run('confirmLakeOffering()'),false);assert.equal(r.run("materialCount('黏稠凝膠')"),100);
+ assert.throws(()=>r.run("EmberwildWishingLake.simulate(poolConfig.wishingLake,poolConfig,{mapId:'map0',inputId:'gel',quantity:50,count:100})"),/停用/);
+ r.run('globalThis.c=exportableBalance();c.wishingLake=EmberwildWishingLake.defaults();c.wishingLake.equipment.aheadChance=1;');const cap=plain(r,"EmberwildWishingLake.simulate(c.wishingLake,c,{mapId:'map12',inputId:'gel',quantity:50,count:10000})");assert(Object.keys(cap.levels).every(lv=>+lv>=57&&+lv<=60));
  r.run('c.wishingLake.future.fairyEvents.push({id:"future",enabled:true})');assert.throws(()=>r.run('EmberwildWishingLake.normalize(c.wishingLake,c)'),/停用/);
 });
 test('explicit gear inputs exclude locked, worn, socketed and protected gear; future triggers never consume',()=>{

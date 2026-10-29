@@ -44,10 +44,13 @@
   if(e?.progressSource!=='mapClears'||e?.rangeSource!=='regionTier'||e?.qualitySource!=='normalDrops'||e?.tierSource!=='normalDrops'||!num(e?.aheadChance,0,1)||!int(e?.aheadLevels,0,5))fail('裝備須沿用通關地區、普通掉落品質／T 級，超前最多 5 級');
   function unique(rows,label){if(!Array.isArray(rows)||rows.length>1000){fail(label+' 必須為至多 1000 筆陣列');return [];}const seen=new Set();for(const r of rows){if(!obj(r)||typeof r.id!=='string'||!/^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(r.id)||seen.has(r.id))fail(label+' ID 無效或重複');seen.add(r?.id);}return rows.filter(obj);}
   const pools=unique(c.pools,'回贈池'),poolIds=new Set(pools.map(p=>p.id));
-  for(const p of pools){const rewards=unique(p.rewards,'回贈列');for(const r of rewards){
+  for(const p of pools){const rewards=unique(p.rewards,'回贈列'),weights=p.typeWeights??c.typeWeights;
+   if(p.enabled!==undefined&&typeof p.enabled!=='boolean')fail(p.id+' 啟用狀態無效');
+   if(!types.every(t=>num(weights?.[t],0,1e9))||!types.some(t=>weights?.[t]>0))fail(p.id+' 類型權重無效');
+   for(const r of rewards){
    if(!types.includes(r.type)||typeof r.enabled!=='boolean'||!num(r.weight,0,1e9)||!map(r.minMapId)||typeof r.allowAhead!=='boolean')fail(p.id+'/'+r.id+' 回贈設定無效');
    if(r.type==='item'&&(!['material','item'].includes(r.kind)||!safe(d,r.kind,r.key)||!int(r.min,1,1e6)||!int(r.max,r.min,1e6)))fail(p.id+'/'+r.id+' 引用不存在、特殊或無法正常入包的道具／數量');
-  }for(const t of types)if(c.typeWeights?.[t]>0&&!rewards.some(r=>r.enabled&&r.type===t&&r.weight>0))fail(p.id+' 缺少 '+t+' 回贈');}
+  }if(p.enabled!==false&&!rewards.some(r=>r.enabled&&r.weight>0&&weights?.[r.type]>0))fail(p.id+' 沒有有效回贈');}
   const triggers=new Set((c.future?.companionQuests||[]).map(r=>r.triggerItemId).filter(Boolean));
   for(const r of unique(c.inputs,'投入規則')){
    if(!['material','item','equipment','token'].includes(r.kind)||!catalog(d).some(x=>x.kind===r.kind&&x.key===r.key))fail(r.id+' 投入引用不存在');
@@ -67,13 +70,14 @@
  function normalize(raw,d){const c=raw===undefined?copy(DEFAULTS):copy(raw),errors=issues(c,d);if(errors.length)throw Error(errors.join('\n'));return c;}
  function eligible(c,d,poolId,clears){
   const highest=region(d,clears);if(!highest)return [];
+  if(c.pools.find(p=>p.id===poolId)?.enabled===false)return [];
   return (c.pools.find(p=>p.id===poolId)?.rewards||[]).filter(r=>r.enabled&&r.weight>0&&(clears?.[r.minMapId]||maps(d).find(m=>m.id===r.minMapId)?.max<=highest.max)&&!(r.type==='item'&&!r.allowAhead&&r.kind==='material'&&(d.balanceSettings.monsters.catalog||[]).some(m=>m.material===r.key&&maps(d)[m.mapIndex]?.min>highest.max)));
  }
  function pick(rows,rng){const total=rows.reduce((n,r)=>n+r.weight,0);if(!(total>0))throw Error('沒有可用回贈');let n=rng()*total;for(const r of rows)if((n-=r.weight)<0)return r;return rows.at(-1);}
  const integer=(a,b,rng)=>a+Math.min(b-a,Math.floor(rng()*(b-a+1)));
- function probabilities(c,d,poolId,clears){const rows=eligible(c,d,poolId,clears),ts=types.filter(t=>rows.some(r=>r.type===t)&&c.typeWeights[t]>0),total=ts.reduce((n,t)=>n+c.typeWeights[t],0);return rows.map(r=>({...r,probability:ts.includes(r.type)?c.typeWeights[r.type]/total*r.weight/rows.filter(x=>x.type===r.type).reduce((n,x)=>n+x.weight,0):0}));}
+ function probabilities(c,d,poolId,clears){const rows=eligible(c,d,poolId,clears),weights=c.pools.find(p=>p.id===poolId)?.typeWeights??c.typeWeights,ts=types.filter(t=>rows.some(r=>r.type===t)&&weights[t]>0),total=ts.reduce((n,t)=>n+weights[t],0);return rows.map(r=>({...r,probability:ts.includes(r.type)?weights[r.type]/total*r.weight/rows.filter(x=>x.type===r.type).reduce((n,x)=>n+x.weight,0):0}));}
  function draw(c,d,poolId,clears,rng=Math.random){
-  const rows=eligible(c,d,poolId,clears),type=pick(types.filter(t=>rows.some(r=>r.type===t)).map(type=>({type,weight:c.typeWeights[type]})),rng).type,r=pick(rows.filter(r=>r.type===type),rng),result={type,ruleId:r.id};
+  const rows=eligible(c,d,poolId,clears),weights=c.pools.find(p=>p.id===poolId)?.typeWeights??c.typeWeights,type=pick(types.filter(t=>rows.some(r=>r.type===t)).map(type=>({type,weight:weights[type]})),rng).type,r=pick(rows.filter(r=>r.type===type),rng),result={type,ruleId:r.id};
   if(type==='gold'){const b=pick(c.gold.bands,rng);return {...result,amount:integer(b.min,b.max,rng)};}
   if(type==='item')return {...result,kind:r.kind,key:r.key,quantity:integer(r.min,r.max,rng)};
   const m=region(d,clears),limits=range(d,m),top=Math.min(limits.cap,limits.max+c.equipment.aheadLevels),ahead=r.allowAhead&&top>limits.max&&rng()<c.equipment.aheadChance;
@@ -82,7 +86,7 @@
  }
  function simulate(c,d,{mapId,inputId,quantity,count=1000},rng=Math.random){
   normalize(c,d);const m=maps(d).find(m=>m.id===mapId),input=c.inputs.find(r=>r.id===inputId&&r.enabled&&!r.specialTrigger);
-  if(!m||!input||!Number.isInteger(quantity)||quantity<input.min||quantity>input.max||![100,1000,10000].includes(count))throw Error('模擬地區、投入或次數無效');
+  if(!m||!input||c.pools.find(p=>p.id===input.poolId)?.enabled===false||!Number.isInteger(quantity)||quantity<input.min||quantity>input.max||![100,1000,10000].includes(count))throw Error('模擬地區、投入或次數無效，或回贈池已停用');
   const clears=Object.fromEntries(maps(d).filter(x=>x.max<=m.max).map(x=>[x.id,true]));clears[c.unlock.mapId]=true;
   const out={count,types:{gold:0,item:0,equipment:0},goldTotal:0,goldMin:null,goldMax:null,items:{},levels:{},ahead:0,invalid:0};
   for(let i=0;i<count;i++)try{const r=draw(c,d,input.poolId,clears,rng);out.types[r.type]++;if(r.type==='gold'){out.goldTotal+=r.amount;out.goldMin=Math.min(out.goldMin??Infinity,r.amount);out.goldMax=Math.max(out.goldMax??0,r.amount);}else if(r.type==='item'){const id=r.kind+':'+r.key;out.items[id]=(out.items[id]||0)+r.quantity;}else{out.levels[r.level]=(out.levels[r.level]||0)+1;out.ahead+=Number(r.ahead);}}catch{out.invalid++;}

@@ -45,7 +45,7 @@
  function choices(){
   if(!party)return [];
   const d=doc(),triggers=new Set(design.future.companionQuests.map(x=>x.triggerItemId));
-  return design.inputs.filter(r=>r.enabled&&!r.specialTrigger&&!triggers.has(r.key)).flatMap(r=>{
+  return design.inputs.filter(r=>r.enabled&&design.pools.find(p=>p.id===r.poolId)?.enabled!==false&&!r.specialTrigger&&!triggers.has(r.key)).flatMap(r=>{
    if(['material','item'].includes(r.kind))return M.safe(d,r.kind,r.key)&&held(r)>0?[{...r,choice:r.id,held:held(r)}]:[];
    if(!(r.kind==='equipment'?design.allowEquipment:design.allowTokens))return [];
    return gearCandidates(r).map(g=>({...r,choice:r.id+'/'+g.id,held:1,gear:g}));
