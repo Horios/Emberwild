@@ -74,7 +74,7 @@
   pending=null;
   if(preference==='off'||!visible()){frame=null;return;}
   owner=party;encounter=foes;
-  frame={events:new Map(),initial:sample(),vitals:sample(),initialStatuses:statuses(),statuses:statuses(),context:{mode:'regen'},at:performance.now(),owner:party,encounter:foes};
+  frame={events:new Map(),initial:sample(),vitals:sample(),statuses:statuses(),context:{mode:'regen'},at:performance.now(),owner:party,encounter:foes};
  }
  function end(){if(!frame)return;checkpoint();if(frame.events.size)pending=frame;frame=null;}
  function result(type,target,source,details={}){if(frame)enqueue(type,id(target),{...details,source:source?id(source):null});}
@@ -149,7 +149,7 @@
   const nodes=new Map();document.querySelectorAll('#battleAllyIcons .unit > [data-hero-id],#battleEnemyIcons .unit > [data-enemy-id]').forEach(node=>nodes.set(node.dataset.heroId||node.dataset.enemyId,node));
   const healthNodes=new Map();document.querySelectorAll('.squad-field .unit[data-combat-id]').forEach(node=>healthNodes.set(node.dataset.combatId,node));
   const playUnit=(key,event,sourceKey)=>{for(const surfaces of [nodes,healthNodes]){const node=surfaces.get(key);if(node)play(node,event,surfaces.get(sourceKey));}};
-  const currentStatuses=staged?.delay&&!staged.impacted?staged.initialStatuses:statuses();
+  const currentStatuses=statuses();
   // Persistent layers reflect authoritative state, not animation timeouts. The
   // portrait and HP card share the exact same labels and disappear on expiry,
   // dispel, shield exhaustion, control removal, death or encounter cleanup.
