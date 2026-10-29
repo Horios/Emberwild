@@ -107,7 +107,10 @@
   const s=globalThis.EmberwildBattleEffects?.present(snapshot())||snapshot(),event=sample(s,animate);
   if(tab==='battle'&&!globalThis.EmberwildBattleEffects?.holdingEncounter&&foes.length){
    const expected=[...s.allies,...s.units].map(r=>r.id).sort().join('|'),actual=[...document.querySelectorAll('.squad-field :is(.squad-allies,.squad-enemies) > .unit[data-combat-id]')].map(n=>n.dataset.combatId).sort().join('|');
-   if(actual!==expected){render();return;}
+   // The input guard may defer a page redraw until the current click/scroll
+   // finishes. It already queues that redraw; recursively requesting it here
+   // would keep observing the previous page and overflow the stack.
+   if(actual!==expected){if(!globalThis.isEmberwildUIInteracting?.())render();return;}
   }
   const status=s.result==='victory'?'戰鬥勝利':s.result==='wipe'?'戰鬥失敗':!s.total?(running?'搜尋敵人':'尚未探索'):!running?'戰鬥暫停':$('modal')?.open?'視窗暫停':round>0&&!roundIterator&&!combatRoundProgress&&foes.some(e=>e.hp>0)?'等待下一回合':event||'戰鬥中';
   if(summary){

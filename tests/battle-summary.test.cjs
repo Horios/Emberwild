@@ -4,6 +4,11 @@ const {loadRuntime}=require('./headless-runtime.cjs');
 const root=path.resolve(__dirname,'..');
 function game(){const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);closeModal();running=true;');return r;}
 const read=r=>JSON.parse(r.run('JSON.stringify(EmberwildBattleSummary.snapshot(),(key,value)=>key==="unit"?undefined:value)'));
+test('a deferred page redraw does not recursively render a stale battle roster during UI interaction',()=>{
+ const r=game();enemies(r);r.run("tab='battle';$('battleSummary').isConnected=true;globalThis.redraws=0;render=()=>{redraws++};globalThis.isEmberwildUIInteracting=()=>true;");
+ r.run('EmberwildBattleSummary.sync()');assert.equal(r.run('redraws'),0);
+ r.run('isEmberwildUIInteracting=()=>false;EmberwildBattleSummary.sync()');assert.equal(r.run('redraws'),1);assert.deepEqual(r.errors,[]);
+});
 function enemies(r){r.run(`foes=[{id:'first',name:'同名',hp:25,maxhp:100},{id:'second',name:'同名',hp:450,maxhp:900}];enemy=foes[0];beginBattleStatistics();`);}
 test('single and unequal-HP enemies use summed effective HP, with safe per-unit bounds and no shield HP',()=>{
  const r=game();r.run(`foes=[{id:'first',hp:25,maxhp:100,shield:999}];beginBattleStatistics()`);
