@@ -5,8 +5,18 @@ const root=path.resolve(__dirname,'..');
 test('equipment sockets: horizontal icons, icon gem choices, modes and disabled skillless gear on desktop/mobile',async()=>{
  const r=await openRuntime(root),p=r.page;
  try{
+  // Starting a save can asynchronously settle offline rewards. Its receipt
+  // is a real blocking dialog, so complete/acknowledge it before testing sockets.
+  await p.evaluate(()=>{selectSaveSlot(1);start(0);closeModal();});
+  await p.waitForFunction(()=>globalThis.EmberwildOffline&&!EmberwildOffline.busy,{},{timeout:60000});
+  assert.equal(await p.evaluate(()=>EmberwildOffline.failed),false,'offline settlement must complete successfully');
+  const settlement=p.locator('#offline-settlement');
+  const retry=settlement.locator('[onclick="retryOfflineExploration()"]');
+  assert.equal(await retry.count(),0,'offline settlement must not fail before socket interactions');
+  const receipt=settlement.locator('[onclick="acknowledgeOfflineExploration()"]');
+  if(await receipt.count())await receipt.click();
+  await settlement.waitFor({state:'hidden',timeout:30000});
   await p.evaluate(()=>{
-   selectSaveSlot(1);start(0);closeModal();
    const h=playerHero(),g=gear(1,3,0,h.job);
    Object.assign(g,{id:'socket-ui',skillId:'tutorial_echo',skillSockets:{version:1,count:3,gems:[null,null,null],firstMode:'skill'}});
    state.bag.push(g);h.gems=Array(15).fill(0);h.gems[0]=h.gems[1]=h.gems[12]=3;equipSharedGear(g.id,memberKey(h),3);selectSkillEquipment(g.id);
