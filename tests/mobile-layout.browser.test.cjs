@@ -126,14 +126,19 @@ test('Responsive: title, creation, utility dialogs and desktop layout stay usabl
    const b=await p.locator('#modal').boundingBox();assert(b.x>=0&&b.x+b.width<=320&&b.height<=640,id+' fits');
    await p.getByRole('button',{name:'關閉彈窗',exact:true}).click();
   }
+  await p.locator('#utilityButton-wishingLake').click();
+  const lakeBox=await p.locator('#modal').boundingBox();assert(lakeBox.x>=0&&lakeBox.x+lakeBox.width<=320&&lakeBox.height<=640,'locked wishing lake fits on mobile');
+  assert.match(await p.locator('#modal').innerText(),/通過第一片冒險區域/);
+  assert.equal(await p.locator('#modal .lake-confirm').count(),0,'new characters cannot offer before the first clear');
+  await p.locator('#modal').getByRole('button',{name:'關閉',exact:true}).click();
   await p.setViewportSize({width:1440,height:900});await p.evaluate(()=>setTab('battle'));
   assert.equal(await p.locator('.mobile-journal-toggle').isVisible(),false);
   assert.equal(await p.locator('.mobile-more-toggle').isVisible(),false);
   assert.equal(await p.locator('#mobileJournalBody').isVisible(),true);
   await p.evaluate(()=>document.querySelectorAll('aside nav details[data-nav-group]').forEach(d=>d.open=true));
-  assert.equal(await p.locator('aside nav [data-page]:visible').count(),navPages.length);
+  assert.equal(await p.locator('aside nav [data-page]:visible').count(),navPages.length+1,'includes the permanent wishing lake entrance');
   const order=await p.locator('aside nav [data-page]').evaluateAll(nodes=>nodes.map(e=>({id:e.dataset.page,y:e.getBoundingClientRect().y})).sort((a,b)=>a.y-b.y).map(e=>e.id));
-  const designed=await p.evaluate(()=>EmberwildNavigation.design.groups.flatMap(g=>g.pages.map(p=>p.id)));
+  const designed=await p.evaluate(()=>[...EmberwildNavigation.design.groups.flatMap(g=>g.pages.map(p=>p.id)),'wishingLake']);
   assert.deepEqual(order,designed,'desktop navigation follows the configured tree');
   const rects=await p.evaluate(()=>['aside','main','#globalBattleJournal'].map(s=>{const r=document.querySelector('.layout').querySelector(s).getBoundingClientRect();return {x:r.x,right:r.right};}));
   assert(rects[0].right<=rects[1].x&&rects[1].right<=rects[2].x,'desktop retains three columns');
