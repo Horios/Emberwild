@@ -101,7 +101,10 @@ test('Purchases and timed rewards roll back when saving fails',async()=>{
   const r=await game();r.run('startLifeGathering();');const gold=r.run('state.gold');
   r.run('globalThis.originalSave=save;save=()=>false;');assert.equal(r.run('buyLifeMaterial("清水",10)'),false);assert.equal(r.run('state.gold'),gold);assert.equal(r.run('materialCount("清水")'),0);
   await advance(r,5000);assert.equal(r.run('materialCount("紅色草")'),0);assert.equal(r.run('__EMBERWILD_LIFE_SKILLS.jobs.gather'),null);
-  r.run('save=originalSave;state.materials["紅色草"]=1;buyLifeMaterial("清水");buyLifeMaterial("藥水瓶");startLifeWork("alchemy");save=()=>false;');
+  assert.equal(r.run('EmberwildOffline.failed'),true);
+  r.run('save=originalSave;');await r.run('retryOfflineExploration()');
+  assert.equal(r.run('EmberwildOffline.failed'),false);
+  r.run('state.materials["紅色草"]=1;buyLifeMaterial("清水");buyLifeMaterial("藥水瓶");startLifeWork("alchemy");save=()=>false;');
   assert.deepEqual(json(r,'({herb:materialCount("紅色草"),water:materialCount("清水"),bottle:materialCount("藥水瓶"),work:__EMBERWILD_LIFE_SKILLS.jobs.work?.mode||null})'),{herb:1,water:1,bottle:1,work:'alchemy'},'pre-tick inventory and recipe must be valid before testing failed-save rollback');
   await advance(r,5000);
   assert.equal(r.run('materialCount("紅色草")'),1);assert.equal(r.run('materialCount("清水")'),1);assert.equal(r.run('materialCount("藥水瓶")'),1);assert.equal(r.run('healPotionCount("heal_small")'),5);
