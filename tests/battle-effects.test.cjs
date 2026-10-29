@@ -13,6 +13,17 @@ test('resolved physical/fire/ice hits and AoE use instance IDs, without touching
  assert.deepEqual(events.filter(e=>e.type==='fire').map(e=>e.target),['fx-0','fx-1','fx-2']);
  events=capture(r,`resolveHit(foes[2],50,state,'ice',false)`);assert(events.some(e=>e.type==='ice'&&e.target==='fx-2'));
 });
+test('existing statuses never turn a plain hit into a new buff/debuff application; every damage element is damage',()=>{
+ const r=game();r.run(`__EMBERWILD_STATUS_TEST_API.apply({id:'held-buff',name:'既有增益',tags:['modifier'],duration:9,polarity:'buff',modifiers:[{kind:'guard',value:.1}]},state,state);__EMBERWILD_STATUS_TEST_API.apply({id:'held-debuff',name:'既有減益',tags:['modifier'],duration:9,polarity:'debuff',modifiers:[{kind:'weaken',value:.1}]},state,foes[1]);`);
+ for(const element of ['physical','fire','ice','wind','light','shadow','lightning']){const events=capture(r,`resolveHit(foes[1],50,state,'${element}',false)`);assert(events.some(e=>e.type==='hit'));assert(events.every(e=>e.category==='damage'));assert(!events.some(e=>['buff','debuff','cast'].includes(e.type)));}
+});
+test('successful enemy casts use the actual damage, healing, shield, enhancement or status category',()=>{
+ const r=game();r.run(`const doc=exportableBalance();doc.statusDefinitions.push({id:'audit-status',name:'測試弱化',tags:['modifier'],polarity:'debuff',duration:3,modifiers:[{kind:'weaken',value:.1}]});const oldFoes=foes;running=false;foes=[];if(applyBalanceConfig(doc,{persist:false})===false)throw Error('fixture config rejected');foes=oldFoes;running=true;foes.forEach((e,i)=>{e.id='fx-'+i;e.hp=e.maxhp=10000;e.shield=0;});enemy=foes[0];`);
+ for(const [effect,category,meta] of [['damage','damage',{}],['drain','damage',{}],['heal','recovery',{}],['shield','shield',{}],['nextActiveDamage','buff',{}],['advanceNextRound','buff',{}],['applyStatus','debuff',{statusId:'audit-status',statusTarget:'enemy'}]]){
+  const events=capture(r,`for(const h of heroes()){h.hp=stats(h).hp;h.shield=0;}foes[0].hp=100;castEnemySharedSkill(foes[0],{id:'audit-${effect}',name:'測試',effect:'${effect}',activation:'active',element:'physical',power:1,maxTargets:1,meta:${JSON.stringify(meta)}})`);
+  assert.equal(events.find(e=>e.type==='cast')?.category,category,effect);
+ }
+});
 test('full/partial shield absorption and breaking are separated from HP damage',()=>{
  const r=game();r.run('foes[1].shield=10000');let events=capture(r,`resolveHit(foes[1],50,state,'fire',false)`);
  assert(events.some(e=>e.type==='absorb'));assert(!events.some(e=>e.type==='hit'||e.type==='fire'));assert(!events.some(e=>e.type==='break'));

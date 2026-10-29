@@ -7,6 +7,26 @@ async function setup(){const g=await openRuntime(root,'index.html',{}, {clockTim
  globalThis.fxCapture=function(fn){EmberwildBattleEffects.begin();fn();EmberwildBattleEffects.end();globalThis.fxEvents=EmberwildBattleEffects.pendingEvents;EmberwildBattleSummary.sync();};
  });return g;}
 const effects=p=>p.locator('#battleEnemyIcons .battle-enemy-icon .battle-fx').evaluateAll(nodes=>nodes.map(n=>({target:n.parentNode.dataset.enemyId,type:n.dataset.fx})));
+const semanticColors={damage:'rgb(255, 121, 111)',buff:'rgb(244, 213, 139)',shield:'rgb(242, 245, 255)',recovery:'rgb(135, 239, 173)',debuff:'rgb(196, 149, 240)'};
+async function assertSemanticColors(p){
+ const rows=await p.locator('.battle-fx,.battle-fx-status>[data-fx-persistent]').evaluateAll(ns=>ns.map(n=>({type:n.dataset.fx||n.dataset.fxPersistent,category:n.dataset.fxCategory,color:getComputedStyle(n).color})));
+ for(const row of rows){assert.equal(row.color,semanticColors[row.category],JSON.stringify(row));if(['slash','ranged','impact','magic','fire','ice','lightning','wind','light','shadow','critical','dot','hit','attack'].includes(row.type))assert.equal(row.category,'damage',row.type);if(['heal','regen','potion','drain'].includes(row.type))assert.equal(row.category,'recovery',row.type);if(['shield','absorb','break','dissolve','shield-impact','resist','evade'].includes(row.type))assert.equal(row.category,'shield',row.type);if(['debuff','skip','polymorph','freeze','frost','fear','tauntRage'].includes(row.type))assert.equal(row.category,'debuff',row.type);if(['buff','rage'].includes(row.type))assert.equal(row.category,'buff',row.type);}
+ return rows;
+}
+test('plain elemental weapon hits stay red without a purple cast/debuff burst or replaying existing statuses',async()=>{
+ const g=await setup(),p=g.page;try{
+  await p.evaluate(()=>{Math.random=()=>.99;castPartySkill=()=>false;weaponElement=()=> 'fire';__EMBERWILD_STATUS_TEST_API.apply({id:'audit-held-buff',name:'既有增益',tags:['modifier'],duration:9,polarity:'buff',modifiers:[{kind:'guard',value:.1}]},state,state);__EMBERWILD_STATUS_TEST_API.apply({id:'audit-held-debuff',name:'既有減益',tags:['modifier'],duration:9,polarity:'debuff',modifiers:[{kind:'weaken',value:.1}]},state,foes[0]);recordAction(heroKey(state),characterName(state),'普攻');fxCapture(()=>performHeroBasic(state));});
+  assert.equal(await p.locator('.battle-fx[data-fx="debuff"],.battle-fx[data-fx="buff"],.battle-fx[data-fx="cast"]').count(),0);
+  assert.equal(await p.locator('#battleAllyIcons [data-fx="attack"][data-fx-category="damage"]').count(),2);
+  assert.equal(await p.locator('#battleEnemyIcons [data-fx="fire"][data-fx-category="damage"]').count(),2);
+  assert.equal(await p.locator('#battleEnemyIcons [data-fx-persistent="debuff"]').count(),2);
+  await assertSemanticColors(p);
+  await p.clock.runFor(1600);await p.evaluate(()=>{foes[0].shield=10000;fxCapture(()=>performHeroBasic(state));});
+  assert.equal(await p.locator('#battleAllyIcons [data-fx="attack"][data-fx-category="damage"]').count(),2);assert.equal(await p.locator('#battleEnemyIcons [data-fx="absorb"][data-fx-category="shield"]').count(),2);await assertSemanticColors(p);
+  await p.clock.runFor(1600);await p.evaluate(()=>{const previous=enemyBattleStats;enemyBattleStats=e=>({...previous(e),evasion:1});fxCapture(()=>performHeroBasic(state));});
+  assert.equal(await p.locator('#battleAllyIcons [data-fx="attack"][data-fx-category="damage"]').count(),2);assert.equal(await p.locator('#battleEnemyIcons [data-fx="evade"][data-fx-category="shield"]').count(),2);await assertSemanticColors(p);assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
 test('1x impacts remain readable; polymorph skips report immediately on both surfaces without deferring damage',async()=>{
  const g=await setup(),p=g.page;try{
   await p.evaluate(()=>fxCapture(()=>__EMBERWILD_CONTROL_TEST_API.applyPolymorph(foes[1],300,{duration:3})));await p.clock.runFor(1600);
@@ -86,6 +106,7 @@ test('each resolved effect is mirrored once on the matching HP block, including 
     const collect=(selector,key)=>Object.fromEntries([...document.querySelectorAll(selector)].map(n=>[n.dataset[key],[...n.querySelectorAll(':scope > .battle-fx')].map(e=>e.dataset.fx).sort()]));
     return {icons:{...collect('#battleAllyIcons .unit>[data-hero-id]','heroId'),...collect('#battleEnemyIcons .unit>[data-enemy-id]','enemyId')},health:collect('.squad-field .unit[data-combat-id]','combatId')};
    });
+   await assertSemanticColors(p);
    assert.deepEqual(both.health,both.icons,code);
    for(const type of expected)assert(both.health[target].includes(type),type+' on '+target);
    for(const [key,types] of Object.entries(both.health))assert.equal(new Set(types).size,types.length,'no duplicate effect on '+key);
@@ -175,7 +196,7 @@ test('mage cast precedes lethal multi-target impacts; redraw keeps effects and p
   }
   assert((await p.locator('#battleEnemyIcons .unit-numbers>span:first-child b').allTextContents()).every(s=>s.startsWith('0 /')));
   await p.evaluate(()=>{globalThis.savedBlastNode=document.querySelector('#battleEnemyIcons .battle-enemy-icon>[data-fx="fire"]');render();});assert(await p.evaluate(()=>savedBlastNode.isConnected));
-  await p.clock.runFor(1100);assert.equal(await p.locator('.battle-fx').count(),0);assert.deepEqual(await p.evaluate(()=>foes.map(e=>e.hp)),[0,0,0]);assert.deepEqual(g.errors,[]);
+  await p.clock.runFor(1600);assert.equal(await p.locator('.battle-fx').count(),0);assert.deepEqual(await p.evaluate(()=>foes.map(e=>e.hp)),[0,0,0]);assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
 
@@ -209,6 +230,7 @@ test('ongoing shield, buff, debuff and polymorph layers persist together until t
   const card=p.locator('.unit[data-combat-id="fx-1"]'),icon=card.locator('.battle-enemy-icon');
   const check=async expected=>{for(const node of [card,icon])assert.deepEqual(await node.locator(':scope>.battle-fx-status>[data-fx-persistent]').evaluateAll(ns=>ns.map(n=>n.dataset.fxPersistent).sort()),expected.slice().sort());};
   await check(['shield','buff','debuff','polymorph']);
+  await assertSemanticColors(p);
   const layers=await card.locator(':scope>.battle-fx-status>[data-fx-persistent]').evaluateAll(ns=>Object.fromEntries(ns.map(n=>[n.dataset.fxPersistent,{layer:n.dataset.fxLayer,z:Number(getComputedStyle(n).zIndex),w:n.getBoundingClientRect().width}])));
   assert.equal(layers.shield.layer,'protection');assert.equal(layers.polymorph.layer,'control');assert(layers.shield.z<layers.polymorph.z);assert(layers.shield.w>layers.polymorph.w);
   await p.evaluate(()=>globalThis.lastingNode=document.querySelector('.unit[data-combat-id="fx-1"]>.battle-fx-status'));
