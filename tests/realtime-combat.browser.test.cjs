@@ -6,7 +6,8 @@ async function setup(rate=1,controlled=true){
   selectSaveSlot(1);start(1);closeModal();startSelectedExploration();
   if(rate===2){state.consumables.speed2_30m=1;useSupply('speed2_30m');setBattleSpeed(2);}
   for(const h of heroes())h.shield=1e12;foes.forEach(e=>{e.hp=1e12;e.maxhp=1e12;e.atk=1;});
-  globalThis.paceBrowser={actions:[],frames:[],ticks:[],saves:[],longTasks:[]};
+  globalThis.paceBrowser={actions:[],frames:[],ticks:[],saves:[],longTasks:[],controlled:[]};
+  const enemyAction=performEnemyAction;performEnemyAction=function(...args){const t=performance.now(),out=enemyAction(...args);if(out==='controlled')paceBrowser.controlled.push(performance.now()-t);return out;};
   const paceStart=performance.now();new PerformanceObserver(rows=>paceBrowser.longTasks.push(...rows.getEntries().filter(e=>e.startTime>=paceStart).map(e=>e.duration))).observe({type:'longtask',buffered:true});
   const action=recordAction;recordAction=function(...args){const out=action(...args);paceBrowser.actions.push({at:Date.now(),resolvedAt:performance.now(),id:args[0],round});return out;};
   const draw=render;render=function(...args){const t=performance.now(),out=draw(...args),s=EmberwildBattleSummary.snapshot();
@@ -22,11 +23,19 @@ function inspect(m,rate){
  // Date.now here is the shared event's start, before variable skill/render cost.
  // Completion-to-completion intervals additionally include that variable cost.
  // Independent actions can also straddle an intentional minimum-round wait.
- assert(Math.min(...deltas)>=900/rate-2,JSON.stringify({rate,min:Math.min(...deltas),small:deltas.filter(d=>d<900/rate-2)}));
- return {rate,actions:m.actions.length,frames:frames.length,minActionMs:Math.min(...deltas),maxActionMs:Math.max(...deltas),minCompletionMs:Math.min(...m.actions.slice(1).map((a,i)=>a.resolvedAt-m.actions[i].resolvedAt)),maxActionsPerTick:Math.max(...m.ticks.map(t=>t.count)),maxActionsPerFrame:Math.max(...changes),maxRenderMs:Math.max(...frames.map(f=>f.ms)),maxTickMs:Math.max(...m.ticks.map(t=>t.ms)),maxSaveMs:Math.max(0,...m.saves),maxLongTaskMs:Math.max(0,...m.longTasks)};
+ assert(Math.min(...deltas)>=1500/rate-2,JSON.stringify({rate,min:Math.min(...deltas),small:deltas.filter(d=>d<1500/rate-2)}));
+ return {rate,actions:m.actions.length,frames:frames.length,minActionMs:Math.min(...deltas),maxActionMs:Math.max(...deltas),minCompletionMs:Math.min(...m.actions.slice(1).map((a,i)=>a.resolvedAt-m.actions[i].resolvedAt)),maxActionsPerTick:Math.max(...m.ticks.map(t=>t.count)),maxActionsPerFrame:Math.max(...changes),maxRenderMs:Math.max(...frames.map(f=>f.ms)),maxTickMs:Math.max(...m.ticks.map(t=>t.ms)),maxSaveMs:Math.max(0,...m.saves),maxLongTaskMs:Math.max(0,...m.longTasks),controlledActions:m.controlled.length,maxControlledActionMs:Math.max(0,...m.controlled)};
 }
 test('browser HP, current actor, portraits and journal update together at 1x and 2x',async t=>{
  for(const rate of [1,2]){const g=await setup(rate);try{await g.page.clock.runFor(30000);const m=await g.page.evaluate(()=>paceBrowser);t.diagnostic(JSON.stringify(inspect(m,rate)));assert.deepEqual(g.errors,[]);}finally{await g.browser.close();}}
+});
+test('a final polymorphed actor reports its skipped turn, then waits only for the existing round deadline',async()=>{
+ const g=await setup(),p=g.page;try{
+  await p.evaluate(()=>{foes=foes.slice(0,3);enemy=foes[0];state.active=[];state.supportSlots=[];castSupport=()=>false;castPartySkill=()=>false;initiativeOrder=()=>[{side:'hero',id:heroKey(state),actor:state},...foes.map(e=>({side:'enemy',id:e.id,actor:e}))];foes[2].kind='normal';__EMBERWILD_CONTROL_TEST_API.applyPolymorph(foes[2],1e12,{duration:3});render();});
+  await p.clock.runFor(4550);assert.equal(await p.evaluate(()=>paceBrowser.actions.length),4);assert.equal(await p.evaluate(()=>roundIterator),null);assert.equal(await p.evaluate(()=>combatRoundProgress),null);
+  assert.equal(await p.locator('[data-summary-state]').textContent(),'等待下一回合');assert.equal(await p.locator('#battleEnemyIcons [data-fx="skip"]').count(),2);assert.equal(await p.evaluate(()=>nextActionAt-Date.now()),1500);
+  await p.clock.runFor(1500);assert.equal(await p.evaluate(()=>paceBrowser.actions.length),5);assert.equal(await p.locator('[data-summary-state]').textContent(),'戰鬥中');assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
 });
 test('a real foreground long task does not produce a burst of independent actions',async()=>{
  const g=await setup(2);try{
@@ -40,7 +49,7 @@ test('a real foreground long task does not produce a burst of independent action
 test('a save before a blocked publication still leaves a full interval between visible actions',async t=>{
  for(const rate of [1,2]){const g=await setup(rate),p=g.page;try{
   await p.evaluate(()=>clearInterval(timer));await p.clock.runFor(50);await p.evaluate(()=>tick());
-  const gap=900/rate;await p.clock.runFor(gap);await p.evaluate(()=>save());
+  const gap=1500/rate;await p.clock.runFor(gap);await p.evaluate(()=>save());
   assert.equal(await p.evaluate(()=>paceBrowser.actions.length),2);assert.equal(await p.evaluate(()=>paceBrowser.frames.at(-1).actions),1);
   await p.clock.fastForward(2300);await p.evaluate(()=>tick());const published=await p.evaluate(()=>Date.now());
   assert.equal(await p.evaluate(()=>nextActionAt-Date.now()),gap);assert.equal(await p.evaluate(()=>paceBrowser.frames.at(-1).actions),2);
@@ -52,8 +61,8 @@ test('a save before a blocked publication still leaves a full interval between v
 });
 test('five real minutes of browser foreground play, actual rendering, saves and a 2300ms main-thread block', {skip:!process.env.EMBERWILD_PACE_REALTIME,timeout:420000},async t=>{
  await Promise.all([1,2].map(async rate=>{const g=await setup(rate,false);try{
-  const start=Date.now();let blocked=false;
-  while(Date.now()-start<300000){await g.page.waitForTimeout(1000);if(!blocked&&Date.now()-start>20000){blocked=true;await g.page.evaluate(()=>{const end=performance.now()+2300;while(performance.now()<end){}});}}
-  const m=await g.page.evaluate(()=>paceBrowser);t.diagnostic(JSON.stringify(inspect(m,rate)));assert.deepEqual(g.errors,[]);assert.equal(await g.page.evaluate(()=>party.offlineExploration.receipt),null);
+  const start=Date.now();let blocked=false,polymorphed=false;
+  while(Date.now()-start<300000){await g.page.waitForTimeout(1000);if(!blocked&&Date.now()-start>20000){blocked=true;await g.page.evaluate(()=>{const end=performance.now()+2300;while(performance.now()<end){}});}if(!polymorphed&&Date.now()-start>40000){polymorphed=true;await g.page.evaluate(()=>{foes[0].kind='normal';__EMBERWILD_CONTROL_TEST_API.applyPolymorph(foes[0],1e12,{duration:3});});}}
+  const m=await g.page.evaluate(()=>paceBrowser);t.diagnostic(JSON.stringify(inspect(m,rate)));assert(m.controlled.length>=3);assert(Math.max(...m.controlled)<500,'controlled action must not block for two seconds');assert.deepEqual(g.errors,[]);assert.equal(await g.page.evaluate(()=>party.offlineExploration.receipt),null);
  }finally{await g.browser.close();}}));
 });

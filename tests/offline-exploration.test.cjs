@@ -5,7 +5,9 @@ function game(){const r=loadRuntime(root);r.ctx.seed=seed;r.ctx.setTimeout=fn=>s
 async function settle(r,ms){r.advance(ms);await r.run('EmberwildOffline.settle()');assert.equal(r.run('EmberwildOffline.failed'),false);assert.equal(r.run('EmberwildOffline.busy'),false);}
 function result(r){return json(r,`({members:party.members.map(h=>({lv:h.lv,xp:h.xp,hp:h.hp,shield:h.shield,kills:h.totalKills,skills:h.skills,mastery:h.mastery})),gold:state.gold,ore:state.ore,materials:state.materials,gems:state.gems,consumables:state.consumables,bag:state.bag.map(g=>{const o={...g};delete o.id;return o;}),foes:foes.map(e=>({name:e.name,hp:e.hp,shield:e.shield,turn:e.turn})),partyClock,round,cooldowns:actorCooldowns,supportCooldowns,boosts:party.timedBoosts,progress:combatRoundProgress?{index:combatRoundProgress.index,unit:combatRoundProgress.unit}:null})`);}
 test('fixed random sequence: visible timeline and offline events give identical combat, levels and original drops',async()=>{
- const online=game(),offline=game();for(let i=0;i<1200;i++){online.advance(50);online.run('tick()');}await settle(offline,60000);
+ // Align the first due event with the first 50ms foreground check. At a 1500ms
+ // interval, a 60s endpoint otherwise straddles one extra offline action at 0ms.
+ const online=game(),offline=game();for(const r of [online,offline])r.run('nextActionAt=Date.now()+50;save()');for(let i=0;i<1200;i++){online.advance(50);online.run('tick()');}await settle(offline,60000);
  assert.deepEqual(result(offline),result(online));const r=json(offline,'party.offlineExploration.receipt');assert.equal(r.end-r.start,60000);assert.equal(r.effectiveMs,60000);assert.equal(r.kills,offline.run('state.totalKills'));assert(r.xp>0);assert.equal(offline.run('party.offlineExploration.lastAt'),offline.now);assert.deepEqual(offline.errors,[]);
 });
 test('resume a persisted mid-turn cursor including support, enemy cooldowns, control, custom status and token state',async()=>{

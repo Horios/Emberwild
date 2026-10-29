@@ -42,6 +42,15 @@ test('actual evasion branch emits dodge without hit or shield effects',()=>{
  const r=game();r.run(`const fxEnemyStats=enemyBattleStats;enemyBattleStats=function(e){return {...fxEnemyStats(e),evasion:1};}`);
  const events=capture(r,`resolveHit(foes[1],50,state,'fire',false)`);assert(events.some(e=>e.type==='evade'&&e.target==='fx-1'));assert(!events.some(e=>['fire','hit','absorb'].includes(e.type)));
 });
+test('polymorph and freeze skips emit immediate feedback without damage, casting or extra control turns',()=>{
+ const r=game();r.run(`__EMBERWILD_CONTROL_TEST_API.applyPolymorph(foes[1],300,{duration:3});globalThis.hpBefore=state.hp;`);
+ let events=capture(r,'performEnemyAction(foes[1])');
+ assert(events.some(e=>e.type==='skip'&&e.target==='fx-1'&&e.label==='變形・無法行動'));assert(!events.some(e=>['hit','cast','attack'].includes(e.type)));
+ assert.equal(r.run('state.hp'),r.run('hpBefore'));assert.equal(r.run('__EMBERWILD_CONTROL_TEST_API.states[foes[1].id].polymorph.turns'),2);
+ r.run(`__EMBERWILD_CONTROL_TEST_API.applyFreeze(foes[2],{duration:2});`);events=capture(r,'performEnemyAction(foes[2])');
+ assert(events.some(e=>e.type==='skip'&&e.target==='fx-2'&&e.label==='冰凍・無法行動'));assert.equal(r.run('state.hp'),r.run('hpBefore'));assert.equal(r.run('__EMBERWILD_CONTROL_TEST_API.states[foes[2].id].freeze.turns'),1);
+ assert.deepEqual(r.errors,[]);
+});
 test('off, hidden, navigation and reset discard presentation; terminal outcomes retain the last hit',()=>{
  const r=game();r.run(`setBattleEffects('off')`);assert.deepEqual(capture(r,`resolveHit(foes[1],50,state,'fire',false)`),[]);
  r.run(`setBattleEffects('full');tab='equipment'`);assert.deepEqual(capture(r,`resolveHit(foes[1],50,state,'fire',false)`),[]);

@@ -77,7 +77,7 @@
   frame={events:new Map(),initial:sample(),vitals:sample(),initialStatuses:statuses(),statuses:statuses(),context:{mode:'regen'},at:performance.now(),owner:party,encounter:foes};
  }
  function end(){if(!frame)return;checkpoint();if(frame.events.size)pending=frame;frame=null;}
- function result(type,target,source){if(frame)enqueue(type,id(target),{source:source?id(source):null});}
+ function result(type,target,source,details={}){if(frame)enqueue(type,id(target),{...details,source:source?id(source):null});}
  function cleanNode(node){const entries=activeNodes.get(node);if(entries)for(const row of entries.values()){clearTimeout(row.timer);row.element.remove();}activeNodes.delete(node);}
  function clear(){frame=null;pending=null;staged=null;held=null;for(const t of timers)clearTimeout(t);timers.clear();for(const node of activeNodes.keys())cleanNode(node);for(const node of markedNodes){node.querySelector(':scope > .battle-fx-status')?.remove();delete node.dataset.fxShield;}markedNodes.clear();owner=null;encounter=null;}
  const colors={slash:'#ff796f',ranged:'#ff987d',impact:'#ff796f',magic:'#cda5ff',fire:'#ff834d',ice:'#9ee7ff',lightning:'#eeceff',wind:'#a5f0ce',light:'#fff0a5',shadow:'#be8fe9',critical:'#ffd69a',dot:'#d59b6b',hit:'#ff796f',heal:'#87efad',regen:'#b3f6c9',potion:'#74e7bd',drain:'#f28ea3',buff:'#f4d58b',debuff:'#c495f0',shield:'#72d9ff',absorb:'#a6edff',break:'#d5f6ff',dissolve:'#89bed9','shield-impact':'#a6edff',evade:'#d1dbe6',resist:'#e8f3ff',cast:'#d1a8ff',attack:'#ffe4bb'};
@@ -99,10 +99,10 @@
   polymorph:'<path d="M12 42Q4 23 23 14Q44 4 53 26Q61 48 39 53Q21 57 20 38Q19 22 35 24Q47 26 40 37Q36 43 31 37"/><path d="M8 10V20M3 15H13M50 48V60M44 54H56"/>',
   cast:'<circle cx="32" cy="32" r="25"/><path d="M13 13L20 20M51 13L44 20M13 51L20 44M51 51L44 44"/>'
  };
- function art(type){return graphics[type]||graphics[{critical:'magic',dot:'debuff',hit:'magic',impact:'slash',wind:'magic',light:'magic',shadow:'magic',regen:'heal',potion:'heal',drain:'heal',dissolve:'shield','shield-impact':'absorb'}[type]]||graphics.magic;}
+ function art(type){return graphics[type]||graphics[{critical:'magic',dot:'debuff',skip:'debuff',hit:'magic',impact:'slash',wind:'magic',light:'magic',shadow:'magic',regen:'heal',potion:'heal',drain:'heal',dissolve:'shield','shield-impact':'absorb'}[type]]||graphics.magic;}
  function play(node,event,sourceNode){
   let entries=activeNodes.get(node);if(!entries){entries=new Map();activeNodes.set(node,entries);}
-  const type=event.type,channel=type==='critical'?'critical':type==='dot'?'dot':type==='break'?'break':['heal','regen','potion','drain'].includes(type)?'recovery':['shield','absorb','break','dissolve','shield-impact'].includes(type)?'shield':type==='hit'?'hit':['buff','debuff'].includes(type)?type:type==='cast'?'cast':'action';
+  const type=event.type,channel=type==='skip'?'control':type==='critical'?'critical':type==='dot'?'dot':type==='break'?'break':['heal','regen','potion','drain'].includes(type)?'recovery':['shield','absorb','break','dissolve','shield-impact'].includes(type)?'shield':type==='hit'?'hit':['buff','debuff'].includes(type)?type:type==='cast'?'cast':'action';
   // Two overlapping occurrences per channel survive; a third replaces only the oldest.
   const peers=[...entries].filter(([,row])=>row.channel===channel);
   if(peers.length>=2){const [key,old]=peers[0];clearTimeout(old.timer);old.element.remove();entries.delete(key);}
@@ -110,11 +110,12 @@
   const element=document.createElement('span');element.className='battle-fx battle-fx-'+type+(node.dataset.combatId?' battle-fx-health':'');
   element.dataset.fx=type;element.dataset.event=event.eventId||'';element.dataset.critical=String(!!event.critical);if(event.label)element.dataset.skill=event.label;element.dataset.detail=mode();element.setAttribute('aria-hidden','true');
   const base=type==='cast'?(event.important?850:650):['buff','debuff'].includes(type)?750:['heal','regen','potion','drain','shield'].includes(type)?650:['slash','ranged','impact','hit','evade','resist','absorb','dot','critical'].includes(type)?500:600;
-  const duration=Math.round(base*(battleRate===2?.82:1));
+  const duration=Math.round(base*(battleRate===1?1.5:battleRate===2?.82:1));
+  if(type==='hit'||type==='evade')node.style.setProperty('--fx-portrait-time',duration+'ms');
   element.style.setProperty('--fx-time',duration+'ms');element.style.setProperty('--fx-color',colors[type]||colors.magic);
   element.style.setProperty('--fx-direction',String(++sequence%2?-1:1));
   element.innerHTML='<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+art(type)+'</svg>';
-  const label=event.label||({critical:'暴擊',evade:'閃避',resist:'抵抗',absorb:'格擋',heal:'治療',shield:'護盾',buff:'增益',debuff:'減益',dot:'持續傷害'}[type])||(event.critical?'暴擊':'');
+  const label=event.label||({critical:'暴擊',evade:'閃避',resist:'抵抗',skip:'無法行動',absorb:'格擋',heal:'治療',shield:'護盾',buff:'增益',debuff:'減益',dot:'持續傷害'}[type])||(event.critical?'暴擊':'');
   if(label){const text=document.createElement('b');text.textContent=label;element.append(text);}
   if(mode()==='full'&&sourceNode&&sourceNode!==node&&['fire','ice','lightning','wind','light','shadow','magic','ranged'].includes(type)){
    const a=sourceNode.getBoundingClientRect(),b=node.getBoundingClientRect(),dx=a.x-b.x,dy=a.y-b.y,length=Math.hypot(dx,dy)||1;
@@ -161,7 +162,7 @@
   const batch=staged;batch.played=true;
   const playEvent=event=>playUnit(event.target,event,event.source);
   const events=[...batch.events.values()],sources=new Set(events.filter(e=>e.type==='cast').map(e=>e.target));
-  for(const event of events)if(!sources.has(event.source)&&nodes.has(event.source)&&event.source!==event.target&&!['critical','dot'].includes(event.type)){
+  for(const event of events)if(!sources.has(event.source)&&nodes.has(event.source)&&event.source!==event.target&&!['critical','dot','skip'].includes(event.type)){
    sources.add(event.source);playEvent({target:event.source,type:['slash','ranged','impact'].includes(event.type)?'attack':'cast',eventId:batch.eventId});
   }
   for(const event of events){event.eventId=batch.eventId;if(event.type==='cast')playEvent(event);}

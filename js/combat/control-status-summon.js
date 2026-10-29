@@ -205,7 +205,7 @@
     else if(freeze&&freeze.turns>0)skip='冰凍';
     else if(fear&&fear.turns>0&&Math.random()<fear.skipChance)skip='畏懼';
     const oldAtk=e.atk;
-    if(skip)e.__controlSkip=skip;
+    if(skip){e.__controlSkip=skip;globalThis.EmberwildBattleEffects?.result('skip',e,e,{label:skip+'・無法行動'});}
     else{
       const fearMul=fear&&fear.turns>0?1-clamp01(fear.damageReduction,.20):1;
       const rageMul=rage&&rage.turns>0?1+clamp01(rage.basicAttackBonus,.20):1;

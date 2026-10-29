@@ -67,8 +67,8 @@
 .battle-fx-buff{border-style:dashed}
 .battle-fx:is(.battle-fx-heal,.battle-fx-regen,.battle-fx-buff,.battle-fx-debuff){inset:6px 3px}
 .battle-fx>b{top:auto;bottom:-3px;font-size:10px;z-index:4}
-.battle-enemy-icon:has(>.battle-fx-hit)>.enemy-icon-art{animation:fx-portrait-hit 500ms ease-out!important}
-.battle-enemy-icon:has(>.battle-fx-evade)>.enemy-icon-art{animation:fx-portrait-evade 500ms ease-out!important}
+.battle-enemy-icon:has(>.battle-fx-hit)>.enemy-icon-art{animation:fx-portrait-hit var(--fx-portrait-time,500ms) ease-out!important}
+.battle-enemy-icon:has(>.battle-fx-evade)>.enemy-icon-art{animation:fx-portrait-evade var(--fx-portrait-time,500ms) ease-out!important}
 .squad-field .unit>.battle-fx-health{inset:1px;height:auto;max-height:none;grid-area:auto;position:absolute}
 .squad-field .unit>.battle-fx-health>svg{width:42px;height:42px;max-width:22%;top:2px;right:52px;opacity:.45}
 .squad-allies .unit>.battle-fx-health>svg{right:4px}

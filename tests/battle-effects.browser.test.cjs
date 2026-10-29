@@ -7,16 +7,34 @@ async function setup(){const g=await openRuntime(root,'index.html',{}, {clockTim
  globalThis.fxCapture=function(fn){EmberwildBattleEffects.begin();fn();EmberwildBattleEffects.end();globalThis.fxEvents=EmberwildBattleEffects.pendingEvents;EmberwildBattleSummary.sync();};
  });return g;}
 const effects=p=>p.locator('#battleEnemyIcons .battle-enemy-icon .battle-fx').evaluateAll(nodes=>nodes.map(n=>({target:n.parentNode.dataset.enemyId,type:n.dataset.fx})));
+test('1x impacts remain readable; polymorph skips report immediately on both surfaces without deferring damage',async()=>{
+ const g=await setup(),p=g.page;try{
+  await p.evaluate(()=>fxCapture(()=>__EMBERWILD_CONTROL_TEST_API.applyPolymorph(foes[1],300,{duration:3})));await p.clock.runFor(1600);
+  const hp=await p.evaluate(()=>state.hp);
+  await p.evaluate(()=>{recordAction(foes[1].id,foes[1].name,'攻擊');fxCapture(()=>performEnemyAction(foes[1]));});
+  const card=p.locator('.unit[data-combat-id="fx-1"]');
+  assert.equal(await card.locator('[data-fx="skip"]').count(),2);assert((await card.locator('[data-fx="skip"] b').allTextContents()).every(x=>x==='變形・無法行動'));
+  assert.equal(await card.locator('[data-fx="attack"],[data-fx="cast"],[data-fx="hit"]').count(),0);assert.equal(await p.evaluate(()=>state.hp),hp);
+  assert.equal(await p.evaluate(()=>__EMBERWILD_CONTROL_TEST_API.states[foes[1].id].polymorph.turns),2);
+  await p.clock.runFor(500);assert.equal(await card.locator('[data-fx="skip"]').count(),2);await p.clock.runFor(1100);
+  assert.equal(await card.locator('[data-fx="skip"]').count(),0);assert.equal(await card.locator('[data-fx-persistent="polymorph"]').count(),2);
+  const before=await p.evaluate(()=>foes[0].hp);await p.evaluate(()=>fxCapture(()=>resolveHit(foes[0],50,state,'fire',false)));
+  const damaged=p.locator('.unit[data-combat-id="fx-0"]');assert(await p.evaluate(x=>foes[0].hp<x,before));
+  assert.equal(await damaged.locator('.battle-fx-health[data-fx="hit"]').evaluate(n=>n.style.getPropertyValue('--fx-time')),'750ms');
+  const live=await p.evaluate(()=>Math.ceil(foes[0].hp));assert((await damaged.locator('.unit-numbers>span:first-child b').textContent()).startsWith(live+' /'));
+  await p.clock.runFor(600);assert.equal(await damaged.locator('[data-fx="hit"]').count(),2);await p.clock.runFor(1000);assert.equal(await damaged.locator('[data-fx="hit"]').count(),0);assert.deepEqual(g.errors,[]);
+ }finally{await g.browser.close();}
+});
 test('actual hits, misses, AoE and shield outcomes reach only their own SVG icon and retain actor/elite identity',async()=>{
  const g=await setup(),p=g.page;try{
   await p.evaluate(()=>{recordAction(heroKey(state),characterName(state),'技能');fxCapture(()=>resolveHit(foes[1],50,state,'fire',false));});
   let rows=await effects(p);assert(rows.some(e=>e.target==='fx-1'&&e.type==='fire'));assert(!rows.some(e=>e.target!=='fx-1'));assert.equal(await p.locator('#battleEnemyIcons .battle-enemy-icon .battle-fx-projectile').count(),1);assert.equal(await p.locator('#battleAllyIcons .is-acting').count(),1);assert.equal(await p.locator('#battleEnemyIcons [data-enemy-id="fx-2"].is-elite .enemy-icon-elite').count(),1);
-  await p.clock.runFor(1000);assert.equal(await p.locator('.battle-fx').count(),0);
-  await p.evaluate(()=>fxCapture(()=>castPartySkill(state,state.active[0],battleStats(state))));await p.clock.runFor(200);assert((await effects(p)).some(e=>e.type==='fire'));assert.equal(await p.locator('#battleAllyIcons .battle-enemy-icon [data-fx="cast"]').count(),1);await p.clock.runFor(1000);
+  await p.clock.runFor(1600);assert.equal(await p.locator('.battle-fx').count(),0);
+  await p.evaluate(()=>fxCapture(()=>castPartySkill(state,state.active[0],battleStats(state))));await p.clock.runFor(200);assert((await effects(p)).some(e=>e.type==='fire'));assert.equal(await p.locator('#battleAllyIcons .battle-enemy-icon [data-fx="cast"]').count(),1);await p.clock.runFor(1600);
   await p.evaluate(()=>fxCapture(()=>foes.forEach(e=>resolveHit(e,50,state,'ice',false))));rows=await effects(p);assert.deepEqual(rows.filter(e=>e.type==='ice').map(e=>e.target),['fx-0','fx-1','fx-2']);
-  await p.clock.runFor(1000);await p.evaluate(()=>{foes[1].shield=10000;fxCapture(()=>resolveHit(foes[1],50,state,'fire',false));});rows=await effects(p);assert(rows.some(e=>e.type==='absorb'));assert(!rows.some(e=>e.type==='hit'||e.type==='fire'));
-  await p.clock.runFor(1000);await p.evaluate(()=>{foes[1].shield=1;fxCapture(()=>resolveHit(foes[1],50,state,'fire',false));});rows=await effects(p);for(const type of ['absorb','break','hit','fire'])assert(rows.some(e=>e.type===type),type);
-  await p.clock.runFor(1000);await p.evaluate(()=>{const base=enemyBattleStats;enemyBattleStats=e=>({...base(e),evasion:1});fxCapture(()=>resolveHit(foes[1],50,state,'fire',false));});rows=await effects(p);assert(rows.some(e=>e.type==='evade'));assert(!rows.some(e=>e.type==='fire'||e.type==='hit'));assert.deepEqual(g.errors,[]);
+  await p.clock.runFor(1600);await p.evaluate(()=>{foes[1].shield=10000;fxCapture(()=>resolveHit(foes[1],50,state,'fire',false));});rows=await effects(p);assert(rows.some(e=>e.type==='absorb'));assert(!rows.some(e=>e.type==='hit'||e.type==='fire'));
+  await p.clock.runFor(1600);await p.evaluate(()=>{foes[1].shield=1;fxCapture(()=>resolveHit(foes[1],50,state,'fire',false));});rows=await effects(p);for(const type of ['absorb','break','hit','fire'])assert(rows.some(e=>e.type===type),type);
+  await p.clock.runFor(1600);await p.evaluate(()=>{const base=enemyBattleStats;enemyBattleStats=e=>({...base(e),evasion:1});fxCapture(()=>resolveHit(foes[1],50,state,'fire',false));});rows=await effects(p);assert(rows.some(e=>e.type==='evade'));assert(!rows.some(e=>e.type==='fire'||e.type==='hit'));assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
 test('healing and coexisting buff/debuff/shield markers use party IDs and expire cleanly',async()=>{
@@ -24,20 +42,20 @@ test('healing and coexisting buff/debuff/shield markers use party IDs and expire
   assert.equal(await p.locator('#battleAllyIcons .unit>[data-hero-id]').count(),3);
   await p.evaluate(()=>{for(const h of heroes())h.hp=1;fxCapture(()=>EmberwildBattleEffects.scope({mode:'skill'},()=>heroes()[1].hp+=10));});
   const target=await p.evaluate(()=>heroKey(heroes()[1]));assert.equal(await p.locator('#battleAllyIcons [data-hero-id="'+target+'"] [data-fx="heal"]').count(),1);assert.equal(await p.locator('#battleAllyIcons .battle-enemy-icon [data-fx="heal"]').count(),1);
-  await p.clock.runFor(1000);await p.evaluate(()=>fxCapture(()=>{applyPureShield(heroes()[1],300);__EMBERWILD_STATUS_TEST_API.apply({id:'fx-b',name:'強化',polarity:'buff',duration:2,modifiers:[{kind:'guard',value:.1}]},state,heroes()[1]);__EMBERWILD_STATUS_TEST_API.apply({id:'fx-d',name:'弱化',polarity:'debuff',duration:2,modifiers:[{kind:'weaken',value:.1}]},foes[0],heroes()[1]);}));
+  await p.clock.runFor(1600);await p.evaluate(()=>fxCapture(()=>{applyPureShield(heroes()[1],300);__EMBERWILD_STATUS_TEST_API.apply({id:'fx-b',name:'強化',polarity:'buff',duration:2,modifiers:[{kind:'guard',value:.1}]},state,heroes()[1]);__EMBERWILD_STATUS_TEST_API.apply({id:'fx-d',name:'弱化',polarity:'debuff',duration:2,modifiers:[{kind:'weaken',value:.1}]},foes[0],heroes()[1]);}));
   const icon=p.locator('#battleAllyIcons [data-hero-id="'+target+'"]');for(const type of ['shield','buff','debuff'])assert.equal(await icon.locator('[data-fx="'+type+'"]').count(),1,type);assert.equal(await icon.locator('.battle-fx-status>i').count(),3);
-  await p.clock.runFor(1000);assert.equal(await icon.locator('.battle-fx').count(),0);assert.equal(await icon.locator('.battle-fx-status>i').count(),3);
+  await p.clock.runFor(1600);assert.equal(await icon.locator('.battle-fx').count(),0);assert.equal(await icon.locator('.battle-fx-status>i').count(),3);
   await p.evaluate(()=>{partyClock+=3;heroes()[1].shield=0;EmberwildBattleSummary.sync();});assert.equal(await icon.locator('.battle-fx-status').count(),0);
   await p.evaluate(()=>fxCapture(()=>EmberwildBattleEffects.scope({mode:'regen'},()=>heroes()[1].hp+=1)));assert.equal(await icon.locator('[data-fx="regen"]').count(),1);assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
 test('speed, reduced motion, settings persistence, bounded bursts, stale/dead targets and lifecycle cleanup',async()=>{
  const g=await setup(),p=g.page;try{
-  for(const rate of [1,2]){await p.evaluate(rate=>{battleRate=rate;fxCapture(()=>resolveHit(foes[1],50,state,'fire',false));},rate);assert.equal(await p.locator('#battleEnemyIcons .battle-enemy-icon [data-fx="fire"]').evaluate(n=>n.style.getPropertyValue('--fx-time')),Math.round(600*(rate===2?.82:1))+'ms');await p.clock.runFor(1000);}
+  for(const rate of [1,2]){await p.evaluate(rate=>{battleRate=rate;fxCapture(()=>resolveHit(foes[1],50,state,'fire',false));},rate);assert.equal(await p.locator('#battleEnemyIcons .battle-enemy-icon [data-fx="fire"]').evaluate(n=>n.style.getPropertyValue('--fx-time')),Math.round(600*(rate===2?.82:1.5))+'ms');await p.clock.runFor(1600);}
   await p.emulateMedia({reducedMotion:'reduce'});await p.evaluate(()=>fxCapture(()=>resolveHit(foes[1],50,state,'fire',false)));assert.equal(await p.locator('#battleEnemyIcons .battle-enemy-icon [data-fx="fire"]').getAttribute('data-detail'),'simple');assert.equal(await p.locator('.battle-fx-projectile').count(),0);assert.equal(await p.locator('#battleEnemyIcons [data-enemy-id="fx-1"]>.enemy-icon-art').evaluate(n=>getComputedStyle(n).animationName),'none');
   await p.emulateMedia({reducedMotion:'no-preference'});
-  await p.evaluate(()=>{for(let i=0;i<100;i++)fxCapture(()=>resolveHit(foes[1],1,state,'physical',false));});assert(await p.evaluate(()=>EmberwildBattleEffects.activeCount)<=24);await p.clock.runFor(1000);assert.equal(await p.locator('.battle-fx').count(),0);assert.equal(await p.evaluate(()=>EmberwildBattleEffects.activeCount),0);
-  await p.evaluate(()=>{EmberwildBattleEffects.begin();resolveHit(foes[1],50,state,'fire',false);EmberwildBattleEffects.end();});await p.clock.runFor(1000);await p.evaluate(()=>EmberwildBattleSummary.sync());assert(await p.locator('.battle-fx').count()>0);await p.clock.runFor(1000);
+  await p.evaluate(()=>{for(let i=0;i<100;i++)fxCapture(()=>resolveHit(foes[1],1,state,'physical',false));});assert(await p.evaluate(()=>EmberwildBattleEffects.activeCount)<=24);await p.clock.runFor(1600);assert.equal(await p.locator('.battle-fx').count(),0);assert.equal(await p.evaluate(()=>EmberwildBattleEffects.activeCount),0);
+  await p.evaluate(()=>{EmberwildBattleEffects.begin();resolveHit(foes[1],50,state,'fire',false);EmberwildBattleEffects.end();});await p.clock.runFor(1600);await p.evaluate(()=>EmberwildBattleSummary.sync());assert(await p.locator('.battle-fx').count()>0);await p.clock.runFor(1600);
   await p.evaluate(()=>{fxCapture(()=>{resolveHit(foes[1],50000,state,'fire',false);});});assert(await p.locator('#battleEnemyIcons [data-enemy-id="fx-1"] .battle-fx').count()>0);
   await p.evaluate(()=>fxCapture(()=>resolveHit(foes[0],50,state,'fire',false)));await p.evaluate(()=>setTab('options'));assert.equal(await p.locator('.battle-fx').count(),0);assert.equal(await p.locator('[data-battle-effects]').count(),1);
   await p.locator('[data-battle-effects]').selectOption('off');assert.equal(await p.evaluate(()=>EmberwildBattleEffects.preference),'off');assert.equal(await p.evaluate(()=>localStorage.getItem('emberwild-battle-effects')),'off');await p.evaluate(()=>{setTab('battle');fxCapture(()=>resolveHit(foes[0],50,state,'fire',false));});assert.equal(await p.locator('.battle-fx').count(),0);
@@ -52,7 +70,7 @@ test('desktop/mobile animation frames preserve icon boxes and readable HP; captu
    assert.deepEqual(await p.locator('#battleEnemyIcons .unit>[data-enemy-id]').evaluateAll(ns=>ns.map(n=>({w:n.offsetWidth,h:n.offsetHeight}))),before);
    assert.equal(await p.locator('#battleEnemyIcons .is-elite').count(),1);assert.equal(await p.locator('#battleAllyIcons .is-acting').count(),1);
    assert(await p.locator('[data-summary-hp]').isVisible());assert(await p.locator('#battleEnemyIcons').isVisible());
-   await p.locator('#battleEnemyIcons').screenshot({path:'/tmp/emberwild-fx-icons-'+size.width+'.png'});await p.screenshot({path:'/tmp/emberwild-fx-'+size.width+'.png'});await p.clock.runFor(1000);
+   await p.locator('#battleEnemyIcons').screenshot({path:'/tmp/emberwild-fx-icons-'+size.width+'.png'});await p.screenshot({path:'/tmp/emberwild-fx-'+size.width+'.png'});await p.clock.runFor(1600);
   }
   await p.setViewportSize({width:1440,height:900});await p.evaluate(()=>{for(const h of heroes())h.hp=1;fxCapture(()=>{EmberwildBattleEffects.scope({mode:'skill'},()=>heroes()[1].hp+=10);applyPureShield(heroes()[0],300);});});await p.clock.runFor(100);await p.screenshot({path:'/tmp/emberwild-fx-recovery.png'});assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
@@ -61,7 +79,7 @@ test('desktop/mobile animation frames preserve icon boxes and readable HP; captu
 test('each resolved effect is mirrored once on the matching HP block, including same-name AoE and special outcomes',async()=>{
  const g=await setup(),p=g.page;try{
   async function check(code,expected,target='fx-1'){
-   await p.clock.runFor(1000);
+   await p.clock.runFor(1600);
    await p.evaluate(code=>{fxCapture(()=>{(0,eval)(code);});},code);
    await p.clock.runFor(200);
    const both=await p.evaluate(()=>{
@@ -106,11 +124,11 @@ test('HP block effects preserve layout and readable bars at desktop/mobile width
    const box=await card.locator('.battle-fx-health[data-fx="fire"]').boundingBox(),cardBox=await card.boundingBox();assert(box.width>=cardBox.width-6&&box.height>=Math.min(70,cardBox.height-2),'effect spans HP information area: '+JSON.stringify({width,box,cardBox}));
    const glyph=await card.locator('.battle-fx-health[data-fx="fire"]>svg').boundingBox();assert(glyph.y+glyph.height<=box.y+box.height+1,'effect glyph fits short HP blocks');
    const bar=card.locator('.battle-health-bar');assert(await bar.isVisible());assert.equal(await bar.evaluate(n=>getComputedStyle(n).zIndex),'2');
-   await card.screenshot({path:'/tmp/emberwild-hpfx-'+width+'.png'});await p.clock.runFor(1000);assert.equal(await card.locator('.battle-fx').count(),0);
+   await card.screenshot({path:'/tmp/emberwild-hpfx-'+width+'.png'});await p.clock.runFor(1600);assert.equal(await card.locator('.battle-fx').count(),0);
   }
   await p.evaluate(()=>{fxCapture(()=>resolveHit(foes[1],5,state,'fire',false));globalThis.firstRepeat=document.querySelector('#battleEnemyIcons .battle-enemy-icon>[data-fx="fire"]');fxCapture(()=>resolveHit(foes[1],5,state,'fire',false));});
-  assert(await p.evaluate(()=>firstRepeat.isConnected),'a repeated impact keeps the preceding occurrence alive');assert.equal(await p.locator('#battleEnemyIcons .battle-enemy-icon>[data-fx="fire"]').count(),2);await p.clock.runFor(1000);
-  await p.evaluate(()=>{fxCapture(()=>resolveHit(foes[0],50,state,'ice',false));render();EmberwildBattleSummary.sync();});await p.clock.runFor(1000);assert.equal(await p.evaluate(()=>EmberwildBattleEffects.activeCount),0);
+  assert(await p.evaluate(()=>firstRepeat.isConnected),'a repeated impact keeps the preceding occurrence alive');assert.equal(await p.locator('#battleEnemyIcons .battle-enemy-icon>[data-fx="fire"]').count(),2);await p.clock.runFor(1600);
+  await p.evaluate(()=>{fxCapture(()=>resolveHit(foes[0],50,state,'ice',false));render();EmberwildBattleSummary.sync();});await p.clock.runFor(1600);assert.equal(await p.evaluate(()=>EmberwildBattleEffects.activeCount),0);
   await p.evaluate(()=>{fxCapture(()=>resolveHit(foes[0],50,state,'fire',false));spawnGroup();render();});assert.equal(await p.locator('.battle-fx').count(),0);
   await p.evaluate(()=>{setBattleEffects('off');fxCapture(()=>resolveHit(foes[0],50,state,'fire',false));});assert.equal(await p.locator('.battle-fx').count(),0);assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
@@ -173,9 +191,9 @@ test('integrated portrait, readable HP and click targets fit phones; physical/ma
   const animations=await p.locator('#battleEnemyIcons .battle-enemy-icon .battle-fx>svg').evaluateAll(ns=>Object.fromEntries(ns.map(n=>[n.parentNode.dataset.fx,getComputedStyle(n).animationName])));
   assert.notEqual(animations.slash,animations.ice);assert.notEqual(animations.debuff,animations.ice);
   assert.equal(await p.locator('#battleEnemyIcons .battle-enemy-icon [data-critical="true"]').count(),2);
-  await p.clock.runFor(1000);await p.evaluate(()=>{effects.push({target:foes[1].id,kind:'dotMaxHp',until:partyClock+3,value:.01,sourceKey:memberKey(state),name:'灼燒'});fxCapture(()=>performEnemyAction(foes[1]));});assert(await p.locator('#battleEnemyIcons .battle-enemy-icon [data-fx="dot"]').count()>0);
-  await p.clock.runFor(1000);await p.evaluate(()=>{fxCapture(()=>resolveHit(foes[1],5,state,'fire',false));Object.defineProperty(document,'hidden',{configurable:true,value:true});dispatchEvent(new Event('visibilitychange'));});assert.equal(await p.locator('.battle-fx').count(),0);
-  await p.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});dispatchEvent(new Event('visibilitychange'));});await p.clock.runFor(1000);assert.equal(await p.locator('.battle-fx').count(),0);assert.deepEqual(g.errors,[]);
+  await p.clock.runFor(1600);await p.evaluate(()=>{effects.push({target:foes[1].id,kind:'dotMaxHp',until:partyClock+3,value:.01,sourceKey:memberKey(state),name:'灼燒'});fxCapture(()=>performEnemyAction(foes[1]));});assert(await p.locator('#battleEnemyIcons .battle-enemy-icon [data-fx="dot"]').count()>0);
+  await p.clock.runFor(1600);await p.evaluate(()=>{fxCapture(()=>resolveHit(foes[1],5,state,'fire',false));Object.defineProperty(document,'hidden',{configurable:true,value:true});dispatchEvent(new Event('visibilitychange'));});assert.equal(await p.locator('.battle-fx').count(),0);
+  await p.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});dispatchEvent(new Event('visibilitychange'));});await p.clock.runFor(1600);assert.equal(await p.locator('.battle-fx').count(),0);assert.deepEqual(g.errors,[]);
  }finally{await g.browser.close();}
 });
 

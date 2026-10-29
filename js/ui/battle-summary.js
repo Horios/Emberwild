@@ -109,7 +109,7 @@
    const expected=[...s.allies,...s.units].map(r=>r.id).sort().join('|'),actual=[...document.querySelectorAll('.squad-field :is(.squad-allies,.squad-enemies) > .unit[data-combat-id]')].map(n=>n.dataset.combatId).sort().join('|');
    if(actual!==expected){render();return;}
   }
-  const status=s.result==='victory'?'戰鬥勝利':s.result==='wipe'?'戰鬥失敗':!s.total?(running?'搜尋敵人':'尚未探索'):!running?'戰鬥暫停':$('modal')?.open?'視窗暫停':event||'戰鬥中';
+  const status=s.result==='victory'?'戰鬥勝利':s.result==='wipe'?'戰鬥失敗':!s.total?(running?'搜尋敵人':'尚未探索'):!running?'戰鬥暫停':$('modal')?.open?'視窗暫停':round>0&&!roundIterator&&!combatRoundProgress&&foes.some(e=>e.hp>0)?'等待下一回合':event||'戰鬥中';
   if(summary){
    put(summary,'[data-summary-name]',s.name);summary.querySelector('[data-summary-name]').title=s.name;put(summary,'[data-summary-state]',status);
    put(summary,'[data-summary-hp]',fmt(s.hp)+' / '+fmt(s.max));

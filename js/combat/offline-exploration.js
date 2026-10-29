@@ -183,12 +183,13 @@
    if(!roundIterator){globalThis.__EMBERWILD_RESUMING_ROUND=!!combatRoundProgress;roundIterator=pacedRound();if(!combatRoundProgress)roundStartedAt=at;}
    let result;try{
     result=roundIterator.next();
-    // A yield is one complete action (including its procs/counters). Once it
-    // ends combat, resume the same generator now to run rewards and all result
-    // wrappers; there is no remaining independent actor to display or wait for.
-    if(!result.done&&(!living().length||!foes.some(e=>e.hp>0)))result=roundIterator.next();
+    // A yield is one complete action (including its procs/counters). Close a
+    // terminal fight or exhausted round cursor now: its cleanup has no further
+    // independent actor to display. Keep the minimum for ongoing rounds below.
+    const p=combatRoundProgress;
+    if(!result.done&&(!living().length||!foes.some(e=>e.hp>0)||p&&!p.unit&&p.index>=p.order.length))result=roundIterator.next();
    }finally{globalThis.__EMBERWILD_RESUMING_ROUND=false;}
-   const actionMs=Math.max(1,Math.round(GS('combat.pacing.actionIntervalMs',900)/battleRate)),roundMs=Math.max(actionMs,Math.round(GS('combat.pacing.roundMinimumMs',6000)/battleRate));
+   const actionMs=Math.max(1,Math.round(GS('combat.pacing.actionIntervalMs',1500)/battleRate)),roundMs=Math.max(actionMs,Math.round(GS('combat.pacing.roundMinimumMs',6000)/battleRate));
    if(result.done){
     roundIterator=null;
     // round===0 means this step only spawned an encounter. The existing action
