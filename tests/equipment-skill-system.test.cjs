@@ -5,6 +5,23 @@ const json=(r,s)=>JSON.parse(r.run('JSON.stringify('+s+')'));
 test('multiple skill items wear simultaneously; only selected equipment enters the skill pool and legal slot',()=>{
  const r=game();assert.equal(r.run('selectSkillEquipment("a")'),true);assert.equal(r.run('configureSkill("proc",0,"job1-core2")'),true);assert.equal(r.run('__EMBERWILD_SKILLS.learned(state,__EMBERWILD_SKILLS.byId("job1-core3"))'),false);assert.equal(r.run('selectSkillEquipment("b")'),true);assert.deepEqual(json(r,'state.skillLoadout.proc'),[null]);assert.equal(r.run('__EMBERWILD_SKILLS.learned(state,__EMBERWILD_SKILLS.byId("job1-core2"))'),false);assert.equal(r.run('state.equipped.includes("a")&&state.equipped.includes("b")'),true);
 });
+test('equipment skill source remains editable mid-encounter even when a companion is selected; snapshot changes next group',()=>{
+ const r=game();
+ r.run('recruitCompanion(10);closeModal();startSelectedExploration();selectHero(10);');
+ assert.equal(r.run('EmberwildBattleConfiguration.pending()'),true);
+ assert.equal(r.run('EmberwildBattleConfiguration.combat(()=>playerHero().activeSkillEquipmentId)'),null);
+ assert.equal(r.run('selectSkillEquipment("a")'),true);
+ assert.equal(r.run('state.companionId'),10);
+ assert.equal(r.run('playerHero().activeSkillEquipmentId'),'a');
+ assert.equal(r.run('EmberwildBattleConfiguration.combat(()=>playerHero().activeSkillEquipmentId)'),null);
+ r.run('selectHero(memberKey(playerHero()))');
+ assert.equal(r.run('configureSkill("proc",0,"job1-core2")'),true);
+ assert.equal(r.run('EmberwildBattleConfiguration.combat(()=>playerHero().skillLoadout.proc[0])'),null);
+ r.run('spawnGroup()');
+ assert.equal(r.run('EmberwildBattleConfiguration.combat(()=>playerHero().activeSkillEquipmentId)'),'a');
+ assert.equal(r.run('EmberwildBattleConfiguration.combat(()=>playerHero().skillLoadout.proc[0])'),'job1-core2');
+ assert.deepEqual(r.errors,[]);
+});
 test('inactive gems use base stats, selected gems affect only their supplied skill, first mode is restored',()=>{
  const r=game();const before=r.run('stats(state).atk');r.run('selectSkillEquipment("a");configureSkill("proc",0,"job1-core2")');assert.equal(r.run('stats(state).atk'),before-2);assert.equal(r.run('gemRate(state,2,0)'),.02);assert.equal(r.run('gemRate(state,21,0)'),0);r.run('setEquipmentGemMode("a","base")');assert.equal(r.run('stats(state).atk'),before);assert.equal(r.run('gemRate(state,2,0)'),0);r.run('selectSkillEquipment("b");selectSkillEquipment("a")');assert.equal(r.run('a.skillSockets.firstMode'), 'base');assert.equal(r.run('gemRate(state,2,0)'),0);
 });
