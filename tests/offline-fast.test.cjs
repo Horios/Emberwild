@@ -18,7 +18,11 @@ test('a fast drop exception restores the atomic checkpoint and finishes in full 
  const persisted=json(r,'packParty()'),before=summary();reset(r,persisted);await r.run('EmberwildOffline.settle()');assert.deepEqual(summary(),before);
 });
 test('a level boundary exits fast replay and rebuilds natural stats and overflow XP',async()=>{
- let save=fixture(r,base,'high');const one=await replay(r,save,1,123456,true);assert(one.xp>0);reset(r,save);r.ctx.hourXP=one.xp;r.run('state.xp=Math.max(0,need(state.lv)-hourXP*4);save()');save=json(r,'packParty()');
+ let save=fixture(r,base,'high');
+ // LV59 no longer earns EXP in the first region. Use a level-appropriate map
+ // for this level-boundary test, preserving the published EXP/drop rules.
+ r.run('stopTeamExploration();selectExplorationMap(5);startSelectedExploration();save()');save=json(r,'packParty()');
+ const one=await replay(r,save,1,123456,true);assert(one.xp>0);reset(r,save);r.ctx.hourXP=one.xp;r.run('state.xp=Math.max(0,need(state.lv)-hourXP*4);save()');save=json(r,'packParty()');
  const full=await replay(r,save,8,123456,true),fast=await replay(r,save,8,123456,false);
  assert(fast.metrics.fastBattles>0);assert(fast.metrics.fallbacks['level-boundary']>0);assert(fast.metrics.fallbacks['combat-state-change']>0);assert.equal(fast.lv,60);assert.equal(fast.lv,full.lv);assert.equal(r.run('state.xp'),0);assert.equal(r.run("Object.hasOwn(state,'ap')"),false);assert.equal(r.run("Object.hasOwn(state,'stats')"),false);
 });

@@ -2,8 +2,8 @@ const test=require('node:test'),assert=require('node:assert/strict'),path=requir
 const {openRuntime}=require('./runtime.cjs'),root=path.resolve(__dirname,'..');
 async function setup(rate=1,controlled=true){
  const g=await openRuntime(root,'index.html',{},controlled?{clockTime:new Date('2026-10-27T02:00:00Z')}:{});
- await g.page.evaluate(rate=>{
-  selectSaveSlot(1);start(1);closeModal();startSelectedExploration();
+ await g.page.evaluate(async rate=>{
+  selectSaveSlot(1);start(1);closeModal();continueFromTitle();clearInterval(timer);await EmberwildOffline.settle(undefined,false);startSelectedExploration();
   if(rate===2){state.consumables.speed2_30m=1;useSupply('speed2_30m');setBattleSpeed(2);}
   for(const h of heroes())h.shield=1e12;foes.forEach(e=>{e.hp=1e12;e.maxhp=1e12;e.atk=1;});
   globalThis.paceBrowser={actions:[],frames:[],ticks:[],saves:[],longTasks:[],controlled:[]};
@@ -14,6 +14,7 @@ async function setup(rate=1,controlled=true){
    paceBrowser.frames.push({at:performance.now(),actions:paceBrowser.actions.length,ms:performance.now()-t,acting:[...document.querySelectorAll('#battleAllyIcons .is-acting,#battleEnemyIcons .is-acting')].map(e=>e.dataset.heroId||e.dataset.enemyId),expected:[...s.allies,...s.units].filter(e=>e.acting).map(e=>e.id),hp:Number($('battleSummary').querySelector('[role="progressbar"]').getAttribute('aria-valuenow')),expectedHp:(EmberwildBattleEffects.present(s)).percent});return out;};
   const step=tick;tick=function(...args){const t=performance.now(),before=paceBrowser.actions.length,out=step(...args);paceBrowser.ticks.push({ms:performance.now()-t,count:paceBrowser.actions.length-before});return out;};
   const store=save;save=function(...args){const t=performance.now(),out=store(...args);paceBrowser.saves.push(performance.now()-t);return out;};
+  timer=setInterval(()=>tick(),50);
  },rate);return g;
 }
 function inspect(m,rate){

@@ -9,7 +9,20 @@ permissions:
 
 jobs:
   core:
-    name: Core modules, gear and skills
+    name: Core · ${{ matrix.group }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: modules-and-gear
+            tests: >-
+              tests/core-catalog-split.test.cjs tests/core-services-split.test.cjs tests/core-ui-split.test.cjs tests/core-journal-split.test.cjs tests/battle-effects.test.cjs tests/gear-inventory-controls.test.cjs tests/inventory-wear-inspector.test.cjs tests/gear-inventory.test.cjs tests/item-descriptions.test.cjs tests/load-integrity.test.cjs tests/current-catalog-integrity.test.cjs
+          - group: skills
+            tests: >-
+              tests/skill-gems.test.cjs tests/equipment-skill-system.test.cjs tests/skill-equipment-tutorial.test.cjs tests/skill-system-model.test.cjs tests/skill-system-runtime.test.cjs tests/initial-clearing-skills.test.cjs tests/battle-configuration.test.cjs tests/status-advanced.test.cjs tests/skill-effects.test.cjs
+          - group: combat
+            tests: >-
+              tests/live-battle-journal.test.cjs tests/realtime-combat.test.cjs
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -18,10 +31,20 @@ jobs:
         with:
           node-version: '20'
       - name: Run current core regression tests
-        run: node --test --test-concurrency=1 tests/core-catalog-split.test.cjs tests/core-services-split.test.cjs tests/core-ui-split.test.cjs tests/core-journal-split.test.cjs tests/live-battle-journal.test.cjs tests/realtime-combat.test.cjs tests/battle-effects.test.cjs tests/gear-inventory-controls.test.cjs tests/inventory-wear-inspector.test.cjs tests/gear-inventory.test.cjs tests/item-descriptions.test.cjs tests/load-integrity.test.cjs tests/current-catalog-integrity.test.cjs tests/skill-gems.test.cjs tests/equipment-skill-system.test.cjs tests/skill-equipment-tutorial.test.cjs tests/skill-system-model.test.cjs tests/skill-system-runtime.test.cjs tests/initial-clearing-skills.test.cjs tests/battle-configuration.test.cjs tests/status-advanced.test.cjs tests/skill-effects.test.cjs
+        run: node --test --test-concurrency=1 ${{ matrix.tests }}
 
   persistence:
-    name: Saves, offline rewards and state ownership
+    name: Saves · ${{ matrix.group }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: receipts-and-compatibility
+            tests: >-
+              tests/boot-save-notices.test.cjs tests/offline-checkpoints.test.cjs tests/offline-receipts.test.cjs tests/team-save-compatibility.test.cjs
+          - group: simulation-and-lifecycle
+            tests: >-
+              tests/offline-exploration.test.cjs tests/offline-fast.test.cjs tests/offline-final-stage.test.cjs tests/gameplay-lifecycle-audit.test.cjs
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -30,7 +53,7 @@ jobs:
         with:
           node-version: '20'
       - name: Verify recoverable saves and offline settlement
-        run: node --test --test-concurrency=1 tests/boot-save-notices.test.cjs tests/offline-checkpoints.test.cjs tests/offline-receipts.test.cjs tests/offline-exploration.test.cjs tests/offline-fast.test.cjs tests/offline-final-stage.test.cjs tests/gameplay-lifecycle-audit.test.cjs tests/team-save-compatibility.test.cjs
+        run: node --test --test-concurrency=1 ${{ matrix.tests }}
 
   browser-smoke:
     name: Chromium boot and responsive navigation
