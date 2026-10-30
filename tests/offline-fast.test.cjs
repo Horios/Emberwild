@@ -17,14 +17,20 @@ test('a fast drop exception restores the atomic checkpoint and finishes in full 
  assert.equal(r.run('fastFault'),true);assert.equal(out.metrics.fallbacks['fast-error'],1);assert.match(out.metrics.lastFastError,/injected/);assert.equal(receipt().kills,r.run('state.totalKills'));assert.equal(receipt().gear.length,r.run('state.bag.length')-save.members[0].bag.length);
  const persisted=json(r,'packParty()'),before=summary();reset(r,persisted);await r.run('EmberwildOffline.settle()');assert.deepEqual(summary(),before);
 });
+test('the published level-gap rule gives an overlevelled starter-region fixture zero EXP',async()=>{
+ const save=fixture(r,base,'high'),out=await replay(r,save,1,123456,true);
+ assert(out.kills>0);assert.equal(out.xp,0);assert.equal(out.lv,59);
+});
 test('a level boundary exits fast replay and rebuilds natural stats and overflow XP',async()=>{
+ // Isolate the boundary from EXP source/level-gap rules (covered above). A
+ // fixed one-EXP reward places the transition after the three sampling hours.
+ const enemyXp=r.ctx.EmberwildProgression.enemyXp;r.ctx.EmberwildProgression.enemyXp=()=>1;
+ try{
  let save=fixture(r,base,'high');
- // LV59 no longer earns EXP in the first region. Use a level-appropriate map
- // for this level-boundary test, preserving the published EXP/drop rules.
- r.run('stopTeamExploration();selectExplorationMap(5);startSelectedExploration();save()');save=json(r,'packParty()');
  const one=await replay(r,save,1,123456,true);assert(one.xp>0);reset(r,save);r.ctx.hourXP=one.xp;r.run('state.xp=Math.max(0,need(state.lv)-hourXP*4);save()');save=json(r,'packParty()');
  const full=await replay(r,save,8,123456,true),fast=await replay(r,save,8,123456,false);
  assert(fast.metrics.fastBattles>0);assert(fast.metrics.fallbacks['level-boundary']>0);assert(fast.metrics.fallbacks['combat-state-change']>0);assert.equal(fast.lv,60);assert.equal(fast.lv,full.lv);assert.equal(r.run('state.xp'),0);assert.equal(r.run("Object.hasOwn(state,'ap')"),false);assert.equal(r.run("Object.hasOwn(state,'stats')"),false);
+ }finally{r.ctx.EmberwildProgression.enemyXp=enemyXp;}
 });
 test('speed, XP and drop boosts expire at four hours and force fresh full samples',async()=>{
  const save=fixture(r,base,'boosts'),out=await replay(r,save,8,123456,false);assert(out.metrics.fastBattles>0);assert(out.metrics.fallbacks['time-boundary']>0);assert(out.metrics.fallbacks['combat-state-change']>0);assert.equal(r.run('battleRate'),1);assert(r.run('party.timedBoosts.every(b=>b.remainingMs===0)'));
