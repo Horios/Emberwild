@@ -28,3 +28,12 @@ test('explicit equipment and token drops grant the selected definition and varia
  r.run('grantConfiguredDrop({type:"sourceMaterial",quantityMin:1,quantityMax:1},{kind:"boss",mat:"變體專屬素材",region:0,difficulty:1},()=>0);');assert.equal(r.run('state.materials["【困難】變體專屬素材"]'),1);
  assert.deepEqual(r.errors,[]);
 });
+
+test('default drop entries survive legacy economy settings without a drops.entries field',()=>{
+ const r=loadRuntime(root);
+ const shape=plain(r.run('({defaults:GAMEPLAY_SETTINGS_DEFAULTS.drops.entries,normalized:normalizeGameplaySettings({drops:{}}).drops.entries,published:exportableBalance().balanceSettings.drops.entries})'));
+ assert(Array.isArray(shape.defaults)&&shape.defaults.length>0,'shipped defaults must include a nonempty drop table');
+ assert.deepEqual(shape.normalized,shape.defaults,'legacy settings must inherit every shipped drop entry');
+ assert(Array.isArray(shape.published)&&shape.published.length>0,'export must retain a usable drop table');
+ assert.deepEqual(r.errors,[]);
+});
