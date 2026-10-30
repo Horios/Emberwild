@@ -1,6 +1,36 @@
 const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path');
 const {loadRuntime}=require('./headless-runtime.cjs');
 const ids=['warrior-cleave-chain','mage-mana-cycle','archer-arrow-rain','priest-holy-prison'];
+test('new priests preview holy prison before LV3, learn it on level-up and retain the configured skill after cold reload',()=>{
+ const root=path.resolve(__dirname,'..'),r=loadRuntime(root);
+ r.run('selectSaveSlot(1);start(3);closeModal();openSkillSlot("active",0)');
+ assert(r.run('$("modal").innerHTML.includes(\'data-skill-id="priest-holy-prison"\')'));
+ assert.equal(r.run('configureSkill("active",0,"priest-holy-prison")'),false);
+ r.run('closeModal();awardXP(need(1));awardXP(need(2));save()');
+ assert.equal(r.run('state.lv'),3);
+ assert.equal(r.run('configureSkill("active",0,"priest-holy-prison")'),true);
+ const cold=loadRuntime(root,'index.html',Object.fromEntries(r.values));
+ assert.equal(cold.run('state.skillLoadout.active[0]'),'priest-holy-prison');
+ assert.equal(cold.run('state.skills[__EMBERWILD_SKILLS.byId("priest-holy-prison").adapter.index]'),1);
+ assert.deepEqual(r.errors,[]);assert.deepEqual(cold.errors,[]);
+});
+test('legacy priest cold boot grants holy prison once, shows it in the picker and casts it after repeated save reloads',()=>{
+ const root=path.resolve(__dirname,'..'),raw=require('./fixtures/legacy-skills-job3.json'),original=JSON.stringify(raw);
+ const r=loadRuntime(root,'index.html',{'emberwild-save-v1':original});
+ assert.equal(r.run('globalThis.__EMBERWILD_BOOT_SAVE_ERROR??null'),null);
+ assert.equal(r.run('state.job'),3);
+ assert.equal(r.run('Object.hasOwn(state,"stats")'),false);
+ r.run('openSkillSlot("active",0)');
+ assert(r.run('$("modal").innerHTML.includes(\'data-skill-id="priest-holy-prison"\')'));
+ assert.equal(r.run('chooseSkillSlot("active",0,"priest-holy-prison")'),true);
+ r.run('for(let i=0;i<3;i++)loadParty(packParty());resetEncounter();Math.random=()=>.99;foes=Array.from({length:4},(_,i)=>({id:"legacy-priest-"+i,name:"同名敵人",kind:"normal",hp:1000,maxhp:1000,atk:1,def:0,lv:1,shield:0,element:"physical",race:"beast",turn:0}));enemy=foes[0];');
+ assert.equal(r.run('state.skillLoadout.active[0]'),'priest-holy-prison');
+ assert.equal(r.run('__EMBERWILD_SKILLS.system().definitions.filter(s=>s.id==="priest-holy-prison").length'),1);
+ assert.equal(cast(r,'priest-holy-prison'),true);
+ assert.equal(r.run('__EMBERWILD_STATUS_TEST_API.active.length'),3);
+ assert.deepEqual(JSON.parse(r.run('JSON.stringify(state.bag.map(g=>g.id))')),raw.members[0].bag.map(g=>g.id));
+ assert.equal(JSON.stringify(raw),original);assert.deepEqual(r.errors,[]);
+});
 function game(job){const r=loadRuntime(path.resolve(__dirname,'..'));r.run(`selectSaveSlot(1);start(${job});closeModal();state.lv=3;save();Math.random=()=>.99;
 globalThis.targets=(hp=1000,n=4)=>{foes=Array.from({length:n},(_,i)=>({id:'test-'+i,name:'同名敵人',kind:'normal',monsterId:'map0_mob0',hp,maxhp:hp,atk:1,def:0,lv:1,shield:0,element:'physical',race:'beast',turn:0}));enemy=foes[0];};targets();`);return r;}
 function cast(r,id){return r.run(`castPartySkill(state,__EMBERWILD_SKILLS.byId('${id}').adapter.index,{...battleStats(state),atk:100})`);}
