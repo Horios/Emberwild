@@ -24,7 +24,7 @@
   globalThis.__EMBERWILD_TEAM_MASTERY=masteryView;
   globalThis.__EMBERWILD_TEAM_GAIN=(h,n)=>{if(h!==player()||!build()||plan()?.job===null)return;const c=build().permanent.classes[h.job];if(c?.activated)c.xp+=n;refreshUnlocks();};
   function snapshot(p){
-    const h=player();p.stats=copy(h.stats);p.skills=copy(h.skills);p.supportLevels=copy(h.supportLevels);p.active=copy(h.active);p.procSlots=copy(h.procSlots);p.supportSlots=copy(h.supportSlots);p.equipped=copy(h.equipped);if(h.skillLoadout)p.skillLoadout=copy(h.skillLoadout);p.activeSkillEquipmentId=h.activeSkillEquipmentId??null;p.passiveEnabled=copy(h.passiveEnabled||{});
+    const h=player();p.skills=copy(h.skills);p.supportLevels=copy(h.supportLevels);p.active=copy(h.active);p.procSlots=copy(h.procSlots);p.supportSlots=copy(h.supportSlots);p.equipped=copy(h.equipped);if(h.skillLoadout)p.skillLoadout=copy(h.skillLoadout);p.activeSkillEquipmentId=h.activeSkillEquipmentId??null;p.passiveEnabled=copy(h.passiveEnabled||{});
     p.playerActive=party.active.includes(memberKey(h));p.companions=party.active.filter(k=>k!==memberKey(h));p.enlisted=(party.enlisted||party.members.map(memberKey)).filter(k=>k!==memberKey(h));
     p.tokens=Object.fromEntries(party.members.slice(1).map(h=>[memberKey(h),h.tokenId??null]));
     p.sockets??=Array(h.skills.length).fill(null);
@@ -33,16 +33,15 @@
   function migrate(){
     const h=player();if(!h)return;if(build())return;
     h.playerId??=h.job;
-    const permanent={playerKey:memberKey(h),abilityCredit:0,classes:{},masteries:copy(h.mastery||{}),unlocks:{},payments:{},gemInstances:{},gemSerial:1};
+    const permanent={playerKey:memberKey(h),classes:{},masteries:copy(h.mastery||{}),unlocks:{},payments:{},gemInstances:{},gemSerial:1};
     CLASSES.forEach((_,j)=>permanent.classes[j]={activated:j===h.job,xp:j===h.job?Object.values(h.mastery||{}).reduce((n,v)=>n+v,0):0,advanced:j===h.job&&h.advanced});
     const p=M.blank('team-1','隊伍 1',h.job,h.skills.length,h.supportLevels.length);party.buildSystem={version:M.VERSION,activeId:p.id,serial:2,plans:[p],permanent};snapshot(p);
     for(const [kind,list] of [['core',h.skills],['support',h.supportLevels]])list.forEach((v,i)=>{if(v)permanent.unlocks[M.key(h.job,kind,i)]=true;});
     h.sockets.forEach((type,i)=>{if(type!==null){const id='gem-'+permanent.gemSerial++;permanent.gemInstances[id]=type;p.sockets[i]=id;}});
-    const total=budgets();permanent.abilityCredit=Math.max(0,(h.ap||0)+h.stats.reduce((a,v)=>a+v,0)-total.ap);
     delete h.sp;
     refreshUnlocks();syncPoints();
   }
-  function syncPoints(){if(!build())return;const h=player(),t=budgets();h.ap=Math.max(0,t.ap-h.stats.reduce((a,v)=>a+v,0));delete h.sp;}
+  function syncPoints(){if(!build())return;const h=player();delete h.ap;delete h.stats;delete h.sp;}
   function capture(){
     if(!party||hydrating)return;migrate();const h=player(),p=plan();
     if(p.job!==null){p.job=h.job;const c=build().permanent.classes[h.job];if(c)c.advanced=h.advanced;}
@@ -51,7 +50,7 @@
   function apply(p){
     const h=player(),hp=new Map(party.members.map(x=>[memberKey(x),x.hp]));h.playerId=build().permanent.playerKey;
     h.job=p.job??0;h.advanced=p.job!==null&&!!build().permanent.classes[p.job]?.advanced;
-    for(const field of ['stats','skills','supportLevels','active','procSlots','supportSlots','equipped'])h[field]=copy(p[field]);
+    for(const field of ['skills','supportLevels','active','procSlots','supportSlots','equipped'])h[field]=copy(p[field]);
     if(p.job===null){h.skills=Array(CLASSES[0].skills.length).fill(0);h.supportLevels=SUPPORT[0].map(()=>0);}
     h.sockets=p.job===null?h.skills.map(()=>null):p.sockets.map(id=>id===null?null:build().permanent.gemInstances[id]);
     h.skillLoadout=p.skillLoadout?copy(p.skillLoadout):undefined;h.activeSkillEquipmentId=p.activeSkillEquipmentId??null;h.passiveEnabled=copy(p.passiveEnabled||{});globalThis.__EMBERWILD_SKILLS?.refreshHero(h);h.mastery=masteryView(h);party.active=[...(p.playerActive?[memberKey(h)]:[]),...p.companions];party.enlisted=[memberKey(h),...p.enlisted];party.selected=memberKey(h);state=h;
@@ -104,7 +103,7 @@
   function releaseSockets(p){const ids=p.sockets.filter(Boolean);p.sockets=p.sockets.map(()=>null);for(const id of ids)if(!build().plans.some(other=>other.sockets.includes(id))){const type=build().permanent.gemInstances[id];player().gems[type]++;delete build().permanent.gemInstances[id];}}
   globalThis.clearTeamPlan=function(id=build()?.activeId){
     if(!safe())return false;const p=build().plans.find(p=>p.id===id);if(!p)return false;
-    if(!confirm('清空「'+p.name+'」的整體配置？主角職業、配點、技能、裝備、寶石及夥伴配置將全部清空，無法復原。永久養成與背包物品保留；未被其他方案使用的寶石會返還。'))return false;
+    if(!confirm('清空「'+p.name+'」的整體配置？主角職業、技能、裝備、寶石及夥伴配置將全部清空，無法復原。永久養成與背包物品保留；未被其他方案使用的寶石會返還。'))return false;
     return transaction(()=>{releaseSockets(p);Object.assign(p,M.blank(p.id,p.name));if(id===build().activeId)apply(p);});
   };
   globalThis.deleteTeamPlan=function(id){
@@ -114,7 +113,6 @@
     return transaction(()=>{releaseSockets(p);b.plans.splice(index,1);if(id===b.activeId){b.activeId=b.plans[0].id;apply(plan());}});
   };
   globalThis.resetSkills=function(){if(state!==player()||!safe()||!confirm('免費重置本隊所有技能學習與裝配？永久解鎖與精通保留。'))return false;return transaction(()=>{const p=plan();releaseSockets(p);p.skills.fill(0);p.supportLevels.fill(0);p.active.fill(null);p.procSlots.fill(null);p.supportSlots.fill(null);apply(p);});};
-  const resetBase=resetStats;resetStats=function(){if(state!==player())return resetBase();if(!safe()||!confirm('免費重置本隊能力點？其他隊伍與永久成長保留。'))return false;return transaction(()=>{plan().stats=[0,0,0];apply(plan());});};
   function learnTeam(kind,i){if(state!==player()||!safe()||plan().job===null)return false;capture();const p=plan(),j=p.job,list=kind==='core'?player().skills:player().supportLevels,k=M.key(j,kind,i),r=kind==='core'?coreRule(j,i):supportRule(j,i);if(!Number.isInteger(i)||i<0||i>=list.length||list[i])return false;if(!build().permanent.unlocks[k]){toast('尚未永久解鎖：'+unlockMissing(j,kind,i).join('、'));return false;}return transaction(()=>{list[i]=1;});}
   const learnBase=learn,supportBase=learnSupport;
   learn=function(i){return state===player()?learnTeam('core',i):learnBase(i);};learnSupport=function(i){return state===player()?learnTeam('support',i):supportBase(i);};
@@ -260,8 +258,8 @@
     }finally{resettingBalance=false;suppressSave=previousSuppress;}
   };
   // Configuration-changing legacy entry points all use the same exploration gate.
-  for(const name of ['allocate','equipSkill','clearActiveSkill','slotProcSkill','clearProcSkill','slotSupport','equipGear','equipSharedGear','unequipSharedGear','toggleMember','setPartnerEnlisted','confirmMemberReplacement','recruitCompanion','equipCompanionToken','unequipCompanionToken','devMasterySetLevel','devMasterySetExp','devMasterySet','devMasteryAdjust','devMasteryReset','devMasteryToggleCore','devMasteryToggleSupport','devMasteryWeapon']){
-    const fn=globalThis[name];if(typeof fn!=='function')continue;globalThis[name]=function(...args){const configuration=['equipGear','equipSharedGear','unequipSharedGear','equipSkill','clearActiveSkill','slotProcSkill','clearProcSkill','slotSupport'].includes(name);if(!configuration&&!safe())return false;if(state===player()&&plan()?.job===null&&['allocate','equipSkill','slotProcSkill','slotSupport','equipGear','equipSharedGear'].includes(name)){toast('請先為本隊選擇主角職業');return false;}if(suppressSave)return fn(...args);let out;const ok=transaction(()=>{out=fn(...args);},{configuration});return ok?out:false;};
+  for(const name of ['equipSkill','clearActiveSkill','slotProcSkill','clearProcSkill','slotSupport','equipGear','equipSharedGear','unequipSharedGear','toggleMember','setPartnerEnlisted','confirmMemberReplacement','recruitCompanion','equipCompanionToken','unequipCompanionToken','devMasterySetLevel','devMasterySetExp','devMasterySet','devMasteryAdjust','devMasteryReset','devMasteryToggleCore','devMasteryToggleSupport','devMasteryWeapon']){
+    const fn=globalThis[name];if(typeof fn!=='function')continue;globalThis[name]=function(...args){const configuration=['equipGear','equipSharedGear','unequipSharedGear','equipSkill','clearActiveSkill','slotProcSkill','clearProcSkill','slotSupport'].includes(name);if(!configuration&&!safe())return false;if(state===player()&&plan()?.job===null&&['equipSkill','slotProcSkill','slotSupport','equipGear','equipSharedGear'].includes(name)){toast('請先為本隊選擇主角職業');return false;}if(suppressSave)return fn(...args);let out;const ok=transaction(()=>{out=fn(...args);},{configuration});return ok?out:false;};
   }
   const battleBase=toggleBattle;toggleBattle=function(...args){if(!running&&!valid()){toast('請先選擇主角職業，並完成符合地圖門檻的隊伍編成');return false;}return battleBase(...args);};
   for(const name of ['startBossChallenge','restartExploration','devMasterySimulate']){

@@ -2,12 +2,12 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const {openRuntime,installCompanionFixtures}=require('./runtime.cjs');
 const root=path.resolve(__dirname,'..'),balanceRoot=process.env.EMBERWILD_BALANCE_ROOT||path.resolve(root,'../Emberwild-Balance');
 const model=require('../js/character/companion-model.js'),progression=require('../js/balance/progression-model.js');
-test('Shared rating budgets include distributed points, actual rounding and level stairs',()=>{
+test('Shared rating budgets use natural growth, rounding and level stairs',()=>{
  const classes=progression.defaults.classes,settings=progression.defaults.settings,c=model.defaults(classes,settings),d={...model.defaultPlans[0],rating:'D'},sss={...d,id:1050,rating:'SSS',growthPerLevel:{hp:2,atk:3,def:0}};
- const a=model.totals(d,classes,settings,c.ratings.weights),b=model.totals(sss,classes,settings,c.ratings.weights);assert(b.effectiveGrowth.atk>a.effectiveGrowth.atk);assert(b.effectiveGrowth.hp<a.effectiveGrowth.hp);assert.equal(c.activeLimit,6);assert.equal(c.ratings.maxGrowthGapPercent,13);assert.equal(c.ratings.maxBaseGapPercent,18);
+ const a=model.totals(d,classes,settings,c.ratings.weights),b=model.totals(sss,classes,settings,c.ratings.weights);assert(b.effectiveGrowth.atk>a.effectiveGrowth.atk);assert(b.effectiveGrowth.hp<a.effectiveGrowth.hp);assert.equal(c.activeLimit,6);assert.equal(c.ratings.maxGrowthGapPercent,22);assert.equal(c.ratings.maxBaseGapPercent,18);
  const extreme={...sss,growthPerLevel:{hp:100,atk:100,def:100}},warnings=model.warnings([d,extreme],classes,settings,c);assert(warnings.some(x=>x.id===1050&&x.message.includes('差距')));assert(warnings.some(x=>x.id===1050&&x.message.includes('SSS')));assert.equal(extreme.growthPerLevel.atk,100);
  assert.deepEqual(model.definition({...d,growthSteps:[]},classes,settings).growthSteps,[]);
- const custom=structuredClone(settings);custom.progression.starting={abilityPoints:1};custom.progression.levelRewards={abilityPoints:1};custom.progression.statsPerPoint={hp:3,attack:1,defense:1};const fractional={...d,initialStats:{hp:18.4},growthPerLevel:{hp:2.1},growthSteps:[],points:[0,1,2]},def=model.definition(fractional,classes,custom),first=progression.naturalStats(def,1),last=progression.naturalStats(def,60),actual=model.totals(fractional,classes,custom,c.ratings.weights);assert.equal(actual.baseStats.hp,first.hp);assert.equal(actual.effectiveGrowth.hp,(last.hp-first.hp+60)/59);
+ const custom=structuredClone(settings);const fractional={...d,initialStats:{hp:18.4},growthPerLevel:{hp:2.1},growthSteps:[]},def=model.definition(fractional,classes,custom),first=progression.naturalStats(def,1),last=progression.naturalStats(def,60),actual=model.totals(fractional,classes,custom,c.ratings.weights);assert.equal(actual.baseStats.hp,first.hp);assert.equal(actual.effectiveGrowth.hp,(last.hp-first.hp)/59);
 });
 test('Full game: acquired roster, enlistment, UID ownership, equipment UI and persistence',async t=>{
  const game=await openRuntime(root,'index.html',{}, {pathname:'/preview/'}),page=game.page;await installCompanionFixtures(page);

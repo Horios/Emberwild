@@ -2,17 +2,17 @@
 /* Sale economy and configurable salvage output. */
 (function installEconomyAndSalvageSystem(){
   const QUALITY_NAMES=(typeof AFFIX_RANK!=='undefined'?AFFIX_RANK:['普通','精良','稀有','傳說']);
-  const DEFAULT_GEAR_SELL=[12,30,75,180];
+  const DEFAULT_GEAR_SELL=[2,6,18,45];
   const defaultMaterialKeys=()=>{
     const set=new Set(['鍛鐵','粉塵','以太鍛鐵','光輝碎塊','升級卷軸','紅色草','紅色草泥','小蟲','藥水瓶','清水']);
     for(const m of (GAMEPLAY_SETTINGS_DEFAULTS?.monsters?.catalog||[]))if(m?.material)set.add(m.material);
     for(const d of (GAMEPLAY_SETTINGS_DEFAULTS?.drops?.entries||[]))if(d?.type==='material'&&d.key)set.add(d.key);
     return [...set];
   };
-  const defaultMaterialPrice=k=>k==='紅色草'?1:['紅色草泥','小蟲'].includes(k)?3:['藥水瓶','清水'].includes(k)?1:k==='鍛鐵'?2:k==='粉塵'?6:k==='以太鍛鐵'?100:k==='光輝碎塊'?120:k==='升級卷軸'?150:5;
+  const defaultMaterialPrice=k=>['紅色草','紅色草泥','小蟲','藥水瓶','清水'].includes(k)?0:k==='鍛鐵'?1:k==='粉塵'?2:k==='以太鍛鐵'?15:k==='光輝碎塊'?20:k==='升級卷軸'?25:1;
   GAMEPLAY_SETTINGS_DEFAULTS.economy ??={};
   GAMEPLAY_SETTINGS_DEFAULTS.economy.equipmentSellPriceByQuality ??=DEFAULT_GEAR_SELL.slice();
-  GAMEPLAY_SETTINGS_DEFAULTS.economy.materialDefaultSellPrice ??=5;
+  GAMEPLAY_SETTINGS_DEFAULTS.economy.materialDefaultSellPrice ??=1;
   GAMEPLAY_SETTINGS_DEFAULTS.economy.potionSellPrice ??=10;
   GAMEPLAY_SETTINGS_DEFAULTS.economy.materialPrices ??=defaultMaterialKeys().map(key=>({key,sellPrice:defaultMaterialPrice(key)}));
   GAMEPLAY_SETTINGS_DEFAULTS.equipment.salvage.extraRewards ??=[];

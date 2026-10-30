@@ -57,10 +57,10 @@ function validateSave(input,{companion=false}={}) {
   if(!object(input)||![1,2].includes(input.version))fail('存檔版本不符');
   const s=migrateLegacyEquipmentSlotsInSave(JSON.parse(JSON.stringify(input))),legacy=s.version===1;
   if(Array.isArray(s.gems)&&s.gems.length===3){s.gems=[...s.gems,...Array(GEMS.length-3).fill(0)];if(Array.isArray(s.sockets))s.sockets=s.sockets.map((v,i)=>v===1&&CLASSES[s.job]?.skills?.[i]?.[1]==='proc'?2:v===2&&CLASSES[s.job]?.skills?.[i]?.[1]==='active'?3:v);}
-  delete s.sp;
+  delete s.sp;delete s.ap;delete s.stats;s.xpFraction??=0;
   if(!int(s.job,0,3)||!int(s.lv,1,RULES.maxLevel)||!int(s.map,0,MAPS.length-1))fail('角色或地圖無效');
   if(s.avatarId!==undefined&&s.avatarId!==null&&s.avatarId!==''&&!['guardian','mage','ranger','healer','wanderer','phoenix'].includes(s.avatarId))fail('角色圖示無效');
-  for(const k of ['gold','ore','dust','ap','totalKills','repeat','potions','xp'])if(!int(s[k]))fail('資源數值無效');
+  for(const k of ['gold','ore','dust','totalKills','repeat','potions','xp'])if(!int(s[k]))fail('資源數值無效');
   for(const k of ['hp','shield'])if(!num(s[k]))fail('生命資料無效');
   const skillCount=CLASSES[s.job].skills.length,MAX_SAVE_SKILLS=64;
   // Boot-time validation runs before some late modules append their built-in skills.
@@ -68,7 +68,7 @@ function validateSave(input,{companion=false}={}) {
   // those modules are installed; otherwise a save written by the same build cannot reload.
   if(Array.isArray(s.skills)&&s.skills.length<skillCount)while(s.skills.length<skillCount)s.skills.push(0);
   if(Array.isArray(s.sockets)&&s.sockets.length<skillCount)while(s.sockets.length<skillCount)s.sockets.push(null);
-  if(!array(s.stats,3)||!s.stats.every(v=>int(v,0,100000)))fail('能力值陣列無效');
+  if(!Number.isFinite(s.xpFraction)||s.xpFraction<0||s.xpFraction>=1)fail('小數經驗資料無效');
   if(!Array.isArray(s.skills)||s.skills.length<skillCount||s.skills.length>MAX_SAVE_SKILLS||!s.skills.every(v=>int(v,0,RULES.skillMax)))fail('技能陣列無效');
   if(!array(s.gems,GEMS.length)||!s.gems.every(v=>int(v,0,1e9)))fail('寶石陣列無效');
   for(const k of ['advanced','won','autoPotion'])if(typeof s[k]!=='boolean')fail('角色狀態無效');

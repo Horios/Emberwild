@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {openRuntime}=require('./runtime.cjs'),root=path.resolve(__dirname,'..'),legacy=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/team-before-companion-skill-pools.json'),'utf8'));
 test('Chromium: legacy slot continues without an error, preserves plans and reloads the migrated save',async()=>{
- const expectedPermanent=structuredClone(legacy.buildSystem.permanent);delete expectedPermanent.skillCredit;
+ const expectedPermanent=structuredClone(legacy.buildSystem.permanent);delete expectedPermanent.skillCredit;delete expectedPermanent.abilityCredit;
  // On first migration the former socket gem instances are refunded into
  // inventory and retired. Permanent progression and serial stay intact.
  expectedPermanent.gemInstances={};const r=await openRuntime(root,'index.html',{'emberwild-save-v1':JSON.stringify(legacy)}),p=r.page;
@@ -9,7 +9,7 @@ test('Chromium: legacy slot continues without an error, preserves plans and relo
   assert.equal(await p.evaluate(()=>globalThis.__EMBERWILD_BOOT_SAVE_ERROR??null),null);
   await p.locator('.save-slot-select[onclick="selectSaveSlot(1)"]').click();await p.locator('.title-screen').waitFor({state:'detached'});assert.equal(await p.locator('#modal').evaluate(el=>el.open),false);
   const before=await p.evaluate(()=>({plans:structuredClone(party.buildSystem.plans),permanent:structuredClone(party.buildSystem.permanent),gems:playerHero().gems.slice()}));
-  assert.deepEqual(before.plans.map(p=>p.stats),legacy.buildSystem.plans.map(p=>p.stats));
+  assert(before.plans.every(p=>!Object.hasOwn(p,'stats')),'obsolete allocation removed');
   assert.deepEqual(before.permanent,expectedPermanent);
   const expectedGems=Array.from({length:before.gems.length},(_,i)=>legacy.members[0].gems[i]||0);
   for(const type of Object.values(legacy.buildSystem.permanent.gemInstances))expectedGems[type]++;
@@ -18,11 +18,11 @@ test('Chromium: legacy slot continues without an error, preserves plans and relo
   assert.deepEqual(await p.evaluate(()=>({plans:party.buildSystem.plans,permanent:party.buildSystem.permanent,gems:playerHero().gems})),before);assert.deepEqual(r.errors,[]);
  }finally{await r.browser.close();}
 });
-test('Chromium: genuinely excessive allocations still show the recovery dialog and download unchanged original JSON',async()=>{
- const bad=structuredClone(legacy);bad.buildSystem.plans[0].stats[0]=999;
+test('Chromium: genuinely corrupted skill records still show the recovery dialog and download unchanged original JSON',async()=>{
+ const bad=structuredClone(legacy);bad.buildSystem.plans[0].skills[0]=2;
  const bytes=JSON.stringify(bad),r=await openRuntime(root,'index.html',{'emberwild-save-v1':bytes}),p=r.page;
  try{
-  await p.locator('.save-slot-select[onclick="selectSaveSlot(1)"]').click();assert((await p.locator('#modal').innerText()).includes('隊伍配點超出額度'));
+  await p.locator('.save-slot-select[onclick="selectSaveSlot(1)"]').click();assert((await p.locator('#modal').innerText()).includes('隊伍技能學習資料無效'));
   assert.equal(await p.evaluate(()=>localStorage.getItem('emberwild-save-v1')),bytes);
   const downloading=p.waitForEvent('download');await p.locator('[onclick="downloadRawLocalSave(\'primary\',1)"]').click();const download=await downloading;assert.deepEqual(JSON.parse(fs.readFileSync(await download.path(),'utf8')),bad);
   assert.equal(await p.evaluate(()=>localStorage.getItem('emberwild-save-v1')),bytes);assert.deepEqual(r.errors,[]);

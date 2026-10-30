@@ -29,7 +29,7 @@ test('Real game, editor, EXP rewards, stages and old-save round trips',async t=>
       const result=await game.page.evaluate(()=>{
         const issues=[];let checks=0;const curve=EmberwildProgression,ints=v=>['hp','atk','def'].every(k=>Number.isSafeInteger(v[k])&&v[k]>=0);
         for(let lv=1;lv<=60;lv++)for(let job=0;job<4;job++){
-          const h=initial(job);h.lv=lv;h.bag=[];h.equipped=[];h.advanced=false;h.stats=[0,0,0];
+          const h=initial(job);h.lv=lv;h.bag=[];h.equipped=[];h.advanced=false;
           const natural=stats(h),expected=curve.naturalStats(CLASSES[job],lv);checks++;
           if(!ints(natural)||['hp','atk','def'].some(k=>natural[k]!==expected[k]))issues.push('character '+job+'/'+lv);
           const mi=MAPS.findIndex((m,i)=>i!==6&&m.min<=lv&&m.max>=lv),range={min:MAPS[mi].min,max:MAPS[mi].max};MAPS[mi].min=MAPS[mi].max=lv;
@@ -40,8 +40,8 @@ test('Real game, editor, EXP rewards, stages and old-save round trips',async t=>
           }
           Object.assign(MAPS[mi],range);
         }
-        const pointHero=initial(0);pointHero.equipped=[];pointHero.bag=[];pointHero.stats=[0,0,0];const before=stats(pointHero);pointHero.stats=[1,1,1];const after=stats(pointHero);
-        if(after.hp-before.hp!==3||after.atk-before.atk!==1||after.def-before.def!==1)issues.push('ability point');
+        const pointHero=initial(0);pointHero.equipped=[];pointHero.bag=[];const before=stats(pointHero);pointHero.stats=[400,400,400];pointHero.ap=999;const after=stats(pointHero);
+        if(['hp','atk','def'].some(k=>after[k]!==before[k]))issues.push('legacy ability ignored');
         return {issues,checks};
       });
       assert.deepEqual(result.issues,[]);assert.equal(result.checks,1680);
@@ -89,7 +89,7 @@ test('Real game, editor, EXP rewards, stages and old-save round trips',async t=>
           for(const h of party.members)if(h.xp!==(h===party.members[0]?want:0))issues.push('xp '+count+'/'+kind+'/'+mode+'/'+memberKey(h));
           const before=party.members.map(h=>h.xp);rewardGroupKill(e);if(party.members.some((h,i)=>h.xp!==before[i]))issues.push('duplicate reward');
         }
-        const h=party.members[0];h.lv=59;h.xp=need(59)-1;const totalPoints=h.stats.reduce((a,b)=>a+b,0)+h.ap;withHero(h,()=>awardXP(1));if(party.members.some(member=>member.lv!==60||member.xp!==0)||h.stats.reduce((a,b)=>a+b,0)+h.ap!==totalPoints+3)issues.push('level 60');
+        const h=party.members[0];h.lv=59;h.xp=need(59)-1;withHero(h,()=>awardXP(1));if(party.members.some(member=>member.lv!==60||member.xp!==0)||Object.hasOwn(h,'ap')||Object.hasOwn(h,'stats'))issues.push('level 60');
         }finally{save=oldSave;render=oldRender;running=false;resetEncounter();}return issues;
       });assert.deepEqual(issues,[]);
     });
@@ -118,17 +118,17 @@ test('Real game, editor, EXP rewards, stages and old-save round trips',async t=>
       await game.page.evaluate(doc=>applyBalanceConfig(doc,{persist:false}),defaults);
       assert.deepEqual(defaults.balanceSettings.difficulty.modes.map(d=>d.reward),[1,1.3,1.65]);
     });
-    await t.test('Editing points, advancement, difficulty, monster/XP and equipment settings changes final runtime formulas',async()=>{
+    await t.test('Editing natural growth, advancement, difficulty, monster/XP and equipment settings changes final runtime formulas',async()=>{
       const issues=await game.page.evaluate(base=>{
         const doc=structuredClone(base);doc.classes[0].initialStats.hp=40;doc.classes[0].growthPerLevel.hp=6;doc.classes[0].growthSteps=[{every:5,hp:1,atk:2,def:1}];
-        Object.assign(doc.balanceSettings.progression.statsPerPoint,{hp:4,attack:2,defense:2});doc.balanceSettings.progression.advance.attackMultiplier=1.3;
+        doc.balanceSettings.progression.advance.attackMultiplier=1.3;
         doc.balanceSettings.progression.xpCurve.quadratic=5;doc.balanceSettings.skills.mastery.characterXpMultiplier=1.1;
         doc.balanceSettings.monsters.normal.hpPerLevel=10;doc.balanceSettings.monsters.awakened.hpPerLevel=.004;doc.balanceSettings.difficulty.modes[2].hp=2.1;
         doc.balanceSettings.rewards.xp.kindMultiplier.elite=2.8;doc.balanceSettings.rewards.xp.perLevel=10;
         doc.balanceSettings.equipment.baseStats.weaponAttackPerTier=4;doc.balanceSettings.equipment.enhance.statPerLevel=.06;doc.equipmentPowerSystem.strength.multipliers[9]=1.8;
-        applyBalanceConfig(doc,{persist:false});const issues=[],h=initial(0);h.lv=60;h.advanced=true;h.stats=[2,3,4];h.bag=[];h.equipped=[];
-        if(stats(h).hp!==Math.round((40+59*6+11+3*4)*1.12))issues.push('natural hp/points');
-        if(stats(h).atk!==Math.round((10+59+11*2+2*2)*1.3))issues.push('natural atk/advance');
+        applyBalanceConfig(doc,{persist:false});const issues=[],h=initial(0);h.lv=60;h.advanced=true;h.bag=[];h.equipped=[];
+        if(stats(h).hp!==Math.round((40+59*6+11)*GAMEPLAY_SETTINGS.progression.advance.hpMultiplier))issues.push('natural hp without AP');
+        if(stats(h).atk!==Math.round((10+59+11*2)*1.3))issues.push('natural atk/advance');
         if(need(59)!==EmberwildProgression.requiredXp(doc.balanceSettings,59))issues.push('xp formula');
         const e=makeEnemy(12,h,()=>.01),row=monsterCatalog().find(m=>m.id===e.monsterId),want=EmberwildProgression.monsterStats(GAMEPLAY_SETTINGS,e.lv,'elite',h.difficulty||0,row);
         if(e.hp!==want.hp)issues.push('monster formula');

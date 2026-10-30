@@ -69,10 +69,19 @@ function partyDropRateBonus(){const hs=party?heroes():(state?[state]:[]);return 
 function equipmentLevelGapDropFactor(rule,e){
   if(!['gear','gearLegendary','equipment'].includes(rule?.type)||!['normal','elite'].includes(e?.kind)||e.bossChallenge)return 1;
   const cfg=GAMEPLAY_SETTINGS.equipment?.dropLevelGap;if(!cfg?.enabled)return 1;
-  const mi=e.region??party?.map??0,max=MAPS[mi]?.max??e.lv??1,level=party?.members?.[0]?.lv??state?.lv??max,gap=Math.max(0,level-max-cfg.freeLevels);
+  const mi=e.region??party?.map??0,max=MAPS[mi]?.max??e.lv??1,level=party?.members?.[0]?.lv??state?.lv??max,gap=Math.max(0,level-(e.lv??max)-cfg.freeLevels);
   return Math.max(cfg.minimumMultiplier,1/(1+gap*cfg.penaltyPerLevel));
 }
-function effectiveDropChance(rule,e,bonus=partyDropRateBonus()){const mode=Math.max(0,Math.min(2,Number(e?.difficulty)||0)),base=Math.max(0,Math.min(1,Number(rule?.chanceByDifficulty?.[mode])||0));return Math.min(1,base*equipmentLevelGapDropFactor(rule,e)*(1+Math.max(0,Number(bonus)||0)));}
+function generalDropLevelGapFactor(rule,e){
+  if(!['normal','elite'].includes(e?.kind)||e?.bossChallenge||!['sourceMaterial','material','ore','dust','gear','gearLegendary','equipment'].includes(rule?.type))return 1;
+  const c=GAMEPLAY_SETTINGS.drops?.levelGap;if(!c?.enabled)return 1;
+  const level=party?.members?.[0]?.lv??state?.lv??e?.lv??1,gap=Math.max(0,level-(e.lv??level));
+  if(gap<=c.freeLevels)return 1;
+  if(gap<=c.midGap)return 1-(1-c.midMultiplier)*(gap-c.freeLevels)/(c.midGap-c.freeLevels);
+  if(gap<=c.highGap)return c.midMultiplier-(c.midMultiplier-c.highMultiplier)*(gap-c.midGap)/(c.highGap-c.midGap);
+  return Math.max(0,c.minimumMultiplier);
+}
+function effectiveDropChance(rule,e,bonus=partyDropRateBonus()){const mode=Math.max(0,Math.min(2,Number(e?.difficulty)||0)),base=Math.max(0,Math.min(1,Number(rule?.chanceByDifficulty?.[mode])||0));return Math.min(1,base*equipmentLevelGapDropFactor(rule,e)*generalDropLevelGapFactor(rule,e)*(1+Math.max(0,Number(bonus)||0)));}
 function configuredDropRules(e){const id=e.monsterId||resolveMonsterCatalogId(e);return (GAMEPLAY_SETTINGS.drops?.entries||[]).filter(r=>r.enabled!==false&&r.sources.includes(id)&&r.kinds.includes(e.kind)&&(r.minLevel===undefined||e.lv>=r.minLevel)&&(!r.maxLevel||e.lv<=r.maxLevel));}
 function configuredDropDescription(row,kind,mapIndex){
   const e={monsterId:row.id,kind,lv:row.lv??row.minLevel??MAPS[mapIndex]?.min??1,region:mapIndex,difficulty:party?.difficulty??state?.difficulty??0},bonus=partyDropRateBonus();
@@ -122,7 +131,7 @@ function rollConfiguredDrops(e,rng=Math.random){
 victory=function(){
   let e=enemy;if(!e)return;lastDefeatedEnemy={...e};let mode=e.difficulty||0,d=MODES[mode],mi=e.region??state.map,tier=regionTier(mi),kindIndex=e.kind==='normal'?0:e.kind==='elite'?1:2,r=GAMEPLAY_SETTINGS.rewards,mult=[r.kindMultiplier.normal,r.kindMultiplier.elite,r.kindMultiplier.boss][kindIndex],firstClear=e.kind==='final'&&!state.won;
   state.totalKills++;state.kills[e.mat]=(state.kills[e.mat]||0)+1;if(!state.discovered.includes(e.mat))state.discovered.push(e.mat);
-  let gold=Math.round((r.gold.base+e.lv*r.gold.perLevel)*mult*d.xp),xp=EmberwildProgression.enemyXp(GAMEPLAY_SETTINGS,e.lv,e.kind,mode,party?.members?.[0]?.lv??state?.lv);state.gold+=gold;state.ore+=Math.ceil(tier*(kindIndex===0?r.ore.normalKindMultiplier:r.ore.eliteBossKindMultiplier)*d.ore);
+  const playerLevel=party?.members?.[0]?.lv??state?.lv,gold=EmberwildProgression.enemyGold(GAMEPLAY_SETTINGS,e.lv,e.kind,mode,playerLevel),xp=EmberwildProgression.enemyXp(GAMEPLAY_SETTINGS,e.lv,e.kind,mode,playerLevel);state.gold+=gold;if(kindIndex>0||Math.random()<(r.ore.normalChanceByDifficulty?.[mode]??1)*generalDropLevelGapFactor({type:'ore'},e))state.ore+=Math.ceil(tier*(kindIndex===0?r.ore.normalKindMultiplier:r.ore.eliteBossKindMultiplier)*d.ore);
   rollConfiguredDrops(e);awardEther(e);
   if(e.kind==='final'){state.won=true;state.modeClears[mode]++;state.materials['日蝕王冠']=Math.max(1,state.materials['日蝕王冠']||0);running=false;}
   awardXP(xp);state.hp=Math.min(stats().hp,state.hp+stats().hp*r.postVictoryHeal);state.shield=0;note(`擊敗 ${e.name}（${d.name}）· ${gold} 金幣`);enemy=null;

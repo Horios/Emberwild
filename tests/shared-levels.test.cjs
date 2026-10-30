@@ -16,16 +16,16 @@ test('Player EXP drives all companion levels, growth, acquisition and progress d
       };
     });
 
-    await t.test('Reserve and archived companions gain real stats, automatic points, advanced skills and class advancement',async()=>{
+    await t.test('Reserve and archived companions gain real stats, natural growth, advanced skills and class advancement',async()=>{
       const r=await page.evaluate(()=>{
         __levelReset();setPartnerEnlisted(14,false);partyMember(13).hp=0;
         const before=party.members.slice(1).map(h=>stats(h));
         let amount=0;for(let lv=1;lv<20;lv++)amount+=need(lv);awardXP(amount);
-        const result={player:playerHero().lv,playerAdvanced:playerHero().advanced,archived:!isPartnerEnlisted(partyMember(14)),members:party.members.slice(1).map((h,i)=>({lv:h.lv,xp:h.xp,points:h.stats.reduce((a,b)=>a+b,0),advanced:h.advanced,hp:h.hp,attack:stats(h).atk,before:before[i].atk})),warrior:partyMember(10).skills[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(10)).core[0]],warriorSupport:partyMember(10).supportLevels.filter(Boolean).length,mageSlot:partyMember(12).active[0],mageExpected:__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(12)).active[0],archer:partyMember(14).skills[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(14)).core[0]]};
+        const result={player:playerHero().lv,playerAdvanced:playerHero().advanced,archived:!isPartnerEnlisted(partyMember(14)),members:party.members.slice(1).map((h,i)=>({lv:h.lv,xp:h.xp,legacyStats:Object.hasOwn(h,'stats'),advanced:h.advanced,hp:h.hp,attack:stats(h).atk,before:before[i].atk})),warrior:partyMember(10).skills[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(10)).core[0]],warriorSupport:partyMember(10).supportLevels.filter(Boolean).length,mageSlot:partyMember(12).active[0],mageExpected:__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(12)).active[0],archer:partyMember(14).skills[__EMBERWILD_COMPANION_TEST_API.companionPlan(partyMember(14)).core[0]]};
         save();return result;
       });
       assert.equal(r.player,20);assert.equal(r.playerAdvanced,false);assert(r.archived);
-      for(const h of r.members){assert.equal(h.lv,20);assert.equal(h.xp,0);assert.equal(h.points,57);assert(h.advanced);assert(h.attack>h.before);}
+      for(const h of r.members){assert.equal(h.lv,20);assert.equal(h.xp,0);assert.equal(h.legacyStats,false);assert(h.advanced);assert(h.attack>h.before);}
       assert.equal(r.members[3].hp,0);assert.equal(r.warrior,1);assert.equal(r.warriorSupport,0);assert.equal(r.mageSlot,r.mageExpected);assert.equal(r.archer,1);
     });
 
@@ -34,13 +34,13 @@ test('Player EXP drives all companion levels, growth, acquisition and progress d
         __levelReset(27,false,false);
         const doc=exportableBalance(),plan={...__testCloneCompanion(doc,1042,'晚加入的夥伴'),passives:[],initialStats:{hp:18,atk:9,def:2,crit:.07,critDamage:1.5,speed:100},growthPerLevel:{hp:2,atk:3,def:1,crit:0,critDamage:0,speed:2},growthSteps:[]};Object.assign(doc.companions.at(-1),plan);applyBalanceConfig(doc,{persist:false});
         showCompanionRecruitment();const levels=[...document.querySelectorAll('#modal .member-level')].map(x=>x.textContent);closeModal();
-        const h=acquireCompanion(1042),build={lv:h.lv,points:h.stats.slice(),skills:__EMBERWILD_COMPANION_TEST_API.companionPlan(h).core.map(i=>h.skills[i]),active:h.active.slice(),support:h.supportLevels.slice(),advanced:h.advanced};closeModal();
-        const old={stats:h.stats,equipped:h.equipped,advanced:h.advanced};h.stats=[0,0,0];h.equipped=[null,null,null,null,null];h.advanced=false;const actual=stats(h);Object.assign(h,old);
+        const h=acquireCompanion(1042),build={lv:h.lv,legacyStats:Object.hasOwn(h,'stats'),skills:__EMBERWILD_COMPANION_TEST_API.companionPlan(h).core.map(i=>h.skills[i]),active:h.active.slice(),support:h.supportLevels.slice(),advanced:h.advanced};closeModal();
+        const old={equipped:h.equipped,advanced:h.advanced};h.equipped=[null,null,null,null,null];h.advanced=false;const actual=stats(h);Object.assign(h,old);
         let amount=need(27)+need(28);awardXP(amount);showCompanionRecruitment();const updated=[...document.querySelectorAll('#modal .member-level')].map(x=>x.textContent);closeModal();
         return {levels,updated,build,actual,live:h.lv};
       });
       assert.deepEqual(r.levels,Array(6).fill('Lv.27'));assert.deepEqual(r.updated,Array(5).fill('Lv.29'));
-      assert.equal(r.build.lv,27);assert.deepEqual(r.build.points,[52,26,0]);assert(r.build.advanced);assert.deepEqual(r.build.skills,[1,1]);assert.notEqual(r.build.active[0],null);assert(r.build.support.every(v=>v===0));
+      assert.equal(r.build.lv,27);assert.equal(r.build.legacyStats,false);assert(r.build.advanced);assert.deepEqual(r.build.skills,[1,1]);assert.notEqual(r.build.active[0],null);assert(r.build.support.every(v=>v===0));
       assert.equal(r.actual.hp,70);assert.equal(r.actual.atk,87);assert.equal(r.actual.def,28);assert.equal(r.actual.speed,152);assert.equal(r.live,29);
     });
 
@@ -96,9 +96,9 @@ test('Player EXP drives all companion levels, growth, acquisition and progress d
     await t.test('A scroll selected through a companion uses the player remaining EXP and updates archived growth too',async()=>{
       const r=await page.evaluate(()=>{
         __levelReset(14);setPartnerEnlisted(14,false);selectHero(10);playerHero().xp=need(14)-10;state.materials['升級卷軸']=1;useLevelScroll(10);
-        return {members:party.members.map(h=>({lv:h.lv,xp:h.xp})),count:state.materials['升級卷軸'],advanced:partyMember(14).advanced,points:partyMember(14).stats.reduce((a,b)=>a+b,0),saved:save()};
+        return {members:party.members.map(h=>({lv:h.lv,xp:h.xp})),count:state.materials['升級卷軸'],advanced:partyMember(14).advanced,legacyStats:Object.hasOwn(partyMember(14),'stats'),saved:save()};
       });
-      assert.deepEqual(r.members,Array(6).fill({lv:15,xp:0}));assert.equal(r.count,0);assert(r.advanced);assert.equal(r.points,42);assert(r.saved);
+      assert.deepEqual(r.members,Array(6).fill({lv:15,xp:0}));assert.equal(r.count,0);assert(r.advanced);assert.equal(r.legacyStats,false);assert(r.saved);
     });
 
     await t.test('A failed scroll save rolls back player and all companion level, growth and skill changes',async()=>{

@@ -2,10 +2,10 @@ const test=require('node:test'),assert=require('node:assert/strict'),path=requir
 const {loadRuntime}=require('./headless-runtime.cjs');
 const root=path.resolve(__dirname,'..'),editorRoot=path.resolve(root,'../Emberwild-Balance');
 const json=(r,code)=>JSON.parse(r.run('JSON.stringify('+code+')'));
-const prices={'紅色草':1,'紅色草泥':3,'小蟲':3,'清水':1,'藥水瓶':1};
+const prices={'紅色草':0,'紅色草泥':0,'小蟲':0,'清水':0,'藥水瓶':0};
 function game(){const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);closeModal();');return r;}
 
-test('material sale defaults agree between designer and game; paste sells for 3 gold',()=>{
+test('material sale defaults agree between designer and game; low-tier crafting ingredients sell for 0 gold',()=>{
  const e=loadRuntime(editorRoot,'balance-editor.html'),g=game();
  for(const [key,price] of Object.entries(prices)){
   g.ctx.key=key;e.ctx.key=key;
@@ -13,7 +13,7 @@ test('material sale defaults agree between designer and game; paste sells for 3 
   assert.equal(e.run('data.balanceSettings.economy.materialPrices.find(x=>x.key===key).sellPrice'),price);
  }
  const gold=g.run('state.gold');g.run('state.materials["紅色草泥"]=2;sellMaterial("紅色草泥",2);');
- assert.equal(g.run('state.gold'),gold+6);assert.equal(g.run('materialCount("紅色草泥")'),0);
+ assert.equal(g.run('state.gold'),gold);assert.equal(g.run('materialCount("紅色草泥")'),0);
 });
 
 test('dedicated materials page is navigable; form edits, addition and reset keep other economy prices',()=>{
@@ -36,7 +36,7 @@ test('dedicated materials page is navigable; form edits, addition and reset keep
  assert(e.run('data.balanceSettings.economy.materialPrices.some(x=>x.key==="新材料")'));
  const gear=json(e,'data.balanceSettings.economy.equipmentSellPriceByQuality');
  e.elements.get('resetMaterialPrices').onclick();
- assert.equal(e.run('data.balanceSettings.economy.materialPrices.find(x=>x.key==="紅色草泥").sellPrice'),3);
+ assert.equal(e.run('data.balanceSettings.economy.materialPrices.find(x=>x.key==="紅色草泥").sellPrice'),0);
  assert.deepEqual(json(e,'data.balanceSettings.economy.equipmentSellPriceByQuality'),gear);
  assert.deepEqual(e.errors,[]);
 });
@@ -53,12 +53,12 @@ test('designer export imports custom material prices into real sale transactions
  assert.deepEqual(g.errors,[]);assert.deepEqual(reload.errors,[]);
 });
 
-test('legacy balance without paste row uses 3 gold fallback and does not replace other custom prices',()=>{
+test('legacy balance without paste row uses zero-value fallback and does not replace other custom prices',()=>{
  const g=game();g.run('{const d=exportableBalance();d.balanceSettings.economy.materialPrices=d.balanceSettings.economy.materialPrices.filter(x=>x.key!=="紅色草泥");d.balanceSettings.economy.materialPrices.find(x=>x.key==="小蟲").sellPrice=9;applyBalanceConfig(d);}');
- assert.equal(g.run('materialSellPrice("紅色草泥")'),3);assert.equal(g.run('materialSellPrice("小蟲")'),9);
+ assert.equal(g.run('materialSellPrice("紅色草泥")'),0);assert.equal(g.run('materialSellPrice("小蟲")'),9);
  const e=loadRuntime(editorRoot,'balance-editor.html');e.ctx.doc=json(g,'exportableBalance()');
  e.run('data=doc;markDirty();ensureArrays();');
- assert.equal(e.run('data.balanceSettings.economy.materialPrices.find(x=>x.key==="紅色草泥").sellPrice'),3);
+ assert.equal(e.run('data.balanceSettings.economy.materialPrices.find(x=>x.key==="紅色草泥").sellPrice'),0);
  assert.equal(e.run('data.balanceSettings.economy.materialPrices.find(x=>x.key==="小蟲").sellPrice'),9);
 });
 

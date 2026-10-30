@@ -15,7 +15,7 @@
     if(!s||typeof s!=='object')return s;
     s.meta??={};
     s.meta.numericCompressionVersion=COMPRESSION_VERSION;
-    s.progression??={};s.progression.statsPerLevel??={};s.progression.statsPerPoint??={};s.progression.advance??={};
+    s.progression??={};s.progression.statsPerLevel??={};s.progression.advance??={};
     Object.assign(s.progression.statsPerLevel,{hp:4,attack:1,defense:1});
     s.skills??={};s.skills.core??={};s.skills.gems??={};
     s.skills.core.effectPerExtraLevel=.18;

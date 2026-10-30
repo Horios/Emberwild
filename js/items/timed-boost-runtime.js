@@ -64,8 +64,8 @@
   supplyDetail=function(item){if(!api.isItem(item))return detailBase(item);return (item.boostType==='speed2'?'解鎖 2× 戰鬥倍速':api.LABELS[item.boostType]+'＋'+item.bonusPercent+'%')+' · 持續 '+item.durationMinutes+' 分鐘（現實時間） · 同名同效果累加時間；不同倍率獨立計時；單一狀態上限 24 小時';};
   const awardBase=awardXP;
   awardXP=function(amount,{applyExpBoost=true}={}){
-    const h=playerHero(),capped=h.lv>=levelCap(h),earned=Math.max(0,Math.round(amount*(applyExpBoost?1+api.bonus(party,'exp')/100:1)));
-    const result=awardBase(earned);if(!capped&&earned>0)note(characterName(h)+' 獲得 '+earned+' EXP','exp');return result;
+    const h=playerHero(),capped=h.lv>=levelCap(h),earned=Math.max(0,(Number(amount)||0)*(applyExpBoost?1+api.bonus(party,'exp')/100:1));
+    const result=awardBase(earned);if(!capped&&earned>0)note(characterName(h)+' 獲得 '+Number(earned.toFixed(2))+' EXP','exp');return result;
   };
   const dropBase=partyDropRateBonus;
   partyDropRateBonus=function(){return dropBase()+api.bonus(party,'drop')/100;};

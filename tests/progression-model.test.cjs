@@ -18,27 +18,25 @@ test('LV30→31 has no awakening step and low-attack builds can damage every ord
   for(let l=1;l<=60;l++)for(const c of curve.defaults.classes){const v=curve.naturalStats(c,l),e=curve.monsterStats(s,l,'normal',2);assert(v.atk-e.def*.55>1);}
 });
 test('Three-person XP growth requires increasingly more encounters at higher levels',()=>{
-  const s=settings();assert.equal(curve.requiredXp(s,1),50);assert.equal(curve.requiredXp(s,59),28934);
+  const s=settings();assert.equal(curve.requiredXp(s,1),50);assert.equal(curve.requiredXp(s,59),101269);
   assert.equal(curve.enemyXp(s,59),549);assert.equal(curve.xpShare(549,3),183);
   assert(curve.requiredXp(s,59)/curve.xpShare(curve.enemyXp(s,59),3)/4.5>35);
-  let previous=0,previousIncrease=0;for(let l=1;l<60;l++){const share=curve.xpShare(curve.enemyXp(s,l),3),fights=curve.requiredXp(s,l)/share/4.5;const oldFights=(24+18*l+6*l*l)/share/4.5,increase=fights-oldFights;assert(fights>=previous);assert(increase>=previousIncrease-1e-10,`non-growing increase at LV${l}`);previous=fights;previousIncrease=increase;}
+  let previous=0;for(let l=1;l<60;l++){const share=curve.xpShare(curve.enemyXp(s,l),3),fights=curve.requiredXp(s,l)/share/4.5;assert(fights>=previous,`non-growing encounter need LV${l}`);previous=fights;}assert(curve.requiredXp(s,40)>curve.requiredXp(s,30)*2);assert(curve.requiredXp(s,59)>curve.requiredXp(s,45)*2);
   assert(curve.enemyXp(s,59,'boss')>curve.enemyXp(s,59,'elite')&&curve.enemyXp(s,59,'elite')>curve.enemyXp(s,59));
 });
-test('Low-level foes lose EXP before party sharing, with full rewards on equal or stronger foes',()=>{
-  const s=settings(),rate=curve.xpLevelGapFactor;
-  for(const [gap,expected] of [[0,1],[5,1],[6,.9],[10,.5],[11,.42],[15,.1],[16,.05],[25,.05]]){
-    assert(Math.abs(rate(s,10+gap,10)-expected)<1e-10,'gap '+gap);
-  }
-  assert.equal(rate(s,8,10),1);
-  assert.equal(curve.enemyXp(s,10),108);
-  assert.equal(curve.enemyXp(s,10,'normal',0,20),54);
-  assert.equal(curve.enemyXp(s,10,'normal',0,26),5);
-  assert.equal(curve.xpShare(curve.enemyXp(s,10,'normal',0,26),3),2);
-  assert.equal(curve.enemyXp(s,10,'elite',1,20),Math.round(108*2.2*1.45*.5));
-  assert.equal(curve.enemyXp(s,10,'boss',0,26),54);
-  s.progression.xpLevelGap.enabled=false;
-  assert.equal(curve.enemyXp(s,10,'normal',0,26),108);
+test('Low-level EXP and gold decay to a true zero; fractional rewards survive sharing',()=>{
+ const s=settings(),xp=curve.xpLevelGapFactor,gold=curve.goldLevelGapFactor;
+ for(const [gap,expected] of [[0,1],[5,1],[6,.84],[10,.2],[11,.17],[15,.05],[16,.04],[19,.01],[20,0],[26,0]])assert(Math.abs(xp(s,10+gap,10)-expected)<1e-10,'EXP gap '+gap);
+ for(const [gap,expected] of [[0,1],[5,1],[6,.87],[10,.35],[11,.30],[15,.10],[16,.08],[20,0]])assert(Math.abs(gold(s,10+gap,10)-expected)<1e-10,'gold gap '+gap);
+ assert.equal(curve.enemyXp(s,10,'normal',0,30),0);
+ assert.equal(curve.enemyGold(s,10,'normal',0,30),0);
+ const fractional=curve.xpShare(curve.enemyXp(s,10,'normal',0,29),3);
+ assert(fractional>0&&fractional<1);
+ assert.equal(curve.enemyXp(s,10,'normal',0,8),curve.enemyXp(s,10));
+ assert.equal(curve.enemyGold(s,10,'normal',0,8),curve.enemyGold(s,10));
+ s.progression.xpLevelGap.enabled=false;assert.equal(curve.enemyXp(s,10,'normal',0,30),curve.enemyXp(s,10));
 });
+
 test('Direct equipment stats and each displayed contribution are integral and monotonic',()=>{
   for(const raw of [{atk:3,hp:0,def:0},{atk:0,hp:8,def:2},{atk:1,hp:3,def:0},{atk:36,hp:0,def:0}]){
     let previous;for(const power of curve.defaults.powerMultipliers){const out=curve.gearStats(raw,{atk:15},power,0,1);

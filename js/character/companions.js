@@ -8,7 +8,7 @@
     const name=p.name??p.names?.[0];
     if(typeof name!=='string'||!name.trim()||name!==name.trim()||Array.from(name).length>20||/[\u0000-\u001f\u007f]/.test(name))throw Error('夥伴角色名稱無效：'+p.id);
     if(p.name===undefined&&(!Array.isArray(p.names)||!p.names.length||p.names.length>30||p.names.some(n=>typeof n!=='string'||!n.trim()||n!==n.trim()||Array.from(n).length>20||/[\u0000-\u001f\u007f]/.test(n))))throw Error('舊版夥伴名字池無效：'+p.id);
-    if(!Array.isArray(p.points)||!p.points.length||p.points.length>32||p.points.some(n=>!Number.isInteger(n)||n<0||n>2))throw Error('夥伴配點順序無效：'+p.id);
+
     for(const key of ['core','active','proc','support'])if(!Array.isArray(p[key])||p[key].length>64||new Set(p[key]).size!==p[key].length||p[key].some(n=>!Number.isInteger(n)||n<0||n>63))throw Error('夥伴技能索引無效：'+p.id+' '+key);
     if(checkSkills){
       const skills=classes[p.job]?.skills||[],supports=supportSkills[p.job]||[];
@@ -118,9 +118,7 @@
     const plan=companionPlan(h);if(!plan)return;
     h.name=plan.name;
     h.advanced=h.lv>=Math.round(GS('progression.advance.level',15));
-    const points=Math.max(0,Math.round(GS('progression.starting.abilityPoints',0)+(h.lv-1)*GS('progression.levelRewards.abilityPoints',3)));
-    h.stats=[0,0,0];for(let n=0;n<points;n++)h.stats[plan.points[n%plan.points.length]]++;
-    h.ap=0;h.sp=0;
+    delete h.stats;delete h.ap;delete h.sp;
     delete h.mastery;
     syncHeroSkillArrays(h);
     h.skills=h.skills.map((_,i)=>Number(plan.core.includes(i)&&!!CLASSES[h.job].skills[i]&&h.lv>=CLASSES[h.job].skills[i][2]&&skillAllowedForPartner(h,CLASSES[h.job].skills[i][6])));
@@ -149,11 +147,7 @@
       if(companionPlan(h))applyPlan(h,{fullHealth:fullHealth&&h.lv>previous});
       else{
         // Retain the builds of old saves that predate fixed companion plans.
-        const budget=Math.max(0,Math.round(GS('progression.starting.abilityPoints',0)+(h.lv-1)*GS('progression.levelRewards.abilityPoints',3)));
-        let excess=Math.max(0,h.stats.reduce((a,b)=>a+b,0)-budget);
-        for(let i=h.stats.length-1;i>=0&&excess>0;i--){const removed=Math.min(h.stats[i],excess);h.stats[i]-=removed;excess-=removed;}
-        h.ap=budget-h.stats.reduce((a,b)=>a+b,0);
-        h.sp=Math.max(0,h.sp+(h.lv-previous)*Math.round(GS('progression.levelRewards.skillPoints',2)));
+        delete h.stats;delete h.ap;delete h.sp;
         h.advanced=h.advanced&&h.lv>=Math.round(GS('progression.advance.level',15));
         h.active=h.active.map(i=>i!==null&&h.skills[i]?i:null);
         h.procSlots=(h.procSlots||Array(PROC_SLOT_COUNT).fill(null)).map(i=>i!==null&&h.skills[i]?i:null);
@@ -286,15 +280,15 @@
   exportableBalance=function(){const doc=originalExportBalance();doc.companionSkillVersion=1;doc.companionNameVersion=1;doc.companions=copy(plans);doc.passiveDefinitions=copy(passiveDefinitions);doc.companionSettings=copy(config);for(let j=0;j<doc.classes.length;j++)for(let i=0;i<doc.classes[j].skills.length;i++)doc.classes[j].skills[i].partnerId=CLASSES[j].skills[i][6]?.partnerId??null;doc.notes=[...(doc.notes||[]),'companions 每位角色使用單一 name 與獨立技能池；core/support 為夥伴專屬技能，達到需求角色等級後自動學會，不需要二轉與精通；active/proc 依順序配置，可個別啟用或禁用並保存。passives 引用該夥伴的 passiveDefinitions，達到 requiredLevel 且啟用後常駐生效、不占技能槽。'];return doc;};
   const originalResetBalance=resetBalanceJSON;
   resetBalanceJSON=function(){restoringDefaults=true;try{originalResetBalance();}finally{restoringDefaults=false;}config=Model.defaults(CLASSES,GAMEPLAY_SETTINGS);if(party){ensureRoster(party);for(const h of party.members){applyPlan(h);cleanPartnerSkillSlots(h);}save();}if(state)render();};
-  for(const name of ['allocate','resetStats','learn','learnSupport','equipSkill','clearActiveSkill','slotProcSkill','clearProcSkill','slotSupport','socket','advance']){
+  for(const name of ['learn','learnSupport','equipSkill','clearActiveSkill','slotProcSkill','clearProcSkill','slotSupport','socket','advance']){
     const original=globalThis[name];if(typeof original!=='function')continue;
-    globalThis[name]=function(...args){if(companionPlan(state))return toast('夥伴的技能與配點依固定走向自動成長');return original(...args);};
+    globalThis[name]=function(...args){if(companionPlan(state))return toast('夥伴的技能依固定走向自動成長');return original(...args);};
   }
   function companionCharacterView(){
     const h=state,plan=companionPlan(h),v=stats(h),c=CLASSES[h.job],advanceLevel=Math.round(GS('progression.advance.level',15));
     const percentage=n=>Math.round((n||0)*100);
     const detail=(items,labels)=>Object.entries(items||{}).map(([key,value])=>`${esc(labels[key]||key)} +${percentage(value)}%`).join(' / ');
-    return `<p class="companion-ability-intro">${esc(plan?.description||'原有隊員')} ${plan?'<span>升級後自動配點與二轉。</span>':''}</p><div class="companion-key-stats"><span>生命 <b>${v.hp}</b></span><span>攻擊 <b>${v.atk}</b></span><span>防禦 <b>${v.def}</b></span><span>暴擊 <b>${percentage(v.crit)}%</b></span><span>速度 <b>${v.speed}</b></span></div><div class="companion-growth-line"><b>能力配點</b>${[c.main,'體質','韌性'].map((name,i)=>`<span>${esc(name)} ${h.stats[i]}</span>`).join('')}</div><div class="companion-advance-line"><b>職業進階</b><span>LV${advanceLevel} · ${esc(c.advanced)} · ${h.advanced?(plan?'已自動完成':'已完成'):(plan?'達到等級後自動完成':'尚未完成')}</span></div><details class="companion-ability-extra"><summary>查看進階詳細屬性</summary><div class="companion-extra-stats"><span>暴擊傷害 ${percentage(v.critDamage)}%</span><span>防禦穿透 ${Number((v.pierce||0).toFixed(1))}</span><span>防禦無視 ${percentage(v.defenseIgnore)}%</span><span>生命竊取 ${percentage(v.lifesteal)}%</span><span>閃避 ${percentage(v.evasion)}%</span><span>武器屬性 ${esc(ELEMENTS[weaponElement(h)])}</span><span>全屬性增傷 ${percentage(v.elementBonus)}%</span></div><p>${detail(v.elementDamage,ELEMENTS)}</p><p>${detail(v.raceDamage,RACES)}</p><p>${Object.entries(v.resist||{}).map(([key,value])=>`${esc(ELEMENTS[key]||key)}抗性 ${percentage(value)}%`).join(' / ')}</p></details>`;
+    return `<p class="companion-ability-intro">${esc(plan?.description||'原有隊員')} ${plan?'<span>升級後依職業自然成長並自動二轉。</span>':''}</p><div class="companion-key-stats"><span>生命 <b>${v.hp}</b></span><span>攻擊 <b>${v.atk}</b></span><span>防禦 <b>${v.def}</b></span><span>暴擊 <b>${percentage(v.crit)}%</b></span><span>速度 <b>${v.speed}</b></span></div><div class="companion-advance-line"><b>職業進階</b><span>LV${advanceLevel} · ${esc(c.advanced)} · ${h.advanced?(plan?'已自動完成':'已完成'):(plan?'達到等級後自動完成':'尚未完成')}</span></div><details class="companion-ability-extra"><summary>查看進階詳細屬性</summary><div class="companion-extra-stats"><span>暴擊傷害 ${percentage(v.critDamage)}%</span><span>防禦穿透 ${Number((v.pierce||0).toFixed(1))}</span><span>防禦無視 ${percentage(v.defenseIgnore)}%</span><span>生命竊取 ${percentage(v.lifesteal)}%</span><span>閃避 ${percentage(v.evasion)}%</span><span>武器屬性 ${esc(ELEMENTS[weaponElement(h)])}</span><span>全屬性增傷 ${percentage(v.elementBonus)}%</span></div><p>${detail(v.elementDamage,ELEMENTS)}</p><p>${detail(v.raceDamage,RACES)}</p><p>${Object.entries(v.resist||{}).map(([key,value])=>`${esc(ELEMENTS[key]||key)}抗性 ${percentage(value)}%`).join(' / ')}</p></details>`;
   }
   function companionSkillsView(){
     const h=state,plan=companionPlan(h),mastery=globalThis.__EMBERWILD_MASTERY;
