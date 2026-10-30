@@ -7,7 +7,8 @@ EmberwildHealingPotions.migrateDrops({monsters:{catalog:DEFAULT_MONSTER_CATALOG}
 GAME_BALANCE_DEFAULTS.affixes.extendedValues.dropRateBonus ??= {normal:0,fine:5,rare:10,legendary:20};
 GAME_BALANCE=normalizeRuntimeBalance(GAME_BALANCE);
 GAMEPLAY_SETTINGS_DEFAULTS.monsters.catalog ??= cloneGameplaySettings(DEFAULT_MONSTER_CATALOG);
-GAMEPLAY_SETTINGS_DEFAULTS.drops ??= {entries:cloneGameplaySettings(DEFAULT_DROP_ENTRIES)};
+GAMEPLAY_SETTINGS_DEFAULTS.drops ??= {};
+GAMEPLAY_SETTINGS_DEFAULTS.drops.entries ??= cloneGameplaySettings(DEFAULT_DROP_ENTRIES);
 
 mergeGameplayShape=function mergeGameplayShapeDrops(def,src,path=''){
     if(/^drops\.entries\.\d+$/.test(path)&&src&&typeof src==='object')return cloneGameplaySettings(src);
