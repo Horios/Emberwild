@@ -71,7 +71,8 @@
   catch(e){loadParty(before);state=partyMember(oldState)||p;toast('操作未保存：'+e.message);return false;}
  }
  globalThis.selectSkillEquipment=function(id){
-  const h=state;if(h!==owner())return false;
+  // The skill page edits the party leader, even when another hero is selected.
+  const h=owner();if(!h)return false;
   const g=id===null?null:equipment(h).find(g=>g.id===id),sk=g&&S.byId(g.skillId);
   if(id!==null&&(!g||!sk||!sk.jobs.includes(h.job)||sk.disabled))return false;
   return transaction(()=>{h.activeSkillEquipmentId=id;refresh(h);S.refreshHero(h);});
