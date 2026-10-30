@@ -13,6 +13,15 @@ test('real LV2 to LV3 progression and old balance/save migration grant all four 
   assert.deepEqual(r.errors,[]);
  }
 });
+test('import migration reads permanent unlocks from incoming save, not the previously active team',()=>{
+ const r=game(0);
+ r.run(`state.lv=5;save();globalThis.importSkill=__EMBERWILD_SKILLS.byId('class0-initial1');importSkill.requiredMastery='sword';importSkill.requiredMasteryLevel=999;globalThis.importKey='0:core:'+importSkill.adapter.index;globalThis.importRaw=JSON.parse(JSON.stringify(packParty()));importRaw.buildSystem.permanent.unlocks[importKey]=true;delete party.buildSystem.permanent.unlocks[importKey];state.mastery.sword=0;`);
+ r.run('loadParty(importRaw)');
+ assert.equal(r.run('party.buildSystem.permanent.unlocks[importKey]'),true);
+ assert.equal(r.run('state.skills[importSkill.adapter.index]'),1);
+ assert.equal(r.run('__EMBERWILD_TEAMS.plan().skills[importSkill.adapter.index]'),1);
+ assert.deepEqual(r.errors,[]);
+});
 test('weapon removal, source disposal, skills, gems and cooldowns remain frozen until the next encounter, including reload',()=>{
  const r=game(1);r.run(`state.lv=25;state.mastery.fire=100000;globalThis.g=gear(3,0,0,1);g.skillId='job1-core2';g.skillSockets={version:1,count:1,gems:[0],firstMode:'skill'};addGear(g);equipSharedGear(g.id,memberKey(state),0);selectSkillEquipment(g.id);configureSkill('proc',0,'job1-core2');configureSkill('active',1,'class1-initial1');startSelectedExploration();globalThis.before=battleStats(state);globalThis.oldActive=state.active.slice();globalThis.encounter=foes;actorCooldowns[memberKey(state)+'-'+state.active[1]]=5;globalThis.cursor={order:[],index:0,unit:null};combatRoundProgress=cursor;state.hp=before.hp;globalThis.oldHp=state.hp;`);
  const cd=json(r,'actorCooldowns');r.run(`unequipSharedGear(g.id);configureSkill('active',1,'class1-initial2');selectSkillEquipment(null);`);
