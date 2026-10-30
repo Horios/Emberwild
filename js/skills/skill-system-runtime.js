@@ -2,7 +2,7 @@
 (()=>{
  'use strict';
  const M=EmberwildSkillSystem,copy=M.copy,T=()=>globalThis.__EMBERWILD_TEAMS;
- let system=null,byId=new Map(),byPosition=new Map(),refreshing=false;
+ let system=null,byId=new Map(),byPosition=new Map(),refreshing=false,restoringBuild=null;
  const wornCache=new WeakMap();
  function worn(h){if(!party?.members.includes(h))return (h.bag||[]).filter(g=>h.equipped?.includes(g.id));if(!wornCache.has(h))wornCache.set(h,equipment(h));return wornCache.get(h);}
  const player=()=>party?.members[0],companion=h=>h&&h!==player()&&h.companionId!==undefined;
@@ -14,7 +14,7 @@
   if(!sk||sk.disabled||!sk.jobs.includes(h.job)||sk.partnerId!=null&&sk.partnerId!==h.companionId)return false;
   const level=sk.requiredLevel??sk.level??1;if(h.lv<level)return false;
   if(companion(h)){const p=globalThis.__EMBERWILD_COMPANION_TEST_API?.companionPlan(h);return sk.partnerId===h.companionId&&(sk.type==='passive'?p?.passives?.includes(sk.id):(sk.adapter.kind==='core'?p?.core:p?.support)?.includes(sk.adapter.index));}
-  const key=`${h.job}:${M.adapterFor(sk,h.job).kind}:${M.adapterFor(sk,h.job).index}`,permanent=T()?.build()?.permanent,unlocked=permanent?.unlocks?.[key];
+  const key=`${h.job}:${M.adapterFor(sk,h.job).kind}:${M.adapterFor(sk,h.job).index}`,permanent=restoringBuild?.permanent||T()?.build()?.permanent,unlocked=permanent?.unlocks?.[key];
   if(!unlocked&&sk.requiredMastery&&__EMBERWILD_MASTERY.masteryLevelFromXp(h.mastery?.[sk.requiredMastery]||0)<(sk.requiredMasteryLevel||0))return false;
   const gates=sk.unlockConditions||{};
   if(!unlocked&&(gates.classMasteryLevel||['materials','bossKills','eliteKills','bossEquipment'].some(k=>gates[k]?.length)))return false;
@@ -115,7 +115,7 @@
   }
   const d=M.migrateSave(migrateLegacyGemSave(raw),system),members=d.version===3?d.members:[d],h=members[0],b=d.buildSystem;
   if(d.skillTutorialVersion!==1&&d.story?.quests?.goddess_intro?.done){h.acquiredSkillIds??=[];for(const sk of system.definitions.filter(sk=>sk.sources.some(s=>s.rewardOnly))){const a=sk.adapter;if((h.job===a.job&&h.supportLevels?.[a.index]||b?.plans?.some(p=>p.job===a.job&&p.supportLevels?.[a.index]))&&!h.acquiredSkillIds.includes(sk.id))h.acquiredSkillIds.push(sk.id);}}d.skillTutorialVersion=1;
-  if(b){for(const p of b.plans){if(p.job===null){p.skillLoadout=null;p.activeSkillEquipmentId=null;continue;}const tmp={...h,job:p.job,advanced:!!b.permanent.classes[p.job]?.advanced,...copy(p)};tmp.advanced=!!b.permanent.classes[p.job]?.advanced;refreshHero(tmp);for(const f of ['skills','supportLevels','active','procSlots','supportSlots','skillLoadout','activeSkillEquipmentId','passiveEnabled'])if(tmp[f]!==undefined)p[f]=copy(tmp[f]);for(const [kind,list] of [['core',p.skills],['support',p.supportLevels]])list.forEach((v,i)=>{if(v)b.permanent.unlocks[`${p.job}:${kind}:${i}`]=true;});}const p=b.plans.find(x=>x.id===b.activeId);if(p?.job!==null)for(const f of ['skills','supportLevels','active','procSlots','supportSlots','skillLoadout','activeSkillEquipmentId','passiveEnabled'])if(p[f]!==undefined)h[f]=copy(p[f]);}
+  if(b){restoringBuild=b;try{for(const p of b.plans){if(p.job===null){p.skillLoadout=null;p.activeSkillEquipmentId=null;continue;}const tmp={...h,job:p.job,advanced:!!b.permanent.classes[p.job]?.advanced,...copy(p)};tmp.advanced=!!b.permanent.classes[p.job]?.advanced;refreshHero(tmp);for(const f of ['skills','supportLevels','active','procSlots','supportSlots','skillLoadout','activeSkillEquipmentId','passiveEnabled'])if(tmp[f]!==undefined)p[f]=copy(tmp[f]);for(const [kind,list] of [['core',p.skills],['support',p.supportLevels]])list.forEach((v,i)=>{if(v)b.permanent.unlocks[`${p.job}:${kind}:${i}`]=true;});}const p=b.plans.find(x=>x.id===b.activeId);if(p?.job!==null)for(const f of ['skills','supportLevels','active','procSlots','supportSlots','skillLoadout','activeSkillEquipmentId','passiveEnabled'])if(p[f]!==undefined)h[f]=copy(p[f]);}finally{restoringBuild=null;}}
   for(const member of members)refreshHero(member);
   if(raw.skillSystemVersion!==M.VERSION&&d.offlineExploration?.combat){d.offlineExploration.combat.progress=null;d.offlineExploration.combat.actorCooldowns={};d.offlineExploration.combat.supportCooldowns={};}
   return d;
