@@ -28,16 +28,17 @@
   return c;
  }
  function ensure(){if(party&&!party.offlineExploration)party.offlineExploration=fresh();return clock()?migrate(clock()):null;}
- function snapshot(){return copy({foes,enemyId:enemy?.id,round,partyClock,effects,actorCooldowns,supportCooldowns,progress:combatRoundProgress,activeBattleStat,questChallenge:party.questChallenge||null,states:hooks().map(h=>h.pack()),heroes:party.members.map(h=>Object.fromEntries(transient.filter(k=>h[k]!==undefined).map(k=>[k,h[k]])))});}
+ function snapshot(){return copy({configuration:globalThis.EmberwildBattleConfiguration?.pack()??null,foes,enemyId:enemy?.id,round,partyClock,effects,actorCooldowns,supportCooldowns,progress:combatRoundProgress,activeBattleStat,questChallenge:party.questChallenge||null,states:hooks().map(h=>h.pack()),heroes:party.members.map(h=>Object.fromEntries(transient.filter(k=>h[k]!==undefined).map(k=>[k,h[k]])))});}
  function hydrate(c){
   migrate(c);
   roundIterator=null;nextActionAt=c.nextAt;roundStartedAt=c.roundAt;
   running=c.status==='running';lastMode=running;
-  const b=c.combat;if(!b)return;
+  const b=c.combat;if(!b){globalThis.EmberwildBattleConfiguration?.restore(null);return;}
   foes=copy(b.foes);enemy=foes.find(e=>e.id===b.enemyId)||null;round=b.round;partyClock=b.partyClock;effects=copy(b.effects);
   actorCooldowns=copy(b.actorCooldowns);supportCooldowns=copy(b.supportCooldowns);combatRoundProgress=copy(b.progress);activeBattleStat=copy(b.activeBattleStat);party.questChallenge=copy(b.questChallenge);
   hooks().forEach((h,i)=>h.restore(copy(b.states[i])));
   party.members.forEach((h,i)=>{for(const k of transient){if(b.heroes[i]?.[k]===undefined)delete h[k];else h[k]=b.heroes[i][k];}});
+  globalThis.EmberwildBattleConfiguration?.restore(b.configuration);
   running=c.status==='running';lastMode=running;
  }
  function validateCombat(b,members){
@@ -63,7 +64,7 @@
    if(b.heroes.length!==members.length||b.heroes.some(h=>!Number.isFinite(h.hp)||h.hp<0||!Number.isFinite(h.shield)||h.shield<0)||b.foes.some(e=>!e||typeof e.id!=='string'||!Number.isFinite(e.hp)||e.hp<0||!Number.isFinite(e.maxhp)||e.maxhp<=0))throw Error('離線戰鬥角色資料無效');
    if(b.questChallenge&&(typeof b.questChallenge.key!=='string'||typeof b.questChallenge.name!=='string'||!Number.isInteger(b.questChallenge.mapIndex)))throw Error('離線任務關卡無效');
    if(b.progress&&(!Array.isArray(b.progress.order)||!Number.isInteger(b.progress.index)||b.progress.index<0||b.progress.index>b.progress.order.length))throw Error('離線回合游標無效');
-   validateCombat(b,members);
+   validateCombat(b,members);globalThis.EmberwildBattleConfiguration?.validate(b.configuration,members);
   }
   for(const r of [c.receipt,c.pendingReceipt].filter(Boolean)){if(!validTime(r.start)||!validTime(r.end)||r.end<r.start||typeof r.id!=='string'||typeof r.complete!=='boolean'||!Array.isArray(r.levels)||!Array.isArray(r.gear)||!r.items||!r.boosts||![r.effectiveMs,r.kills,r.xp,r.goldGained,r.goldSpent].every(n=>Number.isFinite(n)&&n>=0))throw Error('離線收益紀錄無效');
    if(c.version===2&&((r===c.receipt&&!r.complete)||(r===c.pendingReceipt&&r.complete)))throw Error('離線收益紀錄狀態無效');
@@ -206,7 +207,7 @@
  let analysis=null,observed=null,metrics=null,replayCache=null,modelSeed=0;
  function sampleRandom(){modelSeed=(Math.imul(modelSeed,1664525)+1013904223)>>>0;return modelSeed/4294967296;}
  function fastReason(reason){if(metrics)metrics.fallbacks[reason]=(metrics.fallbacks[reason]||0)+1;return false;}
- function combatKey(){return JSON.stringify([party.map,party.difficulty,party.active,battleRate,party.members.map(h=>[memberKey(h),h.lv,h.job,h.advanced,h.stats,h.skills,h.active,h.procSlots,h.supportSlots,h.activeSkillEquipmentId,equipment(h),stats(h)]),buffs().filter(b=>b.enabled&&b.remainingMs>0).map(b=>[b.name,b.boostType,b.bonusPercent,b.effectPercent])]);}
+ function combatKey(){return JSON.stringify([party.map,party.difficulty,party.active,battleRate,party.members.map(h=>[memberKey(h),h.lv,h.job,h.advanced,h.stats,h.skills,h.active,h.procSlots,h.supportSlots,h.activeSkillEquipmentId,h.passiveEnabled,equipment(h),stats(h)]),buffs().filter(b=>b.enabled&&b.remainingMs>0).map(b=>[b.name,b.boostType,b.bonusPercent,b.effectPercent])]);}
  function simpleCombat(){
   if(party.questChallenge||party.bossChallenge?.active||isFinalMap(party.map))return 'special-stage';
   // Bosses and custom skills can carry phase, status or progression dependencies.

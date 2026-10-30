@@ -5,19 +5,56 @@
  const labels={active:'主動',proc:'觸發',support:'輔助',passive:'被動'},sources={class:'職業',advanced:'二轉',quest:'任務',equipment:'裝備',companion:'夥伴'};
  function detail(sk,h=state){
   const a=EmberwildSkillSystem.adapterFor(sk,h.job);
-  if(sk.type==='passive')return sk.description;
+  if(sk.type==='passive')return [sk.description,...(sk.effects||[]).map(EmberwildPassives.effectText)].filter(Boolean).join(' · ');
   if(sk.systemEffect)return `持續 ${sk.duration} 回合 · 冷卻 ${sk.cooldown} 回合${['guard','slow'].includes(sk.systemEffect)?' · '+Math.round(sk.power*100)+'%':sk.systemEffect==='regen'?' · 每回合最大生命 '+Math.round(sk.power*10000)/100+'%':''}`;
   return a.kind==='core'?coreSkillDetail(a.job,a.index,h):supportSkillDetail(a.job,a.index,h);
  }
- function icon(sk){return __EMBERWILD_MASTERY_UI.skillIcon(sk.adapter.job,sk.adapter.kind,sk.adapter.index);}
+ function icon(sk){if(sk.type==='passive')return `<span class="skill-icon-glyph" aria-hidden="true">${__EMBERWILD_SKILL_ICONS.svgFor(sk.kind==='debuff'?'skull':'shield')}</span>`;return __EMBERWILD_MASTERY_UI.skillIcon(sk.adapter.job,sk.adapter.kind,sk.adapter.index);}
+ function stage(sk,h){return sk.requiresAdvanced||sk.sources.some(s=>s.type==='advanced')||S.system().classRules.find(r=>r.job===h.job)?.advanced.some(r=>r.skillId===sk.id)?'二轉':'初始職業';}
+ const questItems=q=>[...(q.rewards?.items||[]),...q.stages.flatMap(s=>s.rewards.items)];
+ function routes(sk,h){
+  const out=[],system=S.system(),rule=system.classRules.find(r=>r.job===h.job),story=globalThis.__EMBERWILD_STORY?.design;
+  for(const row of rule?.initial||[])if(row.skillId===sk.id)out.push('職業學習 · LV'+row.level);
+  for(const row of rule?.advanced||[])if(row.skillId===sk.id)out.push('二轉職業學習 · LV'+row.level);
+  for(const src of sk.sources){
+   if(src.type==='quest'){
+    if(src.rewardOnly){for(const q of story?.quests||[])if(q.enabled!==false&&questItems(q).some(x=>x.type==='skill'&&x.key===sk.id&&(x.job===undefined||x.job===h.job)))out.push('任務獎勵：'+q.name);}
+    else {const ids=src.questIds||sk.unlockConditions?.quests||['tutorial'];if(!ids.length||ids.every(id=>id==='tutorial'||story?.quests.some(q=>q.id===id&&q.enabled!==false)))out.push('完成'+(ids.length?ids.map(id=>id==='tutorial'?'新手教學':story.quests.find(q=>q.id===id)?.name||id).join('、'):'新手教學'));}
+   }
+   if(src.type!=='equipment')continue;
+   for(const pool of system.equipment.pool)if(pool.skillId===sk.id&&pool.jobs.includes(h.job)&&pool.weight>0&&pool.slots.length){out.push(CLASSES[h.job].name+'裝備附帶 · '+pool.slots.map(i=>['武器','護甲','副手','飾品'][i]).join('／')+' · 裝備 LV'+pool.minLevel+'～'+pool.maxLevel);}
+   ITEM_FORMS.forEach((slots,j)=>slots.forEach((forms,slot)=>forms.forEach((f,i)=>{const id=f.id||`job${j}-slot${slot}-form${i}`,fixed=system.equipment.formRules?.find(r=>r.formId===id)?.skillId||f.skillId;if(fixed===sk.id&&(j===h.job||f.wearableJobs?.includes(h.job)))out.push('裝備附帶：'+f.name);} )));
+   for(const g of story?.gearRewards||[])if(g.skillId===sk.id&&(story.quests||[]).some(q=>q.enabled!==false&&questItems(q).some(x=>x.type==='gear'&&x.key===g.id&&(x.job===undefined||x.job===h.job))))out.push('任務裝備：'+g.name);
+  }
+  return [...new Set(out)];
+ }
+ function catalog(h){return S.system().definitions.filter(sk=>!sk.disabled&&sk.partnerId==null&&sk.jobs.includes(h.job)&&routes(sk,h).length);}
+ function conditions(sk,h){
+  const a=EmberwildSkillSystem.adapterFor(sk,h.job),parts=['LV'+(sk.requiredLevel??sk.level??1)];
+  if(stage(sk,h)==='二轉')parts.push('完成二轉');
+  if(sk.requiredMastery)parts.push((__EMBERWILD_MASTERY.masteryLabels[sk.requiredMastery]||sk.requiredMastery)+'精通 LV'+(sk.requiredMasteryLevel||0));
+  if(sk.weaponTypes?.length)parts.push('武器：'+sk.weaponTypes.join('／'));
+  if(a.kind!=='passive')parts.push(...__EMBERWILD_TEAMS.unlockSummary(h.job,a.kind,a.index));
+  if(sk.sources.some(s=>s.type==='quest'||s.type==='equipment'))parts.push(...routes(sk,h));
+  return [...new Set(parts)].join(' · ');
+ }
+ function missing(sk,h){const a=EmberwildSkillSystem.adapterFor(sk,h.job),out=[];if(!S.learned(h,sk))out.push(conditions(sk,h));if(a.kind==='core')out.push(...__EMBERWILD_MASTERY.coreMissingRequirements(h,a.index,true).filter(x=>x!=='尚未取得技能'));else if(a.kind==='support')out.push(...__EMBERWILD_MASTERY.supportMissingRequirements(h,a.index,true).filter(x=>x!=='尚未取得技能'));return [...new Set(out)];}
+ function acquired(sk,h){return S.learned(h,sk)||h.acquiredSkillIds?.includes(sk.id)||sk.sources.some(s=>s.type==='equipment')&&(h.bag||[]).some(g=>g.skillId===sk.id);}
+ function card(sk,h,action=''){
+  const locked=!S.learned(h,sk),equipmentSkill=sk.sources.some(s=>s.type==='equipment');
+  return `<article class="skill-candidate ${locked?'skill-locked':''}" data-skill-id="${esc(sk.id)}"><div class="skill-slot-name">${icon(sk)}<b>${esc(sk.name)}</b><span class="tag">${equipmentSkill?'裝備 · ':''}${sk.type==='support'?'主動（輔助）':labels[sk.type]} · ${stage(sk,h)}</span></div><p>${esc(sk.description||'')}</p><p class="small">${esc(detail(sk,h))}</p><p class="small">解鎖條件：${esc(conditions(sk,h))}</p><p class="small">取得來源：${esc(routes(sk,h).join('／'))}</p>${action}</article>`;
+ }
+ function passives(h){const list=S.system().definitions.filter(sk=>sk.type==='passive'&&S.learned(h,sk));return `<section class="panel"><h2>被動技能 <small>無槽位上限 · 不占主動槽</small></h2><div class="skill-passive-grid">${list.map(sk=>{const on=S.passiveEnabled(h,sk.id);return `<article class="skill-candidate ${on?'':'skill-passive-disabled'}" data-passive-id="${esc(sk.id)}"><button type="button" class="skill-passive-detail" onclick="showSkillInformation('${esc(sk.id)}')">${icon(sk)}<b>${esc(sk.name)}</b></button><p>${esc(sk.description)}</p><button type="button" role="switch" aria-checked="${on}" onclick="setPassiveSkillEnabled('${esc(sk.id)}',${!on})">${on?'已啟用':'已停用'}</button></article>`;}).join('')||'<p>尚未學會被動技能，可至技能圖鑑查看解鎖條件。</p>'}</div></section>`;}
+ globalThis.showSkillInformation=function(id){const h=party.members[0],sk=S.byId(id);if(!sk||!S.learned(h,sk)&&!catalog(h).some(s=>s.id===id))return false;const modal=$('modal');modal.classList.add('skill-system-dialog');modal.innerHTML=card(sk,h)+`<button onclick="closeModal()">關閉</button>`;if(!modal.open)modal.showModal();return true;};
+ globalThis.openSkillCatalog=function(){const h=party.members[0],modal=$('modal');modal.classList.add('skill-system-dialog');modal.innerHTML=`<h2>${esc(CLASSES[h.job].name)}技能圖鑑</h2><p class="small">收錄目前版本可取得的本職業與二轉技能。</p><div class="skill-candidate-list">${catalog(h).map(sk=>card(sk,h,`<span class="tag">${acquired(sk,h)?'已取得':'尚未取得'}</span>`)).join('')}</div><button onclick="closeModal()">關閉</button>`;if(!modal.open)modal.showModal();return true;};
  function equipmentPicker(h){const worn=equipment(h).filter(g=>g.skillId&&S.byId(g.skillId)?.jobs.includes(h.job));return `<section class="panel equipment-skill-picker"><h2>裝備技能</h2><div class="skill-equipment-list"><button type="button" aria-pressed="${!h.activeSkillEquipmentId}" onclick="selectSkillEquipment(null)">不啟用裝備技能</button>${worn.map(g=>{const sk=S.byId(g.skillId),chosen=g.id===h.activeSkillEquipmentId,slotted=Object.values(h.skillLoadout).some(a=>a.includes(sk.id));return `<button type="button" data-skill-equipment="${esc(g.id)}" aria-pressed="${chosen}" onclick="selectSkillEquipment('${esc(g.id)}')"><b>${equipmentNameHTML(g)}</b><span class="equipment-skill-name">${esc(sk.name)} · ${labels[sk.type]}${chosen?' · '+(slotted?'已配置':'待配置'):''}</span><small class="equipment-skill-effect">${esc(sk.description||detail(sk,h))}</small></button>`;}).join('')}</div></section>`;}
  skillsView=function(){
-  const h=party.members[0];if(__EMBERWILD_TEAMS.plan()?.job===null)return heading('SKILLS / 技能','尚未選擇職業')+`<section class="panel"><button onclick="setTab('roster')">前往隊伍編成</button></section>`;return withHero(h,()=>{S.refreshHero(h);return heading('SKILLS / 技能','目前技能配置',`<span class="tag">${esc(characterName(h))} · ${h.advanced?'二轉':'一轉'}</span>`)+`<div class="skill-system-page">${['active','proc','support'].map(type=>`<section class="panel"><h2>${labels[type]}技能</h2><div class="skill-system-slots">${h.skillLoadout[type].map((id,n)=>{const sk=S.byId(id);return `<button type="button" class="skill-system-slot skill-kind-${type}" data-skill-slot="${type}:${n}" onclick="openSkillSlot('${type}',${n})"><span class="small">${labels[type]}槽 ${n+1}</span>${sk?`<span class="skill-slot-name">${icon(sk)}<b>${esc(sk.name)}</b></span><span>${esc(sk.description||detail(sk,h))}</span>`:'<b>選擇技能</b>'}</button>`;}).join('')}</div></section>`).join('')}${equipmentPicker(h)}<section class="panel"><h2>常駐被動（不占技能槽）</h2>${S.system().definitions.filter(sk=>sk.type==='passive'&&sk.jobs.includes(h.job)&&sk.sources.some(s=>s.type==='class')).map(sk=>`<article class="skill-candidate"><b>${esc(sk.name)}</b><span> · LV${sk.requiredLevel} · ${S.learned(h,sk)?'已生效':'尚未解鎖'}</span><p>${esc(sk.description)}</p></article>`).join('')}</section></div>`;});
+  const h=party.members[0];if(__EMBERWILD_TEAMS.plan()?.job===null)return heading('SKILLS / 技能','尚未選擇職業')+`<section class="panel"><button onclick="setTab('roster')">前往隊伍編成</button></section>`;return withHero(h,()=>{S.refreshHero(h);return heading('SKILLS / 技能','目前技能配置',`<span class="tag">${esc(characterName(h))} · ${h.advanced?'二轉':'一轉'}</span>`)+`<div class="skill-system-page"><div class="actions"><button type="button" onclick="openSkillCatalog()">技能圖鑑</button></div>${['active','proc','support'].map(type=>`<section class="panel"><h2>${labels[type]}技能</h2><div class="skill-system-slots">${h.skillLoadout[type].map((id,n)=>{const sk=S.byId(id);return `<button type="button" class="skill-system-slot skill-kind-${type}" data-skill-slot="${type}:${n}" onclick="openSkillSlot('${type}',${n})"><span class="small">${labels[type]}槽 ${n+1}</span>${sk?`<span class="skill-slot-name">${icon(sk)}<b>${esc(sk.name)}</b></span><span>${esc(sk.description||detail(sk,h))}</span>`:'<b>選擇技能</b>'}</button>`;}).join('')}</div></section>`).join('')}${equipmentPicker(h)}${passives(h)}</div>`;});
  };
  globalThis.openSkillSlot=function(type,n){
   const h=party.members[0];if(!h.skillLoadout?.[type]||n<0||n>=h.skillLoadout[type].length)return false;
-  const list=S.system().definitions.filter(sk=>sk.type===type&&S.learned(h,sk)),modal=$('modal');modal.classList.add('skill-system-dialog');
-  modal.innerHTML=`<h2>${labels[type]}槽 ${n+1}</h2><div class="skill-candidate-list">${list.map(sk=>`<article class="skill-candidate" data-skill-id="${esc(sk.id)}"><div class="skill-slot-name">${icon(sk)}<b>${esc(sk.name)}</b><span class="tag">${esc(sk.sources.map(x=>sources[x.type]).join('／'))}</span></div><p>${esc(sk.description||'')}</p><p class="small">${esc(detail(sk,h))}</p><p class="small">需求 LV${sk.requiredLevel??sk.level??1}${sk.sources.some(s=>s.type==='advanced')?' · 二轉':''}</p><button type="button" onclick="chooseSkillSlot('${type}',${n},'${esc(sk.id)}')">${h.skillLoadout[type][n]===sk.id?'目前配置':'裝入技能'}</button></article>`).join('')||'<p>尚未取得符合此類型的技能。</p>'}</div><div class="actions"><button type="button" onclick="chooseSkillSlot('${type}',${n},null)">清空技能槽</button><button type="button" onclick="closeModal()">關閉</button></div>`;if(!modal.open)modal.showModal();return true;
+  const obtainable=new Set(catalog(h).map(sk=>sk.id)),list=S.system().definitions.filter(sk=>sk.type===type&&!sk.disabled&&sk.partnerId==null&&sk.jobs.includes(h.job)&&(S.learned(h,sk)||obtainable.has(sk.id))&&(h.advanced||stage(sk,h)==='初始職業')),modal=$('modal');modal.classList.add('skill-system-dialog');
+  modal.innerHTML=`<h2>${labels[type]}槽 ${n+1}</h2><div class="skill-candidate-list">${list.map(sk=>{const reasons=missing(sk,h),slotted=h.skillLoadout[type].includes(sk.id);return card(sk,h,`<p class="small">${reasons.length?'尚缺：'+esc(reasons.join('、')):slotted?'已裝備':'已學會'}</p><button type="button" onclick="chooseSkillSlot('${type}',${n},'${esc(sk.id)}')" ${reasons.length?'disabled':''}>${reasons.length?'未解鎖／條件未符合':h.skillLoadout[type][n]===sk.id?'目前配置':slotted?'移至此槽':'裝入技能'}</button>`);}).join('')||'<p>目前階段沒有符合此類型的技能。</p>'}</div><div class="actions"><button type="button" onclick="chooseSkillSlot('${type}',${n},null)">清空技能槽</button><button type="button" onclick="closeModal()">關閉</button></div>`;if(!modal.open)modal.showModal();return true;
  };
  globalThis.chooseSkillSlot=function(t,n,id){const h=party.members[0];return withHero(h,()=>{if(!configureSkill(t,n,id))return false;closeModal();return true;});};
  $('modal').addEventListener('close',()=>$('modal').classList.remove('skill-system-dialog'));
@@ -50,5 +87,5 @@
  };
  const detailBase=inventoryGearDetail;inventoryGearDetail=function(g){return detailBase(g)+sockets(g);};
  const slotBase=gearSlotHTML;gearSlotHTML=function(g,options){const html=slotBase(g,options);if(!g?.skillSockets)return html;const text=(g.skillId?'技能 · ':'')+g.skillSockets.gems.filter(x=>x!==null).length+'/'+g.skillSockets.count+' 孔';return html.replace(/(<\/button>)$/,`<small class="equipment-socket-badge">${esc(text)}</small>$1`);};
- globalThis.__EMBERWILD_SKILL_SYSTEM_UI={detail,sockets};
+ globalThis.__EMBERWILD_SKILL_SYSTEM_UI={detail,sockets,catalog,routes,conditions,missing};
 })();

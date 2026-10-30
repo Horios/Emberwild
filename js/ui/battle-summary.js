@@ -17,7 +17,8 @@
   // the global foes binding. This is O(1), including during offline simulation.
   terminal={owner:party,units:foes,name:currentExplorationName(),result};
  }
- function snapshot(){
+ function snapshot(){return globalThis.EmberwildBattleConfiguration?EmberwildBattleConfiguration.combat(snapshotCore):snapshotCore();}
+ function snapshotCore(){
   if(owner!==party)clear();
   const ended=terminal?.owner===party&&(!foes.length||terminal.units===foes)?terminal:null;
   const source=party?(ended?.units||foes):[];

@@ -6,7 +6,7 @@
  const hero=t=>t&&Object.hasOwn(t,'job'),key=t=>hero(t)?heroKey(t):t?.id;
  let depth=0,draining=false,queue=[],chainContext=null;
  const passives=h=>{
-  const classSkills=S()?.system()?.definitions.filter(s=>s.type==='passive'&&s.eventPassive&&S().learned(h,s))||[];
+  const classSkills=S()?.system()?.definitions.filter(s=>s.type==='passive'&&s.eventPassive&&S().learned(h,s)&&S().passiveEnabled(h,s.id))||[];
   const companion=globalThis.__EMBERWILD_COMPANION_TEST_API?.passivesFor(h)||[];
   return [...new Map([...classSkills,...companion.filter(s=>s.eventPassive)].map(s=>[s.id,s])).values()];
  };

@@ -11,3 +11,5 @@
 .equipment-skill-name{color:var(--violet);line-height:1.65}
 .equipment-skill-effect{color:var(--info);line-height:1.7;white-space:normal;overflow-wrap:anywhere}
 .equipment-skill-description .equipment-skill-effect{margin:6px 0 0}
+
+.skill-passive-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:12px}.skill-passive-detail{display:flex;align-items:center;gap:10px;text-align:left;white-space:normal}.skill-passive-disabled .skill-passive-detail{opacity:.5}.skill-locked .skill-icon-glyph{filter:grayscale(1);opacity:.45}.skill-candidate .skill-slot-name{flex-wrap:wrap}.skill-passive-grid h2 small{font-size:12px}

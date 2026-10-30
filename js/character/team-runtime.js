@@ -24,7 +24,7 @@
   globalThis.__EMBERWILD_TEAM_MASTERY=masteryView;
   globalThis.__EMBERWILD_TEAM_GAIN=(h,n)=>{if(h!==player()||!build()||plan()?.job===null)return;const c=build().permanent.classes[h.job];if(c?.activated)c.xp+=n;refreshUnlocks();};
   function snapshot(p){
-    const h=player();p.stats=copy(h.stats);p.skills=copy(h.skills);p.supportLevels=copy(h.supportLevels);p.active=copy(h.active);p.procSlots=copy(h.procSlots);p.supportSlots=copy(h.supportSlots);p.equipped=copy(h.equipped);if(h.skillLoadout)p.skillLoadout=copy(h.skillLoadout);p.activeSkillEquipmentId=h.activeSkillEquipmentId??null;
+    const h=player();p.stats=copy(h.stats);p.skills=copy(h.skills);p.supportLevels=copy(h.supportLevels);p.active=copy(h.active);p.procSlots=copy(h.procSlots);p.supportSlots=copy(h.supportSlots);p.equipped=copy(h.equipped);if(h.skillLoadout)p.skillLoadout=copy(h.skillLoadout);p.activeSkillEquipmentId=h.activeSkillEquipmentId??null;p.passiveEnabled=copy(h.passiveEnabled||{});
     p.playerActive=party.active.includes(memberKey(h));p.companions=party.active.filter(k=>k!==memberKey(h));p.enlisted=(party.enlisted||party.members.map(memberKey)).filter(k=>k!==memberKey(h));
     p.tokens=Object.fromEntries(party.members.slice(1).map(h=>[memberKey(h),h.tokenId??null]));
     p.sockets??=Array(h.skills.length).fill(null);
@@ -54,7 +54,7 @@
     for(const field of ['stats','skills','supportLevels','active','procSlots','supportSlots','equipped'])h[field]=copy(p[field]);
     if(p.job===null){h.skills=Array(CLASSES[0].skills.length).fill(0);h.supportLevels=SUPPORT[0].map(()=>0);}
     h.sockets=p.job===null?h.skills.map(()=>null):p.sockets.map(id=>id===null?null:build().permanent.gemInstances[id]);
-    h.skillLoadout=p.skillLoadout?copy(p.skillLoadout):undefined;h.activeSkillEquipmentId=p.activeSkillEquipmentId??null;globalThis.__EMBERWILD_SKILLS?.refreshHero(h);h.mastery=masteryView(h);party.active=[...(p.playerActive?[memberKey(h)]:[]),...p.companions];party.enlisted=[memberKey(h),...p.enlisted];party.selected=memberKey(h);state=h;
+    h.skillLoadout=p.skillLoadout?copy(p.skillLoadout):undefined;h.activeSkillEquipmentId=p.activeSkillEquipmentId??null;h.passiveEnabled=copy(p.passiveEnabled||{});globalThis.__EMBERWILD_SKILLS?.refreshHero(h);h.mastery=masteryView(h);party.active=[...(p.playerActive?[memberKey(h)]:[]),...p.companions];party.enlisted=[memberKey(h),...p.enlisted];party.selected=memberKey(h);state=h;
     for(const x of party.members.slice(1)){const key=memberKey(x),id=p.tokens[key]??null;x.tokenId=id&&EmberwildTokens.canEquip(findGear(id),x)?id:null;p.tokens[key]=x.tokenId;}
     pageHeroSelection.clear();forgeSelection=null;pendingAffix=null;
     for(const x of party.members){x.hp=Math.min(hp.get(memberKey(x))??0,stats(x).hp);if(x.hp<=0)x.hp=0;}
@@ -88,9 +88,9 @@
   function busy(){return !!(running||partyBusy||roundIterator||foes.some(e=>e.hp>0));}
   function safe(){if(busy()){toast('請先停止探索並結束目前遭遇，再修改隊伍配置');return false;}return !!party;}
   function valid(){return !!plan()&&plan().job!==null&&party.active.length>0&&heroes().every(h=>solo.canVisit(party.map,h));}
-  function transaction(fn){
-    if(!safe())return false;capture();const before=copy(build()),h=player(),members=party.members.slice(),profiles=copy(party.companionProfiles||{}),names=copy(party.companionNames||{}),old={hp:party.members.map(x=>x.hp),shield:party.members.map(x=>x.shield),potionCD:party.members.map(x=>x.healPotionCooldownRemaining||0),ac:copy(actorCooldowns),sc:copy(supportCooldowns),clock:partyClock,gold:h.gold,ore:h.ore,dust:h.dust,gems:copy(h.gems),materials:copy(h.materials)};
-    const previousSuppress=suppressSave;try{suppressSave=true;fn();resetBattleState();suppressSave=previousSuppress;syncPoints();if(save()===false)throw Error('無法儲存');render();return true;}catch(e){suppressSave=previousSuppress;party.members=members;party.companionProfiles=profiles;party.companionNames=names;party.buildSystem=before;apply(plan());h.gold=old.gold;h.ore=old.ore;h.dust=old.dust;h.gems=old.gems;h.materials=old.materials;party.members.forEach((x,i)=>{x.hp=old.hp[i];x.shield=old.shield[i];x.healPotionCooldownRemaining=old.potionCD[i];});actorCooldowns=old.ac;supportCooldowns=old.sc;partyClock=old.clock;toast('操作未保存：'+e.message);return false;}
+  function transaction(fn,{configuration=false}={}){
+    if(configuration?!party:!safe())return false;capture();const before=copy(build()),h=player(),members=party.members.slice(),profiles=copy(party.companionProfiles||{}),names=copy(party.companionNames||{}),old={hp:party.members.map(x=>x.hp),shield:party.members.map(x=>x.shield),potionCD:party.members.map(x=>x.healPotionCooldownRemaining||0),ac:copy(actorCooldowns),sc:copy(supportCooldowns),clock:partyClock,gold:h.gold,ore:h.ore,dust:h.dust,gems:copy(h.gems),materials:copy(h.materials)};
+    const previousSuppress=suppressSave;try{suppressSave=true;fn();if(!configuration)resetBattleState();else if(globalThis.EmberwildBattleConfiguration?.pending()){party.members.forEach((x,i)=>{x.hp=old.hp[i];x.shield=old.shield[i];});}suppressSave=previousSuppress;syncPoints();if(save()===false)throw Error('無法儲存');if(configuration)globalThis.EmberwildBattleConfiguration?.notify();render();return true;}catch(e){suppressSave=previousSuppress;party.members=members;party.companionProfiles=profiles;party.companionNames=names;party.buildSystem=before;apply(plan());h.gold=old.gold;h.ore=old.ore;h.dust=old.dust;h.gems=old.gems;h.materials=old.materials;party.members.forEach((x,i)=>{x.hp=old.hp[i];x.shield=old.shield[i];x.healPotionCooldownRemaining=old.potionCD[i];});actorCooldowns=old.ac;supportCooldowns=old.sc;partyClock=old.clock;toast('操作未保存：'+e.message);return false;}
   }
   function activate(j){const c=build().permanent.classes[j]??={activated:false,xp:0,advanced:false};c.activated=true;}
   globalThis.changePlayerClass=function(j){j=Number(j);if(!safe()||!Number.isInteger(j)||!CLASSES[j]||plan().job===j)return false;
@@ -261,7 +261,7 @@
   };
   // Configuration-changing legacy entry points all use the same exploration gate.
   for(const name of ['allocate','equipSkill','clearActiveSkill','slotProcSkill','clearProcSkill','slotSupport','equipGear','equipSharedGear','unequipSharedGear','toggleMember','setPartnerEnlisted','confirmMemberReplacement','recruitCompanion','equipCompanionToken','unequipCompanionToken','devMasterySetLevel','devMasterySetExp','devMasterySet','devMasteryAdjust','devMasteryReset','devMasteryToggleCore','devMasteryToggleSupport','devMasteryWeapon']){
-    const fn=globalThis[name];if(typeof fn!=='function')continue;globalThis[name]=function(...args){if(!safe())return false;if(state===player()&&plan()?.job===null&&['allocate','equipSkill','slotProcSkill','slotSupport','equipGear','equipSharedGear'].includes(name)){toast('請先為本隊選擇主角職業');return false;}if(suppressSave)return fn(...args);let out;const ok=transaction(()=>{out=fn(...args);});return ok?out:false;};
+    const fn=globalThis[name];if(typeof fn!=='function')continue;globalThis[name]=function(...args){const configuration=['equipGear','equipSharedGear','unequipSharedGear'].includes(name);if(!configuration&&!safe())return false;if(state===player()&&plan()?.job===null&&['allocate','equipSkill','slotProcSkill','slotSupport','equipGear','equipSharedGear'].includes(name)){toast('請先為本隊選擇主角職業');return false;}if(suppressSave)return fn(...args);let out;const ok=transaction(()=>{out=fn(...args);},{configuration});return ok?out:false;};
   }
   const battleBase=toggleBattle;toggleBattle=function(...args){if(!running&&!valid()){toast('請先選擇主角職業，並完成符合地圖門檻的隊伍編成');return false;}return battleBase(...args);};
   for(const name of ['startBossChallenge','restartExploration','devMasterySimulate']){
@@ -275,7 +275,7 @@
     if(!party)return false;running=false;if(roundIterator?.return)roundIterator.return();roundIterator=null;if(typeof activeBattleStat!=='undefined'&&activeBattleStat)finalizeBattleStatistics('abandoned');resetBattleState();save();render();return true;
   };
   function unlockSummary(j,kind,i){const r=kind==='core'?coreRule(j,i):supportRule(j,i),u=r.unlockConditions,parts=[],mapName=n=>n<0?'任意區域':(MAPS[n]?.name||('區域 '+n)),bossName=n=>n<0?'任意 BOSS':(MAPS[n]?.boss?.[0]||mapName(n)+' BOSS');if(u.classMasteryLevel)parts.push('職業精通 Lv'+u.classMasteryLevel);parts.push(...u.quests.map(q=>'任務 '+q),...u.materials.map(m=>m.name+' ×'+m.quantity),...u.bossKills.map(x=>'擊敗 '+bossName(x.mapIndex)+' ×'+x.count),...u.eliteKills.map(x=>'擊敗 '+mapName(x.mapIndex)+'菁英 ×'+x.count),...u.bossEquipment.map(x=>'持有 '+bossName(x.mapIndex)+'裝備 ×'+x.quantity));return parts;}
-  globalThis.__EMBERWILD_TEAMS={build,plan,player,capture,apply,budgets,costs,busy,safe,valid,refreshUnlocks,unlockMissing,unlockSummary,coreRule,supportRule,settings:()=>copy(cfg),validateBuild,resetBattleState};
+  globalThis.__EMBERWILD_TEAMS={build,plan,player,capture,apply,budgets,costs,busy,safe,savingSuppressed:()=>suppressSave,valid,refreshUnlocks,unlockMissing,unlockSummary,coreRule,supportRule,settings:()=>copy(cfg),validateBuild,resetBattleState};
   // Read the exact boot bytes after all late validators are installed.
   const boot=globalThis.__EMBERWILD_TEAM_BOOT_RAW;
   try{const d=M.normalizeDocument(JSON.parse(balanceSourceText()||'null')||baseExport());applyRules(d);Object.assign(GAMEPLAY_SETTINGS.progression.starting,d.balanceSettings.progression.starting);Object.assign(GAMEPLAY_SETTINGS.progression.levelRewards,d.balanceSettings.progression.levelRewards);GAMEPLAY_SETTINGS.meta.teamBuildVersion=M.VERSION;

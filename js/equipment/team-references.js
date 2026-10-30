@@ -5,34 +5,15 @@
   const disposable=g=>g&&!g.locked&&!inlineAffixDrafts.has(affixDraftKey(g));
 
 
-  // Each encounter keeps the equipment values it started with. Players may
-  // strengthen/reroll during combat, but those live item changes are projected
-  // into combat only when the next encounter is spawned.
+  // Combat owns the persisted snapshot; inventory and comparisons read live gear.
   const liveEquipment=equipment;
-  let battleEquipmentSnapshot=null,liveEquipmentReads=0;
-  function withLiveEquipment(read){
-    liveEquipmentReads++;
-    try{return read();}finally{liveEquipmentReads--;}
-  }
+  function withLiveEquipment(read){return globalThis.EmberwildBattleConfiguration?EmberwildBattleConfiguration.editable(read):read();}
   function currentBattleGearIds(){
     const ids=new Set();
     if(!party||!T.busy())return ids;
     for(const h of heroes())for(const g of liveEquipment(h))if(g?.id)ids.add(g.id);
     return ids;
   }
-  function captureBattleEquipment(){
-    if(!party){battleEquipmentSnapshot=null;return;}
-    const next=new Map();
-    for(const h of heroes())next.set(memberKey(h),liveEquipment(h).map(copy));
-    battleEquipmentSnapshot=next;
-  }
-  equipment=function(s=state){
-    const key=s?memberKey(s):null;
-    if(!liveEquipmentReads&&battleEquipmentSnapshot&&Array.isArray(foes)&&foes.some(e=>e.hp>0)&&battleEquipmentSnapshot.has(key))return battleEquipmentSnapshot.get(key);
-    return liveEquipment(s);
-  };
-  const spawnGroupBase=spawnGroup;
-  spawnGroup=function(...args){captureBattleEquipment();return spawnGroupBase(...args);};
 
   function dispose(ids,mode,includeEnhance=true,options={}){
     if(!party)return false;

@@ -18,9 +18,9 @@
     else{if(!skills.has(g.skillId))skills.set(g.skillId,{});const out=skills.get(g.skillId);out[def.skill.key]=Math.min(def.cap,(out[def.skill.key]||0)+def.skill.values[tier]);}
    });
   }
-  const result={base,ratios,skills};cache.set(h,result);return result;
+  const result={base,ratios,skills};if(!globalThis.EmberwildBattleConfiguration?.active)cache.set(h,result);return result;
  }
- const effectsFor=h=>cache.get(h)||refresh(h);
+ const effectsFor=h=>globalThis.EmberwildBattleConfiguration?.active?globalThis.EmberwildBattleConfiguration.equipmentEffects(h,()=>refresh(h)):cache.get(h)||refresh(h);
  const summaryBase=equipmentAbilitySummary;globalThis.equipmentAbilitySummary=function(g){
   const out=summaryBase(g),h=owner();
   for(const [n,id] of (g.skillSockets?.gems||[]).entries()){
@@ -65,16 +65,16 @@
  function supportCooldownOnCast(h,i){const sk=S.byPosition(h?.job,'support',i);return Math.max(1,supportSkillCooldown(h,i)-(sk&&Math.random()<skillRate(h,sk.id,'cooldown')?1:0));}
  const supportBase=castSupport;castSupport=function(h,i){const out=supportBase(h,i),sk=S.byPosition(h?.job,'support',i);if(out!==false&&sk){const heal=skillRate(h,sk.id,'heal'),shield=skillRate(h,sk.id,'shield'),ally=[...living()].sort((a,b)=>a.hp/stats(a).hp-b.hp/stats(b).hp)[0];if(ally){if(heal){const before=ally.hp;ally.hp=Math.min(stats(ally).hp,ally.hp+Math.round(battleStats(h).atk*heal));recordCombatContribution(h,'healing',ally.hp-before);}if(shield)ally.shield+=Math.round(stats(h).def*shield);}}return out;};
  function transaction(change){
-  if(!party||!__EMBERWILD_TEAMS.safe())return false;
+  if(!party)return false;
   const p=owner(),before=copy(packParty()),oldState=memberKey(state);
-  try{change();S.refreshAll();for(const h of party.members)h.hp=Math.min(h.hp,stats(h).hp);if(save()===false)throw Error('儲存失敗');render();return true;}
+  try{change();S.refreshAll();if(!globalThis.EmberwildBattleConfiguration?.pending())for(const h of party.members)h.hp=Math.min(h.hp,stats(h).hp);if(save()===false)throw Error('儲存失敗');globalThis.EmberwildBattleConfiguration?.notify();render();return true;}
   catch(e){loadParty(before);state=partyMember(oldState)||p;toast('操作未保存：'+e.message);return false;}
  }
  globalThis.selectSkillEquipment=function(id){
   const h=state;if(h!==owner())return false;
   const g=id===null?null:equipment(h).find(g=>g.id===id),sk=g&&S.byId(g.skillId);
   if(id!==null&&(!g||!sk||!sk.jobs.includes(h.job)||sk.disabled))return false;
-  return transaction(()=>{h.activeSkillEquipmentId=id;refresh(h);S.refreshHero(h);actorCooldowns={};supportCooldowns={};});
+  return transaction(()=>{h.activeSkillEquipmentId=id;refresh(h);S.refreshHero(h);});
  };
  globalThis.socketEquipmentGem=function(id,n,type){
   const g=findGear(id);type=Number(type);if(!g||EmberwildTokens.isToken(g)||!Number.isInteger(n)||n<0||n>=g.skillSockets?.count||!Number.isInteger(type)||type< -1||type>=GEMS.length)return false;

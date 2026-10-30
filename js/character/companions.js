@@ -53,7 +53,7 @@
   try{const saved=JSON.parse(balanceSourceText()||'null');if(saved?.companions)plans=parsePlans(saved.companions,saved);if(saved){config=Model.normalizeSettings(saved.companionSettings,saved.classes||CLASSES,saved.balanceSettings||GAMEPLAY_SETTINGS);passiveDefinitions=Passive.normalize(saved.passiveDefinitions);}}catch(e){console.warn('夥伴平衡設定無法載入，使用內建角色',e);}
   const byId=()=>new Map(plans.map(p=>[p.id,p]));
   function companionPlan(h){const current=byId().get(h?.companionId);return current?.job===h?.job?current:party?.companionProfiles?.[h?.companionId]?.job===h?.job?party.companionProfiles[h.companionId]:null;}
-  function allPassivesFor(h){return (companionPlan(h)?.passives||[]).map(id=>passiveDefinitions.find(d=>d.id===id)).filter(Boolean);}
+  function allPassivesFor(h){const S=globalThis.__EMBERWILD_SKILLS;if(S&&h===party?.members[0])return S.system().definitions.filter(d=>d.type==='passive'&&S.learned(h,d));return (companionPlan(h)?.passives||[]).map(id=>passiveDefinitions.find(d=>d.id===id)).filter(Boolean);}
   function skillDisabled(h,kind,id){if(globalThis.__EMBERWILD_SKILLS)return false;return !!companionPlan(h)&&!!h.disabledCompanionSkills?.[kind]?.includes(id);}
   function validateDisabledSkills(raw){
     if(raw===undefined)return {core:[],support:[],passive:[]};
@@ -65,7 +65,7 @@
     }return out;
   }
   globalThis.companionSkillDisabled=skillDisabled;
-  function passivesFor(h){return allPassivesFor(h).filter(d=>d.partnerId===h.companionId&&!globalThis.__EMBERWILD_SKILLS?.byId(d.id)?.disabled&&h.lv>=d.requiredLevel&&!skillDisabled(h,'passive',d.id));}
+  function passivesFor(h){return allPassivesFor(h).filter(d=>(h===party?.members[0]||d.partnerId===h.companionId)&&globalThis.__EMBERWILD_SKILLS?.passiveEnabled(h,d.id)!==false&&!globalThis.__EMBERWILD_SKILLS?.byId(d.id)?.disabled&&h.lv>=d.requiredLevel&&!skillDisabled(h,'passive',d.id));}
   function passiveEffectsFor(h){
     const out=passivesFor(h).filter(d=>d.target==='self').flatMap(d=>d.effects);
     if(party?.active.includes(memberKey(h)))for(const owner of heroes().filter(x=>x.hp>0))out.push(...passivesFor(owner).filter(d=>d.target==='allies').flatMap(d=>d.effects));

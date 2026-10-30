@@ -13,6 +13,8 @@ test('backpack sort, modal filters and guided wear work on desktop and mobile; b
    await p.getByRole('button',{name:'裝備篩選',exact:true}).click();
    const modal=p.locator('#modal');assert(await modal.isVisible());
    if(!await modal.locator('details').evaluate(el=>el.open))await modal.locator('summary').click();await modal.getByLabel('詞綴效果',{exact:true}).selectOption('4');
+   // Changing the effect rebuilds this filter dialog; expand its new details.
+   if(!await modal.locator('details').evaluate(el=>el.open))await modal.locator('summary').click();
    await modal.getByLabel('詞綴技能',{exact:true}).selectOption('0:0');
    assert.equal(await modal.getByLabel('屬性',{exact:true}).locator('option').filter({hasText:'核心技能'}).count(),0);
    assert(await modal.evaluate(el=>el.scrollWidth<=el.clientWidth+1));

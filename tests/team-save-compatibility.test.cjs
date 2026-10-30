@@ -17,7 +17,8 @@ function assertLegacyRetained(actual,legacyRows,system){
   const rule=system.classRules.find(r=>r.job===old.job);
   for(const entry of rule.initial){
    const sk=system.definitions.find(s=>s.id===entry.skillId);
-   assert.equal(p.skills[sk.adapter.index],1,old.id+' class starter '+sk.id+' is now available');
+   if(sk.type==='passive')assert.equal(p.passiveEnabled[sk.id],true,old.id+' passive '+sk.id+' is enabled');
+   else assert.equal(p.skills[sk.adapter.index],1,old.id+' class starter '+sk.id+' is now available');
   }
  }
 }

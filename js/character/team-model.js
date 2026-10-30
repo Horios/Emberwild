@@ -27,7 +27,7 @@
   function budget(level,progression,permanent){return {ap:Math.round((progression.starting.abilityPoints||0)+(level-1)*(progression.levelRewards.abilityPoints||0))+(permanent.abilityCredit||0)};
   }
   const key=(job,kind,i)=>`${job}:${kind}:${i}`;
-  function blank(id,name,job=null,coreCount=0,supportCount=0){return {id,name,job,playerActive:true,stats:[0,0,0],skills:Array(coreCount).fill(0),supportLevels:Array(supportCount).fill(0),active:[null,null],procSlots:[null,null],supportSlots:[null,null],equipped:Array(5).fill(null),sockets:Array(coreCount).fill(null),companions:[],enlisted:[],tokens:{},skillLoadout:null,activeSkillEquipmentId:null};}
+  function blank(id,name,job=null,coreCount=0,supportCount=0){return {id,name,job,playerActive:true,stats:[0,0,0],skills:Array(coreCount).fill(0),supportLevels:Array(supportCount).fill(0),active:[null,null],procSlots:[null,null],supportSlots:[null,null],equipped:Array(5).fill(null),sockets:Array(coreCount).fill(null),companions:[],enlisted:[],tokens:{},skillLoadout:null,activeSkillEquipmentId:null,passiveEnabled:{}};}
   function spent(){return 0;}
   function references(build,id){return build.plans.filter(p=>p.equipped.includes(id)||Object.values(p.tokens).includes(id)).map(p=>({id:p.id,name:p.name}));}
   function clearReferences(build,ids){const set=new Set(ids);for(const p of build.plans){p.equipped=p.equipped.map(id=>set.has(id)?null:id);for(const k of Object.keys(p.tokens))if(set.has(p.tokens[k]))p.tokens[k]=null;}}
@@ -62,6 +62,8 @@
       if(!Array.isArray(p.stats)||p.stats.length!==3||p.stats.some(n=>!int(n,0,100000))||p.stats.reduce((a,v)=>a+v,0)>totals.ap||!Array.isArray(p.skills)||p.skills.length!==c||p.skills.some(n=>!int(n,0,1))||!Array.isArray(p.supportLevels)||p.supportLevels.length!==s||p.supportLevels.some(n=>!int(n,0,1)))fail('隊伍配點超出額度');
       for(const [kind,list] of [['core',p.skills],['support',p.supportLevels]])if(list.some((v,i)=>v&&!perm.unlocks[key(p.job,kind,i)]))fail('隊伍學習了尚未永久解鎖的技能');
       for(const [field,list,type] of [['active',p.skills,'active'],['procSlots',p.skills,'proc'],['supportSlots',p.supportLevels,null]]){const slots=p[field];if(!Array.isArray(slots)||slots.length!==(p.skillLoadout?globalThis.__EMBERWILD_SKILLS?.slotCounts({job:p.job??0,advanced:!!perm.classes[p.job]?.advanced})[type||'support']??2:2)||new Set(slots.filter(v=>v!==null)).size!==slots.filter(v=>v!==null).length||slots.some(i=>i!==null&&(!int(i,0,list.length-1)||!list[i]||type&&classes[p.job].skills[i].activation!==type)))fail('隊伍技能槽無效：'+p.id+'/'+field+'（槽數 '+(slots?.length??'缺少')+'）');}
+      if(p.passiveEnabled!==undefined&&(!object(p.passiveEnabled)||Object.entries(p.passiveEnabled).some(([id,v])=>!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/.test(id)||typeof v!=='boolean')))fail('隊伍被動啟用設定無效');
+      p.passiveEnabled??={};
       p.playerActive??=true;
       const activeCount=Number(p.playerActive)+(p.companions?.length||0);
       if(typeof p.playerActive!=='boolean'||activeCount<1||activeCount>3||!Array.isArray(p.equipped)||p.equipped.length!==5||!object(p.tokens)||!Array.isArray(p.companions)||p.companions.length>3||!Array.isArray(p.enlisted)||p.enlisted.length>512||new Set(p.enlisted).size!==p.enlisted.length||new Set(p.companions).size!==p.companions.length||p.enlisted.some(k=>!people.has(k))||p.companions.some(k=>!p.enlisted.includes(k)))fail('隊伍編成無效');

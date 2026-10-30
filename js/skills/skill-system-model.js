@@ -43,14 +43,14 @@
     const descriptions=['普攻或技能擊殺後，以 80% 攻擊追擊目前生命最低敵人；擊殺可連續追擊，最多 3 次。常駐生效、不占槽。','敵人死亡事件群組使自身所有技能冷卻減少 1 回合；獨立冷卻 2 個自身回合。常駐生效、不占槽。','對所有存活敵人各造成 130% 攻擊力的物理傷害。','對最多 3 名敵人施加可疊加的永久光牢；敵人回合結束（含受控）引爆 50%，死亡引爆 30% 光屬性全體傷害；每個標記僅引爆一次，死亡可連鎖。'];
     for(let job=0;job<4;job++){
       if(s.definitions.some(x=>x.id===ids[job]))continue;
-      const passive=job<2,kind=passive?'passive':'core',index=passive?Math.max(d.passiveDefinitions?.length||0,...s.definitions.filter(x=>x.adapter.kind==='passive').map(x=>x.adapter.index+1)):Math.max(d.classes[job].skills.length,...s.definitions.flatMap(adapters).filter(x=>x.kind==='core'&&x.job===job).map(x=>x.index+1));
+      const passive=job<2,kind=passive?'passive':'core',legacyIndex=(passive?d.passiveDefinitions||[]:d.classes[job].skills).findIndex(x=>x.id===ids[job]),index=legacyIndex>=0?legacyIndex:passive?Math.max(d.passiveDefinitions?.length||0,...s.definitions.filter(x=>x.adapter.kind==='passive').map(x=>x.adapter.index+1)):Math.max(d.classes[job].skills.length,...s.definitions.flatMap(adapters).filter(x=>x.kind==='core'&&x.job===job).map(x=>x.index+1));
       const sk={id:ids[job],name:names[job],description:descriptions[job],type:passive?'passive':'active',...(passive?{}:{activation:'active'}),jobs:[job],adapter:{job,index,kind},sources:[{type:'class',level:3}],usageScope:'character',partnerId:null,requiredLevel:3,requiresAdvanced:false,requiredMastery:null,requiredMasteryLevel:0,mastery:null,weaponTypes:[],unlockConditions:emptyConditions(),iconType:'auto',powerPerLevel:0,power:job===2?1.3:0,cooldown:passive?0:3,element:job===3?'light':'physical',target:passive?'self':'enemies',maxTargets:job===3?3:99,hitCount:1,baseCritRate:0,baseCritDamage:1.5,defensePenetration:0,defenseIgnore:0,effect:job===3?'applyStatus':'damage'};
       if(passive)Object.assign(sk,{kind:'buff',effects:[],eventPassive:job===0?{event:'kill',power:.8,maxAttacks:3}:{event:'enemyDeath',reduction:1,cooldown:2}});
       else if(job===2)Object.assign(sk,{commonEffectKeys:['target'],targetLimit:false});
       else Object.assign(sk,{statusId:'holy-prison-mark',statusTarget:'enemies',statusMaxTargets:3});
       s.definitions.push(sk);s.classRules.find(r=>r.job===job).initial.push({skillId:sk.id,level:3});
     }
-    return s;
+    s.clearingSkillsVersion=1;return s;
   }
   function validate(s){
     const fail=m=>{throw Error('技能系統：'+m);};
@@ -109,7 +109,7 @@
     }
     return d;
   }
-  function normalizeDocument(input){const d=copy(input);d.skillSystem??=fromLegacy(d);return project(d);}
+  function normalizeDocument(input){const d=copy(input);d.skillSystem??=fromLegacy(d);if(!d.skillSystem.clearingSkillsVersion)addClearingSkills(d.skillSystem,d);return project(d);}
   function slots(system,job,advanced){return copy(system.classRules.find(r=>r.job===job)?.slots[advanced?'advanced':'first']||{active:3,proc:1,support:1});}
   function gear(g,{legacy=false,source='drop',system,random=Math.random}={}){
     if(!g||g.type==='companionToken')return g;
