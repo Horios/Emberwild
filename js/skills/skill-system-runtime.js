@@ -63,7 +63,7 @@
   for(const type of ['active','proc','support'])for(let n=0;n<slots[type].length;n++){
    const id=h.skillLoadout[type]?.[n],sk=byId.get(id);if(id&&sk?.type===type&&learned(h,sk)&&!seen.has(id)){slots[type][n]=id;seen.add(id);}
   }
-  if(first)for(const row of system.classRules.find(r=>r.job===h.job).initial){const sk=byId.get(row.skillId),n=slots.active.indexOf(null);if(n>=0&&!seen.has(sk.id)&&learned(h,sk)){slots.active[n]=sk.id;seen.add(sk.id);}}
+  if(first)for(const row of system.classRules.find(r=>r.job===h.job).initial){const sk=byId.get(row.skillId),n=slots.active.indexOf(null);if(sk.type==='active'&&n>=0&&!seen.has(sk.id)&&learned(h,sk)){slots.active[n]=sk.id;seen.add(sk.id);}}
   h.skillLoadout=slots;
   h.skills=CLASSES[h.job].skills.map((_,i)=>Number(learned(h,byPosition.get(position(h.job,'core',i)))));
   h.supportLevels=SUPPORT[h.job].map((_,i)=>Number(learned(h,byPosition.get(position(h.job,'support',i)))));

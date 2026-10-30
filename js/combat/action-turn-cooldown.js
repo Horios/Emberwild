@@ -37,6 +37,7 @@ affixLabel=function(a,g){
 function allSkillCooldownReduction(h=state){return equipment(h).filter(g=>g.job===h.job||g.slot===1).flatMap(g=>g.affix||[]).filter(a=>a.type===16).reduce((n,a)=>n+(Number(a.value)||0),0);}
 skillCooldown=function(i,h=state){return Math.max(GAME_BALANCE.combat.minimumActiveCooldown,CLASSES[h.job].skills[i][3]-bonusFor(i,5,h)-allSkillCooldownReduction(h));};
 function supportSkillCooldown(h,index){return Math.max(1,Math.round(SUPPORT[h.job][index].cooldown-allSkillCooldownReduction(h)));}
+function runCombatEventAction(actor,fn){return globalThis.EmberwildCombatEvents?globalThis.EmberwildCombatEvents.action(actor,fn):fn();}
 function tickHeroCooldowns(h){for(const key of Object.keys(actorCooldowns))if(key.startsWith(memberKey(h)+'-'))actorCooldowns[key]=Math.max(0,Math.floor(actorCooldowns[key])-1);for(const key of Object.keys(supportCooldowns))if(key.startsWith(memberKey(h)+'-'))supportCooldowns[key]=Math.max(0,Math.floor(supportCooldowns[key])-1);}
 function cooldownLeft(cds,key){return Math.max(0,Math.floor(cds[key]||0));}
 globalThis.performEnemyActionCore ??= (e=>performEnemyBasic(e));
@@ -72,23 +73,24 @@ pacedRound=function*(){
    const u=p.unit;
    while(u.index<u.support.length){
     const i=u.support[u.index++],key=memberKey(h)+'-'+i;
-    if(castSupport(h,i)!==false){recordAction(heroKey(h),characterName(h),'輔助');supportCooldowns[key]=globalThis.__EMBERWILD_EQUIPMENT_SKILLS?.supportCooldownOnCast(h,i)??supportSkillCooldown(h,i);yield;if(!living().length||!foes.some(e=>e.hp>0))break;}
+    if(runCombatEventAction(h,()=>{const ok=castSupport(h,i);if(ok!==false)supportCooldowns[key]=globalThis.__EMBERWILD_EQUIPMENT_SKILLS?.supportCooldownOnCast(h,i)??supportSkillCooldown(h,i);return ok;})!==false){recordAction(heroKey(h),characterName(h),'輔助');yield;if(!living().length||!foes.some(e=>e.hp>0))break;}
    }
    if(!living().length||!foes.some(e=>e.hp>0))break;
    let actionTaken=false;
    for(const i of u.active){
     if(!foes.some(e=>e.hp>0))break;
-    if(castPartySkill(h,i,battleStats(h))!==false){actorCooldowns[memberKey(h)+'-'+i]=Math.max(0,Math.round(gemCooldownOnCast(i,h)));recordAction(heroKey(h),characterName(h),'技能');actionTaken=true;break;}
+    if(runCombatEventAction(h,()=>{const ok=castPartySkill(h,i,battleStats(h));if(ok!==false)actorCooldowns[memberKey(h)+'-'+i]=Math.max(0,Math.round(gemCooldownOnCast(i,h)));return ok;})!==false){recordAction(heroKey(h),characterName(h),'技能');actionTaken=true;break;}
    }
    p.index++;p.unit=null;
-   if(actionTaken){yield;continue;}
-   if(singleTargetEnemyPool().length){recordAction(ref.id,characterName(h),'普攻');performHeroBasic(h);yield;}
+   if(actionTaken){globalThis.EmberwildCombatEvents?.endTurn(h);yield;continue;}
+   if(singleTargetEnemyPool().length){recordAction(ref.id,characterName(h),'普攻');performHeroBasic(h);globalThis.EmberwildCombatEvents?.endTurn(h);yield;}else globalThis.EmberwildCombatEvents?.endTurn(h,false);
   }else{
    const label=typeof sharedEnemyActionLabel==='function'?sharedEnemyActionLabel(actor):'攻擊';
    recordAction(ref.id,actor.name,label);performEnemyAction(actor);p.index++;p.unit=null;yield;
   }
  }
  combatRoundProgress=null;
+ if(!living().length||!foes.some(e=>e.hp>0))globalThis.EmberwildCombatEvents?.clear();
  // Capture presentation references before the existing result cleanup removes foes.
  if(!living().length)globalThis.EmberwildBattleSummary?.finish('wipe');
  else if(foes.length&&!foes.some(e=>e.hp>0))globalThis.EmberwildBattleSummary?.finish('victory');

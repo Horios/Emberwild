@@ -173,7 +173,7 @@ function applyCustomStatus(defOrId,source,target){
     if(healed>0)note(def.name+'・再生 → '+characterName(target)+' '+Math.round(healed)+' 生命');
   }
   if(def.tags.includes('instant'))for(const fx of def.periodic)executeStatusPeriodic(inst,fx,true);
-  note((source?(statusIsHero(source)?characterName(source):combatEnemyName(source))+' → ':'')+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' 獲得狀態「'+def.name+'」· '+def.duration+' 回合');
+  note((source?(statusIsHero(source)?characterName(source):combatEnemyName(source))+' → ':'')+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' 獲得狀態「'+def.name+'」· '+(def.permanent?'永久':def.duration+' 回合'));
   return true;
 }
 function removeStatusEffects(target,polarity,limit=99){
@@ -201,7 +201,13 @@ function tickCustomStatuses(){
   if(lastStatusTickClock===partyClock)return;lastStatusTickClock=partyClock;
   const keep=[];
   for(const inst of activeStatuses){
-    const target=statusTargetByKey(inst.targetKey),elapsed=partyClock-inst.appliedClock;if(!target||target.hp<=0)continue;
+    const target=statusTargetByKey(inst.targetKey),elapsed=partyClock-inst.appliedClock;
+    if(inst.definition.triggers){
+      if(!target||target.hp<=0&&target.__eventDeathHandled||partyClock>=inst.expiresClock)continue;
+      if(target.hp>0&&elapsed>0)for(const fx of inst.definition.periodic)executeStatusPeriodic(inst,fx,false);
+      keep.push(inst);continue;
+    }
+    if(!target||target.hp<=0)continue;
     if(elapsed>0&&elapsed<=inst.duration)for(const fx of inst.definition.periodic)executeStatusPeriodic(inst,fx,false);
     if(elapsed<inst.duration)keep.push(inst);
   }
@@ -242,6 +248,8 @@ function customStatusTooltip(def){
   const basis=basisLabels[fx.basis]||fx.basis,coef=Number(fx.coefficient)||0,amount=fx.basis==='fixed'?String(coef):basis+' × '+Number(coef.toFixed(3));
   bits.push('每回合'+(fx.kind==='heal'?'恢復 ':'造成 ')+amount+(fx.kind==='damage'&&fx.element?' '+(ELEMENTS[fx.element]||fx.element)+'屬性':'')+'（'+(resolutionLabels[fx.resolution]||fx.resolution)+'）');
  }
+ for(const t of def.triggers||[])bits.push(({targetTurnEnd:'受術者回合結束（含受控）',targetActionEnd:'受術者行動結束',targetDeath:'受術者死亡'})[t.event]+'：'+pct(t.power)+' '+(t.target==='enemies'?'敵方全體':'目標')+' '+(ELEMENTS[t.element]||t.element)+'；觸發後'+(def.removeOnTrigger?'移除':'保留'));
+ if(def.permanent)bits.push('永久');
  if(def.tags?.includes('instant')&&def.periodic?.length)bits.push('套用時立即結算持續效果 1 次');
  return bits.join('；')||'狀態效果';
 }
@@ -280,7 +288,7 @@ initiativeOrder=function(){tickCustomStatuses();return statusInitiativeBase();};
 const statusCastBase=castPartySkill;
 castPartySkill=function(h,i,v){
   const sk=CLASSES[h.job]?.skills?.[i],meta=sk?.[6];if(!sk||sk[5]!=='applyStatus')return statusCastBase(h,i,v);
-  const def=statusById(meta?.statusId);if(!def||!statusAllowedTargetsForDefinition(def).includes(meta?.statusTarget||'enemy'))return false;const targets=statusTargetsForSkill(h,meta);if(!targets.length)return false;
+  const def=statusById(meta?.statusId);if(!def||!statusAllowedTargetsForDefinition(def).includes(meta?.statusTarget||'enemy'))return false;const targets=statusTargetsForSkill(h,meta).slice(0,meta?.statusMaxTargets??99);if(!targets.length)return false;
   let success=false;for(const target of targets)success=applyCustomStatus(def,h,target)||success;
   const mastery=globalThis.__EMBERWILD_MASTERY;
   if(success&&meta?.mastery&&mastery?.gainMastery)mastery.gainMastery(h,meta.mastery,mastery.masterySettings().skillUseXp);
@@ -300,7 +308,7 @@ if(typeof battleBuffRows==='function'){
 
 function attachStatusSkillExtras(raw){
   for(let job=0;job<(raw?.classes||[]).length;job++)for(let i=0;i<(raw.classes[job]?.skills||[]).length;i++){
-    const src=raw.classes[job].skills[i],runtime=CLASSES[job]?.skills?.[i];if(!runtime||src?.effect!=='applyStatus')continue;runtime[6]??={};runtime[6].statusId=String(src.statusId||'');runtime[6].statusTarget=STATUS_TARGETS.includes(src.statusTarget)?src.statusTarget:'enemy';
+    const src=raw.classes[job].skills[i],runtime=CLASSES[job]?.skills?.[i];if(!runtime||src?.effect!=='applyStatus')continue;runtime[6]??={};runtime[6].statusMaxTargets=src.statusMaxTargets??99;runtime[6].statusId=String(src.statusId||'');runtime[6].statusTarget=STATUS_TARGETS.includes(src.statusTarget)?src.statusTarget:'enemy';
   }
 }
 const statusValidateBase=validateBalanceConfig;
@@ -345,6 +353,18 @@ const advancedNormalizeStatusBase=normalizeStatusDefinition;
 normalizeStatusDefinition=function(raw,index=0){
   const out=advancedNormalizeStatusBase(raw,index),source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
   out.uses=statusInt(source.uses,0,0,99);out.stackable=source.stackable===true;
+  if(source.triggers!==undefined){
+    if(!Array.isArray(source.triggers)||source.triggers.length>8)throw Error('狀態事件觸發設定無效');
+    out.triggers=source.triggers.map(t=>{
+      if(!t||!['targetTurnEnd','targetActionEnd','targetDeath'].includes(t.event)||!['damage','heal','shield'].includes(t.effect)||!Number.isFinite(t.power)||t.power<0||t.power>100||!['enemies','allies','self','target'].includes(t.target)||!STATUS_ELEMENTS.includes(t.element)||typeof t.allowDeathChain!=='boolean'||!Number.isFinite(t.chainMultiplier)||t.chainMultiplier<0||t.chainMultiplier>100)throw Error('狀態事件積木參數無效');
+      return {event:t.event,effect:t.effect,power:t.power,target:t.target,element:t.element,allowDeathChain:t.allowDeathChain,chainMultiplier:t.chainMultiplier};
+    });
+    if(new Set(out.triggers.map(t=>t.event)).size!==out.triggers.length)throw Error('同一狀態的觸發時機不可重複');
+    out.removeOnTrigger=source.removeOnTrigger!==false;
+    out.permanent=source.permanent===true;
+    out.durationClock=source.durationClock??'target';
+    if(!['target','caster','battle'].includes(out.durationClock))throw Error('狀態持續時間時計無效');
+  }
   out.modifiers=out.modifiers.map((m,i)=>{if(m.kind==='damageSpread')m.targets=statusInt(source.modifiers?.[i]?.targets,2,1,99);return m;});
   return out;
 };
@@ -371,12 +391,12 @@ applyCustomStatus=function(defOrId,source,target){
   const def=typeof defOrId==='string'?statusById(defOrId):normalizeStatusDefinition(defOrId);if(!def||!target||target.hp<=0)return false;
   const targetKey=statusTargetKey(target),sourceJob=Number.isInteger(source?.job)?source.job:null,sourceKey=sourceJob===null?(source?.id||null):memberKey(source);if(!targetKey)return false;
   if(!def.stackable)activeStatuses=activeStatuses.filter(x=>!(x.statusId===def.id&&x.targetKey===targetKey));
-  const inst={id:def.id+'@'+targetKey+'@'+(++advancedStatusSerial),statusId:def.id,name:def.name,sourceJob,sourceKey,sourceName:source?(statusIsHero(source)?characterName(source):combatEnemyName(source)):'未知來源',targetKey,appliedClock:partyClock,duration:def.duration,expiresClock:partyClock+def.duration,remainingUses:def.uses>0?def.uses:null,definition:deepClone(def)};
+  const inst={id:def.id+'@'+targetKey+'@'+(++advancedStatusSerial),statusId:def.id,name:def.name,sourceJob,sourceKey,sourceName:source?(statusIsHero(source)?characterName(source):combatEnemyName(source)):'未知來源',targetKey,appliedClock:partyClock,duration:def.duration,expiresClock:def.triggers&&(def.permanent||def.durationClock!=='battle')?Number.MAX_SAFE_INTEGER:partyClock+def.duration,remainingTurns:def.duration,remainingUses:def.uses>0?def.uses:null,definition:deepClone(def)};
   activeStatuses.push(inst);applyStatusControl(def,target,source);
   const regenRate=def.modifiers.filter(m=>m.kind==='regen').reduce((sum,m)=>sum+Math.max(0,Number(m.value)||0),0);
   if(regenRate>0&&statusIsHero(target)){const max=statusMaxHp(target),before=target.hp;target.hp=Math.min(max,target.hp+healingAmount(source,max*regenRate));const healed=Math.max(0,target.hp-before);if(healed>0&&source&&typeof recordCombatContribution==='function')recordCombatContribution(source,'healing',healed);if(healed>0)note(def.name+'・再生 → '+characterName(target)+' '+Math.round(healed)+' 生命');}
   if(def.tags.includes('instant'))for(const fx of def.periodic)executeStatusPeriodic(inst,fx,true);
-  note((source?(statusIsHero(source)?characterName(source):combatEnemyName(source))+' → ':'')+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' 獲得狀態「'+def.name+'」· '+def.duration+' 回合'+(inst.remainingUses===null?'':' · '+inst.remainingUses+' 次'));
+  note((source?(statusIsHero(source)?characterName(source):combatEnemyName(source))+' → ':'')+(statusIsHero(target)?characterName(target):combatEnemyName(target))+' 獲得狀態「'+def.name+'」· '+(def.permanent?'永久':def.duration+' 回合')+(inst.remainingUses===null?'':' · '+inst.remainingUses+' 次'));
   return true;
 };
 function consumeCustomStatusUse(instanceId,count=1){const inst=activeStatuses.find(x=>x.id===instanceId);if(!inst||inst.remainingUses===null)return false;inst.remainingUses=Math.max(0,inst.remainingUses-Math.max(1,Math.floor(Number(count)||1)));if(inst.remainingUses<=0)activeStatuses=activeStatuses.filter(x=>x.id!==instanceId);return true;}
@@ -438,6 +458,25 @@ statusApplyShieldAwareDamage=function(...args){
   return visual.scope({mode:'damage'},()=>visualStatusDamageBase(...args));
 };
 globalThis.EmberwildStatusCombatState={pack:()=>({active:activeStatuses,clock:lastStatusTickClock,serial:advancedStatusSerial}),restore:v=>{activeStatuses=v?.active||[];lastStatusTickClock=v?.clock??-1;advancedStatusSerial=v?.serial||0;advancedSpreadContext=null;}};
-globalThis.__EMBERWILD_STATUS_TEST_API={schema:STATUS_SCHEMA_VERSION,normalize:normalizeStatusDefinition,validate:validateStatusDefinition,selfTest:statusPureSelfTest,get definitions(){return deepClone(statusDefinitions);},get active(){return deepClone(activeStatuses);},apply:applyCustomStatus,tick:tickCustomStatuses,remove:removeStatusEffects,polarity:statusPolarity,basis:statusBasisValue,damage:trackedStatusDamage,maxHp:statusMaxHp,consume:consumeCustomStatusUse,beginSkillCast:beginStatusSkillCast,endSkillCast:endStatusSkillCast,targetStats:ADVANCED_STATUS_TARGET_STATS,targetOrders:ADVANCED_STATUS_TARGET_ORDERS};
+function collectStatusTriggers(event,target,allowChain=true,chainScale=1){
+  const rows=[];
+  for(const inst of [...activeStatuses]){
+    if(inst.targetKey!==statusTargetKey(target)||partyClock>=inst.expiresClock||inst.remainingUses===0)continue;
+    const trigger=inst.definition.triggers?.find(t=>t.event===event);if(!trigger)continue;
+    // Even a suppressed chained death consumes/removes its dead target's mark.
+    if(inst.remainingUses!==null)inst.remainingUses=Math.max(0,inst.remainingUses-1);
+    if(inst.definition.removeOnTrigger||inst.remainingUses===0||event==='targetDeath')activeStatuses=activeStatuses.filter(x=>x.id!==inst.id);
+    if(allowChain)rows.push({instance:deepClone(inst),trigger:{...trigger,power:trigger.power*chainScale}});
+  }
+  return rows;
+}
+function tickStatusActorTurns(actor){
+  for(const inst of [...activeStatuses]){
+    const d=inst.definition;if(!d.triggers||d.permanent||d.durationClock==='battle')continue;
+    const match=d.durationClock==='target'?inst.targetKey===statusTargetKey(actor):(inst.sourceKey=== (statusIsHero(actor)?memberKey(actor):actor?.id));
+    if(match){inst.remainingTurns=Math.max(0,(inst.remainingTurns??d.duration)-1);if(inst.remainingTurns===0)activeStatuses=activeStatuses.filter(x=>x.id!==inst.id);}
+  }
+}
+globalThis.__EMBERWILD_STATUS_TEST_API={addDefinition(raw){const def=normalizeStatusDefinition(raw);if(!statusById(def.id))statusDefinitions.push(def);},collectTriggers:collectStatusTriggers,tickActorTurns:tickStatusActorTurns,clearEvents(){activeStatuses=activeStatuses.filter(x=>!x.definition.triggers);},schema:STATUS_SCHEMA_VERSION,normalize:normalizeStatusDefinition,validate:validateStatusDefinition,selfTest:statusPureSelfTest,get definitions(){return deepClone(statusDefinitions);},get active(){return deepClone(activeStatuses);},apply:applyCustomStatus,tick:tickCustomStatuses,remove:removeStatusEffects,polarity:statusPolarity,basis:statusBasisValue,damage:trackedStatusDamage,maxHp:statusMaxHp,consume:consumeCustomStatusUse,beginSkillCast:beginStatusSkillCast,endSkillCast:endStatusSkillCast,targetStats:ADVANCED_STATUS_TARGET_STATS,targetOrders:ADVANCED_STATUS_TARGET_ORDERS};
 if(state)render();
 })();

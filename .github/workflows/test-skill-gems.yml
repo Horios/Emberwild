@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '20'
       - name: Run current core regression tests
-        run: node --test --test-concurrency=1 tests/core-catalog-split.test.cjs tests/core-services-split.test.cjs tests/core-ui-split.test.cjs tests/core-journal-split.test.cjs tests/live-battle-journal.test.cjs tests/realtime-combat.test.cjs tests/battle-effects.test.cjs tests/gear-inventory-controls.test.cjs tests/inventory-wear-inspector.test.cjs tests/gear-inventory.test.cjs tests/item-descriptions.test.cjs tests/load-integrity.test.cjs tests/current-catalog-integrity.test.cjs tests/skill-gems.test.cjs tests/equipment-skill-system.test.cjs tests/skill-equipment-tutorial.test.cjs tests/skill-system-model.test.cjs
+        run: node --test --test-concurrency=1 tests/core-catalog-split.test.cjs tests/core-services-split.test.cjs tests/core-ui-split.test.cjs tests/core-journal-split.test.cjs tests/live-battle-journal.test.cjs tests/realtime-combat.test.cjs tests/battle-effects.test.cjs tests/gear-inventory-controls.test.cjs tests/inventory-wear-inspector.test.cjs tests/gear-inventory.test.cjs tests/item-descriptions.test.cjs tests/load-integrity.test.cjs tests/current-catalog-integrity.test.cjs tests/skill-gems.test.cjs tests/equipment-skill-system.test.cjs tests/skill-equipment-tutorial.test.cjs tests/skill-system-model.test.cjs tests/skill-system-runtime.test.cjs tests/initial-clearing-skills.test.cjs tests/status-advanced.test.cjs tests/skill-effects.test.cjs
 
   persistence:
     name: Saves, offline rewards and state ownership

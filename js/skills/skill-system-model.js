@@ -34,7 +34,23 @@
     for(const sk of definitions)if(sk.sources.some(s=>s.type==='advanced'))classRules[sk.jobs[0]].advanced.push({skillId:sk.id,level:Math.max(15,sk.requiredLevel??sk.level??1)});
     const equipmentPool=definitions.filter(sk=>sk.sources.some(s=>s.type==='equipment')).map(sk=>({skillId:sk.id,jobs:sk.jobs,slots:[0,1,2,3],minLevel:1,maxLevel:999,weight:1,maps:[],monsters:[],bosses:[],allowShop:true,allowCraft:true}));
     const gems=[['atk','flat','effect',[.02,.04,.06]],['speed','flat','cooldown',[.05,.1,.15]],['crit','ratio','procChance',[.01,.02,.03]],['hp','flat','heal',[.03,.06,.09]],['def','flat','shield',[.01,.02,.03]]].map(([stat,unit,key,values],kind)=>({kind,base:{stat,unit,values:kind===0?[2,4,6]:kind===1?[1,2,3]:kind===2?[.01,.02,.03]:kind===3?[10,20,30]:[1,2,3]},skill:{key,values,types:kind===1?['active','support']:kind===2?['proc']:['active','proc','support'],effects:[],slots:[0]},cap:1}));
-    return {version:VERSION,gemSlotRuleVersion:2,definitions,classRules,equipment:{chanceByDifficulty:[.15,.15,.15],formRules:[],pool:equipmentPool,socketBands:[{minLevel:1,maxLevel:10,weights:[.7,.3,0,0]},{minLevel:11,maxLevel:20,weights:[.35,.5,.15,0]},{minLevel:21,maxLevel:999,weights:[.1,.35,.35,.2]}],sourceRules:[{source:'starter',weights:[1,0,0,0]},{source:'boss',weights:[0,.3,.4,.3]}]},gems};
+    return addClearingSkills({version:VERSION,gemSlotRuleVersion:2,definitions,classRules,equipment:{chanceByDifficulty:[.15,.15,.15],formRules:[],pool:equipmentPool,socketBands:[{minLevel:1,maxLevel:10,weights:[.7,.3,0,0]},{minLevel:11,maxLevel:20,weights:[.35,.5,.15,0]},{minLevel:21,maxLevel:999,weights:[.1,.35,.35,.2]}],sourceRules:[{source:'starter',weights:[1,0,0,0]},{source:'boss',weights:[0,.3,.4,.3]}]},gems},d);
+  }
+  function clearingStatus(){return {"id":"holy-prison-mark","name":"神聖光牢","tags":[],"polarity":"debuff","dispellable":true,"duration":99,"permanent":true,"durationClock":"target","stackable":true,"uses":1,"removeOnTrigger":true,"modifiers":[],"control":null,"periodic":[],"triggers":[{"event":"targetTurnEnd","effect":"damage","power":0.5,"target":"enemies","element":"light","allowDeathChain":true,"chainMultiplier":1},{"event":"targetDeath","effect":"damage","power":0.3,"target":"enemies","element":"light","allowDeathChain":true,"chainMultiplier":1}]};}
+  function addClearingSkills(s,d){
+    d.statusDefinitions??=[];if(!d.statusDefinitions.some(x=>x.id==='holy-prison-mark'))d.statusDefinitions.push(clearingStatus());
+    const names=['順勢斬','魔力循環','箭雨','神聖光牢'],ids=['warrior-cleave-chain','mage-mana-cycle','archer-arrow-rain','priest-holy-prison'];
+    const descriptions=['普攻或技能擊殺後，以 80% 攻擊追擊目前生命最低敵人；擊殺可連續追擊，最多 3 次。常駐生效、不占槽。','敵人死亡事件群組使自身所有技能冷卻減少 1 回合；獨立冷卻 2 個自身回合。常駐生效、不占槽。','對所有存活敵人各造成 130% 攻擊力的物理傷害。','對最多 3 名敵人施加可疊加的永久光牢；敵人回合結束（含受控）引爆 50%，死亡引爆 30% 光屬性全體傷害；每個標記僅引爆一次，死亡可連鎖。'];
+    for(let job=0;job<4;job++){
+      if(s.definitions.some(x=>x.id===ids[job]))continue;
+      const passive=job<2,kind=passive?'passive':'core',index=passive?Math.max(d.passiveDefinitions?.length||0,...s.definitions.filter(x=>x.adapter.kind==='passive').map(x=>x.adapter.index+1)):Math.max(d.classes[job].skills.length,...s.definitions.flatMap(adapters).filter(x=>x.kind==='core'&&x.job===job).map(x=>x.index+1));
+      const sk={id:ids[job],name:names[job],description:descriptions[job],type:passive?'passive':'active',...(passive?{}:{activation:'active'}),jobs:[job],adapter:{job,index,kind},sources:[{type:'class',level:3}],usageScope:'character',partnerId:null,requiredLevel:3,requiresAdvanced:false,requiredMastery:null,requiredMasteryLevel:0,mastery:null,weaponTypes:[],unlockConditions:emptyConditions(),iconType:'auto',powerPerLevel:0,power:job===2?1.3:0,cooldown:passive?0:3,element:job===3?'light':'physical',target:passive?'self':'enemies',maxTargets:job===3?3:99,hitCount:1,baseCritRate:0,baseCritDamage:1.5,defensePenetration:0,defenseIgnore:0,effect:job===3?'applyStatus':'damage'};
+      if(passive)Object.assign(sk,{kind:'buff',effects:[],eventPassive:job===0?{event:'kill',power:.8,maxAttacks:3}:{event:'enemyDeath',reduction:1,cooldown:2}});
+      else if(job===2)Object.assign(sk,{commonEffectKeys:['target'],targetLimit:false});
+      else Object.assign(sk,{statusId:'holy-prison-mark',statusTarget:'enemies',statusMaxTargets:3});
+      s.definitions.push(sk);s.classRules.find(r=>r.job===job).initial.push({skillId:sk.id,level:3});
+    }
+    return s;
   }
   function validate(s){
     const fail=m=>{throw Error('技能系統：'+m);};
@@ -48,6 +64,7 @@
       if(!a||!integer(a.job,0,3)||!integer(a.index,0,a.kind==='passive'?511:63)||!['core','support','passive'].includes(a.kind))fail('技能引擎對照重複或無效：'+sk.id);
       if(sk.type==='support'&&a.kind!=='support'||['active','proc'].includes(sk.type)&&a.kind!=='core')fail('技能類型與引擎對照不符：'+sk.id);
       for(const key of ['power','cooldown','duration','requiredLevel','procBaseChance','baseCritRate','defenseIgnore'])if(sk[key]!==undefined&&!finite(sk[key],0,key.includes('Chance')||['baseCritRate','defenseIgnore'].includes(key)?1:1e9))fail('技能數值無效：'+sk.id+' '+key);
+      if(sk.eventPassive){const e=sk.eventPassive;if(sk.type!=='passive'||!['kill','enemyDeath'].includes(e.event)||e.event==='kill'&&(!finite(e.power,0,100)||!integer(e.maxAttacks,1,99))||e.event==='enemyDeath'&&(!integer(e.reduction,0,99)||!integer(e.cooldown,0,99)))fail('事件型被動設定無效：'+sk.id);}
       if(sk.systemEffect!==undefined&&!['taunt','guard','slow','regen'].includes(sk.systemEffect))fail('未知特殊效果：'+sk.id);
       if(sk.systemEffect&&(!integer(sk.duration,1,999)||!finite(sk.power,0,1)))fail('特殊效果持續時間或倍率無效：'+sk.id);
       for(const src of sk.sources)if(src.level!==undefined&&!integer(src.level,1,999))fail('技能取得等級無效：'+sk.id);
@@ -119,5 +136,5 @@
     const ids=new Set();for(const member of members)for(const g of member.bag||[]){if(ids.has(g.id))throw Error('重複裝備 ID：'+g.id);ids.add(g.id);gear(g,{legacy:true,source:'legacy',system});}
     d.skillSystemVersion=VERSION;return d;
   }
-  return {VERSION,copy,adapters,adapterFor,types,sources,emptyConditions,fromLegacy,validate,project,normalizeDocument,slots,gear,migrateSave};
+  return {VERSION,copy,adapters,adapterFor,types,sources,emptyConditions,fromLegacy,clearingStatus,addClearingSkills,validate,project,normalizeDocument,slots,gear,migrateSave};
 });
