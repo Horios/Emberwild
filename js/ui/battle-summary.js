@@ -164,7 +164,8 @@
   for(const e of globalThis.EmberwildStatusCombatState?.pack().active||[])if(e.targetKey===row.id&&e.expiresClock>partyClock&&(e.remainingUses==null||e.remainingUses>0)){
    // Immune controls have no effect unless their real control state exists.
    if(e.definition.control&&!e.definition.modifiers?.length&&!e.definition.periodic?.length&&!globalThis.__EMBERWILD_CONTROL_TEST_API?.states?.[u.id]?.[e.definition.control.kind])continue;
-   statuses.push({name:e.name,polarity:globalThis.__EMBERWILD_STATUS_TEST_API.polarity(e.definition),detail:customStatusTooltip(e.definition),remaining:Math.ceil(e.expiresClock-partyClock),uses:e.remainingUses,source:e.sourceName});
+   const api=globalThis.__EMBERWILD_STATUS_TEST_API;
+   statuses.push({name:e.name,polarity:api.polarity(e.definition),detail:api.tooltip(e.definition),remaining:e.definition.permanent?null:api.remainingTurns(e),time:e.definition.permanent?'永久':null,uses:e.remainingUses,source:e.sourceName});
   }
   if(!ally)for(const [kind,c] of Object.entries(globalThis.__EMBERWILD_CONTROL_TEST_API?.states?.[u.id]||{}))if(c&&(c.turns===undefined||c.turns>0)){
    const bits=[];if(c.shield!==undefined)bits.push('變形護盾 '+fmt(c.shield));if(c.slowPct!==undefined)bits.push('速度降低 '+pct(c.slowPct));if(c.damageReduction!==undefined)bits.push('傷害降低 '+pct(c.damageReduction));if(c.skipChance!==undefined)bits.push('無法行動機率 '+pct(c.skipChance));if(c.basicAttackBonus!==undefined)bits.push('普攻加成 '+pct(c.basicAttackBonus));

@@ -294,16 +294,20 @@ castPartySkill=function(h,i,v){
   if(success&&meta?.mastery&&mastery?.gainMastery)mastery.gainMastery(h,meta.mastery,mastery.masterySettings().skillUseXp);
   return success;
 };
+function customStatusRemainingTurns(inst){
+  if(inst.definition?.permanent)return Infinity;
+  return Math.max(0,Math.ceil(inst.definition?.triggers&&inst.definition.durationClock!=='battle'?(inst.remainingTurns??inst.duration):inst.expiresClock-partyClock));
+}
 const statusCoreDetailBase=coreSkillDetail;
-coreSkillDetail=function(job,i,h=state){const sk=CLASSES[job]?.skills?.[i];if(sk?.[5]!=='applyStatus')return statusCoreDetailBase(job,i,h);const def=statusById(sk[6]?.statusId),target=STATUS_TARGET_LABELS[sk[6]?.statusTarget]||STATUS_TARGET_LABELS.enemy;return '套用狀態：'+(def?.name||'未指定')+' · 目標 '+target+' · '+(def?def.duration+' 回合 · '+customStatusSummary(def):'請在平衡設計器指定狀態');};
+coreSkillDetail=function(job,i,h=state){const sk=CLASSES[job]?.skills?.[i];if(sk?.[5]!=='applyStatus')return statusCoreDetailBase(job,i,h);const def=statusById(sk[6]?.statusId),target=STATUS_TARGET_LABELS[sk[6]?.statusTarget]||STATUS_TARGET_LABELS.enemy;return '套用狀態：'+(def?.name||'未指定')+' · 目標 '+target+' · '+(def?(def.permanent?'永久':def.duration+' 回合')+' · '+customStatusSummary(def):'請在平衡設計器指定狀態');};
 
 if(typeof effectBadges==='function'){
   const statusBadgesBase=effectBadges;
-  effectBadges=function(key){let html=statusBadgesBase(key);for(const x of activeStatuses.filter(s=>s.targetKey===key&&partyClock<s.expiresClock)){const left=Math.max(0,x.expiresClock-partyClock);html+=combatStatusBadge(x.name,left,customStatusTooltip(x.definition));}return html;};
+  effectBadges=function(key){let html=statusBadgesBase(key);for(const x of activeStatuses.filter(s=>s.targetKey===key&&partyClock<s.expiresClock)){html+=combatStatusBadge(x.name,customStatusRemainingTurns(x),customStatusTooltip(x.definition),x.definition.permanent?'永久':'');}return html;};
 }
 if(typeof battleBuffRows==='function'){
   const statusRowsBase=battleBuffRows;
-  battleBuffRows=function(){const rows=activeStatuses.filter(x=>partyClock<x.expiresClock).map(x=>{const t=statusTargetByKey(x.targetKey),left=Math.max(0,x.expiresClock-partyClock);return '<tr><td>'+esc(t?(statusIsHero(t)?characterName(t):t.name):x.targetKey)+'</td><td>'+esc(x.name)+'</td><td>'+esc(customStatusSummary(x.definition))+'</td><td class="buff-time">'+left+' / '+x.duration+' 回合</td><td>自訂狀態</td></tr>';});const base=statusRowsBase();return rows.length?rows.join('')+(base.includes('no-buffs')?'':base):base;};
+  battleBuffRows=function(){const rows=activeStatuses.filter(x=>partyClock<x.expiresClock).map(x=>{const t=statusTargetByKey(x.targetKey),time=x.definition.permanent?'永久':customStatusRemainingTurns(x)+' / '+x.duration+' 回合';return '<tr><td>'+esc(t?(statusIsHero(t)?characterName(t):t.name):x.targetKey)+'</td><td>'+esc(x.name)+'</td><td>'+esc(customStatusSummary(x.definition))+'</td><td class="buff-time">'+time+'</td><td>自訂狀態</td></tr>';});const base=statusRowsBase();return rows.length?rows.join('')+(base.includes('no-buffs')?'':base):base;};
 }
 
 function attachStatusSkillExtras(raw){
@@ -477,6 +481,6 @@ function tickStatusActorTurns(actor){
     if(match){inst.remainingTurns=Math.max(0,(inst.remainingTurns??d.duration)-1);if(inst.remainingTurns===0)activeStatuses=activeStatuses.filter(x=>x.id!==inst.id);}
   }
 }
-globalThis.__EMBERWILD_STATUS_TEST_API={addDefinition(raw){const def=normalizeStatusDefinition(raw);if(!statusById(def.id))statusDefinitions.push(def);},collectTriggers:collectStatusTriggers,tickActorTurns:tickStatusActorTurns,clearEvents(){activeStatuses=activeStatuses.filter(x=>!x.definition.triggers);},schema:STATUS_SCHEMA_VERSION,normalize:normalizeStatusDefinition,validate:validateStatusDefinition,selfTest:statusPureSelfTest,get definitions(){return deepClone(statusDefinitions);},get active(){return deepClone(activeStatuses);},apply:applyCustomStatus,tick:tickCustomStatuses,remove:removeStatusEffects,polarity:statusPolarity,basis:statusBasisValue,damage:trackedStatusDamage,maxHp:statusMaxHp,consume:consumeCustomStatusUse,beginSkillCast:beginStatusSkillCast,endSkillCast:endStatusSkillCast,targetStats:ADVANCED_STATUS_TARGET_STATS,targetOrders:ADVANCED_STATUS_TARGET_ORDERS};
+globalThis.__EMBERWILD_STATUS_TEST_API={addDefinition(raw){const def=normalizeStatusDefinition(raw);if(!statusById(def.id))statusDefinitions.push(def);},collectTriggers:collectStatusTriggers,tickActorTurns:tickStatusActorTurns,clearEvents(){activeStatuses=activeStatuses.filter(x=>!x.definition.triggers);},tooltip:customStatusTooltip,remainingTurns:customStatusRemainingTurns,schema:STATUS_SCHEMA_VERSION,normalize:normalizeStatusDefinition,validate:validateStatusDefinition,selfTest:statusPureSelfTest,get definitions(){return deepClone(statusDefinitions);},get active(){return deepClone(activeStatuses);},apply:applyCustomStatus,tick:tickCustomStatuses,remove:removeStatusEffects,polarity:statusPolarity,basis:statusBasisValue,damage:trackedStatusDamage,maxHp:statusMaxHp,consume:consumeCustomStatusUse,beginSkillCast:beginStatusSkillCast,endSkillCast:endStatusSkillCast,targetStats:ADVANCED_STATUS_TARGET_STATS,targetOrders:ADVANCED_STATUS_TARGET_ORDERS};
 if(state)render();
 })();
