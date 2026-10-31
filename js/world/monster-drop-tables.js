@@ -70,8 +70,9 @@ function partyDropRateBonus(){const hs=party?heroes():(state?[state]:[]);return 
 function equipmentLevelGapDropFactor(rule,e){
   if(!['gear','gearLegendary','equipment','bossGear'].includes(rule?.type))return 1;
   const cfg=GAMEPLAY_SETTINGS.equipment?.dropLevelGap;if(!cfg?.enabled)return 1;
-  const level=party?.members?.[0]?.lv??state?.lv??e?.lv??1;
-  return EmberwildProgression.xpLevelGapFactor(GAMEPLAY_SETTINGS,level,e?.lv??level);
+  const level=party?.members?.[0]?.lv??state?.lv??e?.lv??1,mapIndex=e?.region??party?.map??0;
+  const enemyLevel=e?.lv??MAPS[mapIndex]?.max??level;
+  return EmberwildProgression.xpLevelGapFactor(GAMEPLAY_SETTINGS,level,enemyLevel);
 }
 function generalDropLevelGapFactor(rule,e){
   if(!['normal','elite'].includes(e?.kind)||e?.bossChallenge||!['sourceMaterial','material','ore','dust'].includes(rule?.type))return 1;
