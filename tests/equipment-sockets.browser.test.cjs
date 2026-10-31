@@ -20,41 +20,20 @@ test('equipment sockets: horizontal icons, icon gem choices, modes and disabled 
    const h=playerHero(),g=gear(1,3,0,h.job);
    Object.assign(g,{id:'socket-ui',skillId:'tutorial_echo',skillSockets:{version:1,count:3,gems:[null,null,null],firstMode:'skill'}});
    state.bag.push(g);h.gems=Array(15).fill(0);h.gems[0]=h.gems[1]=h.gems[12]=3;equipSharedGear(g.id,memberKey(h),3);selectSkillEquipment(g.id);
-   setTab('equipment');setInventoryCategory('equipment');selectInventoryGear(g.id);
+   setTab('worn');toggleWornEquipmentSockets(g.id);
   });
   const editor=p.locator('[data-socket-equipment="socket-ui"]'),mode=editor.getByLabel('第一孔效果模式');
   assert.equal(await editor.locator('.equipment-socket-choices').count(),0);
   for(const width of [1280,390]){
    await p.setViewportSize({width,height:900});
    const boxes=await editor.locator('[data-equipment-socket]').evaluateAll(es=>es.map(e=>{const b=e.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,right:b.right};}));
-   assert.equal(boxes.length,3,'selected gear should show its three sockets in the actual equipment category');assert(boxes.every(b=>b.y===boxes[0].y));assert(boxes[2].x>boxes[1].x&&boxes[1].x>boxes[0].x);
+   assert.equal(boxes.length,3,'worn gear should show its three sockets in the equipment panel');assert(boxes.every(b=>b.y===boxes[0].y));assert(boxes[2].x>boxes[1].x&&boxes[1].x>boxes[0].x);
    assert(boxes[2].right<=width,'socket row fits viewport');
    await editor.locator('[data-equipment-socket="0"]').click();
    assert.equal(await editor.locator('[data-equipment-gem] svg').count(),3);
    assert.equal(await editor.locator('[data-equipment-gem="14"]').count(),0);
-   const bottom=await editor.evaluate(el=>{
-    const wrap=el.closest('.inventory-detail-wrap'),main=el.closest('main');
-    wrap.scrollTop=wrap.scrollHeight;main.scrollTop=main.scrollHeight;
-    const footer=el.lastElementChild.getBoundingClientRect(),pane=wrap.getBoundingClientRect(),viewport=main.getBoundingClientRect();
-    return {overflow:getComputedStyle(wrap).overflowY,at:wrap.scrollTop,max:wrap.scrollHeight-wrap.clientHeight,footerTop:footer.top,footerBottom:footer.bottom,paneTop:pane.top,paneBottom:pane.bottom,mainTop:viewport.top,mainBottom:viewport.bottom};
-   });
-   if(width>760){
-    assert.equal(bottom.overflow,'auto');
-    assert(Math.abs(bottom.at-bottom.max)<=1,'detail reaches its true bottom');
-    assert(bottom.footerTop>=bottom.paneTop&&bottom.footerBottom<=bottom.paneBottom+1,'last socket instructions fit inside detail viewport');
-   }else{
-    assert.equal(bottom.overflow,'visible');
-    assert(bottom.footerTop>=bottom.mainTop&&bottom.footerBottom<=bottom.mainBottom+1,'mobile main scroll reaches the last socket instructions');
-   }
-
-   if(width>760){
-    await p.evaluate(()=>{globalThis.socketDetailDescription=__EMBERWILD_SKILLS.byId('tutorial_echo').description;__EMBERWILD_SKILLS.byId('tutorial_echo').description+=' 捲動測試內容。'.repeat(150);render();});
-    const before=await editor.evaluate(el=>{const pane=el.closest('.inventory-detail-wrap');pane.scrollTop=Math.min(180,pane.scrollHeight-pane.clientHeight);return pane.scrollTop;});
-    assert(before>0,'fixture must actually scroll');
-    await p.evaluate(()=>{for(let n=0;n<4;n++)render();});
-    assert.equal(await editor.evaluate(el=>el.closest('.inventory-detail-wrap').scrollTop),before,'automatic redraw preserves detail scroll');
-    await p.evaluate(()=>{__EMBERWILD_SKILLS.byId('tutorial_echo').description=socketDetailDescription;render();});
-   }
+   const withinViewport=await editor.evaluate(el=>{const b=el.getBoundingClientRect();return b.left>=-1&&b.right<=innerWidth+1;});
+   assert(withinViewport,'worn socket editor fits viewport');
    assert.equal(await editor.locator('.equipment-socket-list select').count(),0);
    assert(await mode.evaluate(el=>el.closest('.equipment-socket-mode').previousElementSibling.classList.contains('equipment-socket-list')));
    assert.equal(await mode.isDisabled(),false);
