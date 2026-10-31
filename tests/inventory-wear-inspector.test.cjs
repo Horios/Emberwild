@@ -13,6 +13,18 @@ test('backpack wear entry preserves equipment until the canonical preview and ke
  assert.equal(r.run('tab'),'worn');assert.equal(r.run('JSON.stringify(state.equipped)===before'),true);assert.match(r.run('wornEquipmentView()'),/固定穿戴流程/);assert.match(r.run('wornEquipmentView()'),/穿戴至飾品/);assert.match(r.run('inventoryGearDetail(g)'),/openInventoryWear/);
  r.run('previewEquip(g.id,memberKey(state),3)');assert.equal(r.run('JSON.stringify(state.equipped)===before'),true);assert.equal(r.run('$("modal").open'),true);r.run('confirmEquipComparison(g.id,memberKey(state),3)');assert.equal(r.run('state.equipped[3]'),r.run('g.id'));assert.deepEqual(r.errors,[]);
 });
+test('worn equipment owns socket editing and full detail, while backpack limits its actions',()=>{
+ const r=game();r.run("globalThis.g=gear(1,3,0,0);g.skillSockets={version:1,count:1,gems:[null],firstMode:'base'};addGear(g);equipSharedGear(g.id,memberKey(state),3);setTab('worn');");
+ assert.match(r.run('wornEquipmentView()'),/toggleWornEquipmentSockets/);
+ assert.match(r.run('wornEquipmentView()'),/showWornEquipmentDetail/);
+ assert.doesNotMatch(r.run('inventoryGearDetail(g)'),/equipment-socket-editor|openForge/);
+ assert.match(r.run('inventoryGearDetail(g)'),/sellGear/);
+ r.run('toggleWornEquipmentSockets(g.id)');
+ assert.match(r.run('wornEquipmentView()'),/data-socket-equipment/);
+ assert.equal(r.run('showWornEquipmentDetail(g.id)'),true);
+ assert.match(r.run('$("modal").innerHTML'),/裝備詳情|裝備能力/);
+ assert.deepEqual(r.errors,[]);
+});
 test('affix filters inspect the same actual affix while numerical totals and individual skill targets remain independent',()=>{
  const r=game();r.run(`state.bag=[];globalThis.a=gear(1,1,0,0);globalThis.b=gear(1,1,0,0);a.affix=[{type:4,rank:1,value:18,skill:0},{type:4,rank:2,value:30,skill:2}];b.affix=[{type:4,rank:2,value:40,skill:0}];addGear(a);addGear(b);setGearInventoryFilter('affixType','4');setGearInventoryFilter('affixSkill','0:0');setGearInventoryFilter('affixRank','2');setGearInventoryFilter('affixValue','35');`);
  assert.deepEqual(json(r,'sortedFilteredGear().map(g=>g.id)'),[r.run('b.id')]);r.run("setGearInventoryFilter('affixType','12')");assert.equal(r.run('__EMBERWILD_GEAR_INVENTORY.filters().affixSkill'),'');assert.deepEqual(json(r,'sortedFilteredGear()'),[]);r.run('clearGearInventoryFilters()');assert.equal(r.run('sortedFilteredGear().length'),2);assert.deepEqual(r.errors,[]);
