@@ -221,7 +221,7 @@
         "perLevel": 0.45,
         "quadratic": 0.003,
         "kindMultiplier": {"normal": 1, "elite": 2.6, "boss": 7},
-        "levelGap": {"enabled": true, "freeLevels": 5, "midGap": 10, "midMultiplier": 0.35, "highGap": 15, "highMultiplier": 0.1, "zeroGap": 20}
+        "levelGap": {"enabled": true, "freeLevels": 2, "midGap": 3, "midMultiplier": 0.5, "highGap": 5, "highMultiplier": 0.2, "zeroGap": 10}
       }
     },
     "difficulty": {
@@ -338,10 +338,10 @@
     if(!c?.enabled||!Number.isFinite(playerLevel)||!Number.isFinite(enemyLevel))return 1;
     const gap=Math.max(0,playerLevel-enemyLevel);
     if(gap<=c.freeLevels)return 1;
-    if(gap<=c.midGap)return 1-(1-c.midMultiplier)*(gap-c.freeLevels)/(c.midGap-c.freeLevels);
-    if(gap<=c.highGap)return c.midMultiplier-(c.midMultiplier-c.highMultiplier)*(gap-c.midGap)/(c.highGap-c.midGap);
     if(gap>=c.zeroGap)return 0;
-    return Math.max(0,c.highMultiplier*(c.zeroGap-gap)/(c.zeroGap-c.highGap));
+    if(gap>=c.highGap)return c.highMultiplier;
+    if(gap>=c.midGap)return c.midMultiplier;
+    return 1;
   }
   function enemyGold(settings,level,kind='normal',mode=0,playerLevel=null){
     const c=settings.rewards?.gold??defaults.settings.rewards.gold,key=kind==='final'?'boss':kind;
