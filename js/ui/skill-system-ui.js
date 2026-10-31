@@ -87,7 +87,25 @@
   const h=party.members[0],active=h.activeSkillEquipmentId===g.id;
   return html+`<section class="equipment-skill-description"><h3>裝備技能${active?' · 已啟用':''}</h3><b class="equipment-skill-name">${esc(sk.name)} · ${labels[sk.type]}</b><p class="equipment-skill-effect">${esc(sk.description||detail(sk,h))}</p></section>`;
  };
- const detailBase=inventoryGearDetail;inventoryGearDetail=function(g){return detailBase(g)+sockets(g);};
+ let wornSocketTarget=null;
+ globalThis.toggleWornEquipmentSockets=function(id){
+  const g=findGear(id);if(!g?.skillSockets||!gearWearer(id))return false;
+  wornSocketTarget=wornSocketTarget===id?null:id;
+  socketSelection=null;render();return true;
+ };
+ globalThis.wornEquipmentSocketPanel=function(g){
+  return g&&wornSocketTarget===g.id&&gearWearer(g.id)?`<div class="worn-socket-inline">${sockets(g)}</div>`:'';
+ };
+ globalThis.showWornEquipmentDetail=function(id){
+  const g=findGear(id);if(!g||EmberwildTokens.isToken(g)||!gearWearer(id))return false;
+  const modal=$('modal');
+  modal.innerHTML=`<h2>裝備詳情 · ${equipmentNameHTML(g)}</h2><p class="small">${esc(gearWearableJobsText(g))} · LV ${gearRequiredLevel(g)} · ${qualityTag(g)}</p><p class="equipment-total-summary">${globalThis.equipmentTotalSummaryHTML(g)}</p>${globalThis.equipmentAttributeDetailsHTML(g)}<div class="actions"><button type="button" onclick="closeModal()">關閉</button></div>`;
+  if(!modal.open)modal.showModal();
+  return true;
+ };
+ const resetSocketSession=resetSession;
+ resetSession=function(){wornSocketTarget=null;socketSelection=null;return resetSocketSession();};
+ const detailBase=inventoryGearDetail;inventoryGearDetail=function(g){return detailBase(g);};
  const slotBase=gearSlotHTML;gearSlotHTML=function(g,options){const html=slotBase(g,options);if(!g?.skillSockets)return html;const text=(g.skillId?'技能 · ':'')+g.skillSockets.gems.filter(x=>x!==null).length+'/'+g.skillSockets.count+' 孔';return html.replace(/(<\/button>)$/,`<small class="equipment-socket-badge">${esc(text)}</small>$1`);};
  globalThis.__EMBERWILD_SKILL_SYSTEM_UI={detail,sockets,catalog,routes,conditions,missing};
 })();
