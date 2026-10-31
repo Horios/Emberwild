@@ -687,7 +687,7 @@ function rewardGroupKill(e){if(e.rewarded)return;e.rewarded=true;const members=h
  const oldAward=awardXP;awardXP=()=>{};enemy=e;partyBusy=true;
  try{withHero(receiver,()=>solo.victory());}finally{awardXP=oldAward;partyBusy=false;receiver.hp=hp;receiver.shield=shield;}
  if(isFinal){party.cleared=true;closeModal();running=true;}
- for(const h of members){if(h!==receiver){if(isFinal)h.modeClears[e.difficulty]++;h.totalKills++;h.kills[e.mat]=(h.kills[e.mat]||0)+1;if(!h.discovered.includes(e.mat))h.discovered.push(e.mat);}if(party.cleared&&h.lv>=GS('progression.levelCaps.beforeClear',30))h.won=true;const wasDead=h.hp<=0;withHero(h,()=>awardXP(EmberwildProgression.xpShare(xp,members.length)));if(wasDead)h.hp=0;if(party.cleared&&h.lv>=GS('progression.levelCaps.beforeClear',30))h.won=true;}
+ for(const h of members){if(h!==receiver){if(isFinal)h.modeClears[e.difficulty]++;h.totalKills++;h.kills[e.mat]=(h.kills[e.mat]||0)+1;if(!h.discovered.includes(e.mat))h.discovered.push(e.mat);}if(party.cleared&&h.lv>=GS('progression.levelCaps.beforeClear',30))h.won=true;const wasDead=h.hp<=0;if(h===members[0])withHero(h,()=>awardXP(EmberwildProgression.xpShare(xp,members.length)));if(wasDead)h.hp=0;if(party.cleared&&h.lv>=GS('progression.levelCaps.beforeClear',30))h.won=true;}
  enemy=foes.find(x=>x.hp>0)||null;
 }
 function* pacedRound(){if(!party||!running||$('modal').open)return;currentEvents=[];lastActionOrder=[];actionVisualTime=Date.now();partyClock++;round++;effects=effects.filter(e=>e.until>partyClock);if(!foes.some(e=>e.hp>0)){spawnGroup();if(tab==='battle'||!isEditingControl())render();else refreshGlobalJournal();return;}
