@@ -136,12 +136,12 @@
       },
       "xpLevelGap": {
         "enabled": true,
-        "freeLevels": 5,
-        "midGap": 10,
-        "midMultiplier": 0.2,
-        "highGap": 15,
-        "highMultiplier": 0.05,
-        "zeroGap": 20,
+        "freeLevels": 2,
+        "midGap": 3,
+        "midMultiplier": 0.5,
+        "highGap": 5,
+        "highMultiplier": 0.2,
+        "zeroGap": 10,
         "minimumMultiplier": 0
       },
       "advance": {
@@ -321,10 +321,10 @@
     if(!cfg?.enabled||!Number.isFinite(playerLevel)||!Number.isFinite(enemyLevel))return 1;
     const gap=Math.max(0,playerLevel-enemyLevel);
     if(gap<=cfg.freeLevels)return 1;
-    if(gap<=cfg.midGap)return 1-(1-cfg.midMultiplier)*(gap-cfg.freeLevels)/(cfg.midGap-cfg.freeLevels);
-    if(gap<=cfg.highGap)return cfg.midMultiplier-(cfg.midMultiplier-cfg.highMultiplier)*(gap-cfg.midGap)/(cfg.highGap-cfg.midGap);
-    if(gap>=(cfg.zeroGap??21))return 0;
-    return Math.max(0,cfg.highMultiplier*((cfg.zeroGap??21)-gap)/((cfg.zeroGap??21)-cfg.highGap));
+    if(gap>=cfg.zeroGap)return 0;
+    if(gap>=cfg.highGap)return cfg.highMultiplier;
+    if(gap>=cfg.midGap)return cfg.midMultiplier;
+    return 1;
   }
   function enemyXp(settings,level,kind='normal',mode=0,playerLevel=null){
     const r=settings.rewards,x=r.xp,k=x.kindMultiplier||r.kindMultiplier,key=kind==='final'?'boss':kind;
