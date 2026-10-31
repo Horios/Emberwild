@@ -225,6 +225,9 @@
     }else if(intent==='create:'+ACTIVE_SAVE_SLOT)openCharacterCreation();
     $('app').style.visibility='';
   };
-  if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',finishTitleBoot,{once:true});
+  // Never try to resume a published save while the loader is still installing validators.
+  if(globalThis.__EMBERWILD_BALANCE_SOURCE&&!globalThis.__EMBERWILD_BALANCE_READY)
+    window.addEventListener('emberwild-balance-ready',finishTitleBoot,{once:true});
+  else if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',finishTitleBoot,{once:true});
   else setTimeout(finishTitleBoot,0);
 })();
