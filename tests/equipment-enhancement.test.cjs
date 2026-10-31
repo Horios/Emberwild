@@ -6,15 +6,15 @@ const json=(r,code)=>JSON.parse(r.run('JSON.stringify('+code+')'));
 function game(){const r=loadRuntime(root);r.run('selectSaveSlot(1);start(0);closeModal();');return r;}
 
 test('refinement depends only on equipment level, adds after T and never creates absent stats',()=>{
-  assert.deepEqual(curve.enhancedGearStats({atk:3,hp:0,def:0},10,1),{hp:0,atk:8,def:0});
-  assert.deepEqual(curve.enhancedGearStats({atk:0,hp:8,def:2},10,1),{hp:18,atk:0,def:4});
-  for(const [level,atk,hp,def] of [[1,5,10,2],[10,7,17,3],[30,11,33,6],[60,17,57,11]]){
+  assert.deepEqual(curve.enhancedGearStats({atk:3,hp:0,def:0},10,1),{hp:0,atk:13,def:0});
+  assert.deepEqual(curve.enhancedGearStats({atk:0,hp:8,def:2},10,1),{hp:18,atk:0,def:12});
+  for(const [level,atk,hp,def] of [[1,10,10,10],[10,10,20,10],[30,20,40,10],[60,20,60,20]]){
     for(const base of [1,3,36,100]){
       const out=curve.enhancedGearStats({atk:base,hp:base,def:base},10,level);
       assert.deepEqual(out,{hp:base+hp,atk:base+atk,def:base+def});
     }
   }
-  assert.deepEqual([0,1,2,3,4,5,10,15].map(p=>curve.enhancedGearStats({atk:3},p,1).atk),[3,4,4,5,5,6,8,11]);
+  assert.deepEqual([0,1,2,3,4,5,10,15].map(p=>curve.enhancedGearStats({atk:3},p,1).atk),[3,4,5,6,7,8,13,18]);
 });
 
 test('actual enhancement, preview, combat stats and an existing +10 save use the same growth without changing base/T',()=>{
@@ -28,13 +28,13 @@ test('actual enhancement, preview, combat stats and an existing +10 save use the
     return {before,after,base,preview,cost,first,total:gearBaseStats(restored),plus:restored.plus,t:restored.powerTier,reloadedBase:JSON.stringify(restored.baseSnapshot),ledger,html:(openForge(id),forgeView())};
   })()`);
   assert.equal(out.first.plus,1);assert.equal(out.first.spent,out.cost.ore);assert.equal(out.first.attack,4);assert.match(out.preview,/攻擊 \+4/);
-  assert.equal(out.plus,10);assert.equal(out.t,7);assert.equal(out.total.atk,8);assert.equal(out.after-out.before,5);assert.equal(out.base,out.reloadedBase);
-  assert.equal(out.ledger.rows.find(x=>x.label==='強化加成（+10）').stats.atk,5);assert.match(out.html,/固定值/);
+  assert.equal(out.plus,10);assert.equal(out.t,7);assert.equal(out.total.atk,13);assert.equal(out.after-out.before,10);assert.equal(out.base,out.reloadedBase);
+  assert.equal(out.ledger.rows.find(x=>x.label==='強化加成（+10）').stats.atk,10);assert.match(out.html,/固定值/);
   for(const k of ['atk','hp','def','speed'])assert.equal(out.ledger.rows.reduce((n,row)=>n+row.stats[k],0),out.ledger.total[k]);
   assert.deepEqual(r.errors,[]);
 });
 
-test('forge shows only the next refinement gains for the selected base, excluding affixes and rounding zeroes honestly',()=>{
+test('forge shows the next refinement gains with at least one point per present base attribute, excluding affixes',()=>{
   const r=game(),out=json(r,`(()=>{
     const rows=[];
     state.ore=100000;state.dust=100000;state.materials['以太鍛鐵']=10000;
@@ -63,11 +63,11 @@ test('forge shows only the next refinement gains for the selected base, excludin
     assert.doesNotMatch(row.decorated,/累計|999|火屬性|詞綴/,label);
     assert.match(row.total,/火 屬性傷害 \+15%/,label);
     if(row.slot===1)assert.doesNotMatch(preview,/攻擊/,label);
-    if(Object.values(shown).every(n=>n===0))assert.equal(preview,'本次取整後無能力增加',label);
+    assert(Object.values(shown).some(n=>n>=1),label+' should always gain a present base attribute');
   }
   assert.match(out.rows.find(row=>row.level===1&&row.slot===1&&row.plus===1).decorated,/本次增加：生命 \+1<\/p>/);
   assert.match(out.rows.find(row=>row.level===1&&row.slot===0&&row.plus===0).decorated,/本次增加：攻擊 \+1<\/p>/);
-  assert.match(out.rows.find(row=>row.level===1&&row.slot===0&&row.plus===1).decorated,/本次取整後無能力增加/);
+  assert.match(out.rows.find(row=>row.level===1&&row.slot===0&&row.plus===1).decorated,/本次增加：攻擊 \+1<\/p>/);
   assert.match(out.max,/已達 \+10 強化上限/);assert.doesNotMatch(out.max,/本次增加：|累計/);
   assert.deepEqual(r.errors,[]);
 });
