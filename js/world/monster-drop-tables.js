@@ -68,13 +68,13 @@ makeBaseEnemy=function(map=state.map,h=state,rng=Math.random){const e=dropTableM
 function heroDropRateBonus(h){return equipment(h).flatMap(g=>g.affix||[]).filter(a=>a.type===17).reduce((n,a)=>n+(Number(a.value)||0),0)/100;}
 function partyDropRateBonus(){const hs=party?heroes():(state?[state]:[]);return hs.reduce((n,h)=>n+heroDropRateBonus(h),0);}
 function equipmentLevelGapDropFactor(rule,e){
-  if(!['gear','gearLegendary','equipment'].includes(rule?.type)||!['normal','elite'].includes(e?.kind)||e.bossChallenge)return 1;
+  if(!['gear','gearLegendary','equipment','bossGear'].includes(rule?.type))return 1;
   const cfg=GAMEPLAY_SETTINGS.equipment?.dropLevelGap;if(!cfg?.enabled)return 1;
-  const mi=e.region??party?.map??0,max=MAPS[mi]?.max??e.lv??1,level=party?.members?.[0]?.lv??state?.lv??max,gap=Math.max(0,level-(e.lv??max)-cfg.freeLevels);
-  return Math.max(cfg.minimumMultiplier,1/(1+gap*cfg.penaltyPerLevel));
+  const level=party?.members?.[0]?.lv??state?.lv??e?.lv??1;
+  return EmberwildProgression.xpLevelGapFactor(GAMEPLAY_SETTINGS,level,e?.lv??level);
 }
 function generalDropLevelGapFactor(rule,e){
-  if(!['normal','elite'].includes(e?.kind)||e?.bossChallenge||!['sourceMaterial','material','ore','dust','gear','gearLegendary','equipment'].includes(rule?.type))return 1;
+  if(!['normal','elite'].includes(e?.kind)||e?.bossChallenge||!['sourceMaterial','material','ore','dust'].includes(rule?.type))return 1;
   const c=GAMEPLAY_SETTINGS.drops?.levelGap;if(!c?.enabled)return 1;
   const level=party?.members?.[0]?.lv??state?.lv??e?.lv??1,gap=Math.max(0,level-(e.lv??level));
   if(gap<=c.freeLevels)return 1;
@@ -155,7 +155,7 @@ validateSave=function(input,options){
 };solo.validateSave=validateSave;
 
 const dropTableBalanceReferenceBase=balanceReference;
-balanceReference=function(){const r=dropTableBalanceReferenceBase();r.affixTypes['17']='掉寶率增加：實際機率 = 基礎掉落率 × (1 + 全隊掉寶率加成)，最高 100%';r.balancePaths['balanceSettings.equipment.dropLevelGap']='一般／菁英怪掉落非 BOSS 裝備時，主角超過地圖最高等級 freeLevels 級後以 1/(1+超出級數×penaltyPerLevel) 遞減，最低 minimumMultiplier。';r.balancePaths['balance.affixes.extendedValues.dropRateBonus']='各品質「掉寶率」詞條數值，單位為百分比';r.dropAlgorithm='每條符合怪物來源與遭遇種類的掉落規則獨立判定；普通／菁英的一般裝備先乘低等地區的掉率衰減，接著乘(1+全隊掉寶率加成)，最後封頂100%。成功項目超過怪物 maxDrops 時，隨機保留至上限；素材、BOSS 與信物等不套用一般裝備的等級差衰減。';return r;};
+balanceReference=function(){const r=dropTableBalanceReferenceBase();r.affixTypes['17']='掉寶率增加：實際機率 = 基礎掉落率 × (1 + 全隊掉寶率加成)，最高 100%';r.balancePaths['balanceSettings.equipment.dropLevelGap']='一般與 BOSS 裝備使用 progression.xpLevelGap 相同的等級差倍率；enabled 控制啟用與否，舊 freeLevels／penaltyPerLevel／minimumMultiplier 僅保留相容，不再參與計算。';r.balancePaths['balance.affixes.extendedValues.dropRateBonus']='各品質「掉寶率」詞條數值，單位為百分比';r.dropAlgorithm='每條符合怪物來源與遭遇種類的掉落規則獨立判定；一般裝備與 BOSS 裝備各乘一次 progression.xpLevelGap 倍率（高 3／5／10 級為 50%／20%／0%），再乘(1+全隊掉寶率加成)，最後封頂100%。素材、鍛鐵、粉塵與信物維持各自原有規則。成功項目超過怪物 maxDrops 時，隨機保留至上限。';return r;};
 
 const dropTableApplySideEffectsBase=applyGameplaySettingsSideEffects;
 applyGameplaySettingsSideEffects=function(){dropTableApplySideEffectsBase();syncMonsterCatalogToMaps();};
