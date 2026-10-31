@@ -49,7 +49,7 @@
       'balanceSettings.difficulty.modes[].xpMultiplier':'EXP 專用難度倍率；reward 仍控制金幣等既有獎勵。',
       'balanceSettings.monsters.encounter.levelLeadInterval':'怪物每此間隔可領先 1 級，最多 progression.mapAheadAllowance 級；0 沿用固定上限。只限制隨機怪物等級，BOSS 固定為地圖上限。',
       'balanceSettings.progression.xpCurve':'升級需求多項式；LV30 與 LV45 後的逐級增額由 latePerLevel/endPerLevel 管理，夥伴等級同步主角。',
-      'balanceSettings.progression.xpLevelGap':'達 zeroGap 後 EXP 真正歸零，低於 1 EXP 會累積小數且不保底。',
+      'balanceSettings.progression.xpLevelGap':'主角高於怪物的 EXP 階段式懲罰：midGap 起乘 midMultiplier、highGap 起乘 highMultiplier、zeroGap 起為 0，freeLevels 內不扣減。',
       'balanceSettings.rewards.gold':'金幣採獨立曲線和各怪物種類倍率，不共用 EXP。',
       'balanceSettings.difficulty.modes[].goldMultiplier':'各難度獨立金幣倍率。',
       'balanceSettings.drops.levelGap':'一般怪／菁英怪常見掉落依玩家與怪物級差衰減，劇情與 BOSS 素材豁免。'
