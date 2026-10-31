@@ -10,7 +10,7 @@
   const ability=(event,action,value,extra={})=>({event,action,value,chance:1,duration:2,cooldown:1,maxTriggers:0,threshold:0,...extra});
   const token=(id,name,effects,ability)=>({id,name,description:'',job:'all',quality:1,effects,ability,drop:{enabled:true,weight:1,minLevel:1,maxLevel:60,maps:[],monsters:[],kinds:['normal','elite','boss','final']}});
   const fx=(key,value)=>({key,value});
-  const defaults={schemaVersion:VERSION,qualityMultipliers:[1,1.12,1.25,1.4],drop:{enabled:true,chanceByDifficulty:[.008,.012,.016],qualityWeights:[65,25,9,1],minLevel:1,maxLevel:60,maps:[],monsters:[],kinds:['normal','elite','boss','final']},catalog:[
+  const defaults={schemaVersion:VERSION,qualityMultipliers:[1,1.12,1.25,1.4],drop:{enabled:true,chanceByDifficulty:[.008,.012,.016],qualityWeights:[61,26,11,2],minLevel:1,maxLevel:60,maps:[],monsters:[],kinds:['normal','elite','boss','final']},catalog:[
     token('berserk','狂戰信物',[fx('flatAttack',2),fx('critDamage',5),fx('flatHp',6)],ability('kill','attack',.12)),
     token('guardian','守護信物',[fx('flatHp',10),fx('flatDefense',2),fx('elementResistPct',3)],ability('receivedHit','guard',.10,{cooldown:2})),
     token('pursuit','追擊信物',[fx('flatAttack',2),fx('speed',2),fx('crit',2)],ability('basicHit','extraDamage',.35,{chance:.18,duration:0})),
