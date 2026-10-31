@@ -1862,7 +1862,8 @@ try{
   globalThis.__EMBERWILD_TEAM_BOOT_RAW=raw;
   globalThis.__EMBERWILD_BOOT_SAVE_RAW=raw;
   globalThis.__EMBERWILD_BOOT_SAVE_ERROR=null;
-  if(raw){loadParty(JSON.parse(raw));note('隊伍存檔已載入。');}
+  // Published builds must wait until all late validators and skill modules are installed.
+  if(raw&&!globalThis.__EMBERWILD_BALANCE_SOURCE){loadParty(JSON.parse(raw));note('隊伍存檔已載入。');}
 }catch(e){
   state=null;party=null;
   const message=String(e?.message||e);
