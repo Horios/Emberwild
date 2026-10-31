@@ -356,7 +356,7 @@
     const levels=Math.max(0,Number(plus)||0),itemLevels=Math.max(0,(Number(equipmentLevel)||1)-1);
     return Object.fromEntries(['hp','atk','def'].map(k=>{
       const value=Math.max(0,Number(base[k])||0),gain=(Number(flat[k])||0)+itemLevels*(Number(growth[k])||0);
-      return [k,value>0?value+Math.round(levels*gain):0];
+      return [k,value>0?value+levels*Math.max(1,Math.ceil(gain)):0];
     }));
   }
   function gearStats(raw,effects,power,plus,equipmentLevel=1,flat,growth){
