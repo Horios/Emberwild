@@ -36,7 +36,24 @@ test('speed, XP and drop boosts expire at four hours and force fresh full sample
  const save=fixture(r,base,'boosts'),out=await replay(r,save,8,123456,false);assert(out.metrics.fastBattles>0);assert(out.metrics.fallbacks['time-boundary']>0);assert(out.metrics.fallbacks['combat-state-change']>0);assert.equal(r.run('battleRate'),1);assert(r.run('party.timedBoosts.every(b=>b.remainingMs===0)'));
  assert.deepEqual(Object.values(receipt().boosts).map(b=>b.ms),[4*3600000,4*3600000,4*3600000]);
 });
-test('inventory capacity still stops an encounter, and generated gear is preserved',async()=>{
- const save=fixture(r,base,'high');const warm=await replay(r,save,3,123456,true);r.run('GAMEPLAY_SETTINGS.equipment.bagCapacity='+String(warm.bag+1));
- const out=await replay(r,save,24,123456,false);assert(out.metrics.fastBattles>0);assert.equal(out.running,false);assert(out.bag>=warm.bag+1);assert.match(receipt().reason,/背包已滿/);assert(receipt().effectiveMs<24*3600000);assert.equal(receipt().gear.length,out.bag-save.members[0].bag.length);assert.equal(receipt().kills,r.run('state.totalKills'));r.run('GAMEPLAY_SETTINGS.equipment.bagCapacity=10000');
+test('inventory capacity auto-salvages overflow, preserves existing gear and does not stop offline exploration',async()=>{
+ const save=fixture(r,base,'high'),initialIds=save.members[0].bag.map(g=>g.id);
+ const warm=await replay(r,save,3,123456,true),capacity=warm.bag+1;
+ r.run('GAMEPLAY_SETTINGS.equipment.bagCapacity='+String(capacity));
+ const out=await replay(r,save,24,123456,false);
+ assert(out.metrics.fastBattles>0);
+ assert.equal(out.running,true,'a full bag must not stop an otherwise ongoing expedition');
+ assert.equal(out.bag,capacity,'generated gear fills but never exceeds the configured capacity');
+ assert.equal(receipt().effectiveMs,24*3600000,'the full eligible offline interval must be settled');
+ assert.doesNotMatch(String(receipt().reason||''),/背包已滿/);
+ assert.equal(receipt().gear.length,out.bag-save.members[0].bag.length);
+ assert.equal(receipt().kills,r.run('state.totalKills'));
+ const before=json(r,'({ids:state.bag.map(g=>g.id),ore:state.ore,dust:state.dust})');
+ for(const id of initialIds)assert(before.ids.includes(id),'preexisting gear must be preserved: '+id);
+ r.run('addGear(gear(1,0,0,state.job))');
+ const after=json(r,'({ids:state.bag.map(g=>g.id),ore:state.ore,dust:state.dust})');
+ assert.deepEqual(after.ids,before.ids,'overflow must not replace or discard stored gear');
+ assert.equal(after.ore,before.ore+3,'overflow tier-one gear converts to forge material');
+ assert.equal(after.dust,before.dust+1,'overflow tier-one gear converts to gem dust');
+ r.run('GAMEPLAY_SETTINGS.equipment.bagCapacity=10000');
 });
