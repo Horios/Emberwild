@@ -27,12 +27,13 @@ test('Three-person XP growth requires increasingly more encounters at higher lev
 test('Low-level EXP and gold decay to a true zero; fractional rewards survive sharing',()=>{
  const s=settings(),xp=curve.xpLevelGapFactor,gold=curve.goldLevelGapFactor;
  for(const [gap,expected] of [[-2,1],[0,1],[1,1],[2,1],[3,.5],[4,.5],[5,.2],[6,.2],[9,.2],[10,0],[11,0],[20,0]])assert(Math.abs(xp(s,10+gap,10)-expected)<1e-10,'EXP gap '+gap);
- for(const [gap,expected] of [[0,1],[5,1],[6,.87],[10,.35],[11,.30],[15,.10],[16,.08],[20,0]])assert(Math.abs(gold(s,10+gap,10)-expected)<1e-10,'gold gap '+gap);
+ for(const [gap,expected] of [[-2,1],[0,1],[1,1],[2,1],[3,.5],[4,.5],[5,.2],[6,.2],[9,.2],[10,0],[11,0],[20,0]]assert(Math.abs(gold(s,10+gap,10)-expected)<1e-10,'gold gap '+gap);
  assert.equal(curve.enemyXp(s,10,'normal',0,20),0);
  assert.equal(curve.enemyXp(s,10,'normal',0,13),curve.enemyXp(s,10)*.5);
  assert.equal(curve.enemyXp(s,10,'normal',0,15),curve.enemyXp(s,10)*.2);
  assert.equal(curve.enemyXp(s,10,'elite',2,20),0);
- assert.equal(curve.enemyGold(s,10,'normal',0,30),0);
+ assert.equal(curve.enemyGold(s,10,'normal',0,20),0);
+ assert.equal(curve.enemyGold(s,10,'elite',1,20),0);
  const low=settings();low.rewards.xp.base=0;low.rewards.xp.perLevel=1;
  const fractional=curve.xpShare(curve.enemyXp(low,1,'normal',0,6),3);
  assert(fractional>0&&fractional<1);
