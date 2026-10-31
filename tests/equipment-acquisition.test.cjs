@@ -61,3 +61,18 @@ test('published JSON roundtrips all new fields and rejects invalid equipment ref
  r.run('bad=packParty();bad.members[0].bag[0].baseSnapshot={version:1,mult:1,raw:{atk:-1,hp:0,def:0},body:{atk:0,hp:0,def:0},base:{atk:0,hp:0,def:0}}');assert.throws(()=>r.run('validateParty(bad)'),/基底快照/);
  assert.deepEqual(r.errors,[]);
 });
+
+test('gear and BOSS gear follow the exact EXP level-gap tiers without changing material rates',()=>{
+ const r=game();
+ const rows=json(r,`(()=>{const normal=GAMEPLAY_SETTINGS.drops.entries.find(x=>x.id==='gear_normal'),boss=GAMEPLAY_SETTINGS.drops.entries.find(x=>x.id==='boss_gear'),material=GAMEPLAY_SETTINGS.drops.entries.find(x=>x.id==='map0_mob0_material_normal'),enemy={monsterId:'map0_mob0',mat:'黏稠凝膠',kind:'normal',lv:1,region:0,difficulty:0},out=[];
+   for(const gap of [0,2,3,4,5,9,10]){playerHero().lv=1+gap;syncParty();out.push({gap,gear:effectiveDropChance(normal,enemy,0),boss:effectiveDropChance(boss,{...enemy,monsterId:'map0_boss',kind:'boss'},0),material:effectiveDropChance(material,enemy,0)});}return out;})()`);
+ const wanted=new Map([[0,1],[2,1],[3,.5],[4,.5],[5,.2],[9,.2],[10,0]]);
+ for(const row of rows){
+   const f=wanted.get(row.gap);
+   assert(Math.abs(row.gear-.018*f)<1e-10,'normal gear gap '+row.gap);
+   assert(Math.abs(row.boss-.25*f)<1e-10,'BOSS gear gap '+row.gap);
+   const materialFactor=row.gap<=5?1:row.gap<=10?1-(row.gap-5)*.1:0;
+   assert(Math.abs(row.material-.65*materialFactor)<1e-10,'material unchanged gap '+row.gap);
+ }
+ assert.deepEqual(r.errors,[]);
+});
